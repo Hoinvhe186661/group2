@@ -1,0 +1,3 @@
+com\hlgenerator\dao\DBConnect.class
+com\hlgenerator\servlet\LoginServlet.class
+com\hlgenerator\servlet\LogoutServlet.class

@@ -30,4 +30,6 @@
     <session-timeout>30</session-timeout>
   </session-config>
   
+  <!-- Servlets are configured using @WebServlet annotations -->
+  
 </web-app>

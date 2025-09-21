@@ -673,6 +673,9 @@
                     <i class="fas fa-phone"></i> 0989.888.999
                 </div>
                 <div class="nav-icons">
+                    <a href="admin/login.jsp" title="Admin Panel" style="color: inherit; text-decoration: none;">
+                        <i class="fas fa-cog"></i>
+                    </a>
                     <i class="fas fa-user"></i>
                     <i class="fas fa-shopping-bag"></i>
                 </div>
