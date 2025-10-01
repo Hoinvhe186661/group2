@@ -60,7 +60,7 @@ public class LoginServlet extends HttpServlet {
             }
             
             // Redirect đến trang admin
-            response.sendRedirect(request.getContextPath() + "/admin/admin.jsp");
+            response.sendRedirect(request.getContextPath() + "/admin.jsp");
             return;
         }
         
@@ -81,7 +81,7 @@ public class LoginServlet extends HttpServlet {
     private void redirectWithError(HttpServletRequest request, HttpServletResponse response, 
             String errorType, String message) throws IOException {
         
-        String redirectUrl = request.getContextPath() + "/admin/login.jsp?error=true&errorType=" + errorType + "&message=" + 
+        String redirectUrl = request.getContextPath() + "/login.jsp?error=true&errorType=" + errorType + "&message=" + 
             java.net.URLEncoder.encode(message, "UTF-8");
         response.sendRedirect(redirectUrl);
     }
@@ -92,11 +92,11 @@ public class LoginServlet extends HttpServlet {
         // Kiểm tra nếu đã đăng nhập thì redirect đến admin
         HttpSession session = request.getSession(false);
         if (session != null && Boolean.TRUE.equals(session.getAttribute("isLoggedIn"))) {
-            response.sendRedirect(request.getContextPath() + "/admin/admin.jsp");
+            response.sendRedirect(request.getContextPath() + "/admin.jsp");
             return;
         }
         
         // Nếu chưa đăng nhập thì hiển thị trang login
-        response.sendRedirect(request.getContextPath() + "/admin/login.jsp");
+        response.sendRedirect(request.getContextPath() + "/login.jsp");
     }
 }

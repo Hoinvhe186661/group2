@@ -3,7 +3,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel | Quản lý đơn hàng</title>
+    <title>Bảng điều khiển | Quản lý đơn hàng</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     
     <!-- bootstrap 3.0.2 -->
@@ -22,7 +22,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="admin.jsp" class="logo">
-            Admin Panel
+            Bảng điều khiển quản trị
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -83,7 +83,7 @@
                 <ul class="sidebar-menu">
                     <li>
                         <a href="admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
                     <li>

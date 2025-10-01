@@ -28,7 +28,7 @@ public class LogoutServlet extends HttpServlet {
         }
         
         // Redirect về trang login
-        response.sendRedirect(request.getContextPath() + "/admin/login.jsp?message=" + 
+        response.sendRedirect(request.getContextPath() + "/login.jsp?message=" + 
             java.net.URLEncoder.encode("Đã đăng xuất thành công!", "UTF-8"));
     }
     
