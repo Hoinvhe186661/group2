@@ -2,5 +2,8 @@ C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\model\Cus
 C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
 C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
 C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\model\User.java
 C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
 C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java

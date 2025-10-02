@@ -106,6 +106,10 @@ public class CustomerDAO extends DBConnect {
 
     // Get customer by ID
     public Customer getCustomerById(int id) {
+        if (!checkConnection()) {
+            logger.severe("getCustomerById: Database connection is not available");
+            return null;
+        }
         String sql = "SELECT * FROM customers WHERE id = ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -173,6 +177,9 @@ public class CustomerDAO extends DBConnect {
 
     // Delete customer (soft delete - set status to inactive)
     public boolean deleteCustomer(int id) {
+        if (!checkConnection()) {
+            return false;
+        }
         String sql = "UPDATE customers SET status='inactive', updated_at=CURRENT_TIMESTAMP WHERE id=?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -203,6 +210,9 @@ public class CustomerDAO extends DBConnect {
 
     // Check if customer code exists
     public boolean isCustomerCodeExists(String customerCode) {
+        if (!checkConnection()) {
+            return false;
+        }
         String sql = "SELECT COUNT(*) FROM customers WHERE customer_code = ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -222,6 +232,9 @@ public class CustomerDAO extends DBConnect {
 
     // Check if customer code exists (excluding current customer for updates)
     public boolean isCustomerCodeExists(String customerCode, int excludeId) {
+        if (!checkConnection()) {
+            return false;
+        }
         String sql = "SELECT COUNT(*) FROM customers WHERE customer_code = ? AND id != ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -243,6 +256,9 @@ public class CustomerDAO extends DBConnect {
     // Search customers
     public List<Customer> searchCustomers(String searchTerm) {
         List<Customer> customers = new ArrayList<>();
+        if (!checkConnection()) {
+            return customers;
+        }
         String sql = "SELECT * FROM customers WHERE " +
                     "customer_code LIKE ? OR " +
                     "company_name LIKE ? OR " +
@@ -287,6 +303,9 @@ public class CustomerDAO extends DBConnect {
 
     // Generate next customer code
     public String generateNextCustomerCode() {
+        if (!checkConnection()) {
+            return "CUST001";
+        }
         String sql = "SELECT MAX(CAST(SUBSTRING(customer_code, 5) AS UNSIGNED)) FROM customers WHERE customer_code LIKE 'CUST%'";
         
         try (PreparedStatement ps = connection.prepareStatement(sql);

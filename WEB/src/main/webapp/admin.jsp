@@ -37,6 +37,14 @@
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     <!-- Theme style -->
     <link href="css/style.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Custom styles for user stats -->
+    <style>
+        .st-orange { background-color: #ff9800 !important; }
+        .st-purple { background-color: #9c27b0 !important; }
+        .st-cyan { background-color: #00bcd4 !important; }
+        .st-pink { background-color: #e91e63 !important; }
+    </style>
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -179,6 +187,11 @@
                         </a>
                     </li>
                     <li>
+                        <a href="users.jsp">
+                            <i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="reports.jsp">
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
                         </a>
@@ -230,6 +243,45 @@
                             <div class="sm-st-info">
                                 <span>320</span>
                                 Khách hàng
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row" style="margin-bottom:5px;">
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-orange"><i class="fa fa-user-secret"></i></span>
+                            <div class="sm-st-info">
+                                <span id="totalUsers">0</span>
+                                Người dùng hệ thống
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-purple"><i class="fa fa-wrench"></i></span>
+                            <div class="sm-st-info">
+                                <span id="technicalStaff">0</span>
+                                Nhân viên kỹ thuật
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-cyan"><i class="fa fa-headphones"></i></span>
+                            <div class="sm-st-info">
+                                <span id="supportStaff">0</span>
+                                Hỗ trợ khách hàng
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-pink"><i class="fa fa-warehouse"></i></span>
+                            <div class="sm-st-info">
+                                <span id="storekeepers">0</span>
+                                Thủ kho
                             </div>
                         </div>
                     </div>
@@ -391,6 +443,31 @@
             size: '5px',
             BorderRadius: '5px'
         });
+        
+        // Load user statistics
+        $(document).ready(function() {
+            loadUserStats();
+        });
+        
+        function loadUserStats() {
+            $.ajax({
+                url: 'api/users?action=getStats',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var stats = response.data;
+                        $('#totalUsers').text(stats.totalUsers || 0);
+                        $('#technicalStaff').text(stats.technicalStaffCount || 0);
+                        $('#supportStaff').text(stats.customerSupportCount || 0);
+                        $('#storekeepers').text(stats.storekeeperCount || 0);
+                    }
+                },
+                error: function() {
+                    console.log('Không thể tải thống kê người dùng');
+                }
+            });
+        }
     </script>
     
     <script type="text/javascript">

@@ -102,6 +102,11 @@
                         </a>
                     </li>
                     <li>
+                        <a href="users.jsp">
+                            <i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="reports.jsp">
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
                         </a>
@@ -231,7 +236,7 @@
                             <select class="form-control" id="customerType" required>
                                 <option value="">Chọn loại khách hàng</option>
                                 <option value="individual">Cá nhân</option>
-                                <option value="business">Doanh nghiệp</option>
+                                <option value="company">Doanh nghiệp</option>
                             </select>
                         </div>
                     </form>
@@ -316,7 +321,7 @@
                 "processing": true,
                 "serverSide": false,
                 "ajax": {
-                    "url": "../api/customers?action=list",
+                    "url": "api/customers?action=list",
                     "type": "GET",
                     "dataSrc": "data"
                 },
@@ -332,29 +337,19 @@
                     { 
                         "data": "customerType",
                         "render": function(data, type, row) {
-                            var labelClass = data === 'business' ? 'label-primary' : 'label-info';
-                            var labelText = data === 'business' ? 'Doanh nghiệp' : 'Cá nhân';
-                            return '<span class="label ' + labelClass + '">' + labelText + '</span>';
+                            return getCustomerTypeLabel(data);
+                        }
+                    },
+                    {
+                        "data": "status",
+                        "render": function(data, type, row) {
+                            return getStatusLabel(data);
                         }
                     },
                     {
                         "data": null,
                         "render": function(data, type, row) {
-                            var buttons = '<button class="btn btn-info btn-xs" onclick="viewCustomer(' + row.id + ')">' +
-                                        '<i class="fa fa-eye"></i> Xem</button> ';
-                            
-                            buttons += '<button class="btn btn-warning btn-xs" onclick="editCustomer(' + row.id + ')">' +
-                                      '<i class="fa fa-edit"></i> Sửa</button> ';
-                            
-                            if (row.status === 'active') {
-                                buttons += '<button class="btn btn-danger btn-xs" onclick="deleteCustomer(' + row.id + ')">' +
-                                          '<i class="fa fa-trash"></i> Xóa</button>';
-                            } else {
-                                buttons += '<button class="btn btn-success btn-xs" onclick="activateCustomer(' + row.id + ')">' +
-                                          '<i class="fa fa-unlock"></i> Kích hoạt</button>';
-                            }
-                            
-                            return buttons;
+                            return getActionButtons(row);
                         }
                     }
                 ]
@@ -366,7 +361,7 @@
 
         function loadCustomers() {
             $.ajax({
-                url: '../api/customers?action=list',
+                url: 'api/customers?action=list',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -376,8 +371,9 @@
                         showAlert('Lỗi khi tải dữ liệu: ' + response.message, 'danger');
                     }
                 },
-                error: function() {
-                    showAlert('Lỗi kết nối đến server', 'danger');
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', xhr.responseText);
+                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                 }
             });
         }
@@ -397,6 +393,7 @@
                     '<td>' + customer.address + '</td>' +
                     '<td>' + (customer.taxCode || '-') + '</td>' +
                     '<td>' + getCustomerTypeLabel(customer.customerType) + '</td>' +
+                    '<td>' + getStatusLabel(customer.status) + '</td>' +
                     '<td>' + getActionButtons(customer) + '</td>' +
                     '</tr>';
                 tbody.append(row);
@@ -404,7 +401,7 @@
         }
 
         function getCustomerTypeLabel(type) {
-            if (type === 'business') {
+            if (type === 'company') {
                 return '<span class="label label-primary">Doanh nghiệp</span>';
             } else {
                 return '<span class="label label-info">Cá nhân</span>';
@@ -429,9 +426,17 @@
             return buttons;
         }
 
+        function getStatusLabel(status) {
+            if (status === 'active') {
+                return '<span class="label label-success">Hoạt động</span>';
+            } else {
+                return '<span class="label label-warning">Tạm khóa</span>';
+            }
+        }
+
         function viewCustomer(id) {
             $.ajax({
-                url: '../api/customers?action=get&id=' + id,
+                url: 'api/customers?action=get&id=' + id,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -443,8 +448,9 @@
                         showAlert('Không thể tải thông tin khách hàng: ' + response.message, 'danger');
                     }
                 },
-                error: function() {
-                    showAlert('Lỗi kết nối đến server', 'danger');
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', xhr.responseText);
+                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                 }
             });
         }
@@ -486,7 +492,7 @@
 
         function editCustomer(id) {
             $.ajax({
-                url: '../api/customers?action=get&id=' + id,
+                url: 'api/customers?action=get&id=' + id,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -500,8 +506,9 @@
                         showAlert('Không thể tải thông tin khách hàng: ' + response.message, 'danger');
                     }
                 },
-                error: function() {
-                    showAlert('Lỗi kết nối đến server', 'danger');
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', xhr.responseText);
+                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                 }
             });
         }
@@ -520,7 +527,7 @@
         function deleteCustomer(id) {
             if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
                 $.ajax({
-                    url: '../api/customers',
+                    url: 'api/customers',
                     type: 'POST',
                     data: {
                         action: 'delete',
@@ -535,8 +542,9 @@
                             showAlert('Lỗi khi xóa khách hàng: ' + response.message, 'danger');
                         }
                     },
-                    error: function() {
-                        showAlert('Lỗi kết nối đến server', 'danger');
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', xhr.responseText);
+                        showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                     }
                 });
             }
@@ -545,7 +553,7 @@
         function activateCustomer(id) {
             if (confirm('Bạn có chắc chắn muốn kích hoạt khách hàng này?')) {
                 $.ajax({
-                    url: '../api/customers',
+                    url: 'api/customers',
                     type: 'POST',
                     data: {
                         action: 'activate',
@@ -560,8 +568,9 @@
                             showAlert('Lỗi khi kích hoạt khách hàng: ' + response.message, 'danger');
                         }
                     },
-                    error: function() {
-                        showAlert('Lỗi kết nối đến server', 'danger');
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', xhr.responseText);
+                        showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                     }
                 });
             }
@@ -593,7 +602,7 @@
                 customerType: customerType
             };
 
-            var url = '../api/customers';
+            var url = 'api/customers';
             var action = currentEditingCustomer ? 'update' : 'add';
             formData.action = action;
             
@@ -618,8 +627,9 @@
                         showAlert('Lỗi: ' + response.message, 'danger');
                     }
                 },
-                error: function() {
-                    showAlert('Lỗi kết nối đến server', 'danger');
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', xhr.responseText);
+                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                 }
             });
         }
