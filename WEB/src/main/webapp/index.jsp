@@ -53,10 +53,17 @@
         }
 
         /* Navigation Styles */
-        .navbar {
+        .header-navbar {
             background: var(--white);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             padding: 15px 0;
+        }
+
+        .menu-navbar {
+            background: #eeeeee;
+            border-top: 1px solid #e5e5e5;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 8px 0;
         }
 
         .logo-container {
@@ -536,6 +543,53 @@
             box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
         }
 
+        /* Services Section (fixed info) */
+        .services-section {
+            padding: 70px 0 40px;
+            background: var(--white);
+        }
+        .services-title {
+            color: var(--primary-red);
+            font-size: 2rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+        .service-card {
+            background: var(--light-grey);
+            border-radius: 14px;
+            padding: 24px 22px;
+            height: 100%;
+            box-shadow: 0 6px 18px rgba(0,0,0,.06);
+        }
+        .service-card h5 {
+            font-weight: 800;
+            margin-bottom: 10px;
+            color: var(--dark-grey);
+            text-transform: uppercase;
+        }
+        .service-card ul { margin-bottom: 0; }
+        .service-card li { margin-bottom: 6px; }
+
+        /* Why Trust Us */
+        .why-trust {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: var(--white);
+            padding: 70px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .why-trust h3 {
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: var(--primary-yellow);
+            text-transform: uppercase;
+        }
+        .why-trust p { color: #e6e6e6; }
+        .why-trust .highlight { color: var(--primary-yellow); font-weight: 700; }
+
         /* Floating Social Icons */
         .floating-icons {
             position: fixed;
@@ -629,92 +683,7 @@
     </style>
 </head>
 <body>
-    <!-- Top Header -->
-    <div class="top-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <span class="header-text">MÁY PHÁT ĐIỆN CÔNG NGHIỆP</span>
-                </div>
-                <div class="col-md-6 text-end">
-                    <span class="contact-info">
-                        <i class="fas fa-envelope"></i> Mayphatdienhoalac@gmail.com
-                    </span>
-                    <span class="contact-info">
-                        <i class="fas fa-clock"></i> 08:00 - 17:00
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <div class="logo-container">
-                    <div class="logo-icon">
-                        <img src="images/logo.png" alt="Logo Hoà Lạc" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div style="display:none; width:100%; height:100%; background:var(--primary-red); border-radius:50%; align-items:center; justify-content:center; color:white; font-size:20px;">★</div>
-                    </div>
-                    <div class="logo-text">
-                        <strong>HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR</strong>
-                    </div>
-                </div>
-            </a>
-            
-            <div class="search-container">
-                <input type="text" class="search-input" placeholder="Tìm kiếm...">
-                <i class="fas fa-search search-icon"></i>
-            </div>
-            
-            <div class="contact-info-nav">
-                <div class="phone-number">
-                    <i class="fas fa-phone"></i> 0989.888.999
-                </div>
-                <div class="nav-icons">
-                    <a href="login.jsp" title="Admin Panel" style="color: inherit; text-decoration: none;">
-                        <i class="fas fa-cog"></i>
-                    </a>
-                    <i class="fas fa-user"></i>
-                    <i class="fas fa-shopping-bag"></i>
-                </div>
-            </div>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#home">TRANG CHỦ</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#about">GIỚI THIỆU</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#products">MÁY PHÁT ĐIỆN</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#services">DỊCH VỤ</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#projects">DỰ ÁN</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#guide">HƯỚNG DẪN</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#news">TIN TỨC</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#contact">LIÊN HỆ</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <%@ include file="header.jsp" %>
 
     <!-- Hero Banner Section -->
     <section id="home" class="hero-banner">
@@ -751,6 +720,7 @@
             </div>
         </div>
     </section>
+
 
     <!-- Main Content Section -->
     <section class="main-content-section">
@@ -851,18 +821,68 @@
         </div>
     </section>
 
-    <!-- Floating Social Icons -->
-    <div class="floating-icons">
-        <div class="floating-icon facebook">
-            <i class="fab fa-facebook-f"></i>
+
+    <!-- Services (fixed content) -->
+    <section class="services-section">
+        <div class="container">
+            <h2 class="services-title">DỊCH VỤ CỦA CHÚNG TÔI</h2>
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="service-card h-100">
+                        <h5>1. CUNG CẤP MÁY PHÁT ĐIỆN</h5>
+                        <ul>
+                            <li>Uy tín, chất lượng</li>
+                            <li>Giá cả hợp lý</li>
+                            <li>Đa dạng sản phẩm</li>
+                        </ul>
                     </div>
-        <div class="floating-icon zalo">
-            <i class="fas fa-comments"></i>
                 </div>
-        <div class="floating-icon phone">
-            <i class="fas fa-phone"></i>
-                        </div>
+                <div class="col-lg-4">
+                    <div class="service-card h-100">
+                        <h5>2. SỬA CHỮA MÁY PHÁT ĐIỆN</h5>
+                        <ul>
+                            <li>Đội ngũ kỹ sư lành nghề</li>
+                            <li>Tư vấn miễn phí 24/7</li>
+                            <li>Chất lượng quốc tế</li>
+                            <li>Phụ tùng chính hãng</li>
+                        </ul>
                     </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="service-card h-100">
+                        <h5>3. BẢO DƯỠNG MÁY PHÁT ĐIỆN</h5>
+                        <ul>
+                            <li>Kỹ thuật viên được đào tạo cao cấp</li>
+                            <li>Dịch vụ chuyên nghiệp và tiết kiệm</li>
+                            <li>Chính sách hậu mãi ưu đãi</li>
+                            <li>Nhắc lịch bảo dưỡng định kỳ</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why trust us -->
+    <section class="why-trust">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <h3>Tại sao bạn nên tin tưởng lựa chọn chúng tôi?</h3>
+                    <p><span class="highlight">💡 HOÀ LẠC ELECTRIC</span> hoạt động với phương châm “Uy tín làm nên thương hiệu – Sự hài lòng của bạn là thành công của chúng tôi!”</p>
+                    <p>Chúng tôi mang đến các giải pháp máy phát điện và thiết bị điện công nghiệp ổn định, chất lượng cao với mức chi phí hợp lý – lựa chọn lý tưởng cho các doanh nghiệp đang tìm kiếm nguồn điện tin cậy để bảo đảm hoạt động sản xuất – kinh doanh.</p>
+                    <p>Sở hữu đội ngũ kỹ thuật viên giàu kinh nghiệm, dịch vụ hậu mãi tận tâm cùng hệ thống kho hàng quy mô lớn tại Hà Nội và TP. Hồ Chí Minh, HOÀ LẠC ELECTRIC luôn sẵn sàng đồng hành cùng sự phát triển bền vững của quý khách hàng.</p>
+                    <p>Chúng tôi rất mong nhận được sự tin tưởng, ủng hộ và hợp tác của Quý khách hàng và Đối tác để HOÀ LẠC ELECTRIC có cơ hội cung cấp những sản phẩm chất lượng, giá cả cạnh tranh và dịch vụ chuyên nghiệp, tận tâm.</p>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <img src="images/sanpham1.jpg" class="img-fluid rounded-3" alt="Why trust us" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
+    </section>
+ 
+
+    <%@ include file="footer.jsp" %>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -880,14 +900,11 @@
             });
         });
 
-        // Add scroll effect to navbar
+        // Optional: Add scroll effect to header navbar if present
         window.addEventListener('scroll', function() {
-            const navbar = document.querySelector('.navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
+            const headerBar = document.querySelector('.header-navbar');
+            if (!headerBar) return;
+            if (window.scrollY > 50) { headerBar.classList.add('scrolled'); } else { headerBar.classList.remove('scrolled'); }
         });
 
         // Banner indicators functionality
@@ -908,18 +925,7 @@
             });
         });
 
-        // Floating icons functionality
-        document.querySelectorAll('.floating-icon').forEach(icon => {
-            icon.addEventListener('click', function() {
-                if (this.classList.contains('phone')) {
-                    window.location.href = 'tel:0989888999';
-                } else if (this.classList.contains('facebook')) {
-                    window.open('https://facebook.com', '_blank');
-                } else if (this.classList.contains('zalo')) {
-                    window.open('https://zalo.me/0989888999', '_blank');
-                }
-            });
-        });
+        // Floating icons moved to footer.jsp
 
         // Learn more button functionality
         document.querySelector('.learn-more-btn .btn').addEventListener('click', function() {

@@ -1,9 +1,12 @@
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-C:\Users\Admin\Desktop\group2\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\nhánh c?a Huy\bk\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java

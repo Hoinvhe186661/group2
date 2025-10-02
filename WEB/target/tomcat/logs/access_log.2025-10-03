@@ -1,0 +1,9 @@
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:19:42 +0700] "GET /demo/contracts.jsp HTTP/1.1" 200 44363 http-bio-8080-exec-1 968
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:19:42 +0700] "GET /demo/api/contracts?action=customers HTTP/1.1" 200 136 http-bio-8080-exec-3 17
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:19:44 +0700] "GET /demo/api/contracts?action=products HTTP/1.1" 200 747 http-bio-8080-exec-4 14
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:20:45 +0700] "GET /demo/api/contracts?action=products HTTP/1.1" 200 747 http-bio-8080-exec-6 8
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:21:08 +0700] "GET /demo/api/contracts?action=products HTTP/1.1" 200 747 http-bio-8080-exec-7 7
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:21:29 +0700] "POST /demo/api/contracts HTTP/1.1" 200 78 http-bio-8080-exec-8 15
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:21:29 +0700] "GET /demo/contracts.jsp HTTP/1.1" 200 45614 http-bio-8080-exec-9 9
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:21:29 +0700] "GET /demo/api/contracts?action=customers HTTP/1.1" 200 136 http-bio-8080-exec-10 7
+0:0:0:0:0:0:0:1 - - [03/Oct/2025:00:21:43 +0700] "GET /demo/api/contracts?action=products HTTP/1.1" 200 747 http-bio-8080-exec-10 7
