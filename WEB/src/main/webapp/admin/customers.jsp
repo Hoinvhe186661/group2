@@ -3,7 +3,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel | Quản lý khách hàng</title>
+    <title>Bảng điều khiển | Quản lý khách hàng</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     
     <!-- bootstrap 3.0.2 -->
@@ -22,7 +22,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="admin.jsp" class="logo">
-            Admin Panel
+            Bảng điều khiển quản trị
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -83,7 +83,7 @@
                 <ul class="sidebar-menu">
                     <li>
                         <a href="admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
                     <li>
@@ -135,122 +135,47 @@
                                     <thead>
                                         <tr>
                                             <th>ID</th>
-                                            <th>Họ tên</th>
+                                            <th>Mã khách hàng</th>
+                                            <th>Tên công ty</th>
+                                            <th>Người liên hệ</th>
                                             <th>Email</th>
                                             <th>Số điện thoại</th>
                                             <th>Địa chỉ</th>
-                                            <th>Ngày đăng ký</th>
-                                            <th>Tổng đơn hàng</th>
-                                            <th>Tổng chi tiêu</th>
+                                            <th>Mã số thuế</th>
+                                            <th>Loại khách hàng</th>
                                             <th>Trạng thái</th>
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="customersTableBody">
+                                        <%-- Lấy dữ liệu từ backend và render bằng JSP --%>
+                                        <%
+                                            com.hlgenerator.dao.CustomerDAO dao = new com.hlgenerator.dao.CustomerDAO();
+                                            java.util.List<com.hlgenerator.model.Customer> customers = dao.getAllCustomers();
+                                            for (com.hlgenerator.model.Customer customer : customers) {
+                                        %>
                                         <tr>
-                                            <td>1</td>
-                                            <td>Nguyễn Văn A</td>
-                                            <td>nguyenvana@email.com</td>
-                                            <td>0123456789</td>
-                                            <td>123 Đường ABC, Quận 1, TP.HCM</td>
-                                            <td>15/08/2025</td>
-                                            <td>5</td>
-                                            <td>2,500,000 VNĐ</td>
-                                            <td><span class="label label-success">Hoạt động</span></td>
+                                            <td><%= customer.getId() %></td>
+                                            <td><%= customer.getCustomerCode() %></td>
+                                            <td><%= customer.getCompanyName() %></td>
+                                            <td><%= customer.getContactPerson() %></td>
+                                            <td><%= customer.getEmail() %></td>
+                                            <td><%= customer.getPhone() %></td>
+                                            <td><%= customer.getAddress() %></td>
+                                            <td><%= customer.getTaxCode() %></td>
+                                            <td><%= "company".equals(customer.getCustomerType()) ? "Doanh nghiệp" : "Cá nhân" %></td>
+                                            <td><%= "active".equals(customer.getStatus()) ? "Hoạt động" : "Tạm khóa" %></td>
                                             <td>
-                                                <button class="btn btn-info btn-xs" onclick="viewCustomer(1)">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                                <button class="btn btn-warning btn-xs" onclick="editCustomer(1)">
-                                                    <i class="fa fa-edit"></i> Sửa
-                                                </button>
-                                                <button class="btn btn-danger btn-xs" onclick="deleteCustomer(1)">
-                                                    <i class="fa fa-trash"></i> Xóa
-                                                </button>
+                                                <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')"><i class="fa fa-eye"></i> Xem</button>
+                                                <button class="btn btn-warning btn-xs" onclick="editCustomer('<%= customer.getId() %>')"><i class="fa fa-edit"></i> Sửa</button>
+                                                <% if ("active".equals(customer.getStatus())) { %>
+                                                    <button class="btn btn-danger btn-xs" onclick="deleteCustomer('<%= customer.getId() %>')"><i class="fa fa-trash"></i> Xóa</button>
+                                                <% } else { %>
+                                                    <button class="btn btn-success btn-xs" onclick="activateCustomer('<%= customer.getId() %>')"><i class="fa fa-unlock"></i> Kích hoạt</button>
+                                                <% } %>
                                             </td>
                                         </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>Trần Thị B</td>
-                                            <td>tranthib@email.com</td>
-                                            <td>0987654321</td>
-                                            <td>456 Đường XYZ, Quận 2, TP.HCM</td>
-                                            <td>20/08/2025</td>
-                                            <td>3</td>
-                                            <td>1,800,000 VNĐ</td>
-                                            <td><span class="label label-success">Hoạt động</span></td>
-                                            <td>
-                                                <button class="btn btn-info btn-xs" onclick="viewCustomer(2)">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                                <button class="btn btn-warning btn-xs" onclick="editCustomer(2)">
-                                                    <i class="fa fa-edit"></i> Sửa
-                                                </button>
-                                                <button class="btn btn-danger btn-xs" onclick="deleteCustomer(2)">
-                                                    <i class="fa fa-trash"></i> Xóa
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td>Lê Văn C</td>
-                                            <td>levanc@email.com</td>
-                                            <td>0369852147</td>
-                                            <td>789 Đường DEF, Quận 3, TP.HCM</td>
-                                            <td>10/09/2025</td>
-                                            <td>2</td>
-                                            <td>3,200,000 VNĐ</td>
-                                            <td><span class="label label-success">Hoạt động</span></td>
-                                            <td>
-                                                <button class="btn btn-info btn-xs" onclick="viewCustomer(3)">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                                <button class="btn btn-warning btn-xs" onclick="editCustomer(3)">
-                                                    <i class="fa fa-edit"></i> Sửa
-                                                </button>
-                                                <button class="btn btn-danger btn-xs" onclick="deleteCustomer(3)">
-                                                    <i class="fa fa-trash"></i> Xóa
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>4</td>
-                                            <td>Phạm Thị D</td>
-                                            <td>phamthid@email.com</td>
-                                            <td>0741852963</td>
-                                            <td>321 Đường GHI, Quận 4, TP.HCM</td>
-                                            <td>05/09/2025</td>
-                                            <td>1</td>
-                                            <td>750,000 VNĐ</td>
-                                            <td><span class="label label-warning">Tạm khóa</span></td>
-                                            <td>
-                                                <button class="btn btn-info btn-xs" onclick="viewCustomer(4)">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                                <button class="btn btn-warning btn-xs" onclick="editCustomer(4)">
-                                                    <i class="fa fa-edit"></i> Sửa
-                                                </button>
-                                                <button class="btn btn-success btn-xs" onclick="activateCustomer(4)">
-                                                    <i class="fa fa-unlock"></i> Kích hoạt
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>5</td>
-                                            <td>Hoàng Văn E</td>
-                                            <td>hoangvane@email.com</td>
-                                            <td>0852741963</td>
-                                            <td>654 Đường JKL, Quận 5, TP.HCM</td>
-                                            <td>01/09/2025</td>
-                                            <td>0</td>
-                                            <td>0 VNĐ</td>
-                                            <td><span class="label label-danger">Đã xóa</span></td>
-                                            <td>
-                                                <button class="btn btn-info btn-xs" onclick="viewCustomer(5)">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                            </td>
-                                        </tr>
+                                        <% } %>
                                     </tbody>
                                 </table>
                             </div>
@@ -274,8 +199,16 @@
                 <div class="modal-body">
                     <form id="addCustomerForm">
                         <div class="form-group">
-                            <label for="customerName">Họ tên:</label>
-                            <input type="text" class="form-control" id="customerName" required>
+                            <label for="customerCode">Mã khách hàng:</label>
+                            <input type="text" class="form-control" id="customerCode" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="companyName">Tên công ty:</label>
+                            <input type="text" class="form-control" id="companyName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userContract">Người liên hệ:</label>
+                            <input type="text" class="form-control" id="userContract" required>
                         </div>
                         <div class="form-group">
                             <label for="customerEmail">Email:</label>
@@ -290,8 +223,16 @@
                             <textarea class="form-control" id="customerAddress" rows="3" required></textarea>
                         </div>
                         <div class="form-group">
-                            <label for="customerPassword">Mật khẩu:</label>
-                            <input type="password" class="form-control" id="customerPassword" required>
+                            <label for="taxCode">Mã số thuế:</label>
+                            <input type="text" class="form-control" id="taxCode">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerType">Loại khách hàng:</label>
+                            <select class="form-control" id="customerType" required>
+                                <option value="">Chọn loại khách hàng</option>
+                                <option value="individual">Cá nhân</option>
+                                <option value="business">Doanh nghiệp</option>
+                            </select>
                         </div>
                     </form>
                 </div>
@@ -316,19 +257,26 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h5>Thông tin cá nhân</h5>
-                            <p><strong>Họ tên:</strong> <span id="detailCustomerName"></span></p>
+                            <h5>Thông tin khách hàng</h5>
+                            <p><strong>ID:</strong> <span id="detailCustomerId"></span></p>
+                            <p><strong>Mã khách hàng:</strong> <span id="detailCustomerCode"></span></p>
+                            <p><strong>Tên công ty:</strong> <span id="detailCompanyName"></span></p>
+                            <p><strong>Người liên hệ:</strong> <span id="detailUserContract"></span></p>
                             <p><strong>Email:</strong> <span id="detailCustomerEmail"></span></p>
                             <p><strong>Số điện thoại:</strong> <span id="detailCustomerPhone"></span></p>
                             <p><strong>Địa chỉ:</strong> <span id="detailCustomerAddress"></span></p>
-                            <p><strong>Ngày đăng ký:</strong> <span id="detailCustomerJoinDate"></span></p>
                         </div>
                         <div class="col-md-6">
+                            <h5>Thông tin bổ sung</h5>
+                            <p><strong>Mã số thuế:</strong> <span id="detailTaxCode"></span></p>
+                            <p><strong>Loại khách hàng:</strong> <span id="detailCustomerType"></span></p>
+                            <p><strong>Ngày đăng ký:</strong> <span id="detailCustomerJoinDate"></span></p>
+                            <p><strong>Trạng thái:</strong> <span id="detailCustomerStatus"></span></p>
+                            <hr>
                             <h5>Thống kê mua hàng</h5>
                             <p><strong>Tổng đơn hàng:</strong> <span id="detailTotalOrders"></span></p>
                             <p><strong>Tổng chi tiêu:</strong> <span id="detailTotalSpent"></span></p>
                             <p><strong>Đơn hàng gần nhất:</strong> <span id="detailLastOrder"></span></p>
-                            <p><strong>Trạng thái:</strong> <span id="detailCustomerStatus"></span></p>
                         </div>
                     </div>
                     <hr>
@@ -356,90 +304,351 @@
     <script src="js/Director/app.js" type="text/javascript"></script>
 
     <script type="text/javascript">
+        var customersTable;
+        var currentEditingCustomer = null;
+
         $(document).ready(function() {
-            $('#customersTable').DataTable({
+            // Initialize DataTable
+            customersTable = $('#customersTable').DataTable({
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
-                }
+                },
+                "processing": true,
+                "serverSide": false,
+                "ajax": {
+                    "url": "../api/customers?action=list",
+                    "type": "GET",
+                    "dataSrc": "data"
+                },
+                "columns": [
+                    { "data": "id" },
+                    { "data": "customerCode" },
+                    { "data": "companyName" },
+                    { "data": "contactPerson" },
+                    { "data": "email" },
+                    { "data": "phone" },
+                    { "data": "address" },
+                    { "data": "taxCode" },
+                    { 
+                        "data": "customerType",
+                        "render": function(data, type, row) {
+                            var labelClass = data === 'business' ? 'label-primary' : 'label-info';
+                            var labelText = data === 'business' ? 'Doanh nghiệp' : 'Cá nhân';
+                            return '<span class="label ' + labelClass + '">' + labelText + '</span>';
+                        }
+                    },
+                    {
+                        "data": null,
+                        "render": function(data, type, row) {
+                            var buttons = '<button class="btn btn-info btn-xs" onclick="viewCustomer(' + row.id + ')">' +
+                                        '<i class="fa fa-eye"></i> Xem</button> ';
+                            
+                            buttons += '<button class="btn btn-warning btn-xs" onclick="editCustomer(' + row.id + ')">' +
+                                      '<i class="fa fa-edit"></i> Sửa</button> ';
+                            
+                            if (row.status === 'active') {
+                                buttons += '<button class="btn btn-danger btn-xs" onclick="deleteCustomer(' + row.id + ')">' +
+                                          '<i class="fa fa-trash"></i> Xóa</button>';
+                            } else {
+                                buttons += '<button class="btn btn-success btn-xs" onclick="activateCustomer(' + row.id + ')">' +
+                                          '<i class="fa fa-unlock"></i> Kích hoạt</button>';
+                            }
+                            
+                            return buttons;
+                        }
+                    }
+                ]
             });
+
+            // Load initial data
+            loadCustomers();
         });
 
+        function loadCustomers() {
+            $.ajax({
+                url: '../api/customers?action=list',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        populateTable(response.data);
+                    } else {
+                        showAlert('Lỗi khi tải dữ liệu: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    showAlert('Lỗi kết nối đến server', 'danger');
+                }
+            });
+        }
+
+        function populateTable(customers) {
+            var tbody = $('#customersTableBody');
+            tbody.empty();
+            
+            customers.forEach(function(customer) {
+                var row = '<tr>' +
+                    '<td>' + customer.id + '</td>' +
+                    '<td>' + customer.customerCode + '</td>' +
+                    '<td>' + customer.companyName + '</td>' +
+                    '<td>' + customer.contactPerson + '</td>' +
+                    '<td>' + customer.email + '</td>' +
+                    '<td>' + customer.phone + '</td>' +
+                    '<td>' + customer.address + '</td>' +
+                    '<td>' + (customer.taxCode || '-') + '</td>' +
+                    '<td>' + getCustomerTypeLabel(customer.customerType) + '</td>' +
+                    '<td>' + getActionButtons(customer) + '</td>' +
+                    '</tr>';
+                tbody.append(row);
+            });
+        }
+
+        function getCustomerTypeLabel(type) {
+            if (type === 'business') {
+                return '<span class="label label-primary">Doanh nghiệp</span>';
+            } else {
+                return '<span class="label label-info">Cá nhân</span>';
+            }
+        }
+
+        function getActionButtons(customer) {
+            var buttons = '<button class="btn btn-info btn-xs" onclick="viewCustomer(' + customer.id + ')">' +
+                         '<i class="fa fa-eye"></i> Xem</button> ';
+            
+            buttons += '<button class="btn btn-warning btn-xs" onclick="editCustomer(' + customer.id + ')">' +
+                      '<i class="fa fa-edit"></i> Sửa</button> ';
+            
+            if (customer.status === 'active') {
+                buttons += '<button class="btn btn-danger btn-xs" onclick="deleteCustomer(' + customer.id + ')">' +
+                          '<i class="fa fa-trash"></i> Xóa</button>';
+            } else {
+                buttons += '<button class="btn btn-success btn-xs" onclick="activateCustomer(' + customer.id + ')">' +
+                          '<i class="fa fa-unlock"></i> Kích hoạt</button>';
+            }
+            
+            return buttons;
+        }
+
         function viewCustomer(id) {
-            // Mock data - trong thực tế sẽ lấy từ server
-            document.getElementById('detailCustomerName').textContent = 'Nguyễn Văn A';
-            document.getElementById('detailCustomerEmail').textContent = 'nguyenvana@email.com';
-            document.getElementById('detailCustomerPhone').textContent = '0123456789';
-            document.getElementById('detailCustomerAddress').textContent = '123 Đường ABC, Quận 1, TP.HCM';
-            document.getElementById('detailCustomerJoinDate').textContent = '15/08/2025';
-            document.getElementById('detailTotalOrders').textContent = '5';
-            document.getElementById('detailTotalSpent').textContent = '2,500,000 VNĐ';
-            document.getElementById('detailLastOrder').textContent = '21/09/2025';
-            document.getElementById('detailCustomerStatus').innerHTML = '<span class="label label-success">Hoạt động</span>';
+            $.ajax({
+                url: '../api/customers?action=get&id=' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var customer = response.data;
+                        populateCustomerDetail(customer);
+                        $('#customerDetailModal').modal('show');
+                    } else {
+                        showAlert('Không thể tải thông tin khách hàng: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    showAlert('Lỗi kết nối đến server', 'danger');
+                }
+            });
+        }
+
+        function populateCustomerDetail(customer) {
+            document.getElementById('detailCustomerId').textContent = customer.id;
+            document.getElementById('detailCustomerCode').textContent = customer.customerCode;
+            document.getElementById('detailCompanyName').textContent = customer.companyName;
+            document.getElementById('detailUserContract').textContent = customer.contactPerson;
+            document.getElementById('detailCustomerEmail').textContent = customer.email;
+            document.getElementById('detailCustomerPhone').textContent = customer.phone;
+            document.getElementById('detailCustomerAddress').textContent = customer.address;
+            document.getElementById('detailTaxCode').textContent = customer.taxCode || '-';
+            document.getElementById('detailCustomerType').innerHTML = getCustomerTypeLabel(customer.customerType);
+            document.getElementById('detailCustomerJoinDate').textContent = formatDate(customer.createdAt);
+            document.getElementById('detailCustomerStatus').innerHTML = getStatusLabel(customer.status);
             
-            document.getElementById('customerOrders').innerHTML = `
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Mã đơn hàng</th>
-                            <th>Ngày đặt</th>
-                            <th>Tổng tiền</th>
-                            <th>Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>#ORD001</td>
-                            <td>21/09/2025</td>
-                            <td>1,000,000 VNĐ</td>
-                            <td><span class="label label-warning">Đang xử lý</span></td>
-                        </tr>
-                        <tr>
-                            <td>#ORD002</td>
-                            <td>15/09/2025</td>
-                            <td>750,000 VNĐ</td>
-                            <td><span class="label label-success">Hoàn thành</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            `;
+            // Mock data for orders (in real app, this would come from another API)
+            document.getElementById('detailTotalOrders').textContent = '0';
+            document.getElementById('detailTotalSpent').textContent = '0 VNĐ';
+            document.getElementById('detailLastOrder').textContent = '-';
             
-            $('#customerDetailModal').modal('show');
+            document.getElementById('customerOrders').innerHTML = '<p class="text-muted">Chưa có đơn hàng nào</p>';
+        }
+
+        function getStatusLabel(status) {
+            if (status === 'active') {
+                return '<span class="label label-success">Hoạt động</span>';
+            } else {
+                return '<span class="label label-warning">Tạm khóa</span>';
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            var date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN');
         }
 
         function editCustomer(id) {
-            alert('Chỉnh sửa khách hàng ID: ' + id);
-            // Thêm logic chỉnh sửa khách hàng ở đây
+            $.ajax({
+                url: '../api/customers?action=get&id=' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var customer = response.data;
+                        populateEditForm(customer);
+                        currentEditingCustomer = customer;
+                        $('#addCustomerModal').modal('show');
+                        $('#addCustomerModalLabel').text('Chỉnh sửa khách hàng');
+                    } else {
+                        showAlert('Không thể tải thông tin khách hàng: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    showAlert('Lỗi kết nối đến server', 'danger');
+                }
+            });
+        }
+
+        function populateEditForm(customer) {
+            document.getElementById('customerCode').value = customer.customerCode;
+            document.getElementById('companyName').value = customer.companyName;
+            document.getElementById('userContract').value = customer.contactPerson;
+            document.getElementById('customerEmail').value = customer.email;
+            document.getElementById('customerPhone').value = customer.phone;
+            document.getElementById('customerAddress').value = customer.address;
+            document.getElementById('taxCode').value = customer.taxCode || '';
+            document.getElementById('customerType').value = customer.customerType;
         }
 
         function deleteCustomer(id) {
             if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
-                alert('Đã xóa khách hàng ID: ' + id);
-                // Thêm logic xóa khách hàng ở đây
+                $.ajax({
+                    url: '../api/customers',
+                    type: 'POST',
+                    data: {
+                        action: 'delete',
+                        id: id
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('Đã xóa khách hàng thành công', 'success');
+                            loadCustomers();
+                        } else {
+                            showAlert('Lỗi khi xóa khách hàng: ' + response.message, 'danger');
+                        }
+                    },
+                    error: function() {
+                        showAlert('Lỗi kết nối đến server', 'danger');
+                    }
+                });
             }
         }
 
         function activateCustomer(id) {
             if (confirm('Bạn có chắc chắn muốn kích hoạt khách hàng này?')) {
-                alert('Đã kích hoạt khách hàng ID: ' + id);
-                // Thêm logic kích hoạt khách hàng ở đây
+                $.ajax({
+                    url: '../api/customers',
+                    type: 'POST',
+                    data: {
+                        action: 'activate',
+                        id: id
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert('Đã kích hoạt khách hàng thành công', 'success');
+                            loadCustomers();
+                        } else {
+                            showAlert('Lỗi khi kích hoạt khách hàng: ' + response.message, 'danger');
+                        }
+                    },
+                    error: function() {
+                        showAlert('Lỗi kết nối đến server', 'danger');
+                    }
+                });
             }
         }
 
         function saveCustomer() {
-            var customerName = document.getElementById('customerName').value;
+            var customerCode = document.getElementById('customerCode').value;
+            var companyName = document.getElementById('companyName').value;
+            var userContract = document.getElementById('userContract').value;
             var customerEmail = document.getElementById('customerEmail').value;
             var customerPhone = document.getElementById('customerPhone').value;
             var customerAddress = document.getElementById('customerAddress').value;
-            var customerPassword = document.getElementById('customerPassword').value;
+            var taxCode = document.getElementById('taxCode').value;
+            var customerType = document.getElementById('customerType').value;
 
-            if (customerName && customerEmail && customerPhone && customerAddress && customerPassword) {
-                alert('Đã lưu khách hàng: ' + customerName);
-                $('#addCustomerModal').modal('hide');
-                // Thêm logic lưu khách hàng vào database ở đây
-            } else {
-                alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+            if (!customerCode || !companyName || !userContract || !customerEmail || !customerPhone || !customerAddress || !customerType) {
+                showAlert('Vui lòng điền đầy đủ thông tin bắt buộc', 'warning');
+                return;
             }
+
+            var formData = {
+                customerCode: customerCode,
+                companyName: companyName,
+                userContract: userContract,
+                customerEmail: customerEmail,
+                customerPhone: customerPhone,
+                customerAddress: customerAddress,
+                taxCode: taxCode,
+                customerType: customerType
+            };
+
+            var url = '../api/customers';
+            var action = currentEditingCustomer ? 'update' : 'add';
+            formData.action = action;
+            
+            if (currentEditingCustomer) {
+                formData.id = currentEditingCustomer.id;
+            }
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        showAlert(response.message, 'success');
+                        $('#addCustomerModal').modal('hide');
+                        document.getElementById('addCustomerForm').reset();
+                        currentEditingCustomer = null;
+                        $('#addCustomerModalLabel').text('Thêm khách hàng mới');
+                        loadCustomers();
+                    } else {
+                        showAlert('Lỗi: ' + response.message, 'danger');
+                    }
+                },
+                error: function() {
+                    showAlert('Lỗi kết nối đến server', 'danger');
+                }
+            });
         }
+
+        function showAlert(message, type) {
+            var alertClass = 'alert-' + type;
+            var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade in" role="alert">' +
+                           '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                           '<span aria-hidden="true">&times;</span></button>' +
+                           message + '</div>';
+            
+            // Remove existing alerts
+            $('.alert').remove();
+            
+            // Add new alert
+            $('.content').prepend(alertHtml);
+            
+            // Auto remove after 5 seconds
+            setTimeout(function() {
+                $('.alert').fadeOut();
+            }, 5000);
+        }
+
+        // Reset form when modal is closed
+        $('#addCustomerModal').on('hidden.bs.modal', function() {
+            document.getElementById('addCustomerForm').reset();
+            currentEditingCustomer = null;
+            $('#addCustomerModalLabel').text('Thêm khách hàng mới');
+        });
     </script>
 </body>
 </html>

@@ -1,3 +1,9 @@
-C:\Users\Admin\Desktop\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-C:\Users\Admin\Desktop\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-C:\Users\Admin\Desktop\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+E:\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java

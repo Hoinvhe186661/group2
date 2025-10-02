@@ -13,7 +13,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel | Dashboard</title>
+    <title>Bảng điều khiển | Bảng điều khiển</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     <meta name="description" content="Admin Panel for Web Application">
     <meta name="keywords" content="Admin, Bootstrap 3, Template, Theme, Responsive">
@@ -49,7 +49,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="admin.jsp" class="logo">
-            Admin Panel
+            Bảng điều khiển quản trị
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -160,7 +160,7 @@
                 <ul class="sidebar-menu">
                     <li class="active">
                         <a href="admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
                     <li>
@@ -363,7 +363,7 @@
                 </div>
             </section><!-- /.content -->
             <div class="footer-main">
-                Copyright &copy Admin Panel, 2025
+                Copyright &copy Bảng điều khiển quản trị, 2025
             </div>
         </aside><!-- /.right-side -->
     </div><!-- ./wrapper -->

@@ -138,6 +138,7 @@
             color: var(--primary-red);
         }
 
+
         .navbar-nav .nav-link {
             color: var(--dark-grey) !important;
             font-weight: 500;
@@ -663,13 +664,13 @@
                 </div>
             </a>
             
-            <div class="search-container">
+            <div class="search-container" id="searchContainer">
                 <input type="text" class="search-input" placeholder="Tìm kiếm...">
                 <i class="fas fa-search search-icon"></i>
             </div>
             
             <div class="contact-info-nav">
-                <div class="phone-number">
+                <div class="phone-number" id="phoneNumber">
                     <i class="fas fa-phone"></i> 0989.888.999
                 </div>
                 <div class="nav-icons">
@@ -925,6 +926,7 @@
         document.querySelector('.learn-more-btn .btn').addEventListener('click', function() {
             alert('Cảm ơn bạn đã quan tâm! Chúng tôi sẽ liên hệ lại sớm nhất.');
         });
+
     </script>
 </body>
 </html>

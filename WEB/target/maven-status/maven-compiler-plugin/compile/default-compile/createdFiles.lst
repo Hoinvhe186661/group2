@@ -1,3 +1,10 @@
 com\hlgenerator\dao\DBConnect.class
+com\hlgenerator\dao\UserDAO.class
+com\hlgenerator\dao\UserDAO$UserRecord.class
+com\hlgenerator\dao\CustomerDAO.class
+com\hlgenerator\model\Customer.class
+com\hlgenerator\dao\SupportRequestDAO.class
+com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class
+com\hlgenerator\servlet\SupportRequestServlet.class
 com\hlgenerator\servlet\LogoutServlet.class

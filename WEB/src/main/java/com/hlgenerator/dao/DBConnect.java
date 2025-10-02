@@ -12,10 +12,13 @@ public class DBConnect {
     public DBConnect() {
         try {
             String user = "root";
-            String pass = "12345";
-            String url = "jdbc:mysql://localhost:3306/hlelectric?useSSL=false&allowPublicKeyRetrieval=true";
+            String pass = "phuc1374";
+            String url = "jdbc:mysql://localhost:3306/hlelectric?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8";
             Class.forName("com.mysql.cj.jdbc.Driver");
             connection = DriverManager.getConnection(url, user, pass);
+            try {
+                connection.createStatement().execute("SET time_zone = '+07:00'");
+            } catch (SQLException ignore) {}
         } catch (ClassNotFoundException | SQLException ex) {
             Logger.getLogger(DBConnect.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -31,5 +34,3 @@ public class DBConnect {
         }
     }
 }
-
-

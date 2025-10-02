@@ -1,5 +1,6 @@
-CREATE DATABASE IF NOT EXISTS hl_electric;
-USE hl_electric;
+-- Active: 1758022074282@@127.0.0.1@3306
+
+USE hlelectric;
 
 -- 1. USERS
 CREATE TABLE users (
@@ -9,8 +10,8 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100),
     phone VARCHAR(20),
-    role ENUM('admin', 'customer_support', 'technical_staff', 'head_technician', 'storekeeper', 'guest') NOT NULL,
-    permissions JSON, -- Lưu trực tiếp quyền vào JSON thay vì tách bảng
+    role ENUM('admin', 'customer_support', 'technical_staff', 'head_technician', 'storekeeper', 'customer', 'guest') NOT NULL,
+    permissions JSON,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -52,7 +53,7 @@ CREATE TABLE contracts (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- 4. SUPPLIERS 
+-- 4. SUPPLIERS
 CREATE TABLE suppliers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     supplier_code VARCHAR(20) UNIQUE NOT NULL,
@@ -61,7 +62,7 @@ CREATE TABLE suppliers (
     email VARCHAR(100),
     phone VARCHAR(20),
     address TEXT,
-    bank_info JSON, -- {account_number, bank_name}
+    bank_info JSON,
     status ENUM('active', 'inactive') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -77,6 +78,7 @@ CREATE TABLE products (
     unit_price DECIMAL(10,2),
     supplier_id INT,
     specifications TEXT,
+    image_url VARCHAR(500),
     warranty_months INT DEFAULT 12,
     status ENUM('active', 'discontinued') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -84,7 +86,22 @@ CREATE TABLE products (
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
 );
 
--- 6. INVENTORY
+-- 6. CONTRACT_PRODUCTS:
+CREATE TABLE contract_products (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    contract_id INT NOT NULL,
+    product_id INT NOT NULL,
+    description VARCHAR(500),
+    quantity DECIMAL(10,2) NOT NULL,
+    unit_price DECIMAL(15,2) NOT NULL,
+    line_total DECIMAL(15,2) GENERATED ALWAYS AS (quantity*unit_price) STORED,
+    warranty_months INT,
+    notes TEXT,
+    FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- 7. INVENTORY
 CREATE TABLE inventory (
     id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL,
@@ -97,14 +114,14 @@ CREATE TABLE inventory (
     UNIQUE KEY unique_product_location (product_id, warehouse_location)
 );
 
--- 7. STOCK_HISTORY
+-- 8. STOCK_HISTORY
 CREATE TABLE stock_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT NOT NULL,
     warehouse_location VARCHAR(100) DEFAULT 'Main Warehouse',
     movement_type ENUM('in', 'out', 'adjustment') NOT NULL,
-    quantity INT NOT NULL, -- âm nếu xuất, dương nếu nhập
-    reference_type VARCHAR(50), -- 'purchase', 'sale', 'work_order', 'adjustment'
+    quantity INT NOT NULL,
+    reference_type VARCHAR(50),
     reference_id INT,
     unit_cost DECIMAL(10,2),
     notes TEXT,
@@ -114,17 +131,17 @@ CREATE TABLE stock_history (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- 8. WORK_ORDERS 
+-- 9. WORK_ORDERS
 CREATE TABLE work_orders (
     id INT PRIMARY KEY AUTO_INCREMENT,
     work_order_number VARCHAR(50) UNIQUE NOT NULL,
     customer_id INT NOT NULL,
-    contract_id INT, -- Liên kết với hợp đồng
+    contract_id INT,
     title VARCHAR(200) NOT NULL,
     description TEXT,
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
-    assigned_to INT, -- head technician
+    assigned_to INT,
     estimated_hours DECIMAL(5,2),
     actual_hours DECIMAL(5,2),
     scheduled_date DATE,
@@ -138,28 +155,38 @@ CREATE TABLE work_orders (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- 9. TASKS
+-- 10. TASKS
 CREATE TABLE tasks (
     id INT PRIMARY KEY AUTO_INCREMENT,
     work_order_id INT NOT NULL,
     task_number VARCHAR(20),
     task_description TEXT NOT NULL,
-    assigned_technician INT,
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     estimated_hours DECIMAL(5,2),
     actual_hours DECIMAL(5,2),
     start_date DATETIME,
     completion_date DATETIME,
-    equipment_used JSON, -- [{equipment_id, equipment_name, quantity}]
+    equipment_used JSON,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (assigned_technician) REFERENCES users(id)
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON DELETE CASCADE
 );
 
--- 10. SUPPORT_REQUESTS
+-- 11. TASK_ASSIGNMENTS
+CREATE TABLE task_assignments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    task_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role VARCHAR(50),
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_task_user (task_id, user_id)
+);
+
+-- 12. SUPPORT_REQUESTS
 CREATE TABLE support_requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
     ticket_number VARCHAR(50) UNIQUE NOT NULL,
@@ -170,10 +197,7 @@ CREATE TABLE support_requests (
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     status ENUM('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
     assigned_to INT,
-    
-    -- History gộp vào JSON thay vì tách bảng
-    history JSON, -- [{action, description, user, timestamp}]
-    
+    history JSON,
     resolution TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_at DATETIME,
@@ -181,27 +205,24 @@ CREATE TABLE support_requests (
     FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
 
--- 11. INVOICES
+-- 13. INVOICES
 CREATE TABLE invoices (
     id INT PRIMARY KEY AUTO_INCREMENT,
     invoice_number VARCHAR(50) UNIQUE NOT NULL,
     customer_id INT NOT NULL,
     work_order_id INT,
-    contract_id INT, -- Link đến hợp đồng
+    contract_id INT,
     invoice_date DATE NOT NULL,
     due_date DATE NOT NULL,
     subtotal DECIMAL(15,2) NOT NULL,
     tax_rate DECIMAL(5,2) DEFAULT 10.00,
     tax_amount DECIMAL(15,2) NOT NULL,
     total_amount DECIMAL(15,2) NOT NULL,
-    
-    -- Payment info
     payment_status ENUM('unpaid', 'partial', 'paid', 'overdue') DEFAULT 'unpaid',
-    payment_method VARCHAR(50), -- 'cash', 'transfer', 'card', 'check'
+    payment_method VARCHAR(50),
     payment_date DATE,
     payment_reference VARCHAR(100),
     paid_amount DECIMAL(15,2) DEFAULT 0,
-    
     notes TEXT,
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -212,7 +233,7 @@ CREATE TABLE invoices (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- 12. INVOICE_ITEMS
+-- 14. INVOICE_ITEMS
 CREATE TABLE invoice_items (
     id INT PRIMARY KEY AUTO_INCREMENT,
     invoice_id INT NOT NULL,
@@ -226,7 +247,7 @@ CREATE TABLE invoice_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- 13. EQUIPMENT
+-- 15. EQUIPMENT
 CREATE TABLE equipment (
     id INT PRIMARY KEY AUTO_INCREMENT,
     equipment_code VARCHAR(50) UNIQUE NOT NULL,
@@ -236,47 +257,64 @@ CREATE TABLE equipment (
     status ENUM('available', 'in_use', 'maintenance', 'retired') DEFAULT 'available',
     location VARCHAR(200),
     assigned_to INT,
-    purchase_info JSON, -- {date, cost, supplier, warranty_expiry}
+    purchase_info JSON,
+    image_url VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
 
--- 14. ACTIVITY_LOGS
+-- 16. ACTIVITY_LOGS
 CREATE TABLE activity_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT,
     action VARCHAR(100) NOT NULL,
     table_name VARCHAR(50),
     record_id INT,
-    details JSON, -- Lưu chi tiết thay đổi
+    details JSON,
     ip_address VARCHAR(45),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 15. SETTINGS
+-- 17. SETTINGS
 CREATE TABLE settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     setting_key VARCHAR(100) UNIQUE NOT NULL,
     setting_value TEXT,
     description TEXT,
-    updated_by INT, -- Admin nào thay đổi
+    updated_by INT,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Insert dữ liệu cài đặt cho công ty máy phát điện
+-- Dữ liệu mẫu
 INSERT INTO settings (setting_key, setting_value, description) VALUES
 ('company_name', 'HL Generator Solutions', 'Tên công ty'),
 ('tax_rate', '10.00', 'Thuế suất mặc định (%)'),
 ('default_warranty', '24', 'Bảo hành mặc định cho máy phát điện (tháng)'),
 ('low_stock_alert', '5', 'Cảnh báo tồn kho thấp cho thiết bị');
 
--- Tạo user admin mặc định
 INSERT INTO users (username, email, password_hash, full_name, role, permissions) VALUES
-('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 
- 'System Administrator', 'admin', 
+('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'System Administrator', 'admin',
  '["all_permissions"]'),
-('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 
- 'Nguyễn Văn Tâm', 'head_technician', 
+('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'Nguyễn Văn Tâm', 'head_technician',
  '["view_work_orders", "manage_tasks", "view_inventory"]');
+
+INSERT INTO users (username, email, password_hash, full_name, role, permissions, is_active)
+VALUES ('phuc2','phuc2@example.com','phuc2004','Demo Customer','customer','[]',1)
+ON DUPLICATE KEY UPDATE password_hash='phuc2004', role='customer', is_active=1;
+
+-- create a customer with matching email to link session customerId
+INSERT INTO customers (customer_code, company_name, contact_person, email, phone, address, tax_code, customer_type, status)
+VALUES ('CUST999','Demo Co','Phuc','phuc2@example.com','0900000000','HN','', 'company','active')
+ON DUPLICATE KEY UPDATE status='active';
+
+-- sample support tickets for that customer
+INSERT INTO support_requests (ticket_number, customer_id, subject, description, category, priority, status)
+SELECT CONCAT('SR-', LPAD(IFNULL(MAX(id),0)+1,5,'0')), c.id, 'Máy không nổ', 'Kiểm tra hệ thống đề', 'technical','high','open'
+FROM customers c WHERE c.email='phuc2@example.com';
+INSERT INTO support_requests (ticket_number, customer_id, subject, description, category, priority, status)
+SELECT CONCAT('SR-', LPAD(IFNULL(MAX(id),0)+2,5,'0')), c.id, 'Bảo trì định kỳ', 'Lịch bảo trì tháng này', 'general','medium','open'
+FROM customers c WHERE c.email='phuc2@example.com';
