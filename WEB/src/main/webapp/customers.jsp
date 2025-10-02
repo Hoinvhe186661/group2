@@ -17,6 +17,131 @@
     <!-- Theme style -->
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    
+    <!-- Custom styles for action buttons -->
+    <style>
+        .action-buttons {
+            white-space: nowrap;
+            min-width: 200px;
+            max-width: 250px;
+        }
+        
+        .action-buttons .btn-group {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+        }
+        
+        .action-buttons .btn {
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 4px;
+            border: none;
+            transition: all 0.15s ease;
+            text-transform: none;
+            letter-spacing: 0.3px;
+            flex: 1;
+            min-width: 60px;
+        }
+        
+        /* Màu sắc nút */
+        .action-buttons .btn-info {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+        }
+        .action-buttons .btn-info:hover {
+            background: linear-gradient(135deg, #2980b9, #21618c);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.4);
+        }
+        
+        .action-buttons .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            box-shadow: 0 2px 4px rgba(243, 156, 18, 0.3);
+        }
+        .action-buttons .btn-warning:hover {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(243, 156, 18, 0.4);
+        }
+        
+        .action-buttons .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            box-shadow: 0 2px 4px rgba(39, 174, 96, 0.3);
+        }
+        .action-buttons .btn-success:hover {
+            background: linear-gradient(135deg, #229954, #1e8449);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(39, 174, 96, 0.4);
+        }
+        
+        .action-buttons .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            box-shadow: 0 2px 4px rgba(231, 76, 60, 0.3);
+        }
+        .action-buttons .btn-danger:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4);
+        }
+        
+        /* Icon styling */
+        .action-buttons .btn i {
+            margin-right: 4px;
+            font-size: 10px;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .action-buttons {
+                min-width: 180px;
+                max-width: 220px;
+            }
+            .action-buttons .btn {
+                padding: 3px 8px;
+                font-size: 10px;
+                min-width: 50px;
+            }
+            .action-buttons .btn-group {
+                gap: 4px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .action-buttons {
+                min-width: 160px;
+                max-width: 200px;
+            }
+            .action-buttons .btn {
+                padding: 2px 6px;
+                font-size: 9px;
+                min-width: 45px;
+            }
+            .action-buttons .btn i {
+                margin-right: 2px;
+            }
+            .action-buttons .btn-group {
+                gap: 3px;
+            }
+        }
+        
+        /* Focus states */
+        .action-buttons .btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Active states */
+        .action-buttons .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+    </style>
 </head>
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
@@ -313,91 +438,40 @@
         var currentEditingCustomer = null;
 
         $(document).ready(function() {
-            // Initialize DataTable
+            // Initialize DataTable with pagination - sử dụng dữ liệu tĩnh từ JSP
             customersTable = $('#customersTable').DataTable({
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
                 },
-                "processing": true,
+                "processing": false,
                 "serverSide": false,
-                "ajax": {
-                    "url": "api/customers?action=list",
-                    "type": "GET",
-                    "dataSrc": "data"
-                },
-                "columns": [
-                    { "data": "id" },
-                    { "data": "customerCode" },
-                    { "data": "companyName" },
-                    { "data": "contactPerson" },
-                    { "data": "email" },
-                    { "data": "phone" },
-                    { "data": "address" },
-                    { "data": "taxCode" },
-                    { 
-                        "data": "customerType",
-                        "render": function(data, type, row) {
-                            return getCustomerTypeLabel(data);
-                        }
-                    },
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tất cả"]],
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "autoWidth": false,
+                "responsive": true,
+                "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>' +
+                       '<"row"<"col-sm-12"tr>>' +
+                       '<"row"<"col-sm-5"i><"col-sm-7"p>>',
+                "order": [[0, "desc"]],
+                "columnDefs": [
                     {
-                        "data": "status",
-                        "render": function(data, type, row) {
-                            return getStatusLabel(data);
-                        }
-                    },
-                    {
-                        "data": null,
-                        "render": function(data, type, row) {
-                            return getActionButtons(row);
-                        }
+                        "targets": [10], // Cột thao tác
+                        "orderable": false,
+                        "searchable": false
                     }
                 ]
             });
-
-            // Load initial data
-            loadCustomers();
         });
 
-        function loadCustomers() {
-            $.ajax({
-                url: 'api/customers?action=list',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        populateTable(response.data);
-                    } else {
-                        showAlert('Lỗi khi tải dữ liệu: ' + response.message, 'danger');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText);
-                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                }
-            });
-        }
-
-        function populateTable(customers) {
-            var tbody = $('#customersTableBody');
-            tbody.empty();
-            
-            customers.forEach(function(customer) {
-                var row = '<tr>' +
-                    '<td>' + customer.id + '</td>' +
-                    '<td>' + customer.customerCode + '</td>' +
-                    '<td>' + customer.companyName + '</td>' +
-                    '<td>' + customer.contactPerson + '</td>' +
-                    '<td>' + customer.email + '</td>' +
-                    '<td>' + customer.phone + '</td>' +
-                    '<td>' + customer.address + '</td>' +
-                    '<td>' + (customer.taxCode || '-') + '</td>' +
-                    '<td>' + getCustomerTypeLabel(customer.customerType) + '</td>' +
-                    '<td>' + getStatusLabel(customer.status) + '</td>' +
-                    '<td>' + getActionButtons(customer) + '</td>' +
-                    '</tr>';
-                tbody.append(row);
-            });
+        // Hàm refresh bảng sau khi thao tác
+        function refreshTable() {
+            if (customersTable) {
+                customersTable.draw();
+            }
         }
 
         function getCustomerTypeLabel(type) {
@@ -409,19 +483,23 @@
         }
 
         function getActionButtons(customer) {
-            var buttons = '<button class="btn btn-info btn-xs" onclick="viewCustomer(' + customer.id + ')">' +
-                         '<i class="fa fa-eye"></i> Xem</button> ';
+            var buttons = '<div class="btn-group">';
             
-            buttons += '<button class="btn btn-warning btn-xs" onclick="editCustomer(' + customer.id + ')">' +
-                      '<i class="fa fa-edit"></i> Sửa</button> ';
+            // Tất cả nút nằm ngang
+            buttons += '<button class="btn btn-info btn-xs" onclick="viewCustomer(' + customer.id + ')" title="Xem chi tiết">' +
+                      '<i class="fa fa-eye"></i> Xem</button>';
+            buttons += '<button class="btn btn-warning btn-xs" onclick="editCustomer(' + customer.id + ')" title="Chỉnh sửa">' +
+                      '<i class="fa fa-edit"></i> Sửa</button>';
             
             if (customer.status === 'active') {
-                buttons += '<button class="btn btn-danger btn-xs" onclick="deleteCustomer(' + customer.id + ')">' +
+                buttons += '<button class="btn btn-danger btn-xs" onclick="deleteCustomer(' + customer.id + ')" title="Xóa khách hàng">' +
                           '<i class="fa fa-trash"></i> Xóa</button>';
             } else {
-                buttons += '<button class="btn btn-success btn-xs" onclick="activateCustomer(' + customer.id + ')">' +
+                buttons += '<button class="btn btn-success btn-xs" onclick="activateCustomer(' + customer.id + ')" title="Kích hoạt khách hàng">' +
                           '<i class="fa fa-unlock"></i> Kích hoạt</button>';
             }
+            
+            buttons += '</div>';
             
             return buttons;
         }
@@ -537,7 +615,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã xóa khách hàng thành công', 'success');
-                            loadCustomers();
+                            location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi xóa khách hàng: ' + response.message, 'danger');
                         }
@@ -563,7 +641,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã kích hoạt khách hàng thành công', 'success');
-                            loadCustomers();
+                            location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi kích hoạt khách hàng: ' + response.message, 'danger');
                         }
@@ -615,18 +693,18 @@
                 type: 'POST',
                 data: formData,
                 dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        showAlert(response.message, 'success');
-                        $('#addCustomerModal').modal('hide');
-                        document.getElementById('addCustomerForm').reset();
-                        currentEditingCustomer = null;
-                        $('#addCustomerModalLabel').text('Thêm khách hàng mới');
-                        loadCustomers();
-                    } else {
-                        showAlert('Lỗi: ' + response.message, 'danger');
-                    }
-                },
+                    success: function(response) {
+                        if (response.success) {
+                            showAlert(response.message, 'success');
+                            $('#addCustomerModal').modal('hide');
+                            document.getElementById('addCustomerForm').reset();
+                            currentEditingCustomer = null;
+                            $('#addCustomerModalLabel').text('Thêm khách hàng mới');
+                            location.reload(); // Reload trang để cập nhật dữ liệu
+                        } else {
+                            showAlert('Lỗi: ' + response.message, 'danger');
+                        }
+                    },
                 error: function(xhr, status, error) {
                     console.error('AJAX Error:', xhr.responseText);
                     showAlert('Lỗi kết nối đến server: ' + error, 'danger');

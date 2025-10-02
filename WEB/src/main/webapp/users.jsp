@@ -18,29 +18,89 @@
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     
-    <!-- Custom styles for action buttons -->
     <style>
-        .btn-group .dropdown-menu {
-            min-width: 150px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        :root {
+            --btn-padding: 4px 12px;
+            --btn-radius: 4px;
+            --btn-transition: all 0.15s ease;
+            --shadow-light: 0 2px 4px;
+            --shadow-hover: 0 4px 8px;
         }
-        .btn-group .dropdown-menu li a {
-            padding: 8px 15px;
-            font-size: 12px;
-        }
-        .btn-group .dropdown-menu li a:hover {
-            background-color: #f5f5f5;
-        }
-        .btn-group .dropdown-menu .divider {
-            margin: 5px 0;
-        }
+        
         .action-buttons {
             white-space: nowrap;
+            min-width: 200px;
+            max-width: 250px;
         }
-        .btn-xs {
-            padding: 2px 6px;
+        
+        .action-buttons .btn-group {
+            display: flex;
+            gap: 4px;
+            width: 100%;
+        }
+        
+        .action-buttons .btn {
+            padding: var(--btn-padding);
             font-size: 11px;
-            margin-right: 2px;
+            font-weight: 500;
+            border-radius: var(--btn-radius);
+            border: none;
+            transition: var(--btn-transition);
+            text-transform: none;
+            letter-spacing: 0.3px;
+            flex: 1;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .action-buttons .dropdown-menu {
+            min-width: 180px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: none;
+            border-radius: 6px;
+            padding: 5px 0;
+        }
+        
+        .action-buttons .dropdown-menu li a {
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #333;
+            transition: var(--btn-transition);
+        }
+        
+        .action-buttons .dropdown-menu li a:hover {
+            background-color: #f8f9fa;
+            color: #000;
+        }
+        
+        .action-buttons .dropdown-menu .divider {
+            margin: 5px 0;
+            background-color: #e9ecef;
+        }
+        
+        .action-buttons .btn i {
+            margin-right: 4px;
+            font-size: 10px;
+        }
+        
+        /* Button colors */
+        .action-buttons .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: var(--shadow-light) rgba(52, 152, 219, 0.3); }
+        .action-buttons .btn-info:hover { background: linear-gradient(135deg, #2980b9, #21618c); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(52, 152, 219, 0.4); }
+        .action-buttons .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; box-shadow: var(--shadow-light) rgba(243, 156, 18, 0.3); }
+        .action-buttons .btn-warning:hover { background: linear-gradient(135deg, #e67e22, #d35400); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(243, 156, 18, 0.4); }
+        .action-buttons .btn-primary { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; box-shadow: var(--shadow-light) rgba(155, 89, 182, 0.3); }
+        .action-buttons .btn-primary:hover { background: linear-gradient(135deg, #8e44ad, #7d3c98); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(155, 89, 182, 0.4); }
+        .action-buttons .btn-success { background: linear-gradient(135deg, #27ae60, #229954); color: white; box-shadow: var(--shadow-light) rgba(39, 174, 96, 0.3); }
+        .action-buttons .btn-success:hover { background: linear-gradient(135deg, #229954, #1e8449); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(39, 174, 96, 0.4); }
+        .action-buttons .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; box-shadow: var(--shadow-light) rgba(231, 76, 60, 0.3); }
+        .action-buttons .btn-danger:hover { background: linear-gradient(135deg, #c0392b, #a93226); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(231, 76, 60, 0.4); }
+        
+        .action-buttons .btn:focus { outline: none; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); }
+        .action-buttons .btn:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        
+        @media (max-width: 768px) {
+            .action-buttons { min-width: 160px; max-width: 180px; }
+            .action-buttons .btn { padding: 3px 6px; font-size: 10px; }
         }
     </style>
 </head>
@@ -191,13 +251,37 @@
                                             <td><%= user.getRoleDisplayName() %></td>
                                             <td><%= user.getStatusDisplayName() %></td>
                                             <td>
-                                                <button class="btn btn-info btn-xs" onclick="viewUser('<%= user.getId() %>')"><i class="fa fa-eye"></i> Xem</button>
-                                                <button class="btn btn-warning btn-xs" onclick="editUser('<%= user.getId() %>')"><i class="fa fa-edit"></i> Sửa</button>
-                                                <% if (user.isActive()) { %>
-                                                    <button class="btn btn-danger btn-xs" onclick="deleteUser('<%= user.getId() %>')"><i class="fa fa-trash"></i> Xóa</button>
-                                                <% } else { %>
-                                                    <button class="btn btn-success btn-xs" onclick="activateUser('<%= user.getId() %>')"><i class="fa fa-unlock"></i> Kích hoạt</button>
-                                                <% } %>
+                                                <div class="action-buttons">
+                                                    <div class="btn-group">
+                                                        <!-- Nút Xem -->
+                                                        <button class="btn btn-info btn-xs" onclick="viewUser('<%= user.getId() %>')" title="Xem chi tiết">
+                                                            <i class="fa fa-eye"></i> Xem
+                                                        </button>
+                                                        
+                                                        <!-- Nút Sửa với dropdown -->
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-warning btn-xs dropdown-toggle" data-toggle="dropdown" title="Chỉnh sửa">
+                                                                <i class="fa fa-edit"></i> Sửa <span class="caret"></span>
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a href="#" onclick="editUser('<%= user.getId() %>')"><i class="fa fa-edit"></i> Chỉnh sửa thông tin</a></li>
+                                                                <li><a href="#" onclick="changePasswordUser('<%= user.getId() %>')"><i class="fa fa-key"></i> Đổi mật khẩu</a></li>
+                                                                <li class="divider"></li>
+                                                                <% if (user.isActive()) { %>
+                                                                    <li><a href="#" onclick="deactivateUser('<%= user.getId() %>')" style="color: #f39c12;"><i class="fa fa-lock"></i> Tạm khóa</a></li>
+                                                                <% } else { %>
+                                                                    <li><a href="#" onclick="activateUser('<%= user.getId() %>')" style="color: #27ae60;"><i class="fa fa-unlock"></i> Kích hoạt</a></li>
+                                                                <% } %>
+                                                                <li><a href="#" onclick="hardDeleteUser('<%= user.getId() %>')" style="color: #e74c3c;"><i class="fa fa-trash"></i> Xóa vĩnh viễn</a></li>
+                                                            </ul>
+                                                        </div>
+                                                        
+                                                        <!-- Nút Xóa -->
+                                                        <button class="btn btn-danger btn-xs" onclick="deleteUser('<%= user.getId() %>')" title="Xóa tạm thời">
+                                                            <i class="fa fa-trash-o"></i> Xóa
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                         <% } %>
@@ -266,14 +350,21 @@
                                 </div>
                                 <div class="form-group">
                                     <label>
-                                        <input type="checkbox" id="isActive" checked> Kích hoạt tài khoản
+                                        <input type="checkbox" id="isActive" checked> Kích hoạt tài khoản (có thể đăng nhập ngay)
                                     </label>
+                                    <small class="text-muted">Tài khoản mới sẽ được kích hoạt tự động để có thể đăng nhập ngay lập tức</small>
                                 </div>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
+                    <div class="pull-left">
+                        <small class="text-info">
+                            <i class="fa fa-info-circle"></i> 
+                            Tài khoản mới sẽ được kích hoạt tự động và có thể đăng nhập ngay lập tức
+                        </small>
+                    </div>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Hủy</button>
                     <button type="button" class="btn btn-primary" onclick="saveUser()">Lưu người dùng</button>
                 </div>
@@ -367,85 +458,40 @@
         var currentPasswordUserId = null;
 
         $(document).ready(function() {
-            // Initialize DataTable
+            // Initialize DataTable with pagination - sử dụng dữ liệu tĩnh từ JSP
             usersTable = $('#usersTable').DataTable({
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
                 },
-                "processing": true,
+                "processing": false,
                 "serverSide": false,
-                "ajax": {
-                    "url": "api/users?action=list",
-                    "type": "GET",
-                    "dataSrc": "data"
-                },
-                "columns": [
-                    { "data": "id" },
-                    { "data": "username" },
-                    { "data": "email" },
-                    { "data": "fullName" },
-                    { "data": "phone" },
-                    { 
-                        "data": "role",
-                        "render": function(data, type, row) {
-                            return getRoleLabel(data);
-                        }
-                    },
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tất cả"]],
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "autoWidth": false,
+                "responsive": true,
+                "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>' +
+                       '<"row"<"col-sm-12"tr>>' +
+                       '<"row"<"col-sm-5"i><"col-sm-7"p>>',
+                "order": [[0, "desc"]],
+                "columnDefs": [
                     {
-                        "data": "isActive",
-                        "render": function(data, type, row) {
-                            return getStatusLabel(data);
-                        }
-                    },
-                    {
-                        "data": null,
-                        "render": function(data, type, row) {
-                            return '<div class="action-buttons">' + getActionButtons(row) + '</div>';
-                        }
+                        "targets": [7], // Cột thao tác
+                        "orderable": false,
+                        "searchable": false
                     }
                 ]
             });
-
-            // Load initial data
-            loadUsers();
         });
 
-        function loadUsers() {
-            $.ajax({
-                url: 'api/users?action=list',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        populateTable(response.data);
-                    } else {
-                        showAlert('Lỗi khi tải dữ liệu: ' + response.message, 'danger');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText);
-                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                }
-            });
-        }
-
-        function populateTable(users) {
-            var tbody = $('#usersTableBody');
-            tbody.empty();
-            
-            users.forEach(function(user) {
-                var row = '<tr>' +
-                    '<td>' + user.id + '</td>' +
-                    '<td>' + user.username + '</td>' +
-                    '<td>' + user.email + '</td>' +
-                    '<td>' + user.fullName + '</td>' +
-                    '<td>' + (user.phone || '-') + '</td>' +
-                    '<td>' + getRoleLabel(user.role) + '</td>' +
-                    '<td>' + getStatusLabel(user.isActive) + '</td>' +
-                    '<td><div class="action-buttons">' + getActionButtons(user) + '</div></td>' +
-                    '</tr>';
-                tbody.append(row);
-            });
+        // Hàm refresh bảng sau khi thao tác
+        function refreshTable() {
+            if (usersTable) {
+                usersTable.draw();
+            }
         }
 
         function getRoleLabel(role) {
@@ -469,51 +515,10 @@
             }
         }
 
-        function getActionButtons(user) {
-            var buttons = '<div class="btn-group">';
-            
-            // Xem button
-            buttons += '<button class="btn btn-info btn-xs" onclick="viewUser(' + user.id + ')" title="Xem chi tiết">' +
-                      '<i class="fa fa-eye"></i></button>';
-            
-            // Sửa button
-            buttons += '<button class="btn btn-warning btn-xs" onclick="editUser(' + user.id + ')" title="Chỉnh sửa">' +
-                      '<i class="fa fa-edit"></i></button>';
-            
-            // Dropdown menu
-            buttons += '<div class="btn-group">';
-            buttons += '<button class="btn btn-primary btn-xs dropdown-toggle" data-toggle="dropdown" title="Thao tác khác">' +
-                      '<i class="fa fa-cog"></i> <span class="caret"></span></button>';
-            buttons += '<ul class="dropdown-menu">';
-            
-            // Đổi mật khẩu
-            buttons += '<li><a href="#" onclick="changePasswordUser(' + user.id + ')">' +
-                      '<i class="fa fa-key"></i> Đổi mật khẩu</a></li>';
-            
-            // Kích hoạt/Tạm khóa
-            if (user.isActive) {
-                buttons += '<li><a href="#" onclick="deactivateUser(' + user.id + ')">' +
-                          '<i class="fa fa-lock"></i> Tạm khóa</a></li>';
-            } else {
-                buttons += '<li><a href="#" onclick="activateUser(' + user.id + ')">' +
-                          '<i class="fa fa-unlock"></i> Kích hoạt</a></li>';
-            }
-            
-            buttons += '<li class="divider"></li>';
-            
-            // Xóa mềm
-            buttons += '<li><a href="#" onclick="deleteUser(' + user.id + ')" style="color: #f39c12;">' +
-                      '<i class="fa fa-trash-o"></i> Xóa (Tạm khóa)</a></li>';
-            
-            // Xóa vĩnh viễn
-            buttons += '<li><a href="#" onclick="hardDeleteUser(' + user.id + ')" style="color: #e74c3c;">' +
-                      '<i class="fa fa-trash"></i> Xóa vĩnh viễn</a></li>';
-            
-            buttons += '</ul>';
-            buttons += '</div>';
-            buttons += '</div>';
-            
-            return buttons;
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            var date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN');
         }
 
         function viewUser(id) {
@@ -548,12 +553,6 @@
             document.getElementById('detailStatus').innerHTML = getStatusLabel(user.isActive);
             document.getElementById('detailCreatedAt').textContent = formatDate(user.createdAt);
             document.getElementById('detailUpdatedAt').textContent = formatDate(user.updatedAt);
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            var date = new Date(dateString);
-            return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN');
         }
 
         function editUser(id) {
@@ -649,7 +648,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã tạm khóa người dùng thành công', 'success');
-                            loadUsers();
+                            location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi tạm khóa người dùng: ' + response.message, 'danger');
                         }
@@ -681,7 +680,7 @@
                         success: function(response) {
                             if (response.success) {
                                 showAlert('Đã xóa vĩnh viễn người dùng thành công', 'success');
-                                loadUsers();
+                                location.reload(); // Reload trang để cập nhật dữ liệu
                             } else {
                                 showAlert('Lỗi khi xóa vĩnh viễn người dùng: ' + response.message, 'danger');
                             }
@@ -710,7 +709,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã tạm khóa người dùng thành công', 'success');
-                            loadUsers();
+                            location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi tạm khóa người dùng: ' + response.message, 'danger');
                         }
@@ -736,7 +735,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã kích hoạt người dùng thành công', 'success');
-                            loadUsers();
+                            location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi kích hoạt người dùng: ' + response.message, 'danger');
                         }
@@ -783,6 +782,8 @@
             // Only include password for new users
             if (!currentEditingUser) {
                 formData.password = password;
+                // Đảm bảo tài khoản mới được kích hoạt để có thể đăng nhập ngay
+                formData.isActive = true;
             }
 
             var url = 'api/users';
@@ -800,12 +801,16 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        showAlert(response.message, 'success');
+                        if (!currentEditingUser) {
+                            showAlert('Tạo người dùng thành công! Tài khoản đã được kích hoạt và có thể đăng nhập ngay lập tức.', 'success');
+                        } else {
+                            showAlert(response.message, 'success');
+                        }
                         $('#addUserModal').modal('hide');
                         document.getElementById('addUserForm').reset();
                         currentEditingUser = null;
                         $('#addUserModalLabel').text('Thêm người dùng mới');
-                        loadUsers();
+                        location.reload(); // Reload trang để cập nhật dữ liệu
                     } else {
                         showAlert('Lỗi: ' + response.message, 'danger');
                     }
@@ -818,6 +823,7 @@
         }
 
         function showAlert(message, type) {
+            
             var alertClass = 'alert-' + type;
             var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade in" role="alert">' +
                            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
@@ -827,12 +833,24 @@
             // Remove existing alerts
             $('.alert').remove();
             
-            // Add new alert
-            $('.content').prepend(alertHtml);
+            // Try to find the best container for the alert
+            var container = $('.content');
+            if (container.length === 0) {
+                container = $('.panel');
+            }
+            if (container.length === 0) {
+                container = $('body');
+            }
             
-            // Auto remove after 5 seconds
+            
+            // Add new alert
+            container.prepend(alertHtml);
+            
+            // Auto remove after 3 seconds
             setTimeout(function() {
-                $('.alert').fadeOut();
+                $('.alert').fadeOut(500, function() {
+                    $(this).remove();
+                });
             }, 5000);
         }
 
@@ -849,6 +867,7 @@
             document.getElementById('changePasswordForm').reset();
             currentPasswordUserId = null;
         });
+
     </script>
 </body>
 </html>
