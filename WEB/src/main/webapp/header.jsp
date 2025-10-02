@@ -17,6 +17,8 @@
     .phone-number { color:#dc3545; font-weight:600; font-size:16px; }
     .nav-icons { display:flex; gap:15px; }
     .nav-icons i { font-size:20px; color:#343a40; cursor:pointer; }
+    .nav-icons a { color: inherit; text-decoration: none; transition: color 0.3s ease; }
+    .nav-icons a:hover { color: #dc3545; }
     .navbar-nav .nav-link { color:#343a40 !important; font-weight:500; margin:0 8px; padding:8px 12px !important; text-transform:uppercase; font-size:14px; }
     .navbar-nav .nav-link:hover { color:#dc3545 !important; }
     .navbar-nav .nav-link.active { color:#dc3545 !important; font-weight:700; }
@@ -51,7 +53,7 @@
         </div>
         <div class="contact-info-nav">
             <div class="phone-number"><i class="fas fa-phone"></i> 0989.888.999</div>
-            <div class="nav-icons"><i class="fas fa-user"></i><i class="fas fa-shopping-bag"></i></div>
+            <div class="nav-icons"><a href="login.jsp" style="color: inherit; text-decoration: none;"><i class="fas fa-user"></i></a><i class="fas fa-shopping-bag"></i></div>
         </div>
     </div>
 </nav>
