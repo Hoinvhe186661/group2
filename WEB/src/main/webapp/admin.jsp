@@ -2,12 +2,16 @@
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
+    String fullName = (String) session.getAttribute("fullName");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
-        response.sendRedirect(request.getContextPath() + "/admin/login.jsp");
+        response.sendRedirect("login.jsp");
         return;
     }
+    
+    // Set default values if null
+    if (fullName == null) fullName = username;
 %>
 <!DOCTYPE html>
 <html>
@@ -130,7 +134,7 @@
                             </li>
                             <li class="divider"></li>
                             <li>
-                                <a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
+                                <a href="javascript:void(0);" onclick="logout()"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
                             </li>
                         </ul>
                     </li>
@@ -504,6 +508,24 @@
                 maintainAspectRatio: false,
             });
         });
+    </script>
+    
+    <script type="text/javascript">
+        // Hàm đăng xuất
+        function logout() {
+            if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+                // Xóa session thông qua AJAX hoặc chuyển hướng trực tiếp
+                fetch('logout', {
+                    method: 'GET'
+                }).then(function() {
+                    // Chuyển về trang chủ
+                    window.location.href = 'index.jsp';
+                }).catch(function() {
+                    // Nếu servlet không hoạt động, vẫn chuyển về trang chủ
+                    window.location.href = 'index.jsp';
+                });
+            }
+        }
     </script>
 </body>
 </html> 

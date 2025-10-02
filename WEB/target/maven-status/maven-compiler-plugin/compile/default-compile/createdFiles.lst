@@ -1,9 +1,5 @@
-com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\dao\DBConnect.class
 com\hlgenerator\dao\UserDAO.class
-com\hlgenerator\dao\CustomerDAO.class
-com\hlgenerator\model\Customer.class
-com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class
 com\hlgenerator\model\User.class
 com\hlgenerator\servlet\LogoutServlet.class

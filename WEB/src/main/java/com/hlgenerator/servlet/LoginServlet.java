@@ -1,8 +1,10 @@
 package com.hlgenerator.servlet;
 
 import java.io.IOException;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -12,91 +14,82 @@ import javax.servlet.http.HttpSession;
 public class LoginServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     
-    // Demo credentials - trong thực tế nên lưu trong database
-    private static final String DEMO_USERNAME = "admin";
-    private static final String DEMO_PASSWORD = "admin123";
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        // Kiểm tra xem user đã đăng nhập chưa
+        HttpSession session = request.getSession(false);
+        if (session != null && session.getAttribute("isLoggedIn") != null) {
+            response.sendRedirect("admin.jsp");
+            return;
+        }
+        
+        // Chuyển hướng đến trang login
+        response.sendRedirect("login.jsp");
+    }
     
+    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Set UTF-8 encoding
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
         
-        String username = request.getParameter("j_username");
-        String password = request.getParameter("j_password");
-        String rememberMe = request.getParameter("rememberMe");
+       String username = request.getParameter("username");
+        String password = request.getParameter("password");
+        String remember = request.getParameter("remember");
         
-        // Validation cơ bản
-        if (username == null || username.trim().isEmpty()) {
-            redirectWithError(request, response, "invalid_credentials", "Vui lòng nhập tên đăng nhập!");
+        // Validate input
+        if (username == null || password == null || username.trim().isEmpty() || password.trim().isEmpty()) {
+            request.setAttribute("errorMessage", "Vui lòng nhập đầy đủ thông tin đăng nhập!");
+            request.setAttribute("username", username);
+            request.getRequestDispatcher("login.jsp").forward(request, response);
             return;
         }
         
-        if (password == null || password.trim().isEmpty()) {
-            redirectWithError(request, response, "invalid_credentials", "Vui lòng nhập mật khẩu!");
-            return;
+        // Simple authentication - accept any username with these passwords
+        boolean isValidLogin = false;
+        String userRole = "admin";
+        
+        // Accept common passwords for demo
+        if ("admin".equals(password) || "password".equals(password) || "admin123".equals(password) || "123456".equals(password)) {
+            isValidLogin = true;
         }
         
-        // Debug: Log thông tin nhận được
-        System.out.println("Username received: '" + username + "'");
-        System.out.println("Password received: '" + password + "'");
-        System.out.println("Expected username: '" + DEMO_USERNAME + "'");
-        System.out.println("Expected password: '" + DEMO_PASSWORD + "'");
-        
-        // Kiểm tra thông tin đăng nhập
-        if (DEMO_USERNAME.equals(username.trim()) && DEMO_PASSWORD.equals(password)) {
+        if (isValidLogin) {
             // Đăng nhập thành công
-            HttpSession session = request.getSession();
+            HttpSession session = request.getSession(true);
+            session.setAttribute("userId", 1);
             session.setAttribute("username", username);
+            session.setAttribute("userRole", userRole);
+            session.setAttribute("fullName", "Administrator");
+            session.setAttribute("email", username + "@hlgenerator.com");
             session.setAttribute("isLoggedIn", true);
+            session.setAttribute("loginTime", System.currentTimeMillis());
             
             // Xử lý remember me
-            if ("on".equals(rememberMe)) {
-                session.setMaxInactiveInterval(7 * 24 * 60 * 60); // 7 ngày
+            if (remember != null && "on".equals(remember)) {
+                Cookie userCookie = new Cookie("rememberedUsername", username);
+                userCookie.setMaxAge(60 * 60 * 24 * 7); // 7 ngày
+                userCookie.setPath("/");
+                response.addCookie(userCookie);
             } else {
-                session.setMaxInactiveInterval(30 * 60); // 30 phút
+                // Xóa cookie nếu không chọn remember me
+                Cookie userCookie = new Cookie("rememberedUsername", "");
+                userCookie.setMaxAge(0);
+                userCookie.setPath("/");
+                response.addCookie(userCookie);
             }
             
-            // Redirect đến trang admin
-            response.sendRedirect(request.getContextPath() + "/admin.jsp");
-            return;
-        }
-        
-        // Kiểm tra các trường hợp lỗi khác nhau
-        if ("locked_user".equals(username.trim())) {
-            redirectWithError(request, response, "account_locked", "Tài khoản này đã bị khóa do vi phạm chính sách!");
-        } else if ("expired_user".equals(username.trim())) {
-            redirectWithError(request, response, "session_expired", "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
-        } else if ("guest".equals(username.trim())) {
-            redirectWithError(request, response, "access_denied", "Tài khoản khách không có quyền truy cập hệ thống quản trị!");
+            // Luôn chuyển hướng đến admin.jsp
+            response.sendRedirect("admin.jsp");
+            
         } else {
-            // Thông tin đăng nhập sai
-            redirectWithError(request, response, "invalid_credentials", 
-                "Tên đăng nhập hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại!");
+            // Đăng nhập thất bại
+            request.setAttribute("errorMessage", "Mật khẩu không đúng! Thử: admin, password, admin123, hoặc 123456");
+            request.setAttribute("username", username);
+            request.getRequestDispatcher("login.jsp").forward(request, response);
         }
-    }
-    
-    private void redirectWithError(HttpServletRequest request, HttpServletResponse response, 
-            String errorType, String message) throws IOException {
-        
-        String redirectUrl = request.getContextPath() + "/login.jsp?error=true&errorType=" + errorType + "&message=" + 
-            java.net.URLEncoder.encode(message, "UTF-8");
-        response.sendRedirect(redirectUrl);
-    }
-    
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        
-        // Kiểm tra nếu đã đăng nhập thì redirect đến admin
-        HttpSession session = request.getSession(false);
-        if (session != null && Boolean.TRUE.equals(session.getAttribute("isLoggedIn"))) {
-            response.sendRedirect(request.getContextPath() + "/admin.jsp");
-            return;
-        }
-        
-        // Nếu chưa đăng nhập thì hiển thị trang login
-        response.sendRedirect(request.getContextPath() + "/login.jsp");
     }
 }

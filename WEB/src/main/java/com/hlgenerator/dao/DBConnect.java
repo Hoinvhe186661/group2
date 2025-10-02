@@ -7,7 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DBConnect {
-    protected Connection connection;
+    public Connection connection;
 
     public DBConnect() {
         try {
