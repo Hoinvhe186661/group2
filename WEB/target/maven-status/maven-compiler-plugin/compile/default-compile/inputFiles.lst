@@ -1,3 +1,13 @@
-C:\Users\Admin\Desktop\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-C:\Users\Admin\Desktop\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-C:\Users\Admin\Desktop\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\AddProductServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\SWP\group2\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java

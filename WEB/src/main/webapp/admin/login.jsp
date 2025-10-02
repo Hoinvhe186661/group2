@@ -136,7 +136,7 @@
 <body>
     <div class="login-box">
         <div class="login-logo">
-            <h1><i class="fa fa-shield"></i> Admin Panel</h1>
+            <h1><i class="fa fa-shield"></i> Bảng điều khiển quản trị</h1>
             <p>Đăng nhập quản trị hệ thống</p>
         </div>
         
@@ -237,7 +237,7 @@
         </div>
         
         <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
-            <p>© 2025 Admin Panel. Tất cả quyền được bảo lưu.</p>
+            <p>© 2025 Bảng điều khiển quản trị. Tất cả quyền được bảo lưu.</p>
         </div>
     </div>
 

@@ -32,4 +32,34 @@
   
   <!-- Servlets are configured using @WebServlet annotations -->
   
+
+
+  <servlet>
+    <servlet-name>SupplierServlet</servlet-name>
+    <servlet-class>com.hlgenerator.servlet.SupplierServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>SupplierServlet</servlet-name>
+    <url-pattern>/api/suppliers</url-pattern>
+  </servlet-mapping>
+
+  <servlet>
+    <servlet-name>CustomerServlet</servlet-name>
+    <servlet-class>com.hlgenerator.servlet.CustomerServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>CustomerServlet</servlet-name>
+    <url-pattern>/api/customers</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet>
+    <servlet-name>LogoutServlet</servlet-name>
+    <servlet-class>com.hlgenerator.servlet.LogoutServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>LogoutServlet</servlet-name>
+    <url-pattern>/logout</url-pattern>
+  </servlet-mapping>
+  
 </web-app>

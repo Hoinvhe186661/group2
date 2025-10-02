@@ -1,3 +1,15 @@
 com\hlgenerator\dao\DBConnect.class
+com\hlgenerator\model\Supplier.class
+com\hlgenerator\model\Customer.class
+com\hlgenerator\servlet\SupplierServlet.class
+com\hlgenerator\servlet\AddProductServlet$ValidationResult.class
+com\hlgenerator\dao\ProductDAO.class
+com\hlgenerator\servlet\ProductServlet$ValidationResult.class
+com\hlgenerator\model\Product.class
+com\hlgenerator\servlet\ProductServlet.class
+com\hlgenerator\dao\CustomerDAO.class
+com\hlgenerator\servlet\AddProductServlet.class
+com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class
+com\hlgenerator\dao\SupplierDAO.class
 com\hlgenerator\servlet\LogoutServlet.class
