@@ -1,5 +1,5 @@
 
-USE hlelectric;
+USE hl_electric;
 
 
 INSERT IGNORE INTO suppliers (supplier_code, company_name, contact_person, email, phone, address, status) VALUES

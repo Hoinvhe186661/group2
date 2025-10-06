@@ -1,4 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%-- Shared Header: Top bar + Logo/Search + Menu --%>
 <style>
     .top-header { background: #dc3545; color: #ffffff; padding: 8px 0; font-size: 14px; }
@@ -24,7 +25,7 @@
     .navbar-nav .nav-link.active { color:#dc3545 !important; font-weight:700; }
 </style>
 
-<div class="top-header">
+<div class="top-header" data-logged-in="${sessionScope.isLoggedIn eq true}">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-6"><span class="header-text">MÁY PHÁT ĐIỆN CÔNG NGHIỆP</span></div>
@@ -36,7 +37,7 @@
     </div>
 </div>
 
-<nav class="navbar header-navbar navbar-expand-lg navbar-light bg-white">
+<nav class="navbar header-navbar navbar-expand-lg navbar-light bg-white" aria-label="Thanh điều hướng logo, tìm kiếm và tài khoản">
     <div class="container">
         <a class="navbar-brand" href="index.jsp">
             <div class="logo-container">
@@ -47,18 +48,36 @@
                 <div class="logo-text"><strong>HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR</strong></div>
             </div>
         </a>
-        <div class="search-container">
+        <div class="search-container" role="search">
             <input type="text" class="search-input" placeholder="Tìm kiếm...">
             <i class="fas fa-search search-icon"></i>
         </div>
         <div class="contact-info-nav">
             <div class="phone-number"><i class="fas fa-phone"></i> 0989.888.999</div>
-            <div class="nav-icons"><a href="login.jsp" style="color: inherit; text-decoration: none;"><i class="fas fa-user"></i></a><i class="fas fa-shopping-bag"></i></div>
+            <div class="nav-icons">
+                <c:choose>
+                    <c:when test="${sessionScope.isLoggedIn eq true}">
+                        <a href="profile.jsp" class="user-info" style="color: #dc3545; font-weight: 600; margin-right: 15px; text-decoration:none;">
+                            <i class="fas fa-user"></i>
+                            <c:out value="${empty sessionScope.fullName ? sessionScope.username : sessionScope.fullName}"/>
+                        </a>
+                        <a href="logout" style="color: inherit; text-decoration: none;" title="Đăng xuất">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </c:when>
+                    <c:otherwise>
+                        <a href="login.jsp" style="color: inherit; text-decoration: none;" title="Đăng nhập">
+                            <i class="fas fa-user"></i>
+                        </a>
+                    </c:otherwise>
+                </c:choose>
+                <i class="fas fa-shopping-bag"></i>
+            </div>
         </div>
     </div>
 </nav>
 
-<nav class="menu-navbar">
+<nav class="menu-navbar" aria-label="Thanh menu chính">
     <div class="container">
         <ul class="navbar-nav flex-row justify-content-center w-100">
             <li class="nav-item"><a class="nav-link" href="index.jsp" id="nav-home">TRANG CHỦ</a></li>
@@ -69,6 +88,9 @@
             <li class="nav-item"><a class="nav-link" href="#guide">HƯỚNG DẪN</a></li>
             <li class="nav-item"><a class="nav-link" href="#news">TIN TỨC</a></li>
             <li class="nav-item"><a class="nav-link" href="#contact">LIÊN HỆ</a></li>
+            <c:if test="${sessionScope.isLoggedIn eq true and sessionScope.userRole eq 'customer'}">
+                <li class="nav-item"><a class="nav-link" href="support.jsp" id="nav-support">HỖ TRỢ</a></li>
+            </c:if>
         </ul>
     </div>
 </nav>
@@ -90,4 +112,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Note: auto-logout on tab close was removed to avoid logging out on refresh
 </script>

@@ -1,29 +1,11 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%
-// XỬ LÝ ĐĂNG NHẬP TRỰC TIẾP TRONG JSP (KHÔNG CẦN SERVLET)
-if ("POST".equals(request.getMethod())) {
-    String username = request.getParameter("username");
-    String password = request.getParameter("password");
-    
-    // Kiểm tra đăng nhập đơn giản
-    if (username != null && password != null && 
-        !username.trim().isEmpty() && !password.trim().isEmpty()) {
-        
-        // Chấp nhận các mật khẩu này
-        if ("admin".equals(password) || "password".equals(password) || 
-            "admin123".equals(password) || "123456".equals(password)) {
-            
-            // Đăng nhập thành công
-            session.setAttribute("username", username);
-            session.setAttribute("isLoggedIn", true);
-            session.setAttribute("userRole", "admin");
-            
-            // Chuyển hướng đến admin.jsp
-            response.sendRedirect("admin.jsp");
-            return;
-        }
-    }
+// Xóa session cũ để đảm bảo đăng nhập mới
+if (session != null) {
+    session.invalidate();
 }
+// Tạo session mới
+session = request.getSession(true);
 %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -146,47 +128,37 @@ if ("POST".equals(request.getMethod())) {
         
         <% 
         // Hiển thị lỗi nếu có
-        if ("POST".equals(request.getMethod())) {
-            String username = request.getParameter("username");
-            String password = request.getParameter("password");
-            
-            if (username == null || password == null || 
-                username.trim().isEmpty() || password.trim().isEmpty()) {
+        String errorMessage = (String) request.getAttribute("errorMessage");
+        if (errorMessage != null) {
         %>
             <div class="error">
-                Vui lòng nhập đầy đủ thông tin đăng nhập!
+                <%= errorMessage %>
             </div>
         <% 
-            } else if (!"admin".equals(password) && !"password".equals(password) && 
-                      !"admin123".equals(password) && !"123456".equals(password)) {
-        %>
-            <div class="error">
-                Mật khẩu không đúng! Thử: <code>admin</code>, <code>password</code>, <code>admin123</code>, hoặc <code>123456</code>
-            </div>
-        <% 
-            }
         }
         %>
         
-        <form method="POST">
+        <form method="POST" action="login">
             <div class="form-group">
-                <label>Tên đăng nhập:</label>
-                <input type="text" name="username" 
-                       value="<%= request.getParameter("username") != null ? request.getParameter("username") : "" %>"
+                <label for="username">Tên đăng nhập:</label>
+                <input type="text" id="username" name="username" 
+                       value="<%= request.getAttribute("username") != null ? request.getAttribute("username") : "" %>"
                        required>
             </div>
             
             <div class="form-group">
-                <label>Mật khẩu:</label>
-                <input type="password" name="password" required>
+                <label for="password">Mật khẩu:</label>
+                <input type="password" id="password" name="password" required>
             </div>
             
             <button type="submit">ĐĂNG NHẬP</button>
         </form>
         
         
+        
         <div class="back-link">
-            <a href="index.jsp">← Quay về trang chủ</a>
+            <a href="index.jsp">← Quay về trang chủ</a> | 
+            
         </div>
     </div>
 </body>

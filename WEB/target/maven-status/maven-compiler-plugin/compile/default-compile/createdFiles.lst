@@ -2,8 +2,11 @@ com\hlgenerator\dao\DBConnect.class
 com\hlgenerator\model\Contract.class
 com\hlgenerator\model\Customer.class
 com\hlgenerator\servlet\ContractServlet.class
+com\hlgenerator\dao\SupportRequestDAO.class
 com\hlgenerator\model\User.class
+com\hlgenerator\servlet\SupportRequestServlet.class
 com\hlgenerator\dao\ProductDAO.class
+com\hlgenerator\model\SupportRequest.class
 com\hlgenerator\servlet\ProductServlet$ValidationResult.class
 com\hlgenerator\model\Product.class
 com\hlgenerator\servlet\UserServlet.class

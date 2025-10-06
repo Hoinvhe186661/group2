@@ -1,5 +1,5 @@
 
-USE hlelectric;
+USE hl_electric;
 
 -- 1. USERS
 CREATE TABLE users (
