@@ -29,7 +29,7 @@ public class ContractDAO extends DBConnect {
     public boolean addContract(Contract contract) {
         if (!checkConnection()) return false;
         String sql = "INSERT INTO contracts (contract_number, customer_id, contract_type, title, start_date, end_date, contract_value, status, terms, signed_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, contract.getContractNumber());
             ps.setInt(2, contract.getCustomerId());
             ps.setString(3, contract.getContractType());
@@ -45,7 +45,17 @@ public class ContractDAO extends DBConnect {
             } else {
                 ps.setInt(11, contract.getCreatedBy());
             }
-            return ps.executeUpdate() > 0;
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        int generatedId = rs.getInt(1);
+                        contract.setId(generatedId);
+                    }
+                }
+                return true;
+            }
+            return false;
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error adding contract", e);
             return false;

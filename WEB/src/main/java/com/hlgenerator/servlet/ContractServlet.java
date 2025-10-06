@@ -248,8 +248,8 @@ public class ContractServlet extends HttpServlet {
                             ps.setInt(1, contractId);
                             ps.setInt(2, product.getInt("productId"));
                             ps.setString(3, product.optString("description", null));
-                            ps.setBigDecimal(4, new BigDecimal(product.getString("quantity")));
-                            ps.setBigDecimal(5, new BigDecimal(product.getString("unitPrice")));
+                            ps.setBigDecimal(4, toBigDecimal(product.opt("quantity")));
+                            ps.setBigDecimal(5, toBigDecimal(product.opt("unitPrice")));
                             if (product.has("warrantyMonths") && !product.isNull("warrantyMonths")) {
                                 ps.setInt(6, product.getInt("warrantyMonths"));
                             } else {
@@ -264,6 +264,23 @@ public class ContractServlet extends HttpServlet {
         } catch (Exception e) {
             System.err.println("Error saving contract products: " + e.getMessage());
         }
+    }
+
+    private java.math.BigDecimal toBigDecimal(Object value) {
+        if (value == null || org.json.JSONObject.NULL.equals(value)) {
+            return null;
+        }
+        if (value instanceof java.math.BigDecimal) {
+            return (java.math.BigDecimal) value;
+        }
+        if (value instanceof Number) {
+            // Use toString to avoid floating precision issues from double
+            return new java.math.BigDecimal(value.toString());
+        }
+        // Fallback assume string
+        String s = value.toString().trim();
+        if (s.isEmpty()) return null;
+        return new java.math.BigDecimal(s);
     }
 
     private void deleteContractProducts(int contractId) {

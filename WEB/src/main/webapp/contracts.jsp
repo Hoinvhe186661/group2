@@ -177,7 +177,6 @@
                                     <select class="form-control" id="customerId" required>
                                         <option value="">Chọn khách hàng...</option>
                                     </select>
-                                    <small class="text-muted">Hoặc tìm kiếm: <input type="text" class="form-control" id="customerSearch" placeholder="Tìm theo tên công ty, mã khách hàng..." style="margin-top:5px;"></small>
                                 </div>
                                 <div class="form-group">
                                     <label for="contractType">Loại hợp đồng</label>
@@ -413,29 +412,7 @@
             
             // Load danh sách khách hàng
             loadCustomers();
-            
-            // Tìm kiếm khách hàng
-            $('#customerSearch').on('input', function() {
-                var searchTerm = $(this).val().toLowerCase();
-                console.log('Searching for:', searchTerm);
-                
-                $('#customerId option').each(function() {
-                    var $option = $(this);
-                    var text = $option.text().toLowerCase();
-                    
-                    if (searchTerm === '' || text.includes(searchTerm)) {
-                        $option.show();
-                    } else {
-                        $option.hide();
-                    }
-                });
-                
-                // Nếu có kết quả tìm kiếm, chọn option đầu tiên
-                var visibleOptions = $('#customerId option:visible:not([disabled])');
-                if (visibleOptions.length > 1 && searchTerm !== '') {
-                    // Không tự động chọn, chỉ hiển thị
-                }
-            });
+
         });
 
         function loadCustomers() {
@@ -507,8 +484,60 @@
                         '<p><strong>Giá trị:</strong> ' + (c.contractValue || '-') + '</p>' +
                         '<p><strong>Trạng thái:</strong> ' + (c.status || '-') + '</p>' +
                         '<p><strong>Ngày ký:</strong> ' + (c.signedDate || '-') + '</p>' +
-                        '<p><strong>Điều khoản:</strong><br>' + (c.terms || '-') + '</p>';
+                        '<p><strong>Điều khoản:</strong><br>' + (c.terms || '-') + '</p>' +
+                        '<hr>' +
+                        '<h5><i class="fa fa-list"></i> Sản phẩm gắn với hợp đồng</h5>' +
+                        '<div class="table-responsive">' +
+                        '  <table class="table table-striped table-hover">' +
+                        '    <thead>' +
+                        '      <tr>' +
+                        '        <th width="10%">STT</th>' +
+                        '        <th width="15%">Product ID</th>' +
+                        '        <th width="30%">Mô tả</th>' +
+                        '        <th width="15%">Số lượng</th>' +
+                        '        <th width="15%">Đơn giá</th>' +
+                        '        <th width="15%">Thành tiền</th>' +
+                        '      </tr>' +
+                        '    </thead>' +
+                        '    <tbody id="contractDetailProductsBody">' +
+                        '      <tr><td colspan="6" class="text-center text-muted"><i class="fa fa-spinner fa-spin"></i> Đang tải sản phẩm...</td></tr>' +
+                        '    </tbody>' +
+                        '  </table>' +
+                        '</div>';
                     $('#contractDetail').html(html);
+
+                    // Load products for this contract and render into the details modal
+                    $.get('api/contract-items', { contractId: id }, function(itemsResp) {
+                        var tbody = $('#contractDetailProductsBody');
+                        if (itemsResp && itemsResp.success) {
+                            var items = itemsResp.data || [];
+                            if (items.length === 0) {
+                                tbody.html('<tr><td colspan="6" class="text-center text-muted"><i class="fa fa-info-circle"></i> Hợp đồng chưa có sản phẩm</td></tr>');
+                                return;
+                            }
+                            var rows = '';
+                            var idx = 1;
+                            items.forEach(function(p) {
+                                var qty = p.quantity ? parseFloat(p.quantity).toLocaleString() : '0';
+                                var price = p.unitPrice ? parseFloat(p.unitPrice).toLocaleString() + ' VNĐ' : '0 VNĐ';
+                                var line = (p.quantity && p.unitPrice) ? (parseFloat(p.quantity) * parseFloat(p.unitPrice)) : 0;
+                                rows += '<tr>' +
+                                    '<td class="text-center">' + (idx++) + '</td>' +
+                                    '<td class="text-center">' + p.productId + '</td>' +
+                                    '<td>' + (p.description || '<span class="text-muted">-</span>') + '</td>' +
+                                    '<td class="text-right">' + qty + '</td>' +
+                                    '<td class="text-right">' + price + '</td>' +
+                                    '<td class="text-right"><strong>' + line.toLocaleString() + ' VNĐ</strong></td>' +
+                                '</tr>';
+                            });
+                            tbody.html(rows);
+                        } else {
+                            tbody.html('<tr><td colspan="6" class="text-center text-danger">Không tải được danh sách sản phẩm</td></tr>');
+                        }
+                    }, 'json').fail(function() {
+                        $('#contractDetailProductsBody').html('<tr><td colspan="6" class="text-center text-danger">Lỗi kết nối khi tải sản phẩm</td></tr>');
+                    });
+
                     $('#contractDetailModal').modal('show');
                 } else {
                     showAlert(resp.message, 'danger');
@@ -723,6 +752,8 @@
                 return;
             }
 
+            // Backend expects products as JSON string
+            data.products = JSON.stringify(contractProducts);
             $.post('api/contracts', data, function(resp) {
                 if (resp.success) {
                     showAlert(resp.message, 'success');

@@ -1,5 +1,6 @@
 com\hlgenerator\dao\DBConnect.class
 com\hlgenerator\model\Contract.class
+com\hlgenerator\servlet\ContractItemsServlet.class
 com\hlgenerator\model\Customer.class
 com\hlgenerator\servlet\ContractServlet.class
 com\hlgenerator\dao\SupportRequestDAO.class

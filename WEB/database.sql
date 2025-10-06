@@ -1,5 +1,4 @@
-
-USE hl_electric;
+USE hlelectric;
 
 -- 1. USERS
 CREATE TABLE users (
@@ -85,7 +84,7 @@ CREATE TABLE products (
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
 );
 
--- 6. CONTRACT_PRODUCTS:
+-- 6. CONTRACT_PRODUCTS
 CREATE TABLE contract_products (
     id INT PRIMARY KEY AUTO_INCREMENT,
     contract_id INT NOT NULL,
@@ -166,7 +165,6 @@ CREATE TABLE tasks (
     actual_hours DECIMAL(5,2),
     start_date DATETIME,
     completion_date DATETIME,
-    equipment_used JSON,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -246,23 +244,7 @@ CREATE TABLE invoice_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- 15. EQUIPMENT
-CREATE TABLE equipment (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    equipment_code VARCHAR(50) UNIQUE NOT NULL,
-    equipment_name VARCHAR(200) NOT NULL,
-    equipment_type VARCHAR(100),
-    model VARCHAR(100),
-    status ENUM('available', 'in_use', 'maintenance', 'retired') DEFAULT 'available',
-    location VARCHAR(200),
-    assigned_to INT,
-    purchase_info JSON,
-    image_url VARCHAR(500),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (assigned_to) REFERENCES users(id)
-);
-
--- 16. ACTIVITY_LOGS
+-- 15. ACTIVITY_LOGS
 CREATE TABLE activity_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT,
@@ -275,7 +257,7 @@ CREATE TABLE activity_logs (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 17. SETTINGS
+-- 16. SETTINGS
 CREATE TABLE settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     setting_key VARCHAR(100) UNIQUE NOT NULL,
