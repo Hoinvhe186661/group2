@@ -3,8 +3,12 @@ com\hlgenerator\model\Contract.class
 com\hlgenerator\model\Customer.class
 com\hlgenerator\servlet\ContractServlet.class
 com\hlgenerator\model\User.class
+com\hlgenerator\dao\ProductDAO.class
+com\hlgenerator\servlet\ProductServlet$ValidationResult.class
+com\hlgenerator\model\Product.class
 com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\dao\UserDAO.class
+com\hlgenerator\servlet\ProductServlet.class
 com\hlgenerator\dao\CustomerDAO.class
 com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class

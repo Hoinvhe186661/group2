@@ -212,7 +212,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="products.jsp">
+                        <a href="product">
                             <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
                         </a>
                     </li>

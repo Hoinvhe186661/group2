@@ -66,7 +66,7 @@
                         <a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a>
                     </li>
                     <li>
-                        <a href="products.jsp"><i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span></a>
+                        <a href="product"><i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span></a>
                     </li>
                     <li>
                         <a href="orders.jsp"><i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span></a>
