@@ -140,6 +140,42 @@ public class CustomerDAO extends DBConnect {
         return null;
     }
 
+    // Get customer by email
+    public Customer getCustomerByEmail(String email) {
+        if (!checkConnection()) {
+            logger.severe("getCustomerByEmail: Database connection is not available");
+            return null;
+        }
+        String sql = "SELECT * FROM customers WHERE email = ?";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, email);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Customer(
+                        rs.getInt("id"),
+                        rs.getString("customer_code"),
+                        rs.getString("company_name"),
+                        rs.getString("contact_person"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getString("tax_code"),
+                        rs.getString("customer_type"),
+                        rs.getString("status"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting customer by email: " + email, e);
+        }
+        
+        return null;
+    }
+
     // Update customer
     public boolean updateCustomer(Customer customer) {
         if (!checkConnection()) {
@@ -319,6 +355,6 @@ public class CustomerDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error generating customer code", e);
         }
         
-        return "CUST001"; // Default first code
+        return "CUST001"; 
     }
 }

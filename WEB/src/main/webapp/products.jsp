@@ -3,7 +3,7 @@
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
     if (username == null || isLoggedIn == null || !isLoggedIn) {
-        response.sendRedirect(request.getContextPath() + "/admin/login.jsp");
+        response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
 %>
@@ -17,15 +17,15 @@
     <meta name="keywords" content="Admin, Bootstrap 3, Template, Theme, Responsive">
     
     <!-- bootstrap 3.0.2 -->
-    <link href="<%=request.getContextPath()%>/admin/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="<%=request.getContextPath()%>/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
     <!-- font Awesome -->
-    <link href="<%=request.getContextPath()%>/admin/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+    <link href="<%=request.getContextPath()%>/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
     <!-- Ionicons -->
-    <link href="<%=request.getContextPath()%>/admin/css/ionicons.min.css" rel="stylesheet" type="text/css" />
+    <link href="<%=request.getContextPath()%>/css/ionicons.min.css" rel="stylesheet" type="text/css" />
     <!-- DataTables -->
-    <link href="<%=request.getContextPath()%>/admin/css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
+    <link href="<%=request.getContextPath()%>/css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
     <!-- Theme style -->
-    <link href="<%=request.getContextPath()%>/admin/css/style.css" rel="stylesheet" type="text/css" />
+    <link href="<%=request.getContextPath()%>/css/style.css" rel="stylesheet" type="text/css" />
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     
     <style>
@@ -81,7 +81,7 @@
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
     <header class="header">
-        <a href="<%=request.getContextPath()%>/admin/admin.jsp" class="logo">
+        <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">
             Bảng điều khiển quản trị
         </a>
         <!-- Header Navbar: style can be found in header.less -->
@@ -115,7 +115,7 @@
                             </li>
                             <li class="divider"></li>
                             <li>
-                                <a href="<%=request.getContextPath()%>/admin/logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
+                                <a href="<%=request.getContextPath()%>/logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
                             </li>
                         </ul>
                     </li>
@@ -131,7 +131,7 @@
                 <!-- Sidebar user panel -->
                 <div class="user-panel">
                     <div class="pull-left image">
-                        <img src="<%=request.getContextPath()%>/admin/img/26115.jpg" class="img-circle" alt="User Image" />
+                        <img src="<%=request.getContextPath()%>/img/26115.jpg" class="img-circle" alt="User Image" />
                     </div>
                     <div class="pull-left info">
                         <p>Xin chào, <%= username %></p>
@@ -151,12 +151,12 @@
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
                     <li>
-                        <a href="<%=request.getContextPath()%>/admin/admin.jsp">
+                        <a href="<%=request.getContextPath()%>/admin.jsp">
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
                     <li class="active">
-                        <a href="<%=request.getContextPath()%>/products.jsp">
+                        <a href="<%=request.getContextPath()%>/products">
                             <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
                         </a>
                     </li>
@@ -171,17 +171,17 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<%=request.getContextPath()%>/admin/customers.jsp">
+                        <a href="<%=request.getContextPath()%>/customers.jsp">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
                         </a>
                     </li>
                     <li>
-                        <a href="<%=request.getContextPath()%>/admin/reports.jsp">
+                        <a href="<%=request.getContextPath()%>/reports.jsp">
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
                         </a>
                     </li>
                     <li>
-                        <a href="<%=request.getContextPath()%>/admin/settings.jsp">
+                        <a href="<%=request.getContextPath()%>/settings.jsp">
                             <i class="fa fa-cog"></i> <span>Cài đặt</span>
                         </a>
                     </li>
@@ -579,16 +579,16 @@
 
     <!-- jQuery 2.0.2 -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
-    <script src="<%=request.getContextPath()%>/admin/js/jquery.min.js" type="text/javascript"></script>
+    <script src="<%=request.getContextPath()%>/js/jquery.min.js" type="text/javascript"></script>
     <!-- jQuery UI 1.10.3 -->
-    <script src="<%=request.getContextPath()%>/admin/js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
+    <script src="<%=request.getContextPath()%>/js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
     <!-- Bootstrap -->
-    <script src="<%=request.getContextPath()%>/admin/js/bootstrap.min.js" type="text/javascript"></script>
+    <script src="<%=request.getContextPath()%>/js/bootstrap.min.js" type="text/javascript"></script>
     <!-- DataTables -->
-    <script src="<%=request.getContextPath()%>/admin/js/plugins/datatables/jquery.dataTables.js" type="text/javascript"></script>
-    <script src="<%=request.getContextPath()%>/admin/js/plugins/datatables/dataTables.bootstrap.js" type="text/javascript"></script>
+    <script src="<%=request.getContextPath()%>/js/plugins/datatables/jquery.dataTables.js" type="text/javascript"></script>
+    <script src="<%=request.getContextPath()%>/js/plugins/datatables/dataTables.bootstrap.js" type="text/javascript"></script>
     <!-- Director App -->
-    <script src="<%=request.getContextPath()%>/admin/js/Director/app.js" type="text/javascript"></script>
+    <script src="<%=request.getContextPath()%>/js/Director/app.js" type="text/javascript"></script>
 
     <script type="text/javascript">
         var productsTable;

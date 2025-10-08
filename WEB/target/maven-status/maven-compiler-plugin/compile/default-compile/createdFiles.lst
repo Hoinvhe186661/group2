@@ -16,5 +16,6 @@ com\hlgenerator\servlet\ProductServlet.class
 com\hlgenerator\dao\CustomerDAO.class
 com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class
+com\hlgenerator\servlet\ProductsPageServlet.class
 com\hlgenerator\dao\ContractDAO.class
 com\hlgenerator\servlet\LogoutServlet.class

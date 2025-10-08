@@ -29,7 +29,7 @@ public class SupportRequestServlet extends HttpServlet {
             com.hlgenerator.model.User user = userDAO.getUserByUsername(username);
             if (user == null) return null;
             com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
-            com.hlgenerator.model.Customer c = customerDAO.getCustomerByEmail(user.getEmail());
+            com.hlgenerator.model.Customer c = customerDAO.getCustomerById(user.getId());
             if (c != null) {
                 session.setAttribute("customerId", c.getId());
                 return c.getId();
