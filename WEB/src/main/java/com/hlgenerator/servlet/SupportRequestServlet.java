@@ -22,17 +22,77 @@ public class SupportRequestServlet extends HttpServlet {
         Object cid = session.getAttribute("customerId");
         if (cid instanceof Integer) return (Integer) cid;
         try {
-            Object usernameObj = session.getAttribute("username");
-            if (usernameObj == null) return null;
-            String username = String.valueOf(usernameObj);
-            com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
-            com.hlgenerator.model.User user = userDAO.getUserByUsername(username);
-            if (user == null) return null;
             com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
-            com.hlgenerator.model.Customer c = customerDAO.getCustomerById(user.getId());
-            if (c != null) {
-                session.setAttribute("customerId", c.getId());
-                return c.getId();
+            Object emailObj = session.getAttribute("email");
+            if (emailObj != null) {
+                String email = String.valueOf(emailObj);
+                if (email != null && !"null".equalsIgnoreCase(email) && !email.trim().isEmpty()) {
+                    com.hlgenerator.model.Customer cByEmail = customerDAO.getCustomerByEmail(email.trim());
+                    if (cByEmail != null) {
+                        session.setAttribute("customerId", cByEmail.getId());
+                        return cByEmail.getId();
+                    }
+                }
+            }
+
+            Object usernameObj = session.getAttribute("username");
+            if (usernameObj != null) {
+                String username = String.valueOf(usernameObj);
+                com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
+                com.hlgenerator.model.User user = userDAO.getUserByUsername(username);
+                if (user != null && user.getEmail() != null) {
+                    com.hlgenerator.model.Customer c = customerDAO.getCustomerByEmail(user.getEmail());
+                    if (c != null) {
+                        session.setAttribute("customerId", c.getId());
+                        return c.getId();
+                    }
+                }
+            }
+        } catch (Exception ignore) {}
+        return null;
+    }
+
+    private Integer ensureCustomerFromSession(HttpSession session) {
+        if (session == null) return null;
+        Object cid = session.getAttribute("customerId");
+        if (cid instanceof Integer) return (Integer) cid;
+        try {
+            Object emailObj = session.getAttribute("email");
+            Object nameObj = session.getAttribute("fullName");
+            Object usernameObj = session.getAttribute("username");
+            String email = emailObj != null ? String.valueOf(emailObj) : null;
+            String name = nameObj != null && !"null".equals(String.valueOf(nameObj)) ? String.valueOf(nameObj) : (usernameObj != null ? String.valueOf(usernameObj) : "");
+
+            if (email == null || email.trim().isEmpty() || "null".equalsIgnoreCase(email)) {
+                return null; // cannot create without email due to UNIQUE(email)
+            }
+
+            com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
+            com.hlgenerator.model.Customer existing = customerDAO.getCustomerByEmail(email.trim());
+            if (existing != null) {
+                session.setAttribute("customerId", existing.getId());
+                return existing.getId();
+            }
+
+            // Auto-create minimal customer record for logged-in user
+            String code = customerDAO.generateNextCustomerCode();
+            com.hlgenerator.model.Customer newC = new com.hlgenerator.model.Customer();
+            newC.setCustomerCode(code);
+            newC.setCompanyName(name);
+            newC.setContactPerson(name);
+            newC.setEmail(email.trim());
+            newC.setPhone("");
+            newC.setAddress("");
+            newC.setTaxCode("");
+            newC.setCustomerType("individual");
+            newC.setStatus("active");
+            boolean created = customerDAO.addCustomer(newC);
+            if (created) {
+                com.hlgenerator.model.Customer createdC = customerDAO.getCustomerByEmail(email.trim());
+                if (createdC != null) {
+                    session.setAttribute("customerId", createdC.getId());
+                    return createdC.getId();
+                }
             }
         } catch (Exception ignore) {}
         return null;
@@ -48,6 +108,9 @@ public class SupportRequestServlet extends HttpServlet {
         Integer customerId = session != null ? (Integer) session.getAttribute("customerId") : null;
         if (customerId == null) {
             customerId = resolveOrAttachCustomerId(session);
+        }
+        if (customerId == null) {
+            customerId = ensureCustomerFromSession(session);
         }
         if (customerId == null) {
             response.setStatus(401);
@@ -77,17 +140,19 @@ public class SupportRequestServlet extends HttpServlet {
             customerId = resolveOrAttachCustomerId(session);
         }
         if (customerId == null) {
+            customerId = ensureCustomerFromSession(session);
+        }
+        if (customerId == null) {
             response.setStatus(401);
             out.print(new JSONObject().put("success", false).put("message", "Chưa đăng nhập").toString());
             return;
         }
 
         String action = request.getParameter("action");
-        String inputCustomerNameOrCode = request.getParameter("customerId");
-        String inputEmail = request.getParameter("email");
         String subject = request.getParameter("subject");
         String description = request.getParameter("description");
         String category = request.getParameter("category");
+        // Priority in create flow is controlled by backend default
         String priority = request.getParameter("priority");
         String deleteOldId = request.getParameter("delete_old_id");
         String id = request.getParameter("id");
@@ -124,35 +189,7 @@ public class SupportRequestServlet extends HttpServlet {
             }
         }
 
-        // Validate identity (customer name/code and email must match logged-in account)
-        try {
-            String sessionEmail = session != null ? String.valueOf(session.getAttribute("email")) : null;
-            com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
-            com.hlgenerator.model.Customer sessionCustomer = (sessionEmail != null) ? customerDAO.getCustomerByEmail(sessionEmail) : null;
-            if (sessionCustomer == null) {
-                response.setStatus(401);
-                response.getWriter().print(new JSONObject().put("success", false).put("message", "Không tìm thấy tài khoản khách hàng cho phiên đăng nhập").toString());
-                return;
-            }
-            String entered = inputCustomerNameOrCode != null ? inputCustomerNameOrCode.trim() : "";
-            String enteredEmail = inputEmail != null ? inputEmail.trim() : "";
-            boolean emailOk = !enteredEmail.isEmpty() && sessionEmail != null && enteredEmail.equalsIgnoreCase(sessionEmail);
-            boolean idOk = !entered.isEmpty() && (
-                    entered.equalsIgnoreCase(String.valueOf(sessionCustomer.getCustomerCode())) ||
-                    entered.equalsIgnoreCase(String.valueOf(sessionCustomer.getContactPerson())) ||
-                    entered.equalsIgnoreCase(String.valueOf(sessionCustomer.getCompanyName()))
-            );
-            if (!emailOk || !idOk) {
-                response.setStatus(400);
-                String msg = !emailOk ? "Email không khớp với tài khoản đang đăng nhập" : "Tên/Code khách hàng không đúng với tài khoản đang đăng nhập";
-                response.getWriter().print(new JSONObject().put("success", false).put("message", msg).toString());
-                return;
-            }
-        } catch (Exception ignored) {
-            response.setStatus(400);
-            response.getWriter().print(new JSONObject().put("success", false).put("message", "Xác thực thông tin khách hàng thất bại").toString());
-            return;
-        }
+        // Rely on session-based identity only; no form identity check
 
         // Chỉ kiểm tra subject khi không phải action cancel
         if (subject == null || subject.trim().isEmpty()) {
@@ -169,9 +206,8 @@ public class SupportRequestServlet extends HttpServlet {
         if (!("technical".equals(category) || "billing".equals(category) || "general".equals(category) || "complaint".equals(category))) {
             category = "general";
         }
-        if (!("low".equals(priority) || "medium".equals(priority) || "high".equals(priority) || "urgent".equals(priority))) {
-            priority = "medium";
-        }
+        // Force default priority for create flow
+        priority = "medium";
         if (subject.length() > 200) {
             subject = subject.substring(0, 200);
         }
