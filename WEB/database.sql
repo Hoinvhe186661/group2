@@ -1,4 +1,4 @@
-USE hlelectric;
+USE hl_electric;
 
 -- 1. USERS
 CREATE TABLE users (
@@ -277,10 +277,13 @@ INSERT INTO settings (setting_key, setting_value, description) VALUES
 ('default_warranty', '24', 'Bảo hành mặc định cho máy phát điện (tháng)'),
 ('low_stock_alert', '5', 'Cảnh báo tồn kho thấp cho thiết bị');
 
-INSERT INTO users (username, email, password_hash, full_name, role, permissions) VALUES
+INSERT INTO users (username, email, password_hash, full_name, phone, role, permissions) VALUES
 ('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
- 'System Administrator', 'admin',
+ 'System Administrator', '0123456789', 'admin',
  '["all_permissions"]'),
 ('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
- 'Nguyễn Văn Tâm', 'head_technician',
- '["view_work_orders", "manage_tasks", "view_inventory"]');
+ 'Nguyễn Văn Tâm', '0987654321', 'head_technician',
+ '["view_work_orders", "manage_tasks", "view_inventory"]'),
+('customer1', 'customer1@gmail.com', '123abc',
+ 'Nguyễn Văn Khách', '0909123456', 'customer',
+ '["view_products", "view_orders", "submit_support_request"]');

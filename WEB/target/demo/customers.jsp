@@ -38,10 +38,10 @@
                         </a>
                         <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
-                            <li><a href="#"><i class="fa fa-user fa-fw pull-right"></i> Hồ sơ</a></li>
-                            <li><a data-toggle="modal" href="#modal-user-settings"><i class="fa fa-cog fa-fw pull-right"></i> Cài đặt</a></li>
+                            <li><a href="profile.jsp"><i class="fa fa-user fa-fw pull-right"></i> Hồ sơ</a></li>
+                            <li><a href="settings.jsp"><i class="fa fa-cog fa-fw pull-right"></i> Cài đặt</a></li>
                             <li class="divider"></li>
-                            <li><a href="../index.jsp"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a></li>
+                            <li><a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a></li>
                         </ul>
                     </li>
                 </ul>

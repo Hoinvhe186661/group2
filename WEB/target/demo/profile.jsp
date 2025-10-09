@@ -36,7 +36,7 @@
     <div class="account-tabs">
       <div class="account-tab active" data-tab="info">Thông tin người dùng</div>
       <div class="account-tab" data-tab="products">Sản phẩm sở hữu</div>
-      <div class="account-tab" data-tab="settings">Cài đặt</div>
+      <div class="account-tab" data-tab="settings">Đổi mật khẩu</div>
     </div>
     <div class="account-content">
       <div class="tab-panel" id="tab-info">
@@ -93,7 +93,7 @@
       </div>
 
       <div class="tab-panel" id="tab-settings" style="display:none;">
-        <div class="section-title">Cài đặt tài khoản</div>
+        <div class="section-title">Đổi mật khẩu</div>
         <div class="form-grid">
           <div class="field">
             <label for="currentPassword">Mật khẩu hiện tại</label>
@@ -109,7 +109,7 @@
           </div>
         </div>
         <div style="margin-top:16px;">
-          <button class="save-btn" type="button" onclick="alert('Chức năng đổi mật khẩu sẽ được kết nối API sau');">Đổi mật khẩu</button>
+          <button class="save-btn" type="button" id="changePasswordBtn">Đổi mật khẩu</button>
         </div>
       </div>
     </div>
@@ -303,6 +303,69 @@
             }
           })
           .catch(function(){ alert('Lỗi kết nối máy chủ'); });
+      });
+    }
+
+    // Change password functionality
+    var changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn) {
+      changePasswordBtn.addEventListener('click', function() {
+        var currentPassword = document.getElementById('currentPassword').value.trim();
+        var newPassword = document.getElementById('newPassword').value.trim();
+        var confirmPassword = document.getElementById('confirmPassword').value.trim();
+        
+        // Validate
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          alert('Vui lòng nhập đầy đủ thông tin!');
+          return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+          alert('Mật khẩu mới và xác nhận mật khẩu không khớp!');
+          return;
+        }
+        
+        if (newPassword.length < 6) {
+          alert('Mật khẩu mới phải có ít nhất 6 ký tự!');
+          return;
+        }
+        
+        // Confirm action
+        if (!confirm('Bạn có chắc chắn muốn đổi mật khẩu?')) {
+          return;
+        }
+        
+        // Send request
+        var data = new URLSearchParams();
+        data.append('currentPassword', currentPassword);
+        data.append('newPassword', newPassword);
+        data.append('confirmPassword', confirmPassword);
+        
+        fetch('<%=request.getContextPath()%>/api/changePassword', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+          body: data.toString()
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(j) {
+          if (j && j.success) {
+            alert('Đổi mật khẩu thành công! Vui lòng đăng nhập lại.');
+            // Clear inputs
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            // Optionally redirect to login
+            setTimeout(function() {
+              window.location.href = '<%=request.getContextPath()%>/logout';
+            }, 1500);
+          } else {
+            alert(j.message || 'Không thể đổi mật khẩu!');
+          }
+        })
+        .catch(function(err) {
+          alert('Lỗi kết nối máy chủ!');
+          console.error(err);
+        });
       });
     }
   })();

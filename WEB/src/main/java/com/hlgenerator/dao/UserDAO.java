@@ -573,4 +573,72 @@ public class UserDAO extends DBConnect {
         
         return 0;
     }
+    
+    // Change password
+    public boolean changePassword(int userId, String currentPassword, String newPassword) {
+        if (!checkConnection()) {
+            return false;
+        }
+        
+        try {
+            // First check current password
+            String checkSql = "SELECT password_hash FROM users WHERE id = ?";
+            PreparedStatement checkStmt = connection.prepareStatement(checkSql);
+            checkStmt.setInt(1, userId);
+            ResultSet rs = checkStmt.executeQuery();
+            
+            if (!rs.next()) {
+                logger.warning("User not found with id: " + userId);
+                return false;
+            }
+            
+            String storedPassword = rs.getString("password_hash");
+            
+            // Check if current password matches (support both plain text and hash)
+            String currentPasswordHash = sha256(currentPassword);
+            boolean isCurrentPasswordCorrect = 
+                currentPassword.equals(storedPassword) || 
+                currentPasswordHash.equals(storedPassword);
+            
+            rs.close();
+            checkStmt.close();
+            
+            if (!isCurrentPasswordCorrect) {
+                logger.warning("Current password is incorrect for user id: " + userId);
+                return false;
+            }
+            
+            // Update to new password
+            String updateSql = "UPDATE users SET password_hash = ? WHERE id = ?";
+            PreparedStatement updateStmt = connection.prepareStatement(updateSql);
+            updateStmt.setString(1, newPassword);
+            updateStmt.setInt(2, userId);
+            
+            int rowsAffected = updateStmt.executeUpdate();
+            updateStmt.close();
+            
+            return rowsAffected > 0;
+            
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error changing password for user id: " + userId, e);
+            return false;
+        }
+    }
+    
+    // SHA-256 hash helper
+    private String sha256(String input) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(input.getBytes());
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
 }

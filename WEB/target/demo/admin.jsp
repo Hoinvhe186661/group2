@@ -119,11 +119,11 @@
                         <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
                             <li>
-                                <a href="#">
+                                <a href="profile.jsp">
                                 <i class="fa fa-user fa-fw pull-right"></i>
                                     Hồ sơ
                                 </a>
-                                <a data-toggle="modal" href="#modal-user-settings">
+                                <a href="settings.jsp">
                                 <i class="fa fa-cog fa-fw pull-right"></i>
                                     Cài đặt
                                 </a>

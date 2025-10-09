@@ -76,7 +76,6 @@
                 <tr>
                     <th>ID</th>
                     <th>Loại yêu cầu</th>
-                    <th>Độ ưu tiên</th>
                     <th>Chi tiết vấn đề</th>
                     <th>Ngày tạo</th>
                     <th>Trạng thái</th>
@@ -109,12 +108,28 @@
         <form id="supportForm">
           <div class="row mb-2">
             <div class="col-6">
-              <label>Tên/Code khách hàng :</label>
-              <input type="text" class="form-control" id="customerId" placeholder="Nhập ID khách hàng">
+              <label>Họ tên</label>
+              <input type="text" class="form-control" id="displayName" readonly>
             </div>
             <div class="col-6">
-              <label>Email:</label>
-              <input type="email" class="form-control" id="email">
+              <label>Email</label>
+              <input type="email" class="form-control" id="email" readonly>
+            </div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-12">
+              <label>Hợp đồng</label>
+              <select class="form-control" id="contractSelect">
+                <option value="">-- Chọn hợp đồng --</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-12">
+              <label>Sản phẩm trong hợp đồng</label>
+              <select class="form-control" id="contractProductSelect" disabled>
+                <option value="">-- Chọn sản phẩm --</option>
+              </select>
             </div>
           </div>
           <div class="mb-2">
@@ -128,15 +143,6 @@
                 <option value="billing">Thanh toán</option>
                 <option value="general" selected>Chung</option>
                 <option value="complaint">Khiếu nại</option>
-            </select>
-          </div>
-          <div class="mb-2">
-            <label>Mức độ ưu tiên :</label>
-            <select class="form-control" id="priority">
-              <option value="urgent">Cao</option>
-              <option value="high">Trung bình</option>
-              <option value="medium" selected>Thường</option>
-              <option value="low">Thấp</option>
             </select>
           </div>
           <div class="mb-2">
@@ -178,12 +184,25 @@
               <option value="complaint">Khiếu nại</option>
             </select>
           </div>
+          <div class="col-md-6">
+            <label>Hợp đồng</label>
+            <select id="v_contract_select" class="form-control" disabled>
+              <option value="">-- Chọn hợp đồng --</option>
+            </select>
+          </div>
           <div class="col-md-6"><label>Ưu tiên</label>
             <select id="v_priority_inp" class="form-control" disabled>
+              <option value="">--</option>
               <option value="urgent">Cao</option>
               <option value="high">Trung bình</option>
               <option value="medium">Thường</option>
               <option value="low">Thấp</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label>Sản phẩm trong hợp đồng</label>
+            <select id="v_product_select" class="form-control" disabled>
+              <option value="">-- Chọn sản phẩm --</option>
             </select>
           </div>
           <div class="col-12"><label>Tiêu đề</label><input id="v_subject_inp" class="form-control" disabled/></div>
@@ -193,7 +212,7 @@
           <div class="col-12 d-flex align-items-center justify-content-between">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="v_enable_edit">
-              <label class="form-check-label" for="v_enable_edit">Cho phép chỉnh sửa (ủy quyền)</label>
+              <label class="form-check-label" for="v_enable_edit">Chỉnh sửa </label>
             </div>
             <button type="button" id="v_save_btn" class="btn btn-success" disabled>Lưu thành yêu cầu mới</button>
           </div>
@@ -221,19 +240,62 @@
     } catch(e) {}
     
     const ctx = '<%=request.getContextPath()%>';
-    // Prefill and lock email from session; hint customer field
+    // Prefill name/email theo session và nạp danh sách hợp đồng/sản phẩm
     try {
       const sessionEmail = '<%= String.valueOf(session.getAttribute("email")) %>';
       const sessionUsername = '<%= String.valueOf(session.getAttribute("username")) %>';
+      const sessionFullName = '<%= String.valueOf(session.getAttribute("fullName")) %>';
+      const sessionCustomerId = '<%= String.valueOf(session.getAttribute("customerId")) %>';
       const emailInp = document.getElementById('email');
-      const customerInp = document.getElementById('customerId');
+      const nameInp = document.getElementById('displayName');
       if (emailInp && sessionEmail && sessionEmail !== 'null') {
         emailInp.value = sessionEmail;
-        emailInp.readOnly = true;
       }
-      if (customerInp && sessionUsername && sessionUsername !== 'null') {
-        customerInp.placeholder = 'Nhập tên/Code đúng với tài khoản: ' + sessionUsername;
+      if (nameInp) {
+        const name = (sessionFullName && sessionFullName !== 'null') ? sessionFullName : (sessionUsername && sessionUsername !== 'null' ? sessionUsername : '');
+        nameInp.value = name;
       }
+
+      // Load contracts and filter by customer id if available
+      const contractSelect = document.getElementById('contractSelect');
+      const productSelect = document.getElementById('contractProductSelect');
+      const ctx = '<%=request.getContextPath()%>';
+      fetch(ctx + '/api/contracts', { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(j => {
+          if (!j || !j.success) return;
+          const list = Array.isArray(j.data) ? j.data : [];
+          const cid = (sessionCustomerId && sessionCustomerId !== 'null') ? parseInt(sessionCustomerId, 10) : null;
+          const filtered = cid ? list.filter(it => String(it.customerId) === String(cid)) : list;
+          filtered.forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it.id;
+            opt.textContent = (it.contractNumber ? (it.contractNumber + ' - ') : '') + (it.title || ('HĐ #' + it.id));
+            contractSelect.appendChild(opt);
+          });
+        });
+
+      contractSelect.addEventListener('change', function(){
+        const id = this.value;
+        productSelect.innerHTML = '<option value="">-- Chọn sản phẩm --</option>';
+        productSelect.disabled = !id;
+        if (!id) return;
+        fetch(ctx + '/api/contract-items?contractId=' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' } })
+          .then(r => r.json())
+          .then(j => {
+            if (!j || !j.success) return;
+            const arr = Array.isArray(j.data) ? j.data : [];
+            arr.forEach(item => {
+              const opt = document.createElement('option');
+              opt.value = item.productId;
+              const name = item.description ? item.description : ('Sản phẩm #' + item.productId);
+              opt.textContent = name;
+              opt.dataset.quantity = item.quantity != null ? String(item.quantity) : '';
+              opt.dataset.unitPrice = item.unitPrice != null ? String(item.unitPrice) : '';
+              productSelect.appendChild(opt);
+            });
+          });
+      });
     } catch (e) {}
     const tbody = document.getElementById('supportRows');
     const pagerContainer = document.querySelector('.pagination.custom-pagination');
@@ -290,7 +352,6 @@
             (item.subject && item.subject.toLowerCase().includes(term)) ||
             (item.description && item.description.toLowerCase().includes(term)) ||
             (item.category && item.category.toLowerCase().includes(term)) ||
-            (item.priority && item.priority.toLowerCase().includes(term)) ||
             (item.ticketNumber && item.ticketNumber.toLowerCase().includes(term))
           );
         });
@@ -300,7 +361,7 @@
     function rows(items){
       tbody.innerHTML = '';
       if(!items || !items.length){
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center">Chưa có yêu cầu nào</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có yêu cầu nào</td></tr>';
         return;
       }
       items.forEach(function(it, idx){
@@ -315,7 +376,11 @@
         const cancelButton = canCancel ? '<a href="#" class="cancel-link text-danger" data-id="'+ (it.id||'') +'">Hủy</a>' : '';
         // Tính số thứ tự theo thời gian tạo (mới nhất = 1)
         const sequenceNumber = (currentPage - 1) * pageSize + idx + 1;
-        tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ (it.priority||'') +'</td><td>'+ (it.description||'') +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + '</td>';
+        var displayDesc = (it.description||'');
+        try {
+          displayDesc = displayDesc.replace(/\[Hợp đồng:[^\]]*\]\s*/g, '').replace(/\[Sản phẩm:[^\]]*\]\s*/g, '').trim();
+        } catch(e) {}
+        tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ displayDesc +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + '</td>';
         tbody.appendChild(tr);
       });
     }
@@ -380,12 +445,26 @@
       e.preventDefault();
       const form = e.target;
       const data = new URLSearchParams();
-      data.append('subject', document.getElementById('subject').value || '');
-      data.append('description', document.getElementById('description').value || '');
+      const subject = document.getElementById('subject').value || '';
+      const baseDesc = document.getElementById('description').value || '';
+      // Lưu hợp đồng/sản phẩm vào mô tả để hiển thị lại ở chi tiết (danh sách sẽ ẩn các tiền tố này)
+      const cSel = document.getElementById('contractSelect');
+      const pSel = document.getElementById('contractProductSelect');
+      const cHas = cSel && cSel.value;
+      const pHas = pSel && pSel.value;
+      let composed = baseDesc;
+      if (cHas) {
+        const cText = cSel.options[cSel.selectedIndex].textContent;
+        composed = '[Hợp đồng: ' + cText + '] ' + composed;
+      }
+      if (pHas) {
+        const pText = pSel.options[pSel.selectedIndex].textContent;
+        composed = '[Sản phẩm: ' + pText + '] ' + composed;
+      }
+      data.append('subject', subject);
+      data.append('description', composed);
       data.append('category', document.getElementById('category').value || 'general');
-      data.append('priority', document.getElementById('priority').value || 'medium');
-      data.append('customerId', document.getElementById('customerId').value || '');
-      data.append('email', document.getElementById('email').value || '');
+      // backend tự xác định người dùng theo session; không gửi priority/customer/email
       fetch(ctx + '/api/support-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
@@ -422,14 +501,68 @@
       var priInp = document.getElementById('v_priority_inp');
       var subInp = document.getElementById('v_subject_inp');
       var desInp = document.getElementById('v_description_inp');
+      var vContract = document.getElementById('v_contract_select');
+      var vProduct = document.getElementById('v_product_select');
       if (catInp) catInp.value = (it.category||'general');
-      if (priInp) priInp.value = (it.priority||'medium');
+      if (priInp) priInp.value = (it.priority ? it.priority : '');
       if (subInp) subInp.value = (it.subject||'');
       if (desInp) desInp.value = (it.description||'');
       const created = formatDate(it);
       const resolved = (it.resolvedAt ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(it.resolvedAt)) : '');
       document.getElementById('v_created').textContent = created;
       document.getElementById('v_resolved').textContent = resolved;
+      // Load contracts for view (read-only)
+      try {
+        // reset
+        if (vContract) { vContract.innerHTML = '<option value="">-- Chọn hợp đồng --</option>'; }
+        if (vProduct) { vProduct.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; vProduct.disabled = true; }
+        const sessionCustomerId = '<%= String.valueOf(session.getAttribute("customerId")) %>';
+        fetch(ctx + '/api/contracts', { headers: { 'Accept': 'application/json' } })
+          .then(r=>r.json()).then(function(j){
+            if (!j || !j.success) return;
+            const list = Array.isArray(j.data)? j.data: [];
+            const cid = (sessionCustomerId && sessionCustomerId !== 'null') ? String(sessionCustomerId) : null;
+            const filtered = cid ? list.filter(function(x){ return String(x.customerId)===cid; }) : list;
+            filtered.forEach(function(c){
+              var opt = document.createElement('option');
+              opt.value = c.id;
+              opt.textContent = (c.contractNumber ? (c.contractNumber + ' - ') : '') + (c.title || ('HĐ #' + c.id));
+              vContract.appendChild(opt);
+            });
+            // Try detect from description pattern [Hợp đồng: ...] [Sản phẩm: ...]
+            var desc = desInp ? desInp.value : '';
+            var contractLabel = (desc.match(/\[Hợp đồng:([^\]]+)\]/) || [])[1];
+            var productLabel = (desc.match(/\[Sản phẩm:([^\]]+)\]/) || [])[1];
+            if (contractLabel) {
+              for (var i=0;i<vContract.options.length;i++) {
+                if (vContract.options[i].textContent.indexOf(contractLabel.trim()) !== -1) {
+                  vContract.selectedIndex = i; break;
+                }
+              }
+              if (vContract.value) {
+                vProduct.disabled = false;
+                fetch(ctx + '/api/contract-items?contractId=' + encodeURIComponent(vContract.value), { headers: { 'Accept': 'application/json' } })
+                  .then(r=>r.json()).then(function(j2){
+                    if (!j2 || !j2.success) return;
+                    (Array.isArray(j2.data)? j2.data: []).forEach(function(item){
+                      var opt = document.createElement('option');
+                      opt.value = item.productId;
+                      var name = item.description ? item.description : ('Sản phẩm #' + item.productId);
+                      opt.textContent = name;
+                      vProduct.appendChild(opt);
+                    });
+                    if (productLabel) {
+                      for (var k=0;k<vProduct.options.length;k++) {
+                        if (vProduct.options[k].textContent.indexOf(productLabel.trim()) !== -1) {
+                          vProduct.selectedIndex = k; break;
+                        }
+                      }
+                    }
+                  });
+              }
+            }
+          });
+      } catch(e) {}
       const vm = bootstrap.Modal.getOrCreateInstance(document.getElementById('viewModal'));
       vm.show();
       // reset edit state
@@ -460,7 +593,9 @@
             return;
           }
           var on = !!enable.checked;
-          [catInp, priInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = !on; }});
+         // chỉnh sửa loại yêu cầu, tiêu đề, mô tả
+          [catInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = !on; }});
+          if (priInp) priInp.disabled = true;
           if (saveBtn) saveBtn.disabled = !on;
         };
       }
@@ -470,7 +605,6 @@
           data.append('subject', subInp.value || '');
           data.append('description', desInp.value || '');
           data.append('category', catInp.value || 'general');
-          data.append('priority', priInp.value || 'medium');
           data.append('delete_old_id', id); // thêm ID để xóa bản cũ
           fetch(ctx + '/api/support-requests', {
             method: 'POST',
