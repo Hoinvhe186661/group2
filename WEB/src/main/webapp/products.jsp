@@ -16,17 +16,17 @@
     <meta name="description" content="Admin Panel for Web Application">
     <meta name="keywords" content="Admin, Bootstrap 3, Template, Theme, Responsive">
     
-    <!-- bootstrap 3.0.2 -->
-    <link href="<%=request.getContextPath()%>/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
-    <!-- font Awesome -->
-    <link href="<%=request.getContextPath()%>/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
-    <!-- Ionicons -->
-    <link href="<%=request.getContextPath()%>/css/ionicons.min.css" rel="stylesheet" type="text/css" />
-    <!-- DataTables -->
-    <link href="<%=request.getContextPath()%>/css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
-    <!-- Theme style -->
-    <link href="<%=request.getContextPath()%>/css/style.css" rel="stylesheet" type="text/css" />
-    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+        <!-- bootstrap 3.0.2 -->
+        <link href="<%=request.getContextPath()%>/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+        <!-- font Awesome -->
+        <link href="<%=request.getContextPath()%>/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+        <!-- Ionicons -->
+        <link href="<%=request.getContextPath()%>/css/ionicons.min.css" rel="stylesheet" type="text/css" />
+        <!-- DataTables -->
+        <link href="<%=request.getContextPath()%>/css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
+        <!-- Theme style -->
+        <link href="<%=request.getContextPath()%>/css/style.css" rel="stylesheet" type="text/css" />
+        <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     
     <style>
         /* CSS cho phần lọc sản phẩm */
@@ -82,7 +82,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">
-            Bảng điều khiển quản trị
+            Bảng điều khiển 
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -161,7 +161,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<%=request.getContextPath()%>/suppliers.jsp">
+                        <a href="<%=request.getContextPath()%>/supplier.jsp">
                             <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
                         </a>
                     </li>
