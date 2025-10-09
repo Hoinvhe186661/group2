@@ -1,0 +1,8 @@
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:00 +0700] "GET /demo HTTP/1.1" 302 - http-bio-8080-exec-1 0
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:01 +0700] "GET /demo/ HTTP/1.1" 200 42532 http-bio-8080-exec-2 996
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:01 +0700] "GET /demo/images/logo-banner.png HTTP/1.1" 404 5 http-bio-8080-exec-4 4
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:01 +0700] "GET /demo/images/logo.png HTTP/1.1" 404 5 http-bio-8080-exec-3 7
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:01 +0700] "GET /demo/images/sanpham2.jpg HTTP/1.1" 200 222718 http-bio-8080-exec-6 7
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:01 +0700] "GET /demo/images/sanpham1.jpg HTTP/1.1" 200 222128 http-bio-8080-exec-5 7
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:01 +0700] "GET /demo/images/sanpham3.jpg HTTP/1.1" 200 227052 http-bio-8080-exec-7 9
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:23:08:02 +0700] "GET /demo/login.jsp HTTP/1.1" 200 3937 http-bio-8080-exec-5 44

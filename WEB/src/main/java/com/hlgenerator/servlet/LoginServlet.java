@@ -1,8 +1,6 @@
 package com.hlgenerator.servlet;
 
 import java.io.IOException;
-import com.hlgenerator.dao.UserDAO;
-import com.hlgenerator.model.User;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,6 +9,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+
+import com.hlgenerator.dao.UserDAO;
+import com.hlgenerator.model.User;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
@@ -76,25 +77,6 @@ public class LoginServlet extends HttpServlet {
             }
         }
         
-        // Fallback cho demo - accept common passwords
-        if (!isValidLogin && ("admin".equals(password) || "password".equals(password) || "admin123".equals(password) || "123456".equals(password))) {
-            isValidLogin = true;
-            // Kiểm tra username để xác định vai trò - chỉ dùng khi không có trong database
-            if ("customer".equals(username) || username.startsWith("customer")) {
-                userRole = "customer";
-                fullName = "Customer User";
-                email = username + "@example.com";
-            } else if ("admin".equals(username) || username.startsWith("admin")) {
-                userRole = "admin";
-                fullName = "Administrator";
-                email = username + "@hlgenerator.com";
-            } else {
-                // Mặc định là customer cho các username khác
-                userRole = "customer";
-                fullName = "Customer User";
-                email = username + "@example.com";
-            }
-        }
         
         if (isValidLogin) {
             // Đăng nhập thành công
@@ -135,7 +117,7 @@ public class LoginServlet extends HttpServlet {
             
         } else {
             // Đăng nhập thất bại
-            request.setAttribute("errorMessage", "Mật khẩu không đúng! Thử: admin, password, admin123, hoặc 123456");
+            request.setAttribute("errorMessage", "Mật khẩu hoặc tài khoản không đúng");
             request.setAttribute("username", username);
             request.getRequestDispatcher("login.jsp").forward(request, response);
         }
