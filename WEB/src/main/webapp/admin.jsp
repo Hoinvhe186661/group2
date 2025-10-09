@@ -81,7 +81,7 @@
                             <li>
                                 <!-- inner menu: contains the actual data -->
                                 <ul class="menu">
-                                    <li><!-- start message -->
+                                    <li><!-- start message -->s
                                         <a href="#">
                                             <div class="pull-left">
                                                 <img src="img/26115.jpg" class="img-circle" alt="User Image"/>

@@ -170,7 +170,7 @@
                         </div>
                         <div class="form-group">
                             <label>Tên công ty:</label>
-                            <input type="text" class="form-control" id="companyName" required>
+                            <input type="text" class="form-control" id="companyName">
                         </div>
                         <div class="form-group">
                             <label>Người liên hệ:</label>
@@ -368,9 +368,16 @@
                 customerType: $('#customerType').val()
             };
 
-            if (!formData.customerCode || !formData.companyName || !formData.userContract || 
+            // Kiểm tra các trường bắt buộc cơ bản
+            if (!formData.customerCode || !formData.userContract || 
                 !formData.customerEmail || !formData.customerPhone || !formData.customerAddress || !formData.customerType) {
                 alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+                return;
+            }
+
+            // Kiểm tra tên công ty chỉ bắt buộc khi loại khách hàng là doanh nghiệp
+            if (formData.customerType === 'company' && (!formData.companyName || formData.companyName.trim() === '')) {
+                alert('Vui lòng nhập tên công ty cho khách hàng doanh nghiệp');
                 return;
             }
 
@@ -408,6 +415,22 @@
             $('#addCustomerForm')[0].reset();
             currentEditingCustomer = null;
             $('#addCustomerModal .modal-title').text('Thêm khách hàng mới');
+            // Reset label về mặc định
+            $('label[for="companyName"]').text('Tên công ty:');
+        });
+
+        // Cập nhật label khi thay đổi loại khách hàng
+        $('#customerType').on('change', function() {
+            var customerType = $(this).val();
+            var label = $('label[for="companyName"]');
+            
+            if (customerType === 'individual') {
+                label.text('Tên công ty: (Tùy chọn)');
+            } else if (customerType === 'company') {
+                label.text('Tên công ty: *');
+            } else {
+                label.text('Tên công ty:');
+            }
         });
     </script>
 </body>

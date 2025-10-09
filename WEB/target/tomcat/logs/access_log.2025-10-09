@@ -1,0 +1,11 @@
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:02 +0700] "GET /demo/customers.jsp HTTP/1.1" 200 23858 http-bio-8080-exec-1 870
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:30 +0700] "POST /demo/api/customers HTTP/1.1" 200 65 http-bio-8080-exec-3 21
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:32 +0700] "GET /demo/customers.jsp HTTP/1.1" 200 25655 http-bio-8080-exec-4 13
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:34 +0700] "GET /demo/api/customers?action=get&id=1 HTTP/1.1" 200 319 http-bio-8080-exec-5 7
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:49 +0700] "POST /demo/api/customers HTTP/1.1" 200 72 http-bio-8080-exec-7 14
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:50 +0700] "GET /demo/customers.jsp HTTP/1.1" 200 25662 http-bio-8080-exec-8 7
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:22:57 +0700] "GET /demo/api/customers?action=get&id=3 HTTP/1.1" 200 316 http-bio-8080-exec-10 3
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:23:07 +0700] "GET /demo/api/customers?action=get&id=3 HTTP/1.1" 200 316 http-bio-8080-exec-10 2
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:23:10 +0700] "GET /demo/users.jsp HTTP/1.1" 200 51420 http-bio-8080-exec-10 119
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:23:16 +0700] "GET /demo/api/users?action=get&id=1 HTTP/1.1" 200 334 http-bio-8080-exec-10 7
+0:0:0:0:0:0:0:1 - - [09/Oct/2025:09:23:23 +0700] "GET /demo/api/users?action=get&id=3 HTTP/1.1" 200 344 http-bio-8080-exec-10 0

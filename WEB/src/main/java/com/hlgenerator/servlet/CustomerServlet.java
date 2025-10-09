@@ -193,7 +193,6 @@ public class CustomerServlet extends HttpServlet {
 
             // Validate required fields
             if (customerCode == null || customerCode.trim().isEmpty() ||
-                companyName == null || companyName.trim().isEmpty() ||
                 contactPerson == null || contactPerson.trim().isEmpty() ||
                 email == null || email.trim().isEmpty() ||
                 phone == null || phone.trim().isEmpty() ||
@@ -201,6 +200,12 @@ public class CustomerServlet extends HttpServlet {
                 customerType == null || customerType.trim().isEmpty()) {
                 
                 sendErrorResponse(out, "Tất cả các trường bắt buộc phải được điền", 400);
+                return;
+            }
+
+            // Kiểm tra tên công ty chỉ bắt buộc khi loại khách hàng là doanh nghiệp
+            if ("company".equals(customerType) && (companyName == null || companyName.trim().isEmpty())) {
+                sendErrorResponse(out, "Vui lòng nhập tên công ty cho khách hàng doanh nghiệp", 400);
                 return;
             }
 
@@ -213,7 +218,7 @@ public class CustomerServlet extends HttpServlet {
             // Create customer object
             Customer customer = new Customer(
                 customerCode.trim(),
-                companyName.trim(),
+                companyName != null ? companyName.trim() : null,
                 contactPerson.trim(),
                 email.trim(),
                 phone.trim(),
@@ -263,7 +268,6 @@ public class CustomerServlet extends HttpServlet {
 
             // Validate required fields
             if (customerCode == null || customerCode.trim().isEmpty() ||
-                companyName == null || companyName.trim().isEmpty() ||
                 contactPerson == null || contactPerson.trim().isEmpty() ||
                 email == null || email.trim().isEmpty() ||
                 phone == null || phone.trim().isEmpty() ||
@@ -271,6 +275,12 @@ public class CustomerServlet extends HttpServlet {
                 customerType == null || customerType.trim().isEmpty()) {
                 
                 sendErrorResponse(out, "Tất cả các trường bắt buộc phải được điền", 400);
+                return;
+            }
+
+            // Kiểm tra tên công ty chỉ bắt buộc khi loại khách hàng là doanh nghiệp
+            if ("company".equals(customerType) && (companyName == null || companyName.trim().isEmpty())) {
+                sendErrorResponse(out, "Vui lòng nhập tên công ty cho khách hàng doanh nghiệp", 400);
                 return;
             }
 
@@ -289,7 +299,7 @@ public class CustomerServlet extends HttpServlet {
 
             // Update customer object
             existingCustomer.setCustomerCode(customerCode.trim());
-            existingCustomer.setCompanyName(companyName.trim());
+            existingCustomer.setCompanyName(companyName != null ? companyName.trim() : null);
             existingCustomer.setContactPerson(contactPerson.trim());
             existingCustomer.setEmail(email.trim());
             existingCustomer.setPhone(phone.trim());
