@@ -104,6 +104,62 @@
                                 </div>
                             </header>
                             <div class="panel-body table-responsive">
+                                <form class="form-inline" method="get" action="contracts.jsp" style="margin-bottom: 15px;">
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label for="statusFilter">Trạng thái:&nbsp;</label>
+                                        <select class="form-control" id="statusFilter" name="status">
+                                            <option value="">Tất cả</option>
+                                            <option value="draft">Bản nháp</option>
+                                            <option value="active">Hiệu lực</option>
+                                            <option value="completed">Hoàn thành</option>
+                                            <option value="terminated">Chấm dứt</option>
+                                            <option value="expired">Hết hạn</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label for="typeFilter">Loại:&nbsp;</label>
+                                        <input type="text" class="form-control" id="typeFilter" name="contractType" placeholder="VD: Service">
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label for="search">Tìm kiếm:&nbsp;</label>
+                                        <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH">
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label>Bắt đầu:&nbsp;</label>
+                                        <input type="date" class="form-control" name="startFrom">
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label>Đến:&nbsp;</label>
+                                        <input type="date" class="form-control" name="startTo">
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label>Kết thúc từ:&nbsp;</label>
+                                        <input type="date" class="form-control" name="endFrom">
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label>Đến:&nbsp;</label>
+                                        <input type="date" class="form-control" name="endTo">
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <label for="sortBy">Sắp xếp:&nbsp;</label>
+                                        <select class="form-control" id="sortBy" name="sortBy">
+                                            <option value="id">ID hợp đồng</option>
+                                            <option value="customerName">Tên khách hàng</option>
+                                            <option value="startDate">Ngày bắt đầu</option>
+                                            <option value="endDate">Ngày kết thúc</option>
+                                            <option value="status">Trạng thái</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-right: 10px;">
+                                        <select class="form-control" name="sortDir">
+                                            <option value="desc">Giảm dần</option>
+                                            <option value="asc">Tăng dần</option>
+                                        </select>
+                                    </div>
+                                    <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
+                                    <button type="submit" class="btn btn-default"><i class="fa fa-filter"></i> Lọc</button>
+                                    <a href="contracts.jsp" class="btn btn-link">Xóa lọc</a>
+                                </form>
                                 <table class="table table-hover" id="contractsTable">
                                     <thead>
                                         <tr>
@@ -122,7 +178,29 @@
                                     <tbody id="contractsTableBody">
                                         <%
                                             com.hlgenerator.dao.ContractDAO dao = new com.hlgenerator.dao.ContractDAO();
-                                            java.util.List<com.hlgenerator.model.Contract> contracts = dao.getAllContracts();
+                                            String pageParam = request.getParameter("page");
+                                            String sizeParam = request.getParameter("size");
+                                            int currentPage = 1;
+                                            int pageSize = 10;
+                                            try { if (pageParam != null) currentPage = Integer.parseInt(pageParam); } catch (Exception ignored) {}
+                                            try { if (sizeParam != null) pageSize = Integer.parseInt(sizeParam); } catch (Exception ignored) {}
+                                            if (currentPage < 1) currentPage = 1;
+                                            if (pageSize < 1) pageSize = 10;
+                                            String status = request.getParameter("status");
+                                            String contractType = request.getParameter("contractType");
+                                            String search = request.getParameter("q");
+                                            java.sql.Date startFrom = null, startTo = null, endFrom = null, endTo = null;
+                                            try { String v = request.getParameter("startFrom"); if (v != null && !v.isEmpty()) startFrom = java.sql.Date.valueOf(v); } catch (Exception ignored) {}
+                                            try { String v = request.getParameter("startTo"); if (v != null && !v.isEmpty()) startTo = java.sql.Date.valueOf(v); } catch (Exception ignored) {}
+                                            try { String v = request.getParameter("endFrom"); if (v != null && !v.isEmpty()) endFrom = java.sql.Date.valueOf(v); } catch (Exception ignored) {}
+                                            try { String v = request.getParameter("endTo"); if (v != null && !v.isEmpty()) endTo = java.sql.Date.valueOf(v); } catch (Exception ignored) {}
+                                            String sortBy = request.getParameter("sortBy");
+                                            String sortDir = request.getParameter("sortDir");
+                                            int total = dao.countContractsFiltered(status, contractType, search, startFrom, startTo, endFrom, endTo);
+                                            int totalPages = (int) Math.ceil(total / (double) pageSize);
+                                            if (totalPages == 0) totalPages = 1;
+                                            if (currentPage > totalPages) currentPage = totalPages;
+                                            java.util.List<com.hlgenerator.model.Contract> contracts = dao.getContractsPageFiltered(currentPage, pageSize, status, contractType, search, startFrom, startTo, endFrom, endTo, sortBy, sortDir);
                                             for (com.hlgenerator.model.Contract c : contracts) {
                                         %>
                                         <tr>
@@ -144,6 +222,39 @@
                                         <% } %>
                                     </tbody>
                                 </table>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <%
+                                            int start = (currentPage - 1) * pageSize + 1;
+                                            int end = start + contracts.size() - 1;
+                                            if (total == 0) { start = 0; end = 0; }
+                                        %>
+                                        <p>Hiển thị <strong><%= start %></strong> - <strong><%= end %></strong> trên tổng <strong><%= total %></strong> hợp đồng</p>
+                                    </div>
+                                    <div class="col-sm-6 text-right">
+                                        <ul class="pagination" style="margin: 0;">
+                                            <li class="<%= (currentPage <= 1) ? "disabled" : "" %>"><a href="<%= (currentPage <= 1) ? "#" : ("contracts.jsp?page=" + (currentPage-1) + "&size=" + pageSize
+                                                + (request.getQueryString() != null ? "&" + request.getQueryString().replaceAll("(^|&)(page|size)=[^&]*", "") : "")) %>">&laquo;</a></li>
+                                            <%
+                                                int maxPagesToShow = 5;
+                                                int half = maxPagesToShow / 2;
+                                                int startPage = Math.max(1, currentPage - half);
+                                                int endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                                                if (endPage - startPage + 1 < maxPagesToShow) {
+                                                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                                                }
+                                                for (int p = startPage; p <= endPage; p++) {
+                                            %>
+                                            <li class="<%= (p == currentPage) ? "active" : "" %>"><a href="<%= (p == currentPage) ? "#" : ("contracts.jsp?page=" + p + "&size=" + pageSize
+                                                + (request.getQueryString() != null ? "&" + request.getQueryString().replaceAll("(^|&)(page|size)=[^&]*", "") : "")) %>"><%= p %></a></li>
+                                            <%
+                                                }
+                                            %>
+                                            <li class="<%= (currentPage >= totalPages) ? "disabled" : "" %>"><a href="<%= (currentPage >= totalPages) ? "#" : ("contracts.jsp?page=" + (currentPage+1) + "&size=" + pageSize
+                                                + (request.getQueryString() != null ? "&" + request.getQueryString().replaceAll("(^|&)(page|size)=[^&]*", "") : "")) %>">&raquo;</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -399,9 +510,9 @@
                 "language": { "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json" },
                 "processing": false,
                 "serverSide": false,
-                "paging": true,
-                "pageLength": 10,
-                "searching": true,
+                "paging": false,
+                "searching": false,
+                "dom": 'lrtip',
                 "ordering": true,
                 "info": true,
                 "autoWidth": false,
@@ -409,6 +520,8 @@
                 "order": [[0, "desc"]],
                 "columnDefs": [{ "targets": [9], "orderable": false, "searchable": false }]
             });
+            // Safety: remove filter container if any existed from previous inits
+            $('#contractsTable_filter').remove();
             
             // Load danh sách khách hàng
             loadCustomers();

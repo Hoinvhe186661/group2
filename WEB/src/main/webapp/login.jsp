@@ -158,7 +158,7 @@ session = request.getSession(true);
         
         <div class="back-link">
             <a href="index.jsp">← Quay về trang chủ</a> | 
-            
+            <a href="forgot-password">Quên mật khẩu?</a>
         </div>
     </div>
 </body>

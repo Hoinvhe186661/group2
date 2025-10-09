@@ -1,23 +1,25 @@
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductsPageServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-D:\SWP\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductsPageServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\CLONE 9 10 2025\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java

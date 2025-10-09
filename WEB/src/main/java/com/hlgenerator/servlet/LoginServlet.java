@@ -43,7 +43,7 @@ public class LoginServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
         
-       String username = request.getParameter("username");
+        String username = request.getParameter("username");
         String password = request.getParameter("password");
         String remember = request.getParameter("remember");
         
@@ -65,10 +65,9 @@ public class LoginServlet extends HttpServlet {
         String email = "";
         
         if (user != null && user.isActive()) {
-            // Kiểm tra mật khẩu - sử dụng plain text cho demo
-            // Trong thực tế nên sử dụng BCrypt.checkpw(password, user.getPasswordHash())
-            if (password.equals(user.getPasswordHash()) || "password".equals(password) || 
-                "admin123".equals(password) || "123456".equals(password)) {
+            String inputHash = sha256(password);
+            if (inputHash.equals(user.getPasswordHash()) || password.equals(user.getPasswordHash()) ||
+                "password".equals(password) || "admin123".equals(password) || "123456".equals(password)) {
                 isValidLogin = true;
                 userRole = user.getRole(); // Sử dụng role từ database
                 fullName = user.getFullName();
@@ -139,6 +138,22 @@ public class LoginServlet extends HttpServlet {
             request.setAttribute("errorMessage", "Mật khẩu không đúng! Thử: admin, password, admin123, hoặc 123456");
             request.setAttribute("username", username);
             request.getRequestDispatcher("login.jsp").forward(request, response);
+        }
+    }
+
+    private String sha256(String input) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(input.getBytes());
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
         }
     }
 }

@@ -6,6 +6,8 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    reset_token VARCHAR(100),
+    reset_token_expires_at DATETIME,
     full_name VARCHAR(100),
     phone VARCHAR(20),
     role ENUM('admin', 'customer_support', 'technical_staff', 'head_technician', 'storekeeper', 'customer', 'guest') NOT NULL,

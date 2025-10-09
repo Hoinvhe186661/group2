@@ -4,9 +4,12 @@ com\hlgenerator\servlet\ContractServlet.class
 com\hlgenerator\dao\SupportRequestDAO.class
 com\hlgenerator\model\User.class
 com\hlgenerator\model\SupportRequest.class
+com\hlgenerator\servlet\ForgotPasswordServlet.class
 com\hlgenerator\model\Product.class
 com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\dao\UserDAO.class
+com\hlgenerator\servlet\ResetPasswordServlet.class
+com\hlgenerator\servlet\ForgotPasswordServlet$1.class
 com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class
 com\hlgenerator\dao\ContractDAO.class

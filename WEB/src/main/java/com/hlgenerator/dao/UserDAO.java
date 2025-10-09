@@ -238,6 +238,75 @@ public class UserDAO extends DBConnect {
         }
     }
 
+    // Save password reset token and expiry
+    public boolean savePasswordResetToken(int userId, String token, Timestamp expiresAt) {
+        if (!checkConnection()) {
+            return false;
+        }
+        String sql = "UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, token);
+            ps.setTimestamp(2, expiresAt);
+            ps.setInt(3, userId);
+            int result = ps.executeUpdate();
+            return result > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error saving password reset token", e);
+            return false;
+        }
+    }
+
+    // Get user by reset token (validate expiry in Java to avoid timezone issues)
+    public User getUserByResetToken(String token) {
+        if (!checkConnection()) {
+            return null;
+        }
+        String sql = "SELECT * FROM users WHERE reset_token = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    java.sql.Timestamp exp = rs.getTimestamp("reset_token_expires_at");
+                    if (exp != null && exp.before(new java.util.Date())) {
+                        return null; // expired
+                    }
+                    return new User(
+                        rs.getInt("id"),
+                        rs.getString("username"),
+                        rs.getString("email"),
+                        rs.getString("password_hash"),
+                        rs.getString("full_name"),
+                        rs.getString("phone"),
+                        rs.getString("role"),
+                        rs.getString("permissions"),
+                        rs.getBoolean("is_active"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting user by reset token", e);
+        }
+        return null;
+    }
+
+    // Clear password reset token
+    public boolean clearPasswordResetToken(int userId) {
+        if (!checkConnection()) {
+            return false;
+        }
+        String sql = "UPDATE users SET reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            int result = ps.executeUpdate();
+            return result > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error clearing password reset token", e);
+            return false;
+        }
+    }
+
     // Delete user (soft delete - set is_active to false)
     public boolean deleteUser(int id) {
         if (!checkConnection()) {
