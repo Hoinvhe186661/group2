@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -74,8 +73,7 @@ public class LoginServlet extends HttpServlet {
         
         if (user != null && user.isActive()) {
             String inputHash = sha256(password);
-            if (inputHash.equals(user.getPasswordHash()) || password.equals(user.getPasswordHash()) ||
-                "password".equals(password) || "admin123".equals(password) || "123456".equals(password) || "123abc".equals(password)) {
+            if (inputHash.equals(user.getPasswordHash()) || password.equals(user.getPasswordHash())) {
                 isValidLogin = true;
                 userRole = user.getRole(); // Sử dụng role từ database
                 fullName = user.getFullName();
@@ -96,19 +94,6 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("isLoggedIn", true);
             session.setAttribute("loginTime", System.currentTimeMillis());
             
-            // Xử lý remember me
-            if (remember != null && "on".equals(remember)) {
-                Cookie userCookie = new Cookie("rememberedUsername", username);
-                userCookie.setMaxAge(60 * 60 * 24 * 7); // 7 ngày
-                userCookie.setPath("/");
-                response.addCookie(userCookie);
-            } else {
-                // Xóa cookie nếu không chọn remember me
-                Cookie userCookie = new Cookie("rememberedUsername", "");
-                userCookie.setMaxAge(0);
-                userCookie.setPath("/");
-                response.addCookie(userCookie);
-            }
             
             // Chuyển hướng dựa trên vai trò
             System.out.println("DEBUG: Redirecting user " + username + " with role: '" + userRole + "'");
