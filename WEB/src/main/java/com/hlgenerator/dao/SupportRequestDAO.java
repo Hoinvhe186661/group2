@@ -12,7 +12,7 @@ public class SupportRequestDAO extends DBConnect {
     private String lastError;
 
     public List<Map<String, Object>> listByCustomerId(int customerId) {
-        String sql = "SELECT id, ticket_number, subject, description, category, priority, status, created_at, resolved_at, " +
+        String sql = "SELECT id, ticket_number, subject, description, category, priority, status, assigned_to, history, resolution, created_at, resolved_at, " +
                      "DATE(CONVERT_TZ(created_at, '+00:00', '+07:00')) AS created_local_date " +
                      "FROM support_requests WHERE customer_id = ? ORDER BY created_at DESC";
         List<Map<String, Object>> out = new ArrayList<>();
@@ -28,6 +28,9 @@ public class SupportRequestDAO extends DBConnect {
                 row.put("category", rs.getString("category"));
                 row.put("priority", rs.getString("priority"));
                 row.put("status", rs.getString("status"));
+                row.put("assignedTo", rs.getString("assigned_to"));
+                row.put("history", rs.getString("history"));
+                row.put("resolution", rs.getString("resolution"));
                 java.sql.Timestamp ts = rs.getTimestamp("created_at");
                 row.put("createdAt", ts);
                 try {

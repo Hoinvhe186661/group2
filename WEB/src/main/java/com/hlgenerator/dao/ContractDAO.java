@@ -139,6 +139,23 @@ public class ContractDAO extends DBConnect {
         return 0;
     }
 
+    public List<Contract> getContractsByCustomerId(int customerId) {
+        List<Contract> list = new ArrayList<>();
+        if (!checkConnection()) return list;
+        String sql = "SELECT * FROM contracts WHERE customer_id = ? ORDER BY id DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error fetching contracts by customer id", e);
+        }
+        return list;
+    }
+
     public List<Contract> getContractsPage(int page, int pageSize) {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;

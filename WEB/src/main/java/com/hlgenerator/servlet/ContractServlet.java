@@ -99,7 +99,26 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
-        List<Contract> contracts = contractDAO.getAllContracts();
+        // Lấy customerId từ session để lọc hợp đồng
+        Integer customerId = null;
+        try {
+            Object sessionCustomerId = request.getSession().getAttribute("customerId");
+            if (sessionCustomerId != null && !sessionCustomerId.toString().equals("null")) {
+                customerId = Integer.parseInt(sessionCustomerId.toString());
+            }
+        } catch (Exception e) {
+            // Ignore session errors
+        }
+        
+        List<Contract> contracts;
+        if (customerId != null) {
+            // Chỉ lấy hợp đồng của customer hiện tại
+            contracts = contractDAO.getContractsByCustomerId(customerId);
+        } else {
+            // Nếu không có customerId trong session, trả về tất cả (cho admin)
+            contracts = contractDAO.getAllContracts();
+        }
+        
         JSONArray arr = new JSONArray();
         for (Contract c : contracts) arr.put(toJson(c));
         out.print(successJson(arr));

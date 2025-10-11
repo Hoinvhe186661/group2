@@ -256,7 +256,7 @@
         nameInp.value = name;
       }
 
-      // Load contracts and filter by customer id if available
+      // Load contracts (already filtered by backend based on session customerId)
       const contractSelect = document.getElementById('contractSelect');
       const productSelect = document.getElementById('contractProductSelect');
       const ctx = '<%=request.getContextPath()%>';
@@ -265,9 +265,7 @@
         .then(j => {
           if (!j || !j.success) return;
           const list = Array.isArray(j.data) ? j.data : [];
-          const cid = (sessionCustomerId && sessionCustomerId !== 'null') ? parseInt(sessionCustomerId, 10) : null;
-          const filtered = cid ? list.filter(it => String(it.customerId) === String(cid)) : list;
-          filtered.forEach(it => {
+          list.forEach(it => {
             const opt = document.createElement('option');
             opt.value = it.id;
             opt.textContent = (it.contractNumber ? (it.contractNumber + ' - ') : '') + (it.title || ('HĐ #' + it.id));
@@ -516,14 +514,11 @@
         // reset
         if (vContract) { vContract.innerHTML = '<option value="">-- Chọn hợp đồng --</option>'; }
         if (vProduct) { vProduct.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; vProduct.disabled = true; }
-        const sessionCustomerId = '<%= String.valueOf(session.getAttribute("customerId")) %>';
         fetch(ctx + '/api/contracts', { headers: { 'Accept': 'application/json' } })
           .then(r=>r.json()).then(function(j){
             if (!j || !j.success) return;
             const list = Array.isArray(j.data)? j.data: [];
-            const cid = (sessionCustomerId && sessionCustomerId !== 'null') ? String(sessionCustomerId) : null;
-            const filtered = cid ? list.filter(function(x){ return String(x.customerId)===cid; }) : list;
-            filtered.forEach(function(c){
+            list.forEach(function(c){
               var opt = document.createElement('option');
               opt.value = c.id;
               opt.textContent = (c.contractNumber ? (c.contractNumber + ' - ') : '') + (c.title || ('HĐ #' + c.id));

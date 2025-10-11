@@ -94,6 +94,40 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("isLoggedIn", true);
             session.setAttribute("loginTime", System.currentTimeMillis());
             
+            // Set customerId nếu là customer
+            if ("customer".equals(userRole) && email != null && !email.trim().isEmpty()) {
+                try {
+                    com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
+                    com.hlgenerator.model.Customer customer = customerDAO.getCustomerByEmail(email.trim());
+                    if (customer != null) {
+                        session.setAttribute("customerId", customer.getId());
+                        System.out.println("DEBUG: Set customerId to " + customer.getId() + " for user " + username);
+                    } else {
+                        // Tạo customer mới nếu chưa có
+                        String code = customerDAO.generateNextCustomerCode();
+                        com.hlgenerator.model.Customer newCustomer = new com.hlgenerator.model.Customer();
+                        newCustomer.setCustomerCode(code);
+                        newCustomer.setCompanyName(fullName);
+                        newCustomer.setContactPerson(fullName);
+                        newCustomer.setEmail(email.trim());
+                        newCustomer.setPhone("");
+                        newCustomer.setAddress("");
+                        newCustomer.setTaxCode("");
+                        newCustomer.setCustomerType("individual");
+                        newCustomer.setStatus("active");
+                        if (customerDAO.addCustomer(newCustomer)) {
+                            com.hlgenerator.model.Customer createdCustomer = customerDAO.getCustomerByEmail(email.trim());
+                            if (createdCustomer != null) {
+                                session.setAttribute("customerId", createdCustomer.getId());
+                                System.out.println("DEBUG: Created new customer with ID " + createdCustomer.getId() + " for user " + username);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("DEBUG: Error setting customerId for user " + username + ": " + e.getMessage());
+                }
+            }
+            
             
             // Chuyển hướng dựa trên vai trò
             System.out.println("DEBUG: Redirecting user " + username + " with role: '" + userRole + "'");
