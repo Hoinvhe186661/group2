@@ -49,6 +49,48 @@
         .modal-header { background:#f8f9fa; }
         .btn-success { background:#28a745; border-color:#28a745; }
         .btn-danger { background:#dc3545; border-color:#dc3545; }
+        
+        /* Khung cho các trường thông tin */
+        .form-control-plaintext { 
+            background: #ffffff; 
+            border: 1px solid #ced4da; 
+            border-radius: 6px; 
+            padding: 0.75rem; 
+            margin-bottom: 0.5rem;
+            min-height: 2.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Khung cho textarea */
+        .form-control { 
+            border: 1px solid #ced4da; 
+            border-radius: 6px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Khung cho modal */
+        .modal-content { 
+            border: 2px solid #dee2e6; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+        }
+        
+        /* Padding cho modal body */
+        .modal-body { 
+            padding: 2rem; 
+        }
+        
+        /* Styling cho labels */
+        .modal-body label { 
+            font-weight: 600; 
+            color: #495057; 
+            margin-bottom: 0.5rem; 
+        }
+        
+        /* Focus state */
+        .form-control:focus { 
+            border-color: #80bdff; 
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); 
+        }
     </style>
     </head>
     <body>
@@ -209,6 +251,9 @@
           <div class="col-12"><label>Chi tiết vấn đề</label><textarea id="v_description_inp" class="form-control" rows="4" disabled></textarea></div>
           <div class="col-md-6"><label>Ngày tạo</label><div id="v_created" class="form-control-plaintext"></div></div>
           <div class="col-md-6"><label>Ngày xử lý xong</label><div id="v_resolved" class="form-control-plaintext"></div></div>
+          <div class="col-md-6"><label>Người được phân công</label><div id="v_assigned_to" class="form-control-plaintext"></div></div>
+          <div class="col-md-6"><label>Lịch sử xử lý</label><div id="v_history" class="form-control-plaintext"></div></div>
+          <div class="col-12"><label>Giải pháp</label><textarea id="v_resolution" class="form-control" rows="3" readonly></textarea></div>
           <div class="col-12 d-flex align-items-center justify-content-between">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="v_enable_edit">
@@ -509,6 +554,11 @@
       const resolved = (it.resolvedAt ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(it.resolvedAt)) : '');
       document.getElementById('v_created').textContent = created;
       document.getElementById('v_resolved').textContent = resolved;
+      
+      // Hiển thị các trường mới
+      document.getElementById('v_assigned_to').textContent = it.assignedTo || 'Chưa phân công';
+      document.getElementById('v_history').textContent = it.history || 'Chưa có lịch sử';
+      document.getElementById('v_resolution').value = it.resolution || '';
       // Load contracts for view (read-only)
       try {
         // reset
@@ -575,7 +625,11 @@
       if (enable) {
         enable.disabled = !canEdit;
         if (!canEdit) {
-          enable.title = 'Chỉ có thể chỉnh sửa yêu cầu đang chờ xử lý';
+          enable.title = 'Yêu cầu đang được thực hiện - không thể chỉnh sửa';
+          enable.parentElement.style.color = '#dc3545';
+          enable.parentElement.innerHTML = '<input class="form-check-input" type="checkbox" id="v_enable_edit" disabled><label class="form-check-label" for="v_enable_edit" style="color: #dc3545;">Chỉnh sửa (Yêu cầu đang được thực hiện)</label>';
+        } else {
+          enable.parentElement.style.color = '';
         }
       }
       
@@ -583,7 +637,7 @@
       if (enable) {
         enable.onchange = function(){
           if (!canEdit) {
-            alert('Chỉ có thể chỉnh sửa yêu cầu đang chờ xử lý!');
+            alert('Yêu cầu đang được thực hiện - không thể chỉnh sửa!');
             enable.checked = false;
             return;
           }

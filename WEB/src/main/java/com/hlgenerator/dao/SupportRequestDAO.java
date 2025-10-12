@@ -115,6 +115,100 @@ public class SupportRequestDAO extends DBConnect {
             return false;
         }
     }
+
+    public List<Map<String, Object>> getAllSupportRequests() {
+        String sql = "SELECT sr.id, sr.ticket_number, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
+                     "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                     "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
+                     "u.full_name as assigned_to_name, " +
+                     "DATE(CONVERT_TZ(sr.created_at, '+00:00', '+07:00')) AS created_local_date " +
+                     "FROM support_requests sr " +
+                     "LEFT JOIN customers c ON sr.customer_id = c.id " +
+                     "LEFT JOIN users u ON sr.assigned_to = u.id " +
+                     "ORDER BY sr.created_at DESC";
+        List<Map<String, Object>> out = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("ticketNumber", rs.getString("ticket_number"));
+                row.put("subject", rs.getString("subject"));
+                row.put("description", rs.getString("description"));
+                row.put("category", rs.getString("category"));
+                row.put("priority", rs.getString("priority"));
+                row.put("status", rs.getString("status"));
+                row.put("assignedTo", rs.getString("assigned_to"));
+                row.put("assignedToName", rs.getString("assigned_to_name"));
+                row.put("history", rs.getString("history"));
+                row.put("resolution", rs.getString("resolution"));
+                row.put("customerName", rs.getString("company_name"));
+                row.put("customerContact", rs.getString("contact_person"));
+                row.put("customerEmail", rs.getString("customer_email"));
+                row.put("customerPhone", rs.getString("customer_phone"));
+                
+                java.sql.Timestamp ts = rs.getTimestamp("created_at");
+                row.put("createdAt", ts);
+                try {
+                    String local = rs.getString("created_local_date");
+                    if (local != null && !local.isEmpty()) {
+                        row.put("createdDate", local);
+                    } else if (ts != null) {
+                        java.time.LocalDate ld = ts.toInstant()
+                            .atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                            .toLocalDate();
+                        row.put("createdDate", ld.toString());
+                    }
+                } catch (Exception ignore) {
+                    if (ts != null) {
+                        java.time.LocalDate ld = ts.toInstant()
+                            .atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                            .toLocalDate();
+                        row.put("createdDate", ld.toString());
+                    }
+                }
+                row.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                out.add(row);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = e.getMessage();
+        }
+        return out;
+    }
+
+    public boolean updateSupportRequest(int id, String category, String priority, String status, String resolution, String internalNotes) {
+        try {
+            if (connection == null || connection.isClosed()) {
+                lastError = "DB connection is not available";
+                return false;
+            }
+        } catch (SQLException e) {
+            lastError = "DB connection check failed: " + e.getMessage();
+            return false;
+        }
+        
+        String sql = "UPDATE support_requests SET category = ?, priority = ?, status = ?, resolution = ?, " +
+                     "resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END " +
+                     "WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, category);
+            ps.setString(2, priority);
+            ps.setString(3, status);
+            ps.setString(4, resolution);
+            ps.setString(5, status);
+            ps.setString(6, status);
+            ps.setInt(7, id);
+            
+            int result = ps.executeUpdate();
+            lastError = null;
+            return result > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = e.getMessage();
+            return false;
+        }
+    }
 }
 
 

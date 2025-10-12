@@ -1,26 +1,26 @@
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductsPageServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-E:\sua lai\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductsPageServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\code\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java

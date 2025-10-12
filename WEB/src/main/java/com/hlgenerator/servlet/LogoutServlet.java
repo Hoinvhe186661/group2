@@ -45,12 +45,6 @@ public class LogoutServlet extends HttpServlet {
             session.invalidate();
         }
         
-        // Xóa remember me cookie nếu có
-        Cookie userCookie = new Cookie("rememberedUsername", "");
-        userCookie.setMaxAge(0);
-        userCookie.setPath("/");
-        response.addCookie(userCookie);
-        
         // Chuyển hướng về trang chủ (index.jsp)
         response.sendRedirect("index.jsp");
     }

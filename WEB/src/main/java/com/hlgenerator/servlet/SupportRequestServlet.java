@@ -105,21 +105,38 @@ public class SupportRequestServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         HttpSession session = request.getSession(false);
-        Integer customerId = session != null ? (Integer) session.getAttribute("customerId") : null;
-        if (customerId == null) {
-            customerId = resolveOrAttachCustomerId(session);
-        }
-        if (customerId == null) {
-            customerId = ensureCustomerFromSession(session);
-        }
-        if (customerId == null) {
+        if (session == null) {
             response.setStatus(401);
             out.print(new JSONObject().put("success", false).put("message", "Chưa đăng nhập").toString());
             return;
         }
 
+        String userRole = (String) session.getAttribute("userRole");
+        String action = request.getParameter("action");
+        
         SupportRequestDAO dao = new SupportRequestDAO();
-        List<Map<String, Object>> list = dao.listByCustomerId(customerId);
+        List<Map<String, Object>> list;
+        
+        // Admin và customer_support có thể xem tất cả requests
+        if ("admin".equals(userRole) || "customer_support".equals(userRole)) {
+            list = dao.getAllSupportRequests();
+        } else {
+            // Customer chỉ xem requests của mình
+            Integer customerId = (Integer) session.getAttribute("customerId");
+            if (customerId == null) {
+                customerId = resolveOrAttachCustomerId(session);
+            }
+            if (customerId == null) {
+                customerId = ensureCustomerFromSession(session);
+            }
+            if (customerId == null) {
+                response.setStatus(401);
+                out.print(new JSONObject().put("success", false).put("message", "Không tìm thấy thông tin khách hàng").toString());
+                return;
+            }
+            list = dao.listByCustomerId(customerId);
+        }
+        
         JSONArray arr = new JSONArray(list);
         JSONObject res = new JSONObject();
         res.put("success", true);
@@ -156,6 +173,9 @@ public class SupportRequestServlet extends HttpServlet {
         String priority = request.getParameter("priority");
         String deleteOldId = request.getParameter("delete_old_id");
         String id = request.getParameter("id");
+        String status = request.getParameter("status");
+        String resolution = request.getParameter("resolution");
+        String internalNotes = request.getParameter("internalNotes");
 
         // Xử lý action cancel
         System.out.println("DEBUG: action=" + action + ", id=" + id);
@@ -172,6 +192,62 @@ public class SupportRequestServlet extends HttpServlet {
                 } else {
                     response.setStatus(500);
                     String err = "Không thể hủy yêu cầu";
+                    try {
+                        String daoErr = dao.getLastError();
+                        if (daoErr != null && !daoErr.isEmpty()) {
+                            err = err + ": " + daoErr;
+                        }
+                    } catch (Exception ignore) {}
+                    res.put("message", err);
+                }
+                out.print(res.toString());
+                return;
+            } catch (NumberFormatException e) {
+                response.setStatus(400);
+                out.print(new JSONObject().put("success", false).put("message", "ID không hợp lệ").toString());
+                return;
+            }
+        }
+
+        // Xử lý action update (chỉ admin và customer_support)
+        if ("update".equals(action) && id != null && !id.trim().isEmpty()) {
+            String userRole = (String) session.getAttribute("userRole");
+            if (!"admin".equals(userRole) && !"customer_support".equals(userRole)) {
+                response.setStatus(403);
+                out.print(new JSONObject().put("success", false).put("message", "Không có quyền cập nhật").toString());
+                return;
+            }
+            
+            try {
+                int requestId = Integer.parseInt(id.trim());
+                SupportRequestDAO dao = new SupportRequestDAO();
+                
+                // Validate parameters
+                if (category == null) category = "general";
+                if (priority == null) priority = "medium";
+                if (status == null) status = "open";
+                if (resolution == null) resolution = "";
+                
+                // Sanitize enums
+                if (!("technical".equals(category) || "billing".equals(category) || "general".equals(category) || "complaint".equals(category))) {
+                    category = "general";
+                }
+                if (!("low".equals(priority) || "medium".equals(priority) || "high".equals(priority) || "urgent".equals(priority))) {
+                    priority = "medium";
+                }
+                if (!("open".equals(status) || "in_progress".equals(status) || "resolved".equals(status) || "closed".equals(status))) {
+                    status = "open";
+                }
+                
+                boolean ok = dao.updateSupportRequest(requestId, category, priority, status, resolution, internalNotes);
+                
+                JSONObject res = new JSONObject();
+                res.put("success", ok);
+                if (ok) {
+                    res.put("message", "Cập nhật yêu cầu thành công");
+                } else {
+                    response.setStatus(500);
+                    String err = "Không thể cập nhật yêu cầu";
                     try {
                         String daoErr = dao.getLastError();
                         if (daoErr != null && !daoErr.isEmpty()) {
