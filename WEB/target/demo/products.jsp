@@ -595,7 +595,20 @@
             // Initialize DataTable
             productsTable = $('#productsTable').DataTable({
                 "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
+                    "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json",
+                    "search": "Tìm kiếm:",
+                    "lengthMenu": "Hiển thị _MENU_ bản ghi",
+                    "info": "Hiển thị _START_ đến _END_ trong tổng số _TOTAL_ bản ghi",
+                    "infoEmpty": "Hiển thị 0 đến 0 trong tổng số 0 bản ghi",
+                    "infoFiltered": "(lọc từ _MAX_ bản ghi)",
+                    "paginate": {
+                        "first": "Đầu",
+                        "last": "Cuối",
+                        "next": "Tiếp",
+                        "previous": "Trước"
+                    },
+                    "emptyTable": "Không có dữ liệu trong bảng",
+                    "zeroRecords": "Không tìm thấy bản ghi phù hợp"
                 },
                 "processing": true,
                 "serverSide": false,
@@ -605,7 +618,16 @@
                 "order": [[0, "desc"]],
                 "columnDefs": [
                     { "orderable": false, "targets": [1, 7] } // Disable sorting for image and action columns
-                ]
+                ],
+                "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>' +
+                       '<"row"<"col-sm-12"tr>>' +
+                       '<"row"<"col-sm-5"i><"col-sm-7"p>>',
+                "drawCallback": function(settings) {
+                    // Cập nhật thông tin phân trang sau mỗi lần vẽ
+                    var api = this.api();
+                    var info = api.page.info();
+                    console.log('Trang hiện tại: ' + (info.page + 1) + ' / ' + info.pages);
+                }
             });
         });
 
@@ -615,30 +637,25 @@
             var statusFilter = document.getElementById('filterStatus').value.toLowerCase();
             var searchFilter = document.getElementById('searchProduct').value.toLowerCase();
             
-            // Tạo search string cho DataTables
-            var searchString = '';
+            // Xóa tất cả custom search functions trước đó
+            $.fn.dataTable.ext.search = [];
             
-            if (searchFilter) {
-                searchString += searchFilter + ' ';
-            }
-            if (categoryFilter) {
-                searchString += categoryFilter + ' ';
-            }
-            if (statusFilter) {
-                searchString += statusFilter + ' ';
-            }
-            if (stockFilter) {
-                searchString += stockFilter + ' ';
-            }
-            
-            // Áp dụng search cho DataTables
-            productsTable.search(searchString.trim()).draw();
-            
-            // Áp dụng custom filter cho các cột cụ thể
+            // Thêm custom search function
             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
                 var category = data[5] ? data[5].toLowerCase() : '';
                 var status = data[6] ? data[6].toLowerCase() : '';
-                var quantity = parseInt(data[4]) || 0;
+                var productName = data[2] ? data[2].toLowerCase() : '';
+                var productCode = data[0] ? data[0].toLowerCase() : '';
+                
+                // Lọc theo tìm kiếm tổng quát
+                if (searchFilter) {
+                    var searchMatch = productName.includes(searchFilter) || 
+                                    productCode.includes(searchFilter) ||
+                                    category.includes(searchFilter);
+                    if (!searchMatch) {
+                        return false;
+                    }
+                }
                 
                 // Lọc theo danh mục
                 if (categoryFilter && !category.includes(categoryFilter)) {
@@ -655,15 +672,11 @@
                     }
                 }
                 
-                
                 return true;
             });
             
             // Redraw table với filters
             productsTable.draw();
-            
-            // Xóa custom search function sau khi áp dụng
-            $.fn.dataTable.ext.search.pop();
         }
         
         // Reset filter
@@ -672,7 +685,10 @@
             document.getElementById('filterStatus').value = '';
             document.getElementById('searchProduct').value = '';
             
-            // Clear DataTables search
+            // Xóa tất cả custom search functions
+            $.fn.dataTable.ext.search = [];
+            
+            // Clear DataTables search và redraw
             productsTable.search('').draw();
         }
 

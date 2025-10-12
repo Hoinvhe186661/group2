@@ -174,6 +174,36 @@
                                 %>
                             </tbody>
                         </table>
+                        
+                        <!-- Phân trang -->
+                        <div class="row" style="margin-top: 20px;">
+                            <div class="col-md-6">
+                                <div class="dataTables_info" id="suppliersTable_info" role="status" aria-live="polite">
+                                    Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> 
+                                    trong tổng số <span id="totalRecords">0</span> bản ghi
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="dataTables_paginate paging_simple_numbers" id="suppliersTable_paginate">
+                                    <ul class="pagination" id="pagination">
+                                        <!-- Nút Previous -->
+                                        <li class="paginate_button previous disabled" id="suppliersTable_previous">
+                                            <a href="#" aria-controls="suppliersTable" data-dt-idx="0" tabindex="0" id="prevBtn">Trước</a>
+                                        </li>
+                                        
+                                        <!-- Các nút số trang sẽ được tạo bằng JavaScript -->
+                                        <li class="paginate_button active">
+                                            <a href="#" aria-controls="suppliersTable" data-dt-idx="1" tabindex="0" class="page-link" data-page="1">1</a>
+                                        </li>
+                                        
+                                        <!-- Nút Next -->
+                                        <li class="paginate_button next" id="suppliersTable_next">
+                                            <a href="#" aria-controls="suppliersTable" data-dt-idx="2" tabindex="0" id="nextBtn">Tiếp</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section><!-- /.content -->
@@ -441,6 +471,233 @@
                 });
             }
         }
+        
+        // Biến phân trang
+        var currentPage = 1;
+        var itemsPerPage = 10;
+        var totalItems = 0;
+        var filteredItems = [];
+        var allItems = [];
+        
+        // Hàm khởi tạo phân trang
+        function initializePagination() {
+            // Lấy tất cả dữ liệu từ bảng
+            var table = document.getElementById('suppliersTable');
+            var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            // Lưu tất cả dữ liệu
+            allItems = [];
+            for (var i = 0; i < rows.length; i++) {
+                allItems.push(rows[i].cloneNode(true));
+            }
+            
+            totalItems = allItems.length;
+            filteredItems = allItems.slice(); // Copy tất cả items
+            updatePagination();
+        }
+        
+        // Hàm cập nhật phân trang
+        function updatePagination() {
+            var totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+            var startIndex = (currentPage - 1) * itemsPerPage;
+            var endIndex = Math.min(startIndex + itemsPerPage, filteredItems.length);
+            
+            // Cập nhật thông tin hiển thị
+            document.getElementById('showingStart').textContent = filteredItems.length > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingEnd').textContent = endIndex;
+            document.getElementById('totalRecords').textContent = filteredItems.length;
+            
+            // Cập nhật bảng
+            updateTable();
+            
+            // Cập nhật nút phân trang
+            updatePaginationButtons(totalPages);
+        }
+        
+        // Hàm cập nhật bảng
+        function updateTable() {
+            var table = document.getElementById('suppliersTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
+            
+            // Xóa tất cả hàng hiện tại
+            tbody.innerHTML = '';
+            
+            // Thêm hàng cho trang hiện tại
+            var startIndex = (currentPage - 1) * itemsPerPage;
+            var endIndex = Math.min(startIndex + itemsPerPage, filteredItems.length);
+            
+            for (var i = startIndex; i < endIndex; i++) {
+                tbody.appendChild(filteredItems[i].cloneNode(true));
+            }
+        }
+        
+        // Hàm cập nhật nút phân trang
+        function updatePaginationButtons(totalPages) {
+            var pagination = document.getElementById('pagination');
+            var prevBtn = document.getElementById('prevBtn');
+            var nextBtn = document.getElementById('nextBtn');
+            
+            // Cập nhật nút Previous
+            if (currentPage <= 1) {
+                prevBtn.parentElement.classList.add('disabled');
+            } else {
+                prevBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Cập nhật nút Next
+            if (currentPage >= totalPages) {
+                nextBtn.parentElement.classList.add('disabled');
+            } else {
+                nextBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Xóa các nút số trang cũ (giữ lại Previous và Next)
+            var pageButtons = pagination.querySelectorAll('.page-link');
+            pageButtons.forEach(function(btn) {
+                if (btn.id !== 'prevBtn' && btn.id !== 'nextBtn') {
+                    btn.parentElement.remove();
+                }
+            });
+            
+            // Tạo nút số trang mới
+            var maxVisiblePages = 5;
+            var startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            var endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // Thêm nút số trang
+            for (var i = startPage; i <= endPage; i++) {
+                var li = document.createElement('li');
+                li.className = 'paginate_button';
+                if (i === currentPage) {
+                    li.classList.add('active');
+                }
+                
+                var a = document.createElement('a');
+                a.href = '#';
+                a.textContent = i;
+                a.className = 'page-link';
+                a.setAttribute('data-page', i);
+                a.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    goToPage(parseInt(this.getAttribute('data-page')));
+                });
+                
+                li.appendChild(a);
+                
+                // Chèn trước nút Next
+                nextBtn.parentElement.parentElement.insertBefore(li, nextBtn.parentElement);
+            }
+        }
+        
+        // Hàm chuyển đến trang
+        function goToPage(page) {
+            if (page < 1 || page > Math.ceil(filteredItems.length / itemsPerPage)) {
+                return;
+            }
+            currentPage = page;
+            updatePagination();
+        }
+        
+        // Hàm lọc dữ liệu với phân trang
+        function filterTableWithPagination() {
+            var searchInput = document.getElementById('searchInput').value.toLowerCase();
+            var companyFilter = document.getElementById('companyFilter').value;
+            var contactFilter = document.getElementById('contactFilter').value;
+            var statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredItems = [];
+            
+            for (var i = 0; i < allItems.length; i++) {
+                var row = allItems[i];
+                var cells = row.getElementsByTagName('td');
+                var shouldShow = true;
+                
+                if (cells.length >= 7) {
+                    // Lấy dữ liệu từ các cột
+                    var companyName = cells[2].textContent.trim();
+                    var contactPerson = cells[3].textContent.trim();
+                    var status = cells[6].textContent.trim().toLowerCase();
+                    
+                    // Kiểm tra tìm kiếm tổng quát
+                    if (searchInput) {
+                        var rowText = row.textContent.toLowerCase();
+                        if (!rowText.includes(searchInput)) {
+                            shouldShow = false;
+                        }
+                    }
+                    
+                    // Kiểm tra lọc theo tên công ty
+                    if (companyFilter && companyName !== companyFilter) {
+                        shouldShow = false;
+                    }
+                    
+                    // Kiểm tra lọc theo người liên hệ
+                    if (contactFilter && contactPerson !== contactFilter) {
+                        shouldShow = false;
+                    }
+                    
+                    // Kiểm tra lọc theo trạng thái
+                    if (statusFilter) {
+                        var statusText = status === 'active' ? 'active' : 'inactive';
+                        if (statusText !== statusFilter) {
+                            shouldShow = false;
+                        }
+                    }
+                }
+                
+                if (shouldShow) {
+                    filteredItems.push(row);
+                }
+            }
+            
+            // Reset về trang 1 khi lọc
+            currentPage = 1;
+            updatePagination();
+        }
+        
+        // Hàm reset tất cả bộ lọc với phân trang
+        function resetAllFiltersWithPagination() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('contactFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            filteredItems = allItems.slice();
+            currentPage = 1;
+            updatePagination();
+        }
+        
+        // Khởi tạo khi trang load
+        $(document).ready(function() {
+            // Khởi tạo phân trang
+            initializePagination();
+            
+            // Gắn sự kiện cho các input lọc
+            $('#searchInput').on('keyup', filterTableWithPagination);
+            $('#companyFilter').on('change', filterTableWithPagination);
+            $('#contactFilter').on('change', filterTableWithPagination);
+            $('#statusFilter').on('change', filterTableWithPagination);
+            $('#resetFilters').on('click', resetAllFiltersWithPagination);
+            
+            // Gắn sự kiện cho nút Previous/Next
+            $('#prevBtn').on('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    goToPage(currentPage - 1);
+                }
+            });
+            
+            $('#nextBtn').on('click', function(e) {
+                e.preventDefault();
+                var totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    goToPage(currentPage + 1);
+                }
+            });
+        });
     </script>
 </body>
 </html>

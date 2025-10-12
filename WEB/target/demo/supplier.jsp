@@ -136,7 +136,69 @@
                         <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addSupplierModal" style="margin-bottom:12px;">
                             <i class="fa fa-plus"></i> Thêm nhà cung cấp
                         </button>
-                        <table class="table table-hover">
+                        
+                        <!-- Thanh lọc và tìm kiếm -->
+                        <div class="row" style="margin-bottom: 15px;">
+                            <div class="col-md-12">
+                                <div class="panel panel-default">
+                                    <div class="panel-body">
+                                        <div class="row">
+                                            <!-- Tìm kiếm tổng quát -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>Tìm kiếm:</label>
+                                                    <input type="text" id="searchInput" class="form-control" placeholder="Tìm kiếm tất cả...">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Lọc theo tên công ty -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>Tên công ty:</label>
+                                                    <select id="companyFilter" class="form-control">
+                                                        <option value="">Tất cả công ty</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Lọc theo người liên hệ -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label>Người liên hệ:</label>
+                                                    <select id="contactFilter" class="form-control">
+                                                        <option value="">Tất cả người liên hệ</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Lọc theo trạng thái -->
+                                            <div class="col-md-2">
+                                                <div class="form-group">
+                                                    <label>Trạng thái:</label>
+                                                    <select id="statusFilter" class="form-control">
+                                                        <option value="">Tất cả trạng thái</option>
+                                                        <option value="active">Hoạt động</option>
+                                                        <option value="inactive">Không hoạt động</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Nút reset -->
+                                            <div class="col-md-1">
+                                                <div class="form-group">
+                                                    <label>&nbsp;</label>
+                                                    <button type="button" id="resetFilters" class="btn btn-warning btn-block" title="Xóa tất cả bộ lọc">
+                                                        <i class="fa fa-refresh"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <table class="table table-hover" id="suppliersTable">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -174,6 +236,23 @@
                                 %>
                             </tbody>
                         </table>
+                        
+                        <!-- Phân trang -->
+                        <div class="row" style="margin-top: 15px;">
+                            <div class="col-md-6">
+                                <div class="dataTables_info" id="supplierInfo">
+                                    Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> 
+                                    trong tổng số <span id="totalRecords">0</span> bản ghi
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="dataTables_paginate paging_bootstrap">
+                                    <ul class="pagination" id="supplierPagination">
+                                        <!-- Nút phân trang sẽ được tạo bằng JavaScript -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section><!-- /.content -->
@@ -441,6 +520,351 @@
                 });
             }
         }
+        
+        // Hàm khởi tạo bộ lọc và tìm kiếm
+        function initializeFilters() {
+            // Lấy tất cả dữ liệu từ bảng
+            var table = document.getElementById('suppliersTable');
+            var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            // Tạo danh sách unique cho dropdown
+            var companies = new Set();
+            var contacts = new Set();
+            
+            for (var i = 0; i < rows.length; i++) {
+                var cells = rows[i].getElementsByTagName('td');
+                if (cells.length >= 4) {
+                    // Tên công ty (cột thứ 3, index 2)
+                    var companyName = cells[2].textContent.trim();
+                    if (companyName) {
+                        companies.add(companyName);
+                    }
+                    
+                    // Người liên hệ (cột thứ 4, index 3)
+                    var contactPerson = cells[3].textContent.trim();
+                    if (contactPerson) {
+                        contacts.add(contactPerson);
+                    }
+                }
+            }
+            
+            // Điền dữ liệu vào dropdown tên công ty
+            var companyFilter = document.getElementById('companyFilter');
+            companies.forEach(function(company) {
+                var option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companyFilter.appendChild(option);
+            });
+            
+            // Điền dữ liệu vào dropdown người liên hệ
+            var contactFilter = document.getElementById('contactFilter');
+            contacts.forEach(function(contact) {
+                var option = document.createElement('option');
+                option.value = contact;
+                option.textContent = contact;
+                contactFilter.appendChild(option);
+            });
+        }
+        
+        // Hàm lọc dữ liệu
+        function filterTable() {
+            var searchInput = document.getElementById('searchInput').value.toLowerCase();
+            var companyFilter = document.getElementById('companyFilter').value;
+            var contactFilter = document.getElementById('contactFilter').value;
+            var statusFilter = document.getElementById('statusFilter').value;
+            
+            var table = document.getElementById('suppliersTable');
+            var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var cells = row.getElementsByTagName('td');
+                var shouldShow = true;
+                
+                if (cells.length >= 7) {
+                    // Lấy dữ liệu từ các cột
+                    var companyName = cells[2].textContent.trim();
+                    var contactPerson = cells[3].textContent.trim();
+                    var status = cells[6].textContent.trim().toLowerCase();
+                    
+                    // Kiểm tra tìm kiếm tổng quát
+                    if (searchInput) {
+                        var rowText = row.textContent.toLowerCase();
+                        if (!rowText.includes(searchInput)) {
+                            shouldShow = false;
+                        }
+                    }
+                    
+                    // Kiểm tra lọc theo tên công ty
+                    if (companyFilter && companyName !== companyFilter) {
+                        shouldShow = false;
+                    }
+                    
+                    // Kiểm tra lọc theo người liên hệ
+                    if (contactFilter && contactPerson !== contactFilter) {
+                        shouldShow = false;
+                    }
+                    
+                    // Kiểm tra lọc theo trạng thái
+                    if (statusFilter) {
+                        var statusText = status === 'active' ? 'active' : 'inactive';
+                        if (statusText !== statusFilter) {
+                            shouldShow = false;
+                        }
+                    }
+                }
+                
+                // Hiển thị hoặc ẩn hàng
+                row.style.display = shouldShow ? '' : 'none';
+            }
+        }
+        
+        // Hàm reset tất cả bộ lọc
+        function resetAllFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('contactFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            filterTable();
+        }
+        
+        // Biến toàn cục cho phân trang
+        var currentPage = 1;
+        var itemsPerPage = 10;
+        var allRows = [];
+        var filteredRows = [];
+        
+        // Hàm khởi tạo phân trang
+        function initializePagination() {
+            var table = document.getElementById('suppliersTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
+            allRows = Array.from(tbody.getElementsByTagName('tr'));
+            filteredRows = allRows.slice(); // Copy tất cả rows
+            
+            updatePagination();
+        }
+        
+        // Hàm cập nhật phân trang
+        function updatePagination() {
+            var totalRecords = filteredRows.length;
+            var totalPages = Math.ceil(totalRecords / itemsPerPage);
+            
+            // Cập nhật thông tin hiển thị
+            var startIndex = (currentPage - 1) * itemsPerPage;
+            var endIndex = Math.min(startIndex + itemsPerPage, totalRecords);
+            
+            document.getElementById('showingStart').textContent = totalRecords > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingEnd').textContent = endIndex;
+            document.getElementById('totalRecords').textContent = totalRecords;
+            
+            // Ẩn tất cả rows
+            allRows.forEach(function(row) {
+                row.style.display = 'none';
+            });
+            
+            // Hiển thị rows của trang hiện tại
+            for (var i = startIndex; i < endIndex; i++) {
+                if (filteredRows[i]) {
+                    filteredRows[i].style.display = '';
+                }
+            }
+            
+            // Tạo nút phân trang
+            createPaginationButtons(totalPages);
+        }
+        
+        // Hàm tạo nút phân trang
+        function createPaginationButtons(totalPages) {
+            var pagination = document.getElementById('supplierPagination');
+            pagination.innerHTML = '';
+            
+            if (totalPages <= 1) return;
+            
+            // Nút Previous
+            var prevLi = document.createElement('li');
+            prevLi.className = currentPage === 1 ? 'disabled' : '';
+            var prevLink = document.createElement('a');
+            prevLink.href = '#';
+            prevLink.innerHTML = '«';
+            prevLink.onclick = function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    currentPage--;
+                    updatePagination();
+                }
+            };
+            prevLi.appendChild(prevLink);
+            pagination.appendChild(prevLi);
+            
+            // Nút số trang
+            var startPage = Math.max(1, currentPage - 2);
+            var endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                var firstLi = document.createElement('li');
+                var firstLink = document.createElement('a');
+                firstLink.href = '#';
+                firstLink.textContent = '1';
+                firstLink.onclick = function(e) {
+                    e.preventDefault();
+                    currentPage = 1;
+                    updatePagination();
+                };
+                firstLi.appendChild(firstLink);
+                pagination.appendChild(firstLi);
+                
+                if (startPage > 2) {
+                    var ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'disabled';
+                    var ellipsisSpan = document.createElement('span');
+                    ellipsisSpan.textContent = '...';
+                    ellipsisLi.appendChild(ellipsisSpan);
+                    pagination.appendChild(ellipsisLi);
+                }
+            }
+            
+            for (var i = startPage; i <= endPage; i++) {
+                var li = document.createElement('li');
+                li.className = i === currentPage ? 'active' : '';
+                var link = document.createElement('a');
+                link.href = '#';
+                link.textContent = i;
+                link.onclick = function(pageNum) {
+                    return function(e) {
+                        e.preventDefault();
+                        currentPage = pageNum;
+                        updatePagination();
+                    };
+                }(i);
+                li.appendChild(link);
+                pagination.appendChild(li);
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    var ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'disabled';
+                    var ellipsisSpan = document.createElement('span');
+                    ellipsisSpan.textContent = '...';
+                    ellipsisLi.appendChild(ellipsisSpan);
+                    pagination.appendChild(ellipsisLi);
+                }
+                
+                var lastLi = document.createElement('li');
+                var lastLink = document.createElement('a');
+                lastLink.href = '#';
+                lastLink.textContent = totalPages;
+                lastLink.onclick = function(e) {
+                    e.preventDefault();
+                    currentPage = totalPages;
+                    updatePagination();
+                };
+                lastLi.appendChild(lastLink);
+                pagination.appendChild(lastLi);
+            }
+            
+            // Nút Next
+            var nextLi = document.createElement('li');
+            nextLi.className = currentPage === totalPages ? 'disabled' : '';
+            var nextLink = document.createElement('a');
+            nextLink.href = '#';
+            nextLink.innerHTML = '»';
+            nextLink.onclick = function(e) {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    updatePagination();
+                }
+            };
+            nextLi.appendChild(nextLink);
+            pagination.appendChild(nextLi);
+        }
+        
+        // Hàm lọc dữ liệu với phân trang
+        function filterTableWithPagination() {
+            var searchInput = document.getElementById('searchInput').value.toLowerCase();
+            var companyFilter = document.getElementById('companyFilter').value;
+            var contactFilter = document.getElementById('contactFilter').value;
+            var statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredRows = [];
+            
+            for (var i = 0; i < allRows.length; i++) {
+                var row = allRows[i];
+                var cells = row.getElementsByTagName('td');
+                var shouldShow = true;
+                
+                if (cells.length >= 7) {
+                    // Lấy dữ liệu từ các cột
+                    var companyName = cells[2].textContent.trim();
+                    var contactPerson = cells[3].textContent.trim();
+                    var status = cells[6].textContent.trim().toLowerCase();
+                    
+                    // Kiểm tra tìm kiếm tổng quát
+                    if (searchInput) {
+                        var rowText = row.textContent.toLowerCase();
+                        if (!rowText.includes(searchInput)) {
+                            shouldShow = false;
+                        }
+                    }
+                    
+                    // Kiểm tra lọc theo tên công ty
+                    if (companyFilter && companyName !== companyFilter) {
+                        shouldShow = false;
+                    }
+                    
+                    // Kiểm tra lọc theo người liên hệ
+                    if (contactFilter && contactPerson !== contactFilter) {
+                        shouldShow = false;
+                    }
+                    
+                    // Kiểm tra lọc theo trạng thái
+                    if (statusFilter) {
+                        var statusText = status === 'active' ? 'active' : 'inactive';
+                        if (statusText !== statusFilter) {
+                            shouldShow = false;
+                        }
+                    }
+                }
+                
+                if (shouldShow) {
+                    filteredRows.push(row);
+                }
+            }
+            
+            // Reset về trang 1 và cập nhật phân trang
+            currentPage = 1;
+            updatePagination();
+        }
+        
+        // Hàm reset tất cả bộ lọc với phân trang
+        function resetAllFiltersWithPagination() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('contactFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            
+            filteredRows = allRows.slice();
+            currentPage = 1;
+            updatePagination();
+        }
+        
+        // Khởi tạo khi trang load
+        $(document).ready(function() {
+            // Khởi tạo bộ lọc
+            initializeFilters();
+            
+            // Khởi tạo phân trang
+            initializePagination();
+            
+            // Gắn sự kiện cho các input lọc
+            $('#searchInput').on('keyup', filterTableWithPagination);
+            $('#companyFilter').on('change', filterTableWithPagination);
+            $('#contactFilter').on('change', filterTableWithPagination);
+            $('#statusFilter').on('change', filterTableWithPagination);
+            $('#resetFilters').on('click', resetAllFiltersWithPagination);
+        });
     </script>
 </body>
 </html>
