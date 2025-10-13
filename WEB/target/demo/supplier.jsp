@@ -137,61 +137,59 @@
                             <i class="fa fa-plus"></i> Thêm nhà cung cấp
                         </button>
                         
-                        <!-- Thanh lọc và tìm kiếm -->
-                        <div class="row" style="margin-bottom: 15px;">
+                        <!-- Bộ lọc và tìm kiếm -->
+                        <div class="row" style="margin-bottom: 15px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
                             <div class="col-md-12">
-                                <div class="panel panel-default">
-                                    <div class="panel-body">
-                                        <div class="row">
-                                            <!-- Tìm kiếm tổng quát -->
-                                            <div class="col-md-3">
-                                                <div class="form-group">
-                                                    <label>Tìm kiếm:</label>
-                                                    <input type="text" id="searchInput" class="form-control" placeholder="Tìm kiếm tất cả...">
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Lọc theo tên công ty -->
-                                            <div class="col-md-3">
-                                                <div class="form-group">
-                                                    <label>Tên công ty:</label>
-                                                    <select id="companyFilter" class="form-control">
-                                                        <option value="">Tất cả công ty</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Lọc theo người liên hệ -->
-                                            <div class="col-md-3">
-                                                <div class="form-group">
-                                                    <label>Người liên hệ:</label>
-                                                    <select id="contactFilter" class="form-control">
-                                                        <option value="">Tất cả người liên hệ</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Lọc theo trạng thái -->
-                                            <div class="col-md-2">
-                                                <div class="form-group">
-                                                    <label>Trạng thái:</label>
-                                                    <select id="statusFilter" class="form-control">
-                                                        <option value="">Tất cả trạng thái</option>
-                                                        <option value="active">Hoạt động</option>
-                                                        <option value="inactive">Không hoạt động</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Nút reset -->
-                                            <div class="col-md-1">
-                                                <div class="form-group">
-                                                    <label>&nbsp;</label>
-                                                    <button type="button" id="resetFilters" class="btn btn-warning btn-block" title="Xóa tất cả bộ lọc">
-                                                        <i class="fa fa-refresh"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
+                                <div class="row">
+                                    <!-- Tìm kiếm tổng quát -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="searchInput" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
+                                            <input type="text" id="searchInput" class="form-control" placeholder="Nhập từ khóa tìm kiếm...">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lọc theo tên công ty -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="companyFilter" style="font-weight: bold; margin-bottom: 5px;">Tên công ty:</label>
+                                            <select id="companyFilter" class="form-control">
+                                                <option value="">Tất cả công ty</option>
+                                                <!-- Các option sẽ được thêm bằng JavaScript -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lọc theo người liên hệ -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="contactFilter" style="font-weight: bold; margin-bottom: 5px;">Người liên hệ:</label>
+                                            <select id="contactFilter" class="form-control">
+                                                <option value="">Tất cả người liên hệ</option>
+                                                <!-- Các option sẽ được thêm bằng JavaScript -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lọc theo trạng thái -->
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label for="statusFilter" style="font-weight: bold; margin-bottom: 5px;">Trạng thái:</label>
+                                            <select id="statusFilter" class="form-control">
+                                                <option value="">Tất cả trạng thái</option>
+                                                <option value="active">Hoạt động</option>
+                                                <option value="inactive">Không hoạt động</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Nút reset -->
+                                    <div class="col-md-1">
+                                        <div class="form-group">
+                                            <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                                            <button type="button" id="resetFilters" class="btn btn-warning btn-sm" style="width: 100%;" title="Xóa tất cả bộ lọc">
+                                                <i class="fa fa-refresh"></i>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -238,17 +236,30 @@
                         </table>
                         
                         <!-- Phân trang -->
-                        <div class="row" style="margin-top: 15px;">
+                        <div class="row" style="margin-top: 20px;">
                             <div class="col-md-6">
-                                <div class="dataTables_info" id="supplierInfo">
+                                <div class="dataTables_info" id="suppliersTable_info" role="status" aria-live="polite">
                                     Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> 
                                     trong tổng số <span id="totalRecords">0</span> bản ghi
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="dataTables_paginate paging_bootstrap">
-                                    <ul class="pagination" id="supplierPagination">
-                                        <!-- Nút phân trang sẽ được tạo bằng JavaScript -->
+                                <div class="dataTables_paginate paging_simple_numbers" id="suppliersTable_paginate">
+                                    <ul class="pagination" id="pagination">
+                                        <!-- Nút Previous -->
+                                        <li class="paginate_button previous disabled" id="suppliersTable_previous">
+                                            <a href="#" aria-controls="suppliersTable" data-dt-idx="0" tabindex="0" id="prevBtn">Trước</a>
+                                        </li>
+                                        
+                                        <!-- Các nút số trang sẽ được tạo bằng JavaScript -->
+                                        <li class="paginate_button active">
+                                            <a href="#" aria-controls="suppliersTable" data-dt-idx="1" tabindex="0" class="page-link" data-page="1">1</a>
+                                        </li>
+                                        
+                                        <!-- Nút Next -->
+                                        <li class="paginate_button next" id="suppliersTable_next">
+                                            <a href="#" aria-controls="suppliersTable" data-dt-idx="2" tabindex="0" id="nextBtn">Tiếp</a>
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
@@ -521,45 +532,67 @@
             }
         }
         
-        // Hàm khởi tạo bộ lọc và tìm kiếm
-        function initializeFilters() {
+        // Biến phân trang
+        var currentPage = 1;
+        var itemsPerPage = 10;
+        var totalItems = 0;
+        var filteredItems = [];
+        var allItems = [];
+        
+        // Hàm khởi tạo phân trang
+        function initializePagination() {
             // Lấy tất cả dữ liệu từ bảng
             var table = document.getElementById('suppliersTable');
             var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
             
-            // Tạo danh sách unique cho dropdown
-            var companies = new Set();
-            var contacts = new Set();
-            
+            // Lưu tất cả dữ liệu
+            allItems = [];
             for (var i = 0; i < rows.length; i++) {
-                var cells = rows[i].getElementsByTagName('td');
-                if (cells.length >= 4) {
-                    // Tên công ty (cột thứ 3, index 2)
+                allItems.push(rows[i].cloneNode(true));
+            }
+            
+            totalItems = allItems.length;
+            filteredItems = allItems.slice(); // Copy tất cả items
+            
+            // Khởi tạo dropdown lọc
+            initializeFilterDropdowns();
+            
+            updatePagination();
+        }
+        
+        // Hàm khởi tạo dropdown lọc
+        function initializeFilterDropdowns() {
+            var companySet = new Set();
+            var contactSet = new Set();
+            
+            // Thu thập dữ liệu từ tất cả items
+            for (var i = 0; i < allItems.length; i++) {
+                var cells = allItems[i].getElementsByTagName('td');
+                if (cells.length >= 7) {
                     var companyName = cells[2].textContent.trim();
-                    if (companyName) {
-                        companies.add(companyName);
-                    }
-                    
-                    // Người liên hệ (cột thứ 4, index 3)
                     var contactPerson = cells[3].textContent.trim();
-                    if (contactPerson) {
-                        contacts.add(contactPerson);
+                    
+                    if (companyName && companyName !== '') {
+                        companySet.add(companyName);
+                    }
+                    if (contactPerson && contactPerson !== '') {
+                        contactSet.add(contactPerson);
                     }
                 }
             }
             
-            // Điền dữ liệu vào dropdown tên công ty
+            // Thêm options cho dropdown tên công ty
             var companyFilter = document.getElementById('companyFilter');
-            companies.forEach(function(company) {
+            companySet.forEach(function(company) {
                 var option = document.createElement('option');
                 option.value = company;
                 option.textContent = company;
                 companyFilter.appendChild(option);
             });
             
-            // Điền dữ liệu vào dropdown người liên hệ
+            // Thêm options cho dropdown người liên hệ
             var contactFilter = document.getElementById('contactFilter');
-            contacts.forEach(function(contact) {
+            contactSet.forEach(function(contact) {
                 var option = document.createElement('option');
                 option.value = contact;
                 option.textContent = contact;
@@ -567,218 +600,110 @@
             });
         }
         
-        // Hàm lọc dữ liệu
-        function filterTable() {
-            var searchInput = document.getElementById('searchInput').value.toLowerCase();
-            var companyFilter = document.getElementById('companyFilter').value;
-            var contactFilter = document.getElementById('contactFilter').value;
-            var statusFilter = document.getElementById('statusFilter').value;
-            
-            var table = document.getElementById('suppliersTable');
-            var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-            
-            for (var i = 0; i < rows.length; i++) {
-                var row = rows[i];
-                var cells = row.getElementsByTagName('td');
-                var shouldShow = true;
-                
-                if (cells.length >= 7) {
-                    // Lấy dữ liệu từ các cột
-                    var companyName = cells[2].textContent.trim();
-                    var contactPerson = cells[3].textContent.trim();
-                    var status = cells[6].textContent.trim().toLowerCase();
-                    
-                    // Kiểm tra tìm kiếm tổng quát
-                    if (searchInput) {
-                        var rowText = row.textContent.toLowerCase();
-                        if (!rowText.includes(searchInput)) {
-                            shouldShow = false;
-                        }
-                    }
-                    
-                    // Kiểm tra lọc theo tên công ty
-                    if (companyFilter && companyName !== companyFilter) {
-                        shouldShow = false;
-                    }
-                    
-                    // Kiểm tra lọc theo người liên hệ
-                    if (contactFilter && contactPerson !== contactFilter) {
-                        shouldShow = false;
-                    }
-                    
-                    // Kiểm tra lọc theo trạng thái
-                    if (statusFilter) {
-                        var statusText = status === 'active' ? 'active' : 'inactive';
-                        if (statusText !== statusFilter) {
-                            shouldShow = false;
-                        }
-                    }
-                }
-                
-                // Hiển thị hoặc ẩn hàng
-                row.style.display = shouldShow ? '' : 'none';
-            }
-        }
-        
-        // Hàm reset tất cả bộ lọc
-        function resetAllFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('companyFilter').value = '';
-            document.getElementById('contactFilter').value = '';
-            document.getElementById('statusFilter').value = '';
-            filterTable();
-        }
-        
-        // Biến toàn cục cho phân trang
-        var currentPage = 1;
-        var itemsPerPage = 10;
-        var allRows = [];
-        var filteredRows = [];
-        
-        // Hàm khởi tạo phân trang
-        function initializePagination() {
-            var table = document.getElementById('suppliersTable');
-            var tbody = table.getElementsByTagName('tbody')[0];
-            allRows = Array.from(tbody.getElementsByTagName('tr'));
-            filteredRows = allRows.slice(); // Copy tất cả rows
-            
-            updatePagination();
-        }
-        
         // Hàm cập nhật phân trang
         function updatePagination() {
-            var totalRecords = filteredRows.length;
-            var totalPages = Math.ceil(totalRecords / itemsPerPage);
+            var totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+            var startIndex = (currentPage - 1) * itemsPerPage;
+            var endIndex = Math.min(startIndex + itemsPerPage, filteredItems.length);
             
             // Cập nhật thông tin hiển thị
-            var startIndex = (currentPage - 1) * itemsPerPage;
-            var endIndex = Math.min(startIndex + itemsPerPage, totalRecords);
-            
-            document.getElementById('showingStart').textContent = totalRecords > 0 ? startIndex + 1 : 0;
+            document.getElementById('showingStart').textContent = filteredItems.length > 0 ? startIndex + 1 : 0;
             document.getElementById('showingEnd').textContent = endIndex;
-            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('totalRecords').textContent = filteredItems.length;
             
-            // Ẩn tất cả rows
-            allRows.forEach(function(row) {
-                row.style.display = 'none';
-            });
+            // Cập nhật bảng
+            updateTable();
             
-            // Hiển thị rows của trang hiện tại
-            for (var i = startIndex; i < endIndex; i++) {
-                if (filteredRows[i]) {
-                    filteredRows[i].style.display = '';
-                }
-            }
-            
-            // Tạo nút phân trang
-            createPaginationButtons(totalPages);
+            // Cập nhật nút phân trang
+            updatePaginationButtons(totalPages);
         }
         
-        // Hàm tạo nút phân trang
-        function createPaginationButtons(totalPages) {
-            var pagination = document.getElementById('supplierPagination');
-            pagination.innerHTML = '';
+        // Hàm cập nhật bảng
+        function updateTable() {
+            var table = document.getElementById('suppliersTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
             
-            if (totalPages <= 1) return;
+            // Xóa tất cả hàng hiện tại
+            tbody.innerHTML = '';
             
-            // Nút Previous
-            var prevLi = document.createElement('li');
-            prevLi.className = currentPage === 1 ? 'disabled' : '';
-            var prevLink = document.createElement('a');
-            prevLink.href = '#';
-            prevLink.innerHTML = '«';
-            prevLink.onclick = function(e) {
-                e.preventDefault();
-                if (currentPage > 1) {
-                    currentPage--;
-                    updatePagination();
-                }
-            };
-            prevLi.appendChild(prevLink);
-            pagination.appendChild(prevLi);
+            // Thêm hàng cho trang hiện tại
+            var startIndex = (currentPage - 1) * itemsPerPage;
+            var endIndex = Math.min(startIndex + itemsPerPage, filteredItems.length);
             
-            // Nút số trang
-            var startPage = Math.max(1, currentPage - 2);
-            var endPage = Math.min(totalPages, currentPage + 2);
+            for (var i = startIndex; i < endIndex; i++) {
+                tbody.appendChild(filteredItems[i].cloneNode(true));
+            }
+        }
+        
+        // Hàm cập nhật nút phân trang
+        function updatePaginationButtons(totalPages) {
+            var pagination = document.getElementById('pagination');
+            var prevBtn = document.getElementById('prevBtn');
+            var nextBtn = document.getElementById('nextBtn');
             
-            if (startPage > 1) {
-                var firstLi = document.createElement('li');
-                var firstLink = document.createElement('a');
-                firstLink.href = '#';
-                firstLink.textContent = '1';
-                firstLink.onclick = function(e) {
-                    e.preventDefault();
-                    currentPage = 1;
-                    updatePagination();
-                };
-                firstLi.appendChild(firstLink);
-                pagination.appendChild(firstLi);
-                
-                if (startPage > 2) {
-                    var ellipsisLi = document.createElement('li');
-                    ellipsisLi.className = 'disabled';
-                    var ellipsisSpan = document.createElement('span');
-                    ellipsisSpan.textContent = '...';
-                    ellipsisLi.appendChild(ellipsisSpan);
-                    pagination.appendChild(ellipsisLi);
-                }
+            // Cập nhật nút Previous
+            if (currentPage <= 1) {
+                prevBtn.parentElement.classList.add('disabled');
+            } else {
+                prevBtn.parentElement.classList.remove('disabled');
             }
             
+            // Cập nhật nút Next
+            if (currentPage >= totalPages) {
+                nextBtn.parentElement.classList.add('disabled');
+            } else {
+                nextBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Xóa các nút số trang cũ (giữ lại Previous và Next)
+            var pageButtons = pagination.querySelectorAll('.page-link');
+            pageButtons.forEach(function(btn) {
+                if (btn.id !== 'prevBtn' && btn.id !== 'nextBtn') {
+                    btn.parentElement.remove();
+                }
+            });
+            
+            // Tạo nút số trang mới
+            var maxVisiblePages = 5;
+            var startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            var endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // Thêm nút số trang
             for (var i = startPage; i <= endPage; i++) {
                 var li = document.createElement('li');
-                li.className = i === currentPage ? 'active' : '';
-                var link = document.createElement('a');
-                link.href = '#';
-                link.textContent = i;
-                link.onclick = function(pageNum) {
-                    return function(e) {
-                        e.preventDefault();
-                        currentPage = pageNum;
-                        updatePagination();
-                    };
-                }(i);
-                li.appendChild(link);
-                pagination.appendChild(li);
-            }
-            
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    var ellipsisLi = document.createElement('li');
-                    ellipsisLi.className = 'disabled';
-                    var ellipsisSpan = document.createElement('span');
-                    ellipsisSpan.textContent = '...';
-                    ellipsisLi.appendChild(ellipsisSpan);
-                    pagination.appendChild(ellipsisLi);
+                li.className = 'paginate_button';
+                if (i === currentPage) {
+                    li.classList.add('active');
                 }
                 
-                var lastLi = document.createElement('li');
-                var lastLink = document.createElement('a');
-                lastLink.href = '#';
-                lastLink.textContent = totalPages;
-                lastLink.onclick = function(e) {
+                var a = document.createElement('a');
+                a.href = '#';
+                a.textContent = i;
+                a.className = 'page-link';
+                a.setAttribute('data-page', i);
+                a.addEventListener('click', function(e) {
                     e.preventDefault();
-                    currentPage = totalPages;
-                    updatePagination();
-                };
-                lastLi.appendChild(lastLink);
-                pagination.appendChild(lastLi);
+                    goToPage(parseInt(this.getAttribute('data-page')));
+                });
+                
+                li.appendChild(a);
+                
+                // Chèn trước nút Next
+                nextBtn.parentElement.parentElement.insertBefore(li, nextBtn.parentElement);
             }
-            
-            // Nút Next
-            var nextLi = document.createElement('li');
-            nextLi.className = currentPage === totalPages ? 'disabled' : '';
-            var nextLink = document.createElement('a');
-            nextLink.href = '#';
-            nextLink.innerHTML = '»';
-            nextLink.onclick = function(e) {
-                e.preventDefault();
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    updatePagination();
-                }
-            };
-            nextLi.appendChild(nextLink);
-            pagination.appendChild(nextLi);
+        }
+        
+        // Hàm chuyển đến trang
+        function goToPage(page) {
+            if (page < 1 || page > Math.ceil(filteredItems.length / itemsPerPage)) {
+                return;
+            }
+            currentPage = page;
+            updatePagination();
         }
         
         // Hàm lọc dữ liệu với phân trang
@@ -788,10 +713,10 @@
             var contactFilter = document.getElementById('contactFilter').value;
             var statusFilter = document.getElementById('statusFilter').value;
             
-            filteredRows = [];
+            filteredItems = [];
             
-            for (var i = 0; i < allRows.length; i++) {
-                var row = allRows[i];
+            for (var i = 0; i < allItems.length; i++) {
+                var row = allItems[i];
                 var cells = row.getElementsByTagName('td');
                 var shouldShow = true;
                 
@@ -829,11 +754,11 @@
                 }
                 
                 if (shouldShow) {
-                    filteredRows.push(row);
+                    filteredItems.push(row);
                 }
             }
             
-            // Reset về trang 1 và cập nhật phân trang
+            // Reset về trang 1 khi lọc
             currentPage = 1;
             updatePagination();
         }
@@ -844,17 +769,13 @@
             document.getElementById('companyFilter').value = '';
             document.getElementById('contactFilter').value = '';
             document.getElementById('statusFilter').value = '';
-            
-            filteredRows = allRows.slice();
+            filteredItems = allItems.slice();
             currentPage = 1;
             updatePagination();
         }
         
         // Khởi tạo khi trang load
         $(document).ready(function() {
-            // Khởi tạo bộ lọc
-            initializeFilters();
-            
             // Khởi tạo phân trang
             initializePagination();
             
@@ -864,6 +785,22 @@
             $('#contactFilter').on('change', filterTableWithPagination);
             $('#statusFilter').on('change', filterTableWithPagination);
             $('#resetFilters').on('click', resetAllFiltersWithPagination);
+            
+            // Gắn sự kiện cho nút Previous/Next
+            $('#prevBtn').on('click', function(e) {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    goToPage(currentPage - 1);
+                }
+            });
+            
+            $('#nextBtn').on('click', function(e) {
+                e.preventDefault();
+                var totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    goToPage(currentPage + 1);
+                }
+            });
         });
     </script>
 </body>

@@ -1,0 +1,8 @@
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:50 +0700] "GET /demo/supplier.jsp HTTP/1.1" 302 - http-bio-8080-exec-1 1101
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:50 +0700] "GET /demo/login.jsp HTTP/1.1" 200 3937 http-bio-8080-exec-3 270
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:52 +0700] "POST /demo/login HTTP/1.1" 302 - http-bio-8080-exec-4 404
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:52 +0700] "GET /demo/admin.jsp HTTP/1.1" 200 25474 http-bio-8080-exec-5 106
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:52 +0700] "GET /demo/api/users?action=getStats HTTP/1.1" 200 143 http-bio-8080-exec-6 14
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:54 +0700] "GET /demo/product HTTP/1.1" 200 65593 http-bio-8080-exec-7 191
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:54 +0700] "GET /demo/product HTTP/1.1" 200 65593 http-bio-8080-exec-8 20
+0:0:0:0:0:0:0:1 - - [13/Oct/2025:22:06:54 +0700] "GET /demo/supplier.jsp HTTP/1.1" 200 43887 http-bio-8080-exec-9 11

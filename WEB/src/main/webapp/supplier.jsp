@@ -136,7 +136,67 @@
                         <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addSupplierModal" style="margin-bottom:12px;">
                             <i class="fa fa-plus"></i> Thêm nhà cung cấp
                         </button>
-                        <table class="table table-hover">
+                        
+                        <!-- Bộ lọc và tìm kiếm -->
+                        <div class="row" style="margin-bottom: 15px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <!-- Tìm kiếm tổng quát -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="searchInput" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
+                                            <input type="text" id="searchInput" class="form-control" placeholder="Nhập từ khóa tìm kiếm...">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lọc theo tên công ty -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="companyFilter" style="font-weight: bold; margin-bottom: 5px;">Tên công ty:</label>
+                                            <select id="companyFilter" class="form-control">
+                                                <option value="">Tất cả công ty</option>
+                                                <!-- Các option sẽ được thêm bằng JavaScript -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lọc theo người liên hệ -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="contactFilter" style="font-weight: bold; margin-bottom: 5px;">Người liên hệ:</label>
+                                            <select id="contactFilter" class="form-control">
+                                                <option value="">Tất cả người liên hệ</option>
+                                                <!-- Các option sẽ được thêm bằng JavaScript -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Lọc theo trạng thái -->
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label for="statusFilter" style="font-weight: bold; margin-bottom: 5px;">Trạng thái:</label>
+                                            <select id="statusFilter" class="form-control">
+                                                <option value="">Tất cả trạng thái</option>
+                                                <option value="active">Hoạt động</option>
+                                                <option value="inactive">Không hoạt động</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Nút reset -->
+                                    <div class="col-md-1">
+                                        <div class="form-group">
+                                            <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                                            <button type="button" id="resetFilters" class="btn btn-warning btn-sm" style="width: 100%;" title="Xóa tất cả bộ lọc">
+                                                <i class="fa fa-refresh"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <table class="table table-hover" id="suppliersTable">
                             <thead>
                                 <tr>
                                     <th>ID</th>
@@ -493,7 +553,51 @@
             
             totalItems = allItems.length;
             filteredItems = allItems.slice(); // Copy tất cả items
+            
+            // Khởi tạo dropdown lọc
+            initializeFilterDropdowns();
+            
             updatePagination();
+        }
+        
+        // Hàm khởi tạo dropdown lọc
+        function initializeFilterDropdowns() {
+            var companySet = new Set();
+            var contactSet = new Set();
+            
+            // Thu thập dữ liệu từ tất cả items
+            for (var i = 0; i < allItems.length; i++) {
+                var cells = allItems[i].getElementsByTagName('td');
+                if (cells.length >= 7) {
+                    var companyName = cells[2].textContent.trim();
+                    var contactPerson = cells[3].textContent.trim();
+                    
+                    if (companyName && companyName !== '') {
+                        companySet.add(companyName);
+                    }
+                    if (contactPerson && contactPerson !== '') {
+                        contactSet.add(contactPerson);
+                    }
+                }
+            }
+            
+            // Thêm options cho dropdown tên công ty
+            var companyFilter = document.getElementById('companyFilter');
+            companySet.forEach(function(company) {
+                var option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                companyFilter.appendChild(option);
+            });
+            
+            // Thêm options cho dropdown người liên hệ
+            var contactFilter = document.getElementById('contactFilter');
+            contactSet.forEach(function(contact) {
+                var option = document.createElement('option');
+                option.value = contact;
+                option.textContent = contact;
+                contactFilter.appendChild(option);
+            });
         }
         
         // Hàm cập nhật phân trang
