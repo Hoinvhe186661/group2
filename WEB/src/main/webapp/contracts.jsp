@@ -222,39 +222,7 @@
                                         <% } %>
                                     </tbody>
                                 </table>
-                                <div class="row">
-                                    <div class="col-sm-6">
-                                        <%
-                                            int start = (currentPage - 1) * pageSize + 1;
-                                            int end = start + contracts.size() - 1;
-                                            if (total == 0) { start = 0; end = 0; }
-                                        %>
-                                        <p>Hiển thị <strong><%= start %></strong> - <strong><%= end %></strong> trên tổng <strong><%= total %></strong> hợp đồng</p>
-                                    </div>
-                                    <div class="col-sm-6 text-right">
-                                        <ul class="pagination" style="margin: 0;">
-                                            <li class="<%= (currentPage <= 1) ? "disabled" : "" %>"><a href="<%= (currentPage <= 1) ? "#" : ("contracts.jsp?page=" + (currentPage-1) + "&size=" + pageSize
-                                                + (request.getQueryString() != null ? "&" + request.getQueryString().replaceAll("(^|&)(page|size)=[^&]*", "") : "")) %>">&laquo;</a></li>
-                                            <%
-                                                int maxPagesToShow = 5;
-                                                int half = maxPagesToShow / 2;
-                                                int startPage = Math.max(1, currentPage - half);
-                                                int endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-                                                if (endPage - startPage + 1 < maxPagesToShow) {
-                                                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
-                                                }
-                                                for (int p = startPage; p <= endPage; p++) {
-                                            %>
-                                            <li class="<%= (p == currentPage) ? "active" : "" %>"><a href="<%= (p == currentPage) ? "#" : ("contracts.jsp?page=" + p + "&size=" + pageSize
-                                                + (request.getQueryString() != null ? "&" + request.getQueryString().replaceAll("(^|&)(page|size)=[^&]*", "") : "")) %>"><%= p %></a></li>
-                                            <%
-                                                }
-                                            %>
-                                            <li class="<%= (currentPage >= totalPages) ? "disabled" : "" %>"><a href="<%= (currentPage >= totalPages) ? "#" : ("contracts.jsp?page=" + (currentPage+1) + "&size=" + pageSize
-                                                + (request.getQueryString() != null ? "&" + request.getQueryString().replaceAll("(^|&)(page|size)=[^&]*", "") : "")) %>">&raquo;</a></li>
-                                        </ul>
-                                    </div>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -512,9 +480,9 @@
                 "serverSide": false,
                 "paging": false,
                 "searching": false,
-                "dom": 'lrtip',
+                "dom": 'lrt',
                 "ordering": true,
-                "info": true,
+                "info": false,
                 "autoWidth": false,
                 "responsive": true,
                 "order": [[0, "desc"]],
