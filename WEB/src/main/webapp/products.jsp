@@ -27,12 +27,12 @@
         <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     
     <style>
-        /* CSS cho phần lọc sản phẩm */
+        /* CSS cho phần lọc sản phẩm - giống với trang nhà cung cấp */
         .filter-panel {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #ddd;
+            background-color: #f9f9f9;
+            border-radius: 5px;
             padding: 15px;
-            margin-bottom: 0;
+            margin-bottom: 15px;
         }
         
         .filter-panel .form-control {
@@ -47,18 +47,20 @@
         }
         
         .filter-panel label {
-            font-weight: 600;
+            font-weight: bold;
             color: #333;
             margin-bottom: 5px;
         }
         
-        .filter-panel .input-group-btn .btn {
-            border-radius: 0 4px 4px 0;
-            border-left: 0;
+        .filter-panel .btn-warning {
+            background-color: #f0ad4e;
+            border-color: #eea236;
+            color: #fff;
         }
         
-        .filter-panel .input-group .form-control {
-            border-radius: 4px 0 0 4px;
+        .filter-panel .btn-warning:hover {
+            background-color: #ec971f;
+            border-color: #d58512;
         }
         
         /* Responsive cho filter panel */
@@ -281,38 +283,56 @@
                             <!-- Phần lọc sản phẩm -->
                             <div class="panel-body filter-panel">
                                 <div class="row">
-                                    <div class="col-md-3">
-                                        <label for="filterCategory">Lọc theo danh mục:</label>
-                                        <select class="form-control" id="filterCategory" onchange="filterProducts()">
-                                            <option value="">Tất cả danh mục</option>
-                                            <%
-                                                com.hlgenerator.dao.ProductDAO statsDAO = new com.hlgenerator.dao.ProductDAO();
-                                                java.util.List<String> categories = statsDAO.getAllCategories();
-                                                for (String category : categories) {
-                                            %>
-                                            <option value="<%= category %>"><%= category %></option>
-                                            <%
-                                                }
-                                            %>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label for="filterStatus">Lọc theo trạng thái:</label>
-                                        <select class="form-control" id="filterStatus" onchange="filterProducts()">
-                                            <option value="">Tất cả trạng thái</option>
-                                            <option value="active">Đang bán</option>
-                                            <option value="discontinued">Ngừng bán</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label for="searchProduct">Tìm kiếm sản phẩm:</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." oninput="filterProducts()">
-                                            <span class="input-group-btn">
-                                                <button type="button" class="btn btn-default" onclick="resetFilters()" title="Xóa bộ lọc">
-                                                    <i class="fa fa-refresh"></i>
-                                                </button>
-                                            </span>
+                                    <div class="col-md-12">
+                                        <div class="row">
+                                            <!-- Tìm kiếm tổng quát -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="searchProduct" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm sản phẩm:</label>
+                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." oninput="filterProducts()">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Lọc theo danh mục -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="filterCategory" style="font-weight: bold; margin-bottom: 5px;">Danh mục:</label>
+                                                    <select class="form-control" id="filterCategory" onchange="filterProducts()">
+                                                        <option value="">Tất cả danh mục</option>
+                                                        <%
+                                                            com.hlgenerator.dao.ProductDAO statsDAO = new com.hlgenerator.dao.ProductDAO();
+                                                            java.util.List<String> categories = statsDAO.getAllCategories();
+                                                            for (String category : categories) {
+                                                        %>
+                                                        <option value="<%= category %>"><%= category %></option>
+                                                        <%
+                                                            }
+                                                        %>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Lọc theo trạng thái -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="filterStatus" style="font-weight: bold; margin-bottom: 5px;">Trạng thái:</label>
+                                                    <select class="form-control" id="filterStatus" onchange="filterProducts()">
+                                                        <option value="">Tất cả trạng thái</option>
+                                                        <option value="active">Đang bán</option>
+                                                        <option value="discontinued">Ngừng bán</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Nút reset -->
+                                            <div class="col-md-1">
+                                                <div class="form-group">
+                                                    <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                                                    <button type="button" class="btn btn-warning btn-sm" style="width: 100%;" onclick="resetFilters()" title="Xóa tất cả bộ lọc">
+                                                        <i class="fa fa-refresh"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -326,7 +346,7 @@
                                             <th>Hình ảnh</th>
                                             <th>Tên sản phẩm</th>
                                             <th>Giá</th>
-                                            <th>Số lượng</th>
+                                            <th>Nhà cung cấp</th>
                                             <th>Danh mục</th>
                                             <th>Trạng thái</th>
                                             <th>Thao tác</th>
@@ -361,7 +381,15 @@
                                             </td>
                                             <td><%= product.getProductName() %></td>
                                             <td><%= String.format("%,.0f", product.getUnitPrice()) %> VNĐ</td>
-                                            <td><%= product.getQuantity() %></td>
+                                            <td>
+                                                <%
+                                                    // Lấy tên nhà cung cấp từ supplier_id
+                                                    com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
+                                                    com.hlgenerator.model.Supplier supplier = supplierDAO.getSupplierById(product.getSupplierId());
+                                                    String supplierName = (supplier != null) ? supplier.getCompanyName() : "Không xác định";
+                                                %>
+                                                <%= supplierName %>
+                                            </td>
                                             <td><%= product.getCategory() != null ? product.getCategory() : "Chưa phân loại" %></td>
                                             <td>
                                                 <%
