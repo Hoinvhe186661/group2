@@ -156,7 +156,7 @@
                         </a>
                     </li>
                     <li class="active">
-                        <a href="<%=request.getContextPath()%>/products">
+                        <a href="<%=request.getContextPath()%>/product">
                             <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
                         </a>
                     </li>
@@ -425,14 +425,14 @@
                                 
                                 <!-- Phân trang -->
                                 <div class="row" style="margin-top: 20px;">
-                                    <div class="col-md-6">
+                                    <div class="col-md-8">
                                         <div class="dataTables_info" id="productsTable_info" role="status" aria-live="polite">
                                             Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> 
                                             trong tổng số <span id="totalRecords">0</span> bản ghi
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="dataTables_paginate paging_simple_numbers" id="productsTable_paginate">
+                                    <div class="col-md-4">
+                                        <div class="dataTables_paginate paging_simple_numbers" id="productsTable_paginate" style="text-align: right;">
                                             <ul class="pagination" id="pagination">
                                                 <!-- Nút Previous -->
                                                 <li class="paginate_button previous disabled" id="productsTable_previous">
@@ -994,7 +994,6 @@
             document.getElementById('showingEnd').textContent = endIndex;
             document.getElementById('totalRecords').textContent = filteredItemsProducts.length;
             
-            // Cập nhật bảng
             updateTableProducts();
             
             // Cập nhật nút phân trang

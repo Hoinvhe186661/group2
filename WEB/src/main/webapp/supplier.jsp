@@ -93,7 +93,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<%=request.getContextPath()%>/products">
+                        <a href="<%=request.getContextPath()%>/product">
                             <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
                         </a>
                     </li>
@@ -141,14 +141,6 @@
                         <div class="row" style="margin-bottom: 15px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
                             <div class="col-md-12">
                                 <div class="row">
-                                    <!-- Tìm kiếm tổng quát -->
-                                    <div class="col-md-3">
-                                        <div class="form-group">
-                                            <label for="searchInput" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
-                                            <input type="text" id="searchInput" class="form-control" placeholder="Nhập từ khóa tìm kiếm...">
-                                        </div>
-                                    </div>
-                                    
                                     <!-- Lọc theo tên công ty -->
                                     <div class="col-md-3">
                                         <div class="form-group">
@@ -180,6 +172,14 @@
                                                 <option value="active">Hoạt động</option>
                                                 <option value="inactive">Không hoạt động</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Tìm kiếm tổng quát -->
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label for="searchInput" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
+                                            <input type="text" id="searchInput" class="form-control" placeholder="Nhập từ khóa tìm kiếm...">
                                         </div>
                                     </div>
                                     
@@ -237,14 +237,14 @@
                         
                         <!-- Phân trang -->
                         <div class="row" style="margin-top: 20px;">
-                            <div class="col-md-6">
+                            <div class="col-md-8">
                                 <div class="dataTables_info" id="suppliersTable_info" role="status" aria-live="polite">
                                     Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> 
                                     trong tổng số <span id="totalRecords">0</span> bản ghi
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="dataTables_paginate paging_simple_numbers" id="suppliersTable_paginate">
+                            <div class="col-md-4">
+                                <div class="dataTables_paginate paging_simple_numbers" id="suppliersTable_paginate" style="text-align: right;">
                                     <ul class="pagination" id="pagination">
                                         <!-- Nút Previous -->
                                         <li class="paginate_button previous disabled" id="suppliersTable_previous">
@@ -758,12 +758,12 @@
                 }
             }
             
-            // Reset về trang 1 khi lọc
+           
             currentPage = 1;
             updatePagination();
         }
         
-        // Hàm reset tất cả bộ lọc với phân trang
+        
         function resetAllFiltersWithPagination() {
             document.getElementById('searchInput').value = '';
             document.getElementById('companyFilter').value = '';
@@ -774,9 +774,9 @@
             updatePagination();
         }
         
-        // Khởi tạo khi trang load
+        
         $(document).ready(function() {
-            // Khởi tạo phân trang
+            
             initializePagination();
             
             // Gắn sự kiện cho các input lọc
