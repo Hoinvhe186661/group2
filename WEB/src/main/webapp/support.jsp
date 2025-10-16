@@ -318,6 +318,20 @@
           });
         });
 
+      // Luôn prefill lại thông tin người dùng mỗi khi mở modal (tránh bị xoá bởi reset)
+      try {
+        const modalEl = document.getElementById('supportModal');
+        if (modalEl) {
+          modalEl.addEventListener('show.bs.modal', function(){
+            if (emailInp && sessionEmail && sessionEmail !== 'null') emailInp.value = sessionEmail;
+            if (nameInp) {
+              const name = (sessionFullName && sessionFullName !== 'null') ? sessionFullName : (sessionUsername && sessionUsername !== 'null' ? sessionUsername : '');
+              nameInp.value = name;
+            }
+          });
+        }
+      } catch(e) {}
+
       contractSelect.addEventListener('change', function(){
         const id = this.value;
         productSelect.innerHTML = '<option value="">-- Chọn sản phẩm --</option>';
@@ -515,7 +529,18 @@
       }).then(r=>r.json())
         .then(j=>{
           if(j && j.success){
-            form.reset();
+            // Chỉ làm sạch các trường nhập liệu, giữ nguyên Họ tên/Email
+            const subjInp = document.getElementById('subject');
+            const descInp = document.getElementById('description');
+            const catSel = document.getElementById('category');
+            const cSel2 = document.getElementById('contractSelect');
+            const pSel2 = document.getElementById('contractProductSelect');
+            if (subjInp) subjInp.value = '';
+            if (descInp) descInp.value = '';
+            if (catSel) catSel.value = 'general';
+            if (cSel2) cSel2.selectedIndex = 0;
+            if (pSel2) { pSel2.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; pSel2.disabled = true; }
+
             const modalEl = document.getElementById('supportModal');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.hide();
