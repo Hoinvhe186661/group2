@@ -227,6 +227,129 @@
                                 </div>
                             </header>
                             <div class="panel-body table-responsive">
+<% request.setCharacterEncoding("UTF-8"); %>
+<%! 
+    private boolean equalsParam(String param, String actual) {
+        if (param == null || param.trim().isEmpty()) return true;
+        String val = actual == null ? "" : actual.trim();
+        return param.trim().equalsIgnoreCase(val);
+    }
+    private String decodeParam(String s) {
+        if (s == null) return null;
+        try {
+            byte[] bytes = s.getBytes("ISO-8859-1");
+            return new String(bytes, "UTF-8").trim();
+        } catch (Exception e) { return s.trim(); }
+    }
+    private String roleLabel(String raw) {
+        if (raw == null) return "-";
+        if ("admin".equals(raw)) return "Quản trị viên";
+        else if ("customer_support".equals(raw)) return "Hỗ trợ khách hàng";
+        else if ("technical_staff".equals(raw)) return "Nhân viên kỹ thuật";
+        else if ("head_technician".equals(raw)) return "Trưởng phòng kỹ thuật";
+        else if ("storekeeper".equals(raw)) return "Thủ kho";
+        else if ("customer".equals(raw)) return "Khách hàng";
+        else if ("guest".equals(raw)) return "Khách";
+        else return raw;
+    }
+    private String statusLabel(boolean active) { return active ? "Hoạt động" : "Tạm khóa"; }
+%>
+<%
+    com.hlgenerator.dao.UserDAO filterDao = new com.hlgenerator.dao.UserDAO();
+    java.util.List<com.hlgenerator.model.User> allUsers = filterDao.getAllUsers();
+    String pEmail = decodeParam(request.getParameter("email"));
+    String pFullName = decodeParam(request.getParameter("fullName"));
+    String pPhone = decodeParam(request.getParameter("phone"));
+    String pRole = decodeParam(request.getParameter("role")); // raw role key
+    String pStatus = decodeParam(request.getParameter("status")); // "active" | "inactive"
+
+    java.util.List<com.hlgenerator.model.User> filteredUsers = new java.util.ArrayList<com.hlgenerator.model.User>();
+    for (com.hlgenerator.model.User u : allUsers) {
+        if (!equalsParam(pEmail, u.getEmail())) continue;
+        if (!equalsParam(pFullName, u.getFullName())) continue;
+        if (!equalsParam(pPhone, u.getPhone())) continue;
+        String rawRole = null;
+        try { rawRole = (String)com.hlgenerator.model.User.class.getMethod("getRole").invoke(u); } catch (Exception ignored) {}
+        String roleToCompare = rawRole != null ? rawRole : (u.getRoleDisplayName() != null ? u.getRoleDisplayName() : "");
+        if (!equalsParam(pRole, roleToCompare)) continue;
+        if (pStatus != null && !pStatus.trim().isEmpty()) {
+            boolean wantActive = "active".equalsIgnoreCase(pStatus.trim());
+            if (u.isActive() != wantActive) continue;
+        }
+        filteredUsers.add(u);
+    }
+
+    // Build option sets
+    java.util.Set<String> emails = new java.util.TreeSet<String>();
+    java.util.Set<String> fullNames = new java.util.TreeSet<String>();
+    java.util.Set<String> phones = new java.util.TreeSet<String>();
+    java.util.Set<String> roles = new java.util.TreeSet<String>(); // store raw if available else display
+    java.util.Set<String> statuses = new java.util.TreeSet<String>(); // "active" / "inactive"
+
+    for (com.hlgenerator.model.User u : allUsers) {
+        if (u.getEmail() != null && !u.getEmail().trim().isEmpty()) emails.add(u.getEmail().trim());
+        if (u.getFullName() != null && !u.getFullName().trim().isEmpty()) fullNames.add(u.getFullName().trim());
+        if (u.getPhone() != null && !u.getPhone().trim().isEmpty()) phones.add(u.getPhone().trim());
+        String r = null;
+        try { r = (String)com.hlgenerator.model.User.class.getMethod("getRole").invoke(u); } catch (Exception ignored) {}
+        roles.add(r != null ? r : (u.getRoleDisplayName() != null ? u.getRoleDisplayName().trim() : "-"));
+        statuses.add(u.isActive() ? "active" : "inactive");
+    }
+%>
+                                <form class="form-inline" method="get" action="users.jsp" accept-charset="UTF-8" style="margin-bottom: 10px;">
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-2">
+                                            <label for="filterEmail">Email</label>
+                                            <select id="filterEmail" name="email" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<% for (String e : emails) { %>
+                                                <option value="<%= e %>" <%= (pEmail != null && pEmail.equals(e)) ? "selected" : "" %>><%= e %></option>
+<% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <label for="filterFullName">Họ tên</label>
+                                            <select id="filterFullName" name="fullName" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<% for (String fn : fullNames) { %>
+                                                <option value="<%= fn %>" <%= (pFullName != null && pFullName.equals(fn)) ? "selected" : "" %>><%= fn %></option>
+<% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <label for="filterPhone">Số ĐT</label>
+                                            <select id="filterPhone" name="phone" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<% for (String ph : phones) { %>
+                                                <option value="<%= ph %>" <%= (pPhone != null && pPhone.equals(ph)) ? "selected" : "" %>><%= ph %></option>
+<% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterRole">Vai trò</label>
+                                            <select id="filterRole" name="role" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<% for (String r : roles) { %>
+                                                <option value="<%= r %>" <%= (pRole != null && pRole.equalsIgnoreCase(r)) ? "selected" : "" %>><%= roleLabel(r) %></option>
+<% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterStatus">Trạng thái</label>
+                                            <select id="filterStatus" name="status" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+                                                <option value="active" <%= ("active".equalsIgnoreCase(pStatus)) ? "selected" : "" %>>Hoạt động</option>
+                                                <option value="inactive" <%= ("inactive".equalsIgnoreCase(pStatus)) ? "selected" : "" %>>Tạm khóa</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-12">
+                                            <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-filter"></i> Lọc</button>
+                                            <a href="users.jsp" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Xóa lọc</a>
+                                        </div>
+                                    </div>
+                                </form>
                                 <table class="table table-hover" id="usersTable">
                                     <thead>
                                         <tr>
@@ -241,20 +364,21 @@
                                         </tr>
                                     </thead>
                                     <tbody id="usersTableBody">
-                                        <%-- Lấy dữ liệu từ backend và render bằng JSP --%>
-                                        <%
-                                            com.hlgenerator.dao.UserDAO dao = new com.hlgenerator.dao.UserDAO();
-                                            java.util.List<com.hlgenerator.model.User> users = dao.getAllUsers();
-                                            for (com.hlgenerator.model.User user : users) {
-                                        %>
+                                        <% for (com.hlgenerator.model.User user : filteredUsers) { %>
                                         <tr>
                                             <td><%= user.getId() %></td>
                                             <td><%= user.getUsername() %></td>
                                             <td><%= user.getEmail() %></td>
                                             <td><%= user.getFullName() %></td>
                                             <td><%= user.getPhone() != null ? user.getPhone() : "-" %></td>
-                                            <td><%= user.getRoleDisplayName() %></td>
-                                            <td><%= user.getStatusDisplayName() %></td>
+                                            <td>
+<%
+    String rawRoleRow = null;
+    try { rawRoleRow = (String)com.hlgenerator.model.User.class.getMethod("getRole").invoke(user); } catch (Exception ignored) {}
+%>
+                                                <%= roleLabel(rawRoleRow != null ? rawRoleRow : user.getRoleDisplayName()) %>
+                                            </td>
+                                            <td><%= statusLabel(user.isActive()) %></td>
                                             <td>
                                                 <div class="action-buttons">
                                                     <div class="btn-group">
@@ -262,7 +386,6 @@
                                                         <button class="btn btn-info btn-xs" onclick="viewUser('<%= user.getId() %>')" title="Xem chi tiết">
                                                             <i class="fa fa-eye"></i> Xem
                                                         </button>
-                                                        
                                                         <!-- Nút Sửa với dropdown -->
                                                         <div class="btn-group">
                                                             <button class="btn btn-warning btn-xs dropdown-toggle" data-toggle="dropdown" title="Chỉnh sửa">
@@ -280,7 +403,6 @@
                                                                 <li><a href="#" onclick="hardDeleteUser('<%= user.getId() %>')" style="color: #e74c3c;"><i class="fa fa-trash"></i> Xóa vĩnh viễn</a></li>
                                                             </ul>
                                                         </div>
-                                                        
                                                         <!-- Nút Xóa -->
                                                         <button class="btn btn-danger btn-xs" onclick="deleteUser('<%= user.getId() %>')" title="Xóa tạm thời">
                                                             <i class="fa fa-trash-o"></i> Xóa
