@@ -517,8 +517,29 @@
                             <input type="number" class="form-control" id="edit_unit_price" name="unit_price" min="0" step="0.01">
                         </div>
                         <div class="form-group">
-                            <label for="edit_supplier_id">Nhà cung cấp (ID)</label>
-                            <input type="number" class="form-control" id="edit_supplier_id" name="supplier_id" min="1">
+                            <label for="edit_supplier_id">Nhà cung cấp</label>
+                            <select class="form-control" id="edit_supplier_id" name="supplier_id">
+                                <option value="">-- Chọn nhà cung cấp --</option>
+                                <%
+                                    // Tạo lại supplierDAO cho form sửa
+                                    com.hlgenerator.dao.SupplierDAO supplierDAOEdit = new com.hlgenerator.dao.SupplierDAO();
+                                    java.util.List<com.hlgenerator.model.Supplier> suppliersEdit = supplierDAOEdit.getAllSuppliers();
+                                    boolean hasActiveSuppliersEdit = false;
+                                    for (com.hlgenerator.model.Supplier supplier : suppliersEdit) {
+                                        if ("active".equals(supplier.getStatus())) {
+                                            hasActiveSuppliersEdit = true;
+                                %>
+                                <option value="<%= supplier.getId() %>"><%= supplier.getCompanyName() %> (<%= supplier.getSupplierCode() %>)</option>
+                                <%
+                                        }
+                                    }
+                                    if (!hasActiveSuppliersEdit) {
+                                %>
+                                <option value="" disabled>Không có nhà cung cấp nào</option>
+                                <%
+                                    }
+                                %>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="edit_specifications">Thông số kỹ thuật</label>
@@ -594,9 +615,29 @@
                             <input type="number" class="form-control" id="unit_price" name="unit_price" min="0" step="1000" required>
                         </div>
                         <div class="form-group">
-                            <label for="supplier_id">Nhà cung cấp (ID) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="supplier_id" name="supplier_id" min="1" required>
-                            <small class="form-text text-muted">Nhập ID của nhà cung cấp từ danh sách nhà cung cấp</small>
+                            <label for="supplier_id">Nhà cung cấp <span class="text-danger">*</span></label>
+                            <select class="form-control" id="supplier_id" name="supplier_id" required>
+                                <option value="">-- Chọn nhà cung cấp --</option>
+                                <%
+                                    com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
+                                    java.util.List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
+                                    boolean hasActiveSuppliers = false;
+                                    for (com.hlgenerator.model.Supplier supplier : suppliers) {
+                                        if ("active".equals(supplier.getStatus())) {
+                                            hasActiveSuppliers = true;
+                                %>
+                                <option value="<%= supplier.getId() %>"><%= supplier.getCompanyName() %> (<%= supplier.getSupplierCode() %>)</option>
+                                <%
+                                        }
+                                    }
+                                    if (!hasActiveSuppliers) {
+                                %>
+                                <option value="" disabled>Không có nhà cung cấp nào</option>
+                                <%
+                                    }
+                                %>
+                            </select>
+                            <small class="form-text text-muted">Chọn nhà cung cấp từ danh sách có sẵn. Nếu không có nhà cung cấp nào, vui lòng thêm nhà cung cấp trước.</small>
                         </div>
                         <div class="form-group">
                             <label for="specifications">Thông số kỹ thuật</label>
@@ -844,13 +885,17 @@
         }
 
         function updateProduct() {
+            // Sử dụng FormData để xử lý file upload và form data
             var form = document.getElementById('editProductForm');
-            var formData = $(form).serialize();
+            var formData = new FormData(form);
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/product',
                 type: 'POST',
                 data: formData,
+                processData: false, // Không xử lý dữ liệu
+                contentType: false, // Không set content type
+                dataType: 'json',
                 success: function(response) {
                     console.log('Update response:', response);
                     if (typeof response === 'string') {
@@ -894,25 +939,23 @@
         }
 
         function submitAddProduct() {
-            var formData = {
-                action: 'add',
-                product_code: $('#product_code').val(),
-                product_name: $('#product_name').val(),
-                category: $('#category').val(),
-                unit: $('#unit').val(),
-                description: $('#description').val(),
-                unit_price: $('#unit_price').val(),
-                supplier_id: $('#supplier_id').val(),
-                specifications: $('#specifications').val(),
-                image_url: $('#image_url').val(),
-                warranty_months: $('#warranty_months').val(),
-                status: $('#status').val()
-            };
+            // Kiểm tra validation trước khi gửi
+            var supplierId = $('#supplier_id').val();
+            if (!supplierId || supplierId === '') {
+                alert('Vui lòng chọn nhà cung cấp');
+                return;
+            }
+            
+            // Sử dụng FormData để xử lý file upload và form data
+            var form = document.getElementById('addProductForm');
+            var formData = new FormData(form);
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/product',
                 type: 'POST',
                 data: formData,
+                processData: false, // Không xử lý dữ liệu
+                contentType: false, // Không set content type
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
@@ -924,7 +967,22 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    alert('Lỗi kết nối: ' + error);
+                    console.error('AJAX Error:', xhr.responseText);
+                    console.error('Status:', status);
+                    console.error('Error:', error);
+                    
+                    var errorMsg = 'Lỗi kết nối: ';
+                    if (xhr.responseText) {
+                        try {
+                            var errorResponse = JSON.parse(xhr.responseText);
+                            errorMsg += errorResponse.message || xhr.responseText;
+                        } catch (e) {
+                            errorMsg += xhr.responseText;
+                        }
+                    } else {
+                        errorMsg += error;
+                    }
+                    alert(errorMsg);
                 }
             });
         }
