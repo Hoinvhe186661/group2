@@ -62,3 +62,7 @@
 0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:05:36 +0700] "GET /demo/js/bootstrap.min.js HTTP/1.1" 304 - http-bio-8080-exec-8 2
 0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:05:36 +0700] "GET /demo/js/jquery-ui-1.10.3.min.js HTTP/1.1" 304 - http-bio-8080-exec-5 2
 0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:05:36 +0700] "GET /demo/js/Director/app.js HTTP/1.1" 304 - http-bio-8080-exec-4 2
+0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:06:03 +0700] "GET /demo/users.jsp HTTP/1.1" 200 56049 http-bio-8080-exec-4 121
+0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:06:06 +0700] "GET /demo/users.jsp?email=&fullName=Nguy%E1%BB%85n+V%C4%83n+Kh%C3%A1ch&phone=&role=&status= HTTP/1.1" 200 48977 http-bio-8080-exec-4 6
+0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:06:08 +0700] "GET /demo/users.jsp?email=&fullName=System+Administrator&phone=&role=&status= HTTP/1.1" 200 48979 http-bio-8080-exec-4 6
+0:0:0:0:0:0:0:1 - - [16/Oct/2025:14:06:10 +0700] "GET /demo/users.jsp?email=&fullName=&phone=&role=&status= HTTP/1.1" 200 56049 http-bio-8080-exec-4 7

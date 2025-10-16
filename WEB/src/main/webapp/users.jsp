@@ -890,6 +890,22 @@
                 return;
             }
 
+            // Email phải là @gmail.com
+            var emailRegex = /^[A-Za-z0-9._%+-]+@gmail\.com$/i;
+            if (!emailRegex.test((email || '').trim())) {
+                showAlert('Email phải có định dạng @gmail.com', 'warning');
+                document.getElementById('email').focus();
+                return;
+            }
+
+            // Số điện thoại bắt buộc: 10 hoặc 11 chữ số
+            var phoneRegex = /^\d{10,11}$/;
+            if (!phone || !phoneRegex.test(phone.trim())) {
+                showAlert('Số điện thoại phải gồm 10 hoặc 11 chữ số', 'warning');
+                document.getElementById('phone').focus();
+                return;
+            }
+
             // For new user, password is required
             if (!currentEditingUser && !password) {
                 showAlert('Mật khẩu là bắt buộc cho người dùng mới', 'warning');
