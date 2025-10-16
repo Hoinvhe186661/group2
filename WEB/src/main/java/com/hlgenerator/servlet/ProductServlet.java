@@ -8,10 +8,14 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.URL;
 import java.util.List;
+import java.util.UUID;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.io.FilenameUtils;
 
 @WebServlet("/product")
 public class ProductServlet extends HttpServlet {
@@ -41,21 +45,215 @@ public class ProductServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json");
         
-        String action = request.getParameter("action");
-        System.out.println("=== DOPOST DEBUG ===");
-        System.out.println("Received action: '" + action + "'");
-        System.out.println("Content-Type: " + request.getContentType());
-        
-        if ("add".equals(action)) {
-            addProduct(request, response);
-        } else if ("update".equals(action)) {
-            updateProduct(request, response);
-        } else if ("delete".equals(action)) {
-            deleteProduct(request, response);
+        // Kiểm tra xem request có phải là multipart form data không
+        if (ServletFileUpload.isMultipartContent(request)) {
+            handleMultipartRequest(request, response);
         } else {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"success\": false, \"message\": \"Invalid action\"}");
+            // Xử lý request thông thường (không có file upload)
+            String action = request.getParameter("action");
+            System.out.println("=== DOPOST DEBUG ===");
+            System.out.println("Received action: '" + action + "'");
+            System.out.println("Content-Type: " + request.getContentType());
+            
+            if ("delete".equals(action)) {
+                deleteProduct(request, response);
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"success\": false, \"message\": \"Invalid action or missing multipart data\"}");
+            }
+        }
+    }
+    
+    /**
+     * Xử lý request multipart form data (có file upload)
+     */
+    private void handleMultipartRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            // Tạo factory và upload handler
+            DiskFileItemFactory factory = new DiskFileItemFactory();
+            ServletFileUpload upload = new ServletFileUpload(factory);
+            
+            // Parse request
+            List<FileItem> items = upload.parseRequest(request);
+            
+            String action = null;
+            String imageUrl = null;
+            Product product = new Product();
+            
+            // Xử lý từng item
+            for (FileItem item : items) {
+                if (item.isFormField()) {
+                    // Xử lý form field thông thường
+                    String fieldName = item.getFieldName();
+                    String fieldValue = item.getString("UTF-8");
+                    
+                    switch (fieldName) {
+                        case "action":
+                            action = fieldValue;
+                            break;
+                        case "id":
+                            if (fieldValue != null && !fieldValue.trim().isEmpty()) {
+                                product.setId(Integer.parseInt(fieldValue));
+                            }
+                            break;
+                        case "product_code":
+                            product.setProductCode(fieldValue);
+                            break;
+                        case "product_name":
+                            product.setProductName(fieldValue);
+                            break;
+                        case "category":
+                            product.setCategory(fieldValue);
+                            break;
+                        case "description":
+                            product.setDescription(fieldValue);
+                            break;
+                        case "unit":
+                            product.setUnit(fieldValue);
+                            break;
+                        case "unit_price":
+                            if (fieldValue != null && !fieldValue.trim().isEmpty()) {
+                                product.setUnitPrice(Double.parseDouble(fieldValue));
+                            }
+                            break;
+                        case "supplier_id":
+                            if (fieldValue != null && !fieldValue.trim().isEmpty()) {
+                                product.setSupplierId(Integer.parseInt(fieldValue));
+                            }
+                            break;
+                        case "specifications":
+                            product.setSpecifications(fieldValue);
+                            break;
+                        case "warranty_months":
+                            if (fieldValue != null && !fieldValue.trim().isEmpty()) {
+                                product.setWarrantyMonths(Integer.parseInt(fieldValue));
+                            }
+                            break;
+                        case "status":
+                            product.setStatus(fieldValue);
+                            break;
+                    }
+                } else {
+                    // Xử lý file upload
+                    if ("product_image".equals(item.getFieldName()) && !item.getName().isEmpty()) {
+                        imageUrl = handleFileUpload(item, request);
+                    }
+                }
+            }
+            
+            // Set image URL nếu có
+            if (imageUrl != null) {
+                product.setImageUrl(imageUrl);
+            }
+            
+            // Xử lý action
+            if ("add".equals(action)) {
+                addProductWithFile(product, response);
+            } else if ("update".equals(action)) {
+                updateProductWithFile(product, response);
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"success\": false, \"message\": \"Invalid action\"}");
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.getWriter().write("{\"success\": false, \"message\": \"Error processing request: " + e.getMessage() + "\"}");
+        }
+    }
+    
+    /**
+     * Xử lý upload file và trả về đường dẫn file
+     */
+    private String handleFileUpload(FileItem fileItem, HttpServletRequest request) throws Exception {
+        // Kiểm tra file có tồn tại không
+        if (fileItem.getName() == null || fileItem.getName().trim().isEmpty()) {
+            return null;
+        }
+        
+        // Kiểm tra kích thước file (5MB)
+        if (fileItem.getSize() > 5 * 1024 * 1024) {
+            throw new Exception("File size too large. Maximum size is 5MB.");
+        }
+        
+        // Kiểm tra định dạng file
+        String fileName = fileItem.getName();
+        String extension = FilenameUtils.getExtension(fileName).toLowerCase();
+        if (!extension.matches("jpg|jpeg|png|gif")) {
+            throw new Exception("Invalid file format. Only JPG, PNG, GIF are allowed.");
+        }
+        
+        // Tạo tên file unique
+        String uniqueFileName = UUID.randomUUID().toString() + "." + extension;
+        
+        // Đường dẫn thư mục upload
+        String uploadPath = request.getServletContext().getRealPath("/uploads/products/");
+        File uploadDir = new File(uploadPath);
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
+        }
+        
+        // Lưu file
+        File uploadedFile = new File(uploadDir, uniqueFileName);
+        fileItem.write(uploadedFile);
+        
+        // Trả về đường dẫn relative
+        return "uploads/products/" + uniqueFileName;
+    }
+    
+    /**
+     * Thêm sản phẩm mới với file upload
+     */
+    private void addProductWithFile(Product product, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        try {
+            System.out.println("=== ADD PRODUCT WITH FILE DEBUG ===");
+            System.out.println("Product: " + product.getProductName());
+            System.out.println("Image URL: " + product.getImageUrl());
+            
+            boolean success = productDAO.addProduct(product);
+            
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Sản phẩm đã được thêm thành công\"}");
+            } else {
+                String error = productDAO.getLastError();
+                out.write("{\"success\": false, \"message\": \"Lỗi khi thêm sản phẩm: " + error + "\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"success\": false, \"message\": \"Lỗi hệ thống: " + e.getMessage() + "\"}");
+        }
+    }
+    
+    /**
+     * Cập nhật sản phẩm với file upload
+     */
+    private void updateProductWithFile(Product product, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        try {
+            System.out.println("=== UPDATE PRODUCT WITH FILE DEBUG ===");
+            System.out.println("Product ID: " + product.getId());
+            System.out.println("Product: " + product.getProductName());
+            System.out.println("Image URL: " + product.getImageUrl());
+            
+            boolean success = productDAO.updateProduct(product);
+            
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Sản phẩm đã được cập nhật thành công\"}");
+            } else {
+                String error = productDAO.getLastError();
+                out.write("{\"success\": false, \"message\": \"Lỗi khi cập nhật sản phẩm: " + error + "\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"success\": false, \"message\": \"Lỗi hệ thống: " + e.getMessage() + "\"}");
         }
     }
     

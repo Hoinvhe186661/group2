@@ -25,4 +25,3 @@ com\hlgenerator\servlet\ProductServlet$ValidationResult.class
 com\hlgenerator\servlet\ChangePasswordServlet.class
 com\hlgenerator\servlet\ProductServlet.class
 com\hlgenerator\dao\CustomerDAO.class
-com\hlgenerator\servlet\ProductsPageServlet.class
