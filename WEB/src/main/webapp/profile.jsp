@@ -43,9 +43,16 @@
         <form id="form-profile" method="post" action="#">
           <div class="form-grid">
             <div class="field">
-              <label for="fullName">Họ và tên</label>
-              <input id="fullName" type="text" name="fullName" value="${sessionScope.fullName}" />
+              <label for="lastName">Họ</label>
+              <input id="lastName" type="text" />
             </div>
+            <div class="field">
+              <label for="firstName">Tên</label>
+              <input id="firstName" type="text" />
+            </div>
+            <!-- Hidden combined field to keep compatibility with backend -->
+            <input id="fullName" type="hidden" name="fullName" value="${sessionScope.fullName}" />
+
             <div class="field">
               <label for="address">Địa chỉ</label>
               <input id="address" type="text" name="address" value="" />
@@ -108,10 +115,17 @@
       </div>
       <div class="modal-body">
         <form id="updateUserForm">
-          <div class="mb-3">
-            <label for="m_fullName" class="form-label">Họ và tên</label>
-            <input type="text" class="form-control" id="m_fullName" required>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="m_lastName">Họ</label>
+              <input type="text" class="form-control" id="m_lastName" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="m_firstName">Tên</label>
+              <input type="text" class="form-control" id="m_firstName" required>
+            </div>
           </div>
+          <input type="hidden" id="m_fullName" />
           <div class="mb-3">
             <label for="m_email" class="form-label">Email</label>
             <input type="email" class="form-control" id="m_email" required>
@@ -124,12 +138,23 @@
             <label for="m_companyName" class="form-label">Công ty</label>
             <input type="text" class="form-control" id="m_companyName" required>
           </div>
-          <div class="mb-3">
-            <label for="m_address" class="form-label">Địa chỉ</label>
-            <input type="text" class="form-control" id="m_address" required>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="m_addrStreet">Số nhà (xã, thôn)</label>
+              <input type="text" class="form-control" id="m_addrStreet" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="m_addrDistrict">Huyện</label>
+              <input type="text" class="form-control" id="m_addrDistrict" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="m_addrCity">Thành phố</label>
+              <input type="text" class="form-control" id="m_addrCity" required>
+            </div>
           </div>
+          <input type="hidden" id="m_address" />
           <div class="mb-3">
-            <label class="form-label">Tên đăng nhập</label>
+            <label class="form-label" for="m_username">Tên đăng nhập</label>
             <input type="text" class="form-control" id="m_username" disabled>
           </div>
         </form>
@@ -159,9 +184,39 @@
     var sessionUserId = '<%= String.valueOf(session.getAttribute("userId")) %>';
     var userData = null;
     var customerData = null;
+    function splitName(fullName){
+      if (!fullName) return { lastName: '', firstName: '' };
+      var parts = String(fullName).trim().split(/\s+/);
+      if (parts.length === 1) return { lastName: '', firstName: parts[0] };
+      var firstName = parts.pop();
+      return { lastName: parts.join(' '), firstName: firstName };
+    }
+
+    function composeName(lastName, firstName){
+      return [String(lastName||'').trim(), String(firstName||'').trim()].filter(Boolean).join(' ');
+    }
+
+    function splitAddress(address){
+      if (!address) return { street:'', district:'', city:'' };
+      var parts = String(address).split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      return {
+        street: parts[0] || '',
+        district: parts[1] || '',
+        city: parts[2] || ''
+      };
+    }
+
+    function composeAddress(street, district, city){
+      var segs = [street, district, city].map(function(s){ return String(s||'').trim(); }).filter(Boolean);
+      return segs.join(', ');
+    }
+
     function fillForm(data){
       try {
         document.getElementById('fullName').value = data.fullName || '';
+        var n = splitName(data.fullName || '');
+        if (document.getElementById('lastName')) document.getElementById('lastName').value = n.lastName;
+        if (document.getElementById('firstName')) document.getElementById('firstName').value = n.firstName;
         document.getElementById('email').value = data.email || '';
         if (document.getElementById('phone')) document.getElementById('phone').value = data.phone || '';
         if (document.getElementById('companyName')) document.getElementById('companyName').value = (data.companyName || '');
@@ -213,11 +268,18 @@
         var formAddress = (document.getElementById('address') && document.getElementById('address').value) || '';
         var finalCompany = formCompany || (userData.companyName || (customerData && customerData.companyName) || '');
         var finalAddress = formAddress || (userData.address || (customerData && customerData.address) || '');
-        document.getElementById('m_fullName').value = userData.fullName || '';
+        var n = splitName(userData.fullName || '');
+        document.getElementById('m_lastName').value = n.lastName;
+        document.getElementById('m_firstName').value = n.firstName;
+        document.getElementById('m_fullName').value = composeName(n.lastName, n.firstName);
         document.getElementById('m_email').value = userData.email || '';
         document.getElementById('m_phone').value = userData.phone || '';
         document.getElementById('m_companyName').value = finalCompany;
-        document.getElementById('m_address').value = finalAddress;
+        var a = splitAddress(finalAddress);
+        document.getElementById('m_addrStreet').value = a.street;
+        document.getElementById('m_addrDistrict').value = a.district;
+        document.getElementById('m_addrCity').value = a.city;
+        document.getElementById('m_address').value = composeAddress(a.street, a.district, a.city);
         document.getElementById('m_username').value = userData.username || '';
         var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('updateUserModal'));
         modal.show();
@@ -228,11 +290,18 @@
     var confirmBtn = document.getElementById('confirmUpdateBtn');
     if (confirmBtn) {
       confirmBtn.addEventListener('click', function(){
-        var fullName = document.getElementById('m_fullName').value.trim();
+        var fullName = composeName(
+          document.getElementById('m_lastName').value.trim(),
+          document.getElementById('m_firstName').value.trim()
+        );
         var email = document.getElementById('m_email').value.trim();
         var phone = document.getElementById('m_phone').value.trim();
         var companyName = document.getElementById('m_companyName').value.trim();
-        var address = document.getElementById('m_address').value.trim();
+        var address = composeAddress(
+          document.getElementById('m_addrStreet').value.trim(),
+          document.getElementById('m_addrDistrict').value.trim(),
+          document.getElementById('m_addrCity').value.trim()
+        );
         // Validate required fields to avoid clearing existing data unintentionally
         if (!fullName || !email || !phone || !companyName || !address) {
           alert('Vui lòng nhập đầy đủ Họ và tên, Email, Số điện thoại, Công ty và Địa chỉ!');
@@ -258,10 +327,17 @@
           .then(function(j){
             if (j && j.success){
               // update UI
+              var nameParts = splitName(fullName);
+              if (document.getElementById('lastName')) document.getElementById('lastName').value = nameParts.lastName;
+              if (document.getElementById('firstName')) document.getElementById('firstName').value = nameParts.firstName;
               document.getElementById('fullName').value = fullName;
               document.getElementById('email').value = email;
               if (document.getElementById('phone')) document.getElementById('phone').value = phone;
               if (document.getElementById('companyName')) document.getElementById('companyName').value = companyName;
+              var addrParts = splitAddress(address);
+              if (document.getElementById('addrStreet')) document.getElementById('addrStreet').value = addrParts.street;
+              if (document.getElementById('addrDistrict')) document.getElementById('addrDistrict').value = addrParts.district;
+              if (document.getElementById('addrCity')) document.getElementById('addrCity').value = addrParts.city;
               if (document.getElementById('address')) document.getElementById('address').value = address;
               if (userData){ userData.fullName = fullName; userData.email = email; userData.phone = phone; }
               var m = bootstrap.Modal.getInstance(document.getElementById('updateUserModal'));
