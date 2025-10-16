@@ -92,6 +92,131 @@
                             </header>
                             
                             <div class="panel-body table-responsive">
+<%! 
+    private boolean equalsParam(String param, String actual) {
+        if (param == null || param.trim().isEmpty()) return true;
+        String val = actual == null ? "" : actual.trim();
+        return param.trim().equalsIgnoreCase(val);
+    }
+    private String typeLabel(String raw) {
+        return (raw != null && raw.equalsIgnoreCase("company")) ? "Doanh nghiệp" : "Cá nhân";
+    }
+    private String statusLabel(String raw) {
+        return (raw != null && raw.equalsIgnoreCase("active")) ? "Hoạt động" : "Tạm khóa";
+    }
+%>
+<%
+    com.hlgenerator.dao.CustomerDAO daoPage = new com.hlgenerator.dao.CustomerDAO();
+    java.util.List<com.hlgenerator.model.Customer> allCustomers = daoPage.getAllCustomers();
+    String pCode = request.getParameter("customerCode");
+    String pType = request.getParameter("customerType"); // raw: individual/company
+    String pStatus = request.getParameter("status");     // raw: active/inactive
+    String pContact = request.getParameter("contactPerson");
+    String pAddress = request.getParameter("address");
+
+    java.util.List<com.hlgenerator.model.Customer> customers = new java.util.ArrayList<com.hlgenerator.model.Customer>();
+    for (com.hlgenerator.model.Customer c : allCustomers) {
+        if (!equalsParam(pCode, c.getCustomerCode())) continue;
+        if (!equalsParam(pContact, c.getContactPerson())) continue;
+        if (!equalsParam(pType, c.getCustomerType())) continue;      // raw compare
+        if (!equalsParam(pStatus, c.getStatus())) continue;          // raw compare
+        if (!equalsParam(pAddress, c.getAddress())) continue;
+        customers.add(c);
+    }
+
+    java.util.Set<String> codeOptions = new java.util.TreeSet<String>();
+    java.util.Set<String> contactOptions = new java.util.TreeSet<String>();
+    java.util.Set<String> typeOptionsRaw = new java.util.TreeSet<String>(); // individual/company
+    java.util.Set<String> statusOptionsRaw = new java.util.TreeSet<String>(); // active/inactive
+    java.util.Set<String> addressOptions = new java.util.TreeSet<String>();
+    for (com.hlgenerator.model.Customer c : allCustomers) {
+        if (c.getCustomerCode() != null && !c.getCustomerCode().trim().isEmpty()) codeOptions.add(c.getCustomerCode().trim());
+        if (c.getContactPerson() != null && !c.getContactPerson().trim().isEmpty()) contactOptions.add(c.getContactPerson().trim());
+        if (c.getCustomerType() != null && !c.getCustomerType().trim().isEmpty()) typeOptionsRaw.add(c.getCustomerType().trim());
+        if (c.getStatus() != null && !c.getStatus().trim().isEmpty()) statusOptionsRaw.add(c.getStatus().trim());
+        if (c.getAddress() != null && !c.getAddress().trim().isEmpty()) addressOptions.add(c.getAddress().trim());
+    }
+%>
+                                <form class="form-inline" method="get" action="customers.jsp" style="margin-bottom: 10px;">
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-3">
+                                            <label for="filterCustomerCode">Mã khách hàng</label>
+                                            <select id="filterCustomerCode" name="customerCode" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<%
+    for (String code : codeOptions) {
+%>
+                                                <option value="<%= code %>" <%= (pCode != null && pCode.equals(code)) ? "selected" : "" %>><%= code %></option>
+<%
+    }
+%>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterCustomerType">Loại khách hàng</label>
+                                            <select id="filterCustomerType" name="customerType" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<%
+    for (String raw : typeOptionsRaw) {
+        String label = typeLabel(raw);
+%>
+                                                <option value="<%= raw %>" <%= (pType != null && pType.equalsIgnoreCase(raw)) ? "selected" : "" %>><%= label %></option>
+<%
+    }
+%>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterStatus">Trạng thái</label>
+                                            <select id="filterStatus" name="status" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<%
+    for (String raw : statusOptionsRaw) {
+        String label = statusLabel(raw);
+%>
+                                                <option value="<%= raw %>" <%= (pStatus != null && pStatus.equalsIgnoreCase(raw)) ? "selected" : "" %>><%= label %></option>
+<%
+    }
+%>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterContactPerson">Người liên hệ</label>
+                                            <select id="filterContactPerson" name="contactPerson" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+<%
+    for (String ct : contactOptions) {
+%>
+                                                <option value="<%= ct %>" <%= (pContact != null && pContact.equals(ct)) ? "selected" : "" %>><%= ct %></option>
+<%
+    }
+%>
+                                            </select>
+                                        </div>
+                                    </div>
+                                <div class="row" style="margin-bottom: 10px;">
+                                    <div class="col-sm-3">
+                                        <label for="filterAddress">Địa chỉ</label>
+                                        <select id="filterAddress" name="address" class="form-control" style="width:100%">
+                                            <option value="">Tất cả</option>
+<%
+    for (String addr : addressOptions) {
+%>
+                                            <option value="<%= addr %>" <%= (pAddress != null && pAddress.equals(addr)) ? "selected" : "" %>><%= addr %></option>
+<%
+    }
+%>
+                                        </select>
+                                    </div>
+                                </div>
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-12">
+                                            <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-filter"></i> Lọc</button>
+                                            <a href="customers.jsp" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Xóa lọc</a>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div id="filterSummary" style="margin: 5px 0 10px 0;"></div>
                                 <table class="table table-hover" id="customersTable">
                                     <thead>
                                         <tr>
@@ -110,8 +235,6 @@
                                     </thead>
                                     <tbody>
                                         <%
-                                            com.hlgenerator.dao.CustomerDAO dao = new com.hlgenerator.dao.CustomerDAO();
-                                            java.util.List<com.hlgenerator.model.Customer> customers = dao.getAllCustomers();
                                             for (com.hlgenerator.model.Customer customer : customers) {
                                         %>
                                         <tr>
@@ -123,8 +246,8 @@
                                             <td><%= customer.getPhone() %></td>
                                             <td><%= customer.getAddress() %></td>
                                             <td><%= customer.getTaxCode() %></td>
-                                            <td><%= "company".equals(customer.getCustomerType()) ? "Doanh nghiệp" : "Cá nhân" %></td>
-                                            <td><%= "active".equals(customer.getStatus()) ? "Hoạt động" : "Tạm khóa" %></td>
+                                            <td><%= typeLabel(customer.getCustomerType()) %></td>
+                                            <td><%= statusLabel(customer.getStatus()) %></td>
                                             <td class="action-buttons">
                                                 <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')">
                                                     <i class="fa fa-eye"></i> Xem
@@ -242,10 +365,36 @@
         $(document).ready(function() {
             customersTable = $('#customersTable').DataTable({
                 "language": { "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json" },
-                "pageLength": 10,
+                "processing": false,
+                "serverSide": false,
+                "paging": true,
+                "searching": false,
+                "dom": 'lrtip',
+                "ordering": true,
+                "info": true,
+                "autoWidth": false,
+                "responsive": true,
                 "order": [[0, "desc"]],
                 "columnDefs": [{ "targets": [10], "orderable": false, "searchable": false }]
             });
+
+            // Hiển thị tóm tắt lựa chọn hiện tại (đọc từ tham số GET đã bind sẵn vào selected)
+            function renderFilterSummary() {
+                var params = new URLSearchParams(window.location.search);
+                var items = [];
+                var code = params.get('customerCode') || '';
+                var contact = params.get('contactPerson') || '';
+                var type = params.get('customerType') || '';
+                var status = params.get('status') || '';
+                var address = params.get('address') || '';
+                if (code) items.push('<span class="label label-primary" style="margin-right:6px;">Mã KH: ' + $('<div>').text(code).html() + '</span>');
+                if (contact) items.push('<span class="label label-info" style="margin-right:6px;">Người LH: ' + $('<div>').text(contact).html() + '</span>');
+                if (type) items.push('<span class="label label-success" style="margin-right:6px;">Loại: ' + $('<div>').text(type).html() + '</span>');
+                if (status) items.push('<span class="label label-warning" style="margin-right:6px;">Trạng thái: ' + $('<div>').text(status).html() + '</span>');
+                if (address) items.push('<span class="label label-default" style="margin-right:6px;">Địa chỉ: ' + $('<div>').text(address).html() + '</span>');
+                $('#filterSummary').html(items.join(''));
+            }
+            renderFilterSummary();
         });
 
         function viewCustomer(id) {
