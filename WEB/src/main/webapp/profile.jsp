@@ -35,7 +35,6 @@
   <div class="account-card">
     <div class="account-tabs">
       <div class="account-tab active" data-tab="info">Thông tin người dùng</div>
-      <div class="account-tab" data-tab="products">Sản phẩm sở hữu</div>
       <div class="account-tab" data-tab="settings">Đổi mật khẩu</div>
     </div>
     <div class="account-content">
@@ -71,26 +70,7 @@
         </form>
       </div>
 
-      <div class="tab-panel" id="tab-products" style="display:none;">
-        <div class="section-title">Sản phẩm sở hữu</div>
-        <div class="product-list">
-          <table>
-            <thead>
-              <tr>
-                <th>Mã</th>
-                <th>Tên sản phẩm</th>
-                <th>Ngày kích hoạt</th>
-                <th>Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colspan="4">Chưa có dữ liệu sản phẩm. Sẽ hiển thị sau khi kết nối cơ sở dữ liệu.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      
 
       <div class="tab-panel" id="tab-settings" style="display:none;">
         <div class="section-title">Đổi mật khẩu</div>
@@ -138,15 +118,15 @@
           </div>
           <div class="mb-3">
             <label for="m_phone" class="form-label">Số điện thoại</label>
-            <input type="text" class="form-control" id="m_phone">
+            <input type="text" class="form-control" id="m_phone" required>
           </div>
           <div class="mb-3">
             <label for="m_companyName" class="form-label">Công ty</label>
-            <input type="text" class="form-control" id="m_companyName">
+            <input type="text" class="form-control" id="m_companyName" required>
           </div>
           <div class="mb-3">
             <label for="m_address" class="form-label">Địa chỉ</label>
-            <input type="text" class="form-control" id="m_address">
+            <input type="text" class="form-control" id="m_address" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Tên đăng nhập</label>
@@ -167,7 +147,6 @@
     var tabs = document.querySelectorAll('.account-tab');
     var panels = {
       info: document.getElementById('tab-info'),
-      products: document.getElementById('tab-products'),
       settings: document.getElementById('tab-settings')
     };
     function activate(name){
@@ -228,11 +207,17 @@
             role: '<%= String.valueOf(session.getAttribute("userRole")) %>'
           };
         }
+        // Prefer values already shown on the main form (which come from customer info),
+        // then fall back to userData, then customerData
+        var formCompany = (document.getElementById('companyName') && document.getElementById('companyName').value) || '';
+        var formAddress = (document.getElementById('address') && document.getElementById('address').value) || '';
+        var finalCompany = formCompany || (userData.companyName || (customerData && customerData.companyName) || '');
+        var finalAddress = formAddress || (userData.address || (customerData && customerData.address) || '');
         document.getElementById('m_fullName').value = userData.fullName || '';
         document.getElementById('m_email').value = userData.email || '';
         document.getElementById('m_phone').value = userData.phone || '';
-        document.getElementById('m_companyName').value = userData.companyName || '';
-        document.getElementById('m_address').value = userData.address || '';
+        document.getElementById('m_companyName').value = finalCompany;
+        document.getElementById('m_address').value = finalAddress;
         document.getElementById('m_username').value = userData.username || '';
         var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('updateUserModal'));
         modal.show();
@@ -248,6 +233,11 @@
         var phone = document.getElementById('m_phone').value.trim();
         var companyName = document.getElementById('m_companyName').value.trim();
         var address = document.getElementById('m_address').value.trim();
+        // Validate required fields to avoid clearing existing data unintentionally
+        if (!fullName || !email || !phone || !companyName || !address) {
+          alert('Vui lòng nhập đầy đủ Họ và tên, Email, Số điện thoại, Công ty và Địa chỉ!');
+          return;
+        }
         if (!userData) return;
         var data = new URLSearchParams();
         data.append('id', userData.id);
@@ -276,6 +266,13 @@
               if (userData){ userData.fullName = fullName; userData.email = email; userData.phone = phone; }
               var m = bootstrap.Modal.getInstance(document.getElementById('updateUserModal'));
               if (m) m.hide();
+              // Cập nhật tên hiển thị ở header mà không cần reload
+              try {
+                var headerUser = document.querySelector('.user-info');
+                if (headerUser) {
+                  headerUser.innerHTML = '<i class="fas fa-user"></i> ' + (fullName || (userData.username || ''));
+                }
+              } catch(e) {}
               // Additionally update customer info if we have it
               if (customerData && customerData.id) {
                 var cdata = new URLSearchParams();

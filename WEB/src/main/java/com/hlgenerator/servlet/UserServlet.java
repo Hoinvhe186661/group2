@@ -10,6 +10,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -351,6 +352,20 @@ public class UserServlet extends HttpServlet {
             if (success) {
                 result.put("success", true);
                 result.put("message", "Đã cập nhật người dùng thành công");
+                // Đồng bộ lại session nếu người dùng cập nhật chính mình
+                try {
+                    HttpSession session = request.getSession(false);
+                    if (session != null) {
+                        Object sid = session.getAttribute("userId");
+                        if (sid != null && String.valueOf(sid).equals(String.valueOf(existingUser.getId()))) {
+                            session.setAttribute("username", existingUser.getUsername());
+                            session.setAttribute("email", existingUser.getEmail());
+                            session.setAttribute("fullName", existingUser.getFullName());
+                            session.setAttribute("phone", existingUser.getPhone());
+                            session.setAttribute("userRole", existingUser.getRole());
+                        }
+                    }
+                } catch (Exception ignore) {}
             } else {
                 result.put("success", false);
                 result.put("message", "Không thể cập nhật người dùng");

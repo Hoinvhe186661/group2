@@ -285,20 +285,36 @@
     } catch(e) {}
     
     const ctx = '<%=request.getContextPath()%>';
-    // Prefill name/email theo session và nạp danh sách hợp đồng/sản phẩm
+    // Prefill name/email: first from live API, fallback to session variables
     try {
       const sessionEmail = '<%= String.valueOf(session.getAttribute("email")) %>';
       const sessionUsername = '<%= String.valueOf(session.getAttribute("username")) %>';
       const sessionFullName = '<%= String.valueOf(session.getAttribute("fullName")) %>';
       const sessionCustomerId = '<%= String.valueOf(session.getAttribute("customerId")) %>';
+      const sessionUserId = '<%= String.valueOf(session.getAttribute("userId")) %>';
       const emailInp = document.getElementById('email');
       const nameInp = document.getElementById('displayName');
-      if (emailInp && sessionEmail && sessionEmail !== 'null') {
-        emailInp.value = sessionEmail;
-      }
+      // Fill from session immediately
+      if (emailInp && sessionEmail && sessionEmail !== 'null') emailInp.value = sessionEmail;
       if (nameInp) {
         const name = (sessionFullName && sessionFullName !== 'null') ? sessionFullName : (sessionUsername && sessionUsername !== 'null' ? sessionUsername : '');
         nameInp.value = name;
+      }
+      // Then fetch fresh user info to reflect any recent changes and update header too
+      if (sessionUserId && sessionUserId !== 'null') {
+        fetch(ctx + '/api/users?action=get&id=' + encodeURIComponent(sessionUserId), { headers: { 'Accept': 'application/json' } })
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if (j && j.success && j.data) {
+              const u = j.data;
+              if (emailInp && u.email) emailInp.value = u.email;
+              if (nameInp && (u.fullName || u.username)) nameInp.value = (u.fullName || u.username);
+              try {
+                var headerUser = document.querySelector('.user-info');
+                if (headerUser) headerUser.innerHTML = '<i class="fas fa-user"></i> ' + (u.fullName || u.username || '');
+              } catch(e) {}
+            }
+          }).catch(function(){});
       }
 
       // Load contracts (already filtered by backend based on session customerId)
@@ -317,6 +333,20 @@
             contractSelect.appendChild(opt);
           });
         });
+
+      // Luôn prefill lại thông tin người dùng mỗi khi mở modal (tránh bị xoá bởi reset)
+      try {
+        const modalEl = document.getElementById('supportModal');
+        if (modalEl) {
+          modalEl.addEventListener('show.bs.modal', function(){
+            if (emailInp && sessionEmail && sessionEmail !== 'null') emailInp.value = sessionEmail;
+            if (nameInp) {
+              const name = (sessionFullName && sessionFullName !== 'null') ? sessionFullName : (sessionUsername && sessionUsername !== 'null' ? sessionUsername : '');
+              nameInp.value = name;
+            }
+          });
+        }
+      } catch(e) {}
 
       contractSelect.addEventListener('change', function(){
         const id = this.value;
@@ -515,7 +545,18 @@
       }).then(r=>r.json())
         .then(j=>{
           if(j && j.success){
-            form.reset();
+            // Chỉ làm sạch các trường nhập liệu, giữ nguyên Họ tên/Email
+            const subjInp = document.getElementById('subject');
+            const descInp = document.getElementById('description');
+            const catSel = document.getElementById('category');
+            const cSel2 = document.getElementById('contractSelect');
+            const pSel2 = document.getElementById('contractProductSelect');
+            if (subjInp) subjInp.value = '';
+            if (descInp) descInp.value = '';
+            if (catSel) catSel.value = 'general';
+            if (cSel2) cSel2.selectedIndex = 0;
+            if (pSel2) { pSel2.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; pSel2.disabled = true; }
+
             const modalEl = document.getElementById('supportModal');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.hide();
@@ -642,17 +683,56 @@
             return;
           }
           var on = !!enable.checked;
-         // chỉnh sửa loại yêu cầu, tiêu đề, mô tả
+          // chỉnh sửa loại yêu cầu, tiêu đề, mô tả
           [catInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = !on; }});
           if (priInp) priInp.disabled = true;
           if (saveBtn) saveBtn.disabled = !on;
+          // Cho phép chọn hợp đồng/sản phẩm khi bật chỉnh sửa
+          if (vContract) vContract.disabled = !on;
+          if (vProduct) vProduct.disabled = !on || !vContract || !vContract.value;
+          // Nạp lại danh sách sản phẩm khi đổi hợp đồng
+          if (on && vContract) {
+            vContract.onchange = function(){
+              if (!vProduct) return;
+              var id = vContract.value;
+              vProduct.innerHTML = '<option value="">-- Chọn sản phẩm --</option>';
+              vProduct.disabled = !id;
+              if (!id) return;
+              fetch(ctx + '/api/contract-items?contractId=' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' } })
+                .then(function(r){ return r.json(); })
+                .then(function(j2){
+                  if (!j2 || !j2.success) return;
+                  (Array.isArray(j2.data) ? j2.data : []).forEach(function(item){
+                    var opt = document.createElement('option');
+                    opt.value = item.productId;
+                    var name = item.description ? item.description : ('Sản phẩm #' + item.productId);
+                    opt.textContent = name;
+                    vProduct.appendChild(opt);
+                  });
+                });
+            };
+          }
         };
       }
       if (saveBtn) {
         saveBtn.onclick = function(){
           const data = new URLSearchParams();
+          // Ghép thông tin hợp đồng/sản phẩm vào mô tả giống form tạo mới
+          var baseDesc = desInp.value || '';
+          try {
+            baseDesc = baseDesc.replace(/\[Hợp đồng:[^\]]+\]\s*/,'').replace(/\[Sản phẩm:[^\]]+\]\s*/,'').trim();
+          } catch(e) {}
+          var composed = baseDesc;
+          if (vContract && vContract.value) {
+            var cText = vContract.options[vContract.selectedIndex].textContent;
+            composed = '[Hợp đồng: ' + cText + '] ' + composed;
+          }
+          if (vProduct && vProduct.value) {
+            var pText = vProduct.options[vProduct.selectedIndex].textContent;
+            composed = '[Sản phẩm: ' + pText + '] ' + composed;
+          }
           data.append('subject', subInp.value || '');
-          data.append('description', desInp.value || '');
+          data.append('description', composed);
           data.append('category', catInp.value || 'general');
           data.append('delete_old_id', id); // thêm ID để xóa bản cũ
           fetch(ctx + '/api/support-requests', {
