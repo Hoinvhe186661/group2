@@ -108,22 +108,27 @@
                             </header>
                             
                             <div class="panel-body table-responsive">
+<% request.setCharacterEncoding("UTF-8"); %>
                                     <%! private boolean equalsParam(String param, String actual) { if (param==null ||
                                         param.trim().isEmpty()) return true; String val=actual==null ? "" :
                                         actual.trim(); return param.trim().equalsIgnoreCase(val); } private String
                                         typeLabel(String raw) { return (raw !=null && raw.equalsIgnoreCase("company"))
                                         ? "Doanh nghiệp" : "Cá nhân" ; } private String statusLabel(String raw) { return
-                                        (raw !=null && raw.equalsIgnoreCase("active")) ? "Hoạt động" : "Tạm khóa" ; } %>
+                                        (raw !=null && raw.equalsIgnoreCase("active")) ? "Hoạt động" : "Tạm khóa" ; }
+                                        private String decodeParam(String s){ if(s==null) return null; try{ byte[] b=
+                                        s.getBytes("ISO-8859-1"); return new String(b, "UTF-8").trim(); }catch(Exception
+                                        e){ return s.trim(); } }
+                                    %>
                                         <% com.hlgenerator.dao.CustomerDAO daoPage=new
                                             com.hlgenerator.dao.CustomerDAO();
                                             java.util.List<com.hlgenerator.model.Customer> allCustomers =
                                             daoPage.getAllCustomers();
-                                            String pCode = request.getParameter("customerCode");
-                                            String pType = request.getParameter("customerType"); // raw:
+                                            String pCode = decodeParam(request.getParameter("customerCode"));
+                                            String pType = decodeParam(request.getParameter("customerType")); // raw:
                                             /* individual/company */
-                                            String pStatus = request.getParameter("status"); // raw: active/inactive
-                                            String pContact = request.getParameter("contactPerson");
-                                            String pAddress = request.getParameter("address");
+                                            String pStatus = decodeParam(request.getParameter("status")); // raw: active/inactive
+                                            String pContact = decodeParam(request.getParameter("contactPerson"));
+                                            String pAddress = decodeParam(request.getParameter("address"));
 
                                             java.util.List<com.hlgenerator.model.Customer> customers = new
                                                 java.util.ArrayList<com.hlgenerator.model.Customer>();
@@ -174,7 +179,7 @@
                                                                                             %>
                                                                                             <form class="form-inline"
                                                                                                 method="get"
-                                                                                                action="customers.jsp"
+                                                                                                action="customers.jsp" accept-charset="UTF-8"
                                                                                                 style="margin-bottom: 10px;">
                                                                                                 <div class="row"
                                                                                                     style="margin-bottom: 10px;">
