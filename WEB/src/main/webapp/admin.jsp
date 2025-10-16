@@ -187,6 +187,11 @@
                         </a>
                     </li>
                     <li>
+                        <a href="my_tasks.jsp">
+                            <i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="customers.jsp">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
                         </a>
