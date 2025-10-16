@@ -89,6 +89,8 @@ public class ProductServlet extends HttpServlet {
                     String fieldName = item.getFieldName();
                     String fieldValue = item.getString("UTF-8");
                     
+                    System.out.println("Field: " + fieldName + " = " + fieldValue);
+                    
                     switch (fieldName) {
                         case "action":
                             action = fieldValue;
@@ -138,7 +140,9 @@ public class ProductServlet extends HttpServlet {
                 } else {
                     // Xử lý file upload
                     if ("product_image".equals(item.getFieldName()) && !item.getName().isEmpty()) {
+                        System.out.println("Processing file upload: " + item.getName());
                         imageUrl = handleFileUpload(item, request);
+                        System.out.println("Image URL generated: " + imageUrl);
                     }
                 }
             }
@@ -146,16 +150,35 @@ public class ProductServlet extends HttpServlet {
             // Set image URL nếu có
             if (imageUrl != null) {
                 product.setImageUrl(imageUrl);
+                System.out.println("Image URL set to product: " + imageUrl);
+            } else {
+                System.out.println("No image URL to set");
             }
             
+            // Debug log product object
+            System.out.println("=== PRODUCT OBJECT DEBUG ===");
+            System.out.println("Product Code: " + product.getProductCode());
+            System.out.println("Product Name: " + product.getProductName());
+            System.out.println("Category: " + product.getCategory());
+            System.out.println("Unit: " + product.getUnit());
+            System.out.println("Unit Price: " + product.getUnitPrice());
+            System.out.println("Supplier ID: " + product.getSupplierId());
+            System.out.println("Image URL: " + product.getImageUrl());
+            System.out.println("Warranty Months: " + product.getWarrantyMonths());
+            System.out.println("Status: " + product.getStatus());
+            System.out.println("Description: " + product.getDescription());
+            System.out.println("Specifications: " + product.getSpecifications());
+            
             // Xử lý action
+            System.out.println("Action received: " + action);
             if ("add".equals(action)) {
                 addProductWithFile(product, response);
             } else if ("update".equals(action)) {
                 updateProductWithFile(product, response);
             } else {
+                System.out.println("Invalid action: " + action);
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"success\": false, \"message\": \"Invalid action\"}");
+                response.getWriter().write("{\"success\": false, \"message\": \"Invalid action: " + action + "\"}");
             }
             
         } catch (Exception e) {
@@ -213,8 +236,17 @@ public class ProductServlet extends HttpServlet {
         
         try {
             System.out.println("=== ADD PRODUCT WITH FILE DEBUG ===");
-            System.out.println("Product: " + product.getProductName());
+            System.out.println("Product Code: " + product.getProductCode());
+            System.out.println("Product Name: " + product.getProductName());
+            System.out.println("Category: " + product.getCategory());
+            System.out.println("Unit: " + product.getUnit());
+            System.out.println("Unit Price: " + product.getUnitPrice());
+            System.out.println("Supplier ID: " + product.getSupplierId());
             System.out.println("Image URL: " + product.getImageUrl());
+            System.out.println("Warranty Months: " + product.getWarrantyMonths());
+            System.out.println("Status: " + product.getStatus());
+            System.out.println("Description: " + product.getDescription());
+            System.out.println("Specifications: " + product.getSpecifications());
             
             boolean success = productDAO.addProduct(product);
             
