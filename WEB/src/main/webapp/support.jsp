@@ -108,8 +108,23 @@
             <h4 class="support-title">Yêu cầu hỗ trợ</h4>
             <a href="#" class="create-request-link" data-bs-toggle="modal" data-bs-target="#supportModal">Tạo yêu cầu mới +</a>
         </div>
-        <div class="support-search">
-            <input type="text" class="form-control" placeholder="Tìm kiếm...">
+        <div class="d-flex align-items-center gap-2 support-search" style="min-width:480px;">
+            <input type="text" class="form-control" placeholder="Tìm kiếm..." style="max-width:280px;">
+            <select id="filterStatus" class="form-select" style="max-width:160px;">
+              <option value="">Tất cả trạng thái</option>
+              <option value="waiting">Chờ xử lý</option>
+              <option value="in_progress">Đang xử lý</option>
+              <option value="resolved">Đã giải quyết</option>
+              <option value="cancelled">Đã hủy</option>
+              <option value="closed">Đã đóng</option>
+            </select>
+            <select id="filterCategory" class="form-select" style="max-width:160px;">
+              <option value="">Tất cả loại</option>
+              <option value="technical">Kỹ thuật</option>
+              <option value="billing">Thanh toán</option>
+              <option value="general">Chung</option>
+              <option value="complaint">Khiếu nại</option>
+            </select>
         </div>
     </div>
     <div class="table-responsive">
@@ -118,7 +133,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Loại yêu cầu</th>
-                    <th>Chi tiết vấn đề</th>
+                    <th>Tiêu đề</th>
                     <th>Ngày tạo</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
@@ -272,10 +287,15 @@
 <script>
   // Tự động set ngày hiện tại cho trường "Ngày tạo"
   document.addEventListener('DOMContentLoaded', function() {
-    var today = new Date().toISOString().split('T')[0];
+    // Set date using local timezone to avoid UTC offset (+/-1 day) issues
+    var now = new Date();
+    var yyyyLocal = now.getFullYear();
+    var mmLocal = String(now.getMonth() + 1).padStart(2, '0');
+    var ddLocal = String(now.getDate()).padStart(2, '0');
+    var todayLocal = yyyyLocal + '-' + mmLocal + '-' + ddLocal;
     var createdInput = document.getElementById('createdDate');
     var createdText = document.getElementById('createdDateText');
-    if (createdInput) createdInput.value = today;
+    if (createdInput) createdInput.value = todayLocal;
     try {
       var d = new Date();
       var dd = String(d.getDate()).padStart(2,'0');
@@ -320,7 +340,7 @@
       // Load contracts (already filtered by backend based on session customerId)
       const contractSelect = document.getElementById('contractSelect');
       const productSelect = document.getElementById('contractProductSelect');
-      const ctx = '<%=request.getContextPath()%>';
+      // ctx already defined above; avoid redeclaration that breaks script execution
       fetch(ctx + '/api/contracts', { headers: { 'Accept': 'application/json' } })
         .then(r => r.json())
         .then(j => {
@@ -378,6 +398,8 @@
     const pageSize = 9;
     let cancelledItems = new Set(); // Lưu trữ các ID đã hủy trên frontend
     let searchTerm = ''; // Lưu từ khóa tìm kiếm
+    let filterStatus = ''; // Lọc theo trạng thái
+    let filterCategory = ''; // Lọc theo loại yêu cầu
     function formatDate(it){
       if (it.createdDate && typeof it.createdDate === 'string' && it.createdDate.includes('-')) {
         var parts = it.createdDate.split('-');
@@ -416,19 +438,22 @@
     }
     
     function filterItems() {
-      if (!searchTerm.trim()) {
-        filteredItems = [...allItems];
-      } else {
-        const term = searchTerm.toLowerCase();
-        filteredItems = allItems.filter(function(item) {
-          return (
-            (item.subject && item.subject.toLowerCase().includes(term)) ||
-            (item.description && item.description.toLowerCase().includes(term)) ||
-            (item.category && item.category.toLowerCase().includes(term)) ||
-            (item.ticketNumber && item.ticketNumber.toLowerCase().includes(term))
-          );
-        });
-      }
+      const term = searchTerm.trim().toLowerCase();
+      filteredItems = allItems.filter(function(item){
+        // text match
+        const textOk = !term || (
+          (item.subject && item.subject.toLowerCase().includes(term)) ||
+          (item.description && item.description.toLowerCase().includes(term)) ||
+          (item.category && item.category.toLowerCase().includes(term)) ||
+          (item.ticketNumber && item.ticketNumber.toLowerCase().includes(term))
+        );
+        // status match (use final status considering cancelled set)
+        const st = (cancelledItems.has(String(item.id)) ? 'cancelled' : (item.status || 'pending'));
+        const statusOk = !filterStatus || (filterStatus === 'waiting' ? (st === 'open' || st === 'pending') : st === filterStatus);
+        // category match
+        const categoryOk = !filterCategory || (item.category||'').toLowerCase() === filterCategory;
+        return textOk && statusOk && categoryOk;
+      });
     }
     
     function rows(items){
@@ -449,11 +474,8 @@
         const cancelButton = canCancel ? '<a href="#" class="cancel-link text-danger" data-id="'+ (it.id||'') +'">Hủy</a>' : '';
         // Tính số thứ tự theo thời gian tạo (mới nhất = 1)
         const sequenceNumber = (currentPage - 1) * pageSize + idx + 1;
-        var displayDesc = (it.description||'');
-        try {
-          displayDesc = displayDesc.replace(/\[Hợp đồng:[^\]]*\]\s*/g, '').replace(/\[Sản phẩm:[^\]]*\]\s*/g, '').trim();
-        } catch(e) {}
-        tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ displayDesc +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + '</td>';
+        var displaySubject = (it.subject||'');
+        tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ displaySubject +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + '</td>';
         tbody.appendChild(tr);
       });
     }
@@ -495,9 +517,25 @@
 
     // Thêm chức năng tìm kiếm
     const searchInput = document.querySelector('.support-search input');
+    const statusSelect = document.getElementById('filterStatus');
+    const categorySelect = document.getElementById('filterCategory');
     if (searchInput) {
       searchInput.addEventListener('input', function(e) {
         searchTerm = e.target.value;
+        filterItems();
+        renderPage(1);
+      });
+    }
+    if (statusSelect) {
+      statusSelect.addEventListener('change', function(){
+        filterStatus = this.value;
+        filterItems();
+        renderPage(1);
+      });
+    }
+    if (categorySelect) {
+      categorySelect.addEventListener('change', function(){
+        filterCategory = this.value;
         filterItems();
         renderPage(1);
       });
@@ -716,6 +754,14 @@
       }
       if (saveBtn) {
         saveBtn.onclick = function(){
+          // Validate: require both contract and product selections when editing
+          if (!vContract || !vProduct) return;
+          var hasContract = vContract.value && vContract.value.trim() !== '';
+          var hasProduct = vProduct.value && vProduct.value.trim() !== '';
+          if (!hasContract || !hasProduct) {
+            alert('Vui lòng chọn Hợp đồng và Sản phẩm trong hợp đồng trước khi lưu.');
+            return;
+          }
           const data = new URLSearchParams();
           // Ghép thông tin hợp đồng/sản phẩm vào mô tả giống form tạo mới
           var baseDesc = desInp.value || '';

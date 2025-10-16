@@ -1,30 +1,30 @@
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-E:\Gittttttttttttt\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+E:\Git oi oi\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java

@@ -13,7 +13,7 @@ public class SupportRequestDAO extends DBConnect {
 
     public List<Map<String, Object>> listByCustomerId(int customerId) {
         String sql = "SELECT id, ticket_number, subject, description, category, priority, status, assigned_to, history, resolution, created_at, resolved_at, " +
-                     "DATE(CONVERT_TZ(created_at, '+00:00', '+07:00')) AS created_local_date " +
+                     "DATE(created_at) AS created_local_date " +
                      "FROM support_requests WHERE customer_id = ? ORDER BY created_at DESC";
         List<Map<String, Object>> out = new ArrayList<>();
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -121,7 +121,7 @@ public class SupportRequestDAO extends DBConnect {
                      "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
                      "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
                      "u.full_name as assigned_to_name, " +
-                     "DATE(CONVERT_TZ(sr.created_at, '+00:00', '+07:00')) AS created_local_date " +
+                     "DATE(sr.created_at) AS created_local_date " +
                      "FROM support_requests sr " +
                      "LEFT JOIN customers c ON sr.customer_id = c.id " +
                      "LEFT JOIN users u ON sr.assigned_to = u.id " +
