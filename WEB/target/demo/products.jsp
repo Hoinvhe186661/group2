@@ -1,4 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -299,15 +302,9 @@
                                                     <label for="filterCategory" style="font-weight: bold; margin-bottom: 5px;">Danh mục:</label>
                                                     <select class="form-control" id="filterCategory" onchange="filterProducts()">
                                                         <option value="">Tất cả danh mục</option>
-                                                        <%
-                                                            com.hlgenerator.dao.ProductDAO statsDAO = new com.hlgenerator.dao.ProductDAO();
-                                                            java.util.List<String> categories = statsDAO.getAllCategories();
-                                                            for (String category : categories) {
-                                                        %>
-                                                        <option value="<%= category %>"><%= category %></option>
-                                                        <%
-                                                            }
-                                                        %>
+                                                        <c:forEach var="category" items="${categories}">
+                                                            <option value="${category}">${category}</option>
+                                                        </c:forEach>
                                                     </select>
                                                 </div>
                                             </div>
@@ -353,73 +350,66 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <%
-                                            java.util.List<com.hlgenerator.model.Product> products = (java.util.List<com.hlgenerator.model.Product>) request.getAttribute("products");
-                                            if (products != null) {
-                                                for (com.hlgenerator.model.Product product : products) {
-                                        %>
+                                        <c:choose>
+                                            <c:when test="${not empty products}">
+                                                <c:forEach var="product" items="${products}">
                                         <tr>
-                                            <td><%= product.getId() %></td>
+                                            <td>${product.id}</td>
                                             <td>
-                                                <%
-                                                    String imgUrl;
-                                                    if (product.getImageUrl() != null && !product.getImageUrl().trim().isEmpty() && !product.getImageUrl().equals("null")) {
-                                                        imgUrl = product.getImageUrl();
-                                                        if (!imgUrl.startsWith("http") && !imgUrl.startsWith("/")) {
-                                                            imgUrl = request.getContextPath() + "/" + imgUrl;
-                                                        } else if (imgUrl.startsWith("/") && !imgUrl.startsWith(request.getContextPath())) {
-                                                            imgUrl = request.getContextPath() + imgUrl;
-                                                        }
-                                                        if (imgUrl.contains("sanpham1.jpg")) {
-                                                            imgUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=";
-                                                        }
-                                                    } else {
-                                                        imgUrl = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=";
-                                                    }
-                                                %>
-                                                <img src="<%= imgUrl %>" alt="<%= product.getProductName() %>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                                <c:choose>
+                                                    <c:when test="${not empty product.imageUrl and product.imageUrl != 'null'}">
+                                                        <c:set var="imgUrl" value="${product.imageUrl}" />
+                                                        <c:if test="${not fn:startsWith(imgUrl, 'http') and not fn:startsWith(imgUrl, '/')}">
+                                                            <c:set var="imgUrl" value="${pageContext.request.contextPath}/${imgUrl}" />
+                                                        </c:if>
+                                                        <c:if test="${fn:startsWith(imgUrl, '/') and not fn:startsWith(imgUrl, pageContext.request.contextPath)}">
+                                                            <c:set var="imgUrl" value="${pageContext.request.contextPath}${imgUrl}" />
+                                                        </c:if>
+                                                        <c:if test="${fn:contains(imgUrl, 'sanpham1.jpg')}">
+                                                            <c:set var="imgUrl" value="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=" />
+                                                        </c:if>
+                                                        <img src="${imgUrl}" alt="${product.productName}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=" alt="${product.productName}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </td>
-                                            <td><%= product.getProductName() %></td>
-                                            <td><%= String.format("%,.0f", product.getUnitPrice()) %> VNĐ</td>
+                                            <td>${product.productName}</td>
+                                            <td><fmt:formatNumber value="${product.unitPrice}" type="number" maxFractionDigits="0"/> VNĐ</td>
                                             <td>
-                                                <%
-                                                    // Lấy tên nhà cung cấp từ supplier_id
-                                                    com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
-                                                    com.hlgenerator.model.Supplier supplier = supplierDAO.getSupplierById(product.getSupplierId());
-                                                    String supplierName = (supplier != null) ? supplier.getCompanyName() : "Không xác định";
-                                                %>
-                                                <%= supplierName %>
+                                                <c:forEach var="supplier" items="${suppliers}">
+                                                    <c:if test="${supplier.id == product.supplierId}">
+                                                        ${supplier.companyName}
+                                                    </c:if>
+                                                </c:forEach>
                                             </td>
-                                            <td><%= product.getCategory() != null ? product.getCategory() : "Chưa phân loại" %></td>
+                                            <td>${not empty product.category ? product.category : 'Chưa phân loại'}</td>
                                             <td>
-                                                <%
-                                                    if ("active".equals(product.getStatus())) {
-                                                %>
-                                                <span class="label label-success">Đang bán</span>
-                                                <%
-                                                    } else {
-                                                %>
-                                                <span class="label label-warning">Ngừng bán</span>
-                                                <%
-                                                    }
-                                                %>
+                                                <span class="label ${product.status == 'active' ? 'label-success' : 'label-warning'}">
+                                                    ${product.status == 'active' ? 'Đang bán' : 'Ngừng bán'}
+                                                </span>
                                             </td>
                                             <td>
-                                                <button class="btn btn-info btn-xs" data-product-id="<%= product.getId() %>" onclick="viewProduct(this)">
+                                                <button class="btn btn-info btn-xs" data-product-id="${product.id}" onclick="viewProduct(this)">
                                                     <i class="fa fa-eye"></i> Xem
                                                 </button>
-                                                <button class="btn btn-warning btn-xs" data-product-id="<%= product.getId() %>" onclick="editProduct(this)">
+                                                <button class="btn btn-warning btn-xs" data-product-id="${product.id}" onclick="editProduct(this)">
                                                     <i class="fa fa-edit"></i> Sửa
                                                 </button>
-                                                <button class="btn btn-danger btn-xs" data-product-id="<%= product.getId() %>" onclick="deleteProduct(this)">
+                                                <button class="btn btn-danger btn-xs" data-product-id="${product.id}" onclick="deleteProduct(this)">
                                                     <i class="fa fa-trash"></i> Xóa
                                                 </button>
                                             </td>
                                         </tr>
-                                        <%
-                                                }
-                                            }
-                                        %>
+                                                </c:forEach>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <tr>
+                                                    <td colspan="8" class="text-center">Không có sản phẩm nào</td>
+                                                </tr>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </tbody>
                                 </table>
                                 
@@ -520,25 +510,18 @@
                             <label for="edit_supplier_id">Nhà cung cấp</label>
                             <select class="form-control" id="edit_supplier_id" name="supplier_id">
                                 <option value="">-- Chọn nhà cung cấp --</option>
-                                <%
-                                    // Tạo lại supplierDAO cho form sửa
-                                    com.hlgenerator.dao.SupplierDAO supplierDAOEdit = new com.hlgenerator.dao.SupplierDAO();
-                                    java.util.List<com.hlgenerator.model.Supplier> suppliersEdit = supplierDAOEdit.getAllSuppliers();
-                                    boolean hasActiveSuppliersEdit = false;
-                                    for (com.hlgenerator.model.Supplier supplier : suppliersEdit) {
-                                        if ("active".equals(supplier.getStatus())) {
-                                            hasActiveSuppliersEdit = true;
-                                %>
-                                <option value="<%= supplier.getId() %>"><%= supplier.getCompanyName() %> (<%= supplier.getSupplierCode() %>)</option>
-                                <%
-                                        }
-                                    }
-                                    if (!hasActiveSuppliersEdit) {
-                                %>
-                                <option value="" disabled>Không có nhà cung cấp nào</option>
-                                <%
-                                    }
-                                %>
+                                <c:choose>
+                                    <c:when test="${not empty suppliers}">
+                                        <c:forEach var="supplier" items="${suppliers}">
+                                            <c:if test="${supplier.status == 'active'}">
+                                                <option value="${supplier.id}">${supplier.companyName} (${supplier.supplierCode})</option>
+                                            </c:if>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <option value="" disabled>Không có nhà cung cấp nào</option>
+                                    </c:otherwise>
+                                </c:choose>
                             </select>
                         </div>
                         <div class="form-group">
@@ -618,24 +601,18 @@
                             <label for="supplier_id">Nhà cung cấp <span class="text-danger">*</span></label>
                             <select class="form-control" id="supplier_id" name="supplier_id" required>
                                 <option value="">-- Chọn nhà cung cấp --</option>
-                                <%
-                                    com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
-                                    java.util.List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
-                                    boolean hasActiveSuppliers = false;
-                                    for (com.hlgenerator.model.Supplier supplier : suppliers) {
-                                        if ("active".equals(supplier.getStatus())) {
-                                            hasActiveSuppliers = true;
-                                %>
-                                <option value="<%= supplier.getId() %>"><%= supplier.getCompanyName() %> (<%= supplier.getSupplierCode() %>)</option>
-                                <%
-                                        }
-                                    }
-                                    if (!hasActiveSuppliers) {
-                                %>
-                                <option value="" disabled>Không có nhà cung cấp nào</option>
-                                <%
-                                    }
-                                %>
+                                <c:choose>
+                                    <c:when test="${not empty suppliers}">
+                                        <c:forEach var="supplier" items="${suppliers}">
+                                            <c:if test="${supplier.status == 'active'}">
+                                                <option value="${supplier.id}">${supplier.companyName} (${supplier.supplierCode})</option>
+                                            </c:if>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <option value="" disabled>Không có nhà cung cấp nào</option>
+                                    </c:otherwise>
+                                </c:choose>
                             </select>
                             <small class="form-text text-muted">Chọn nhà cung cấp từ danh sách có sẵn. Nếu không có nhà cung cấp nào, vui lòng thêm nhà cung cấp trước.</small>
                         </div>

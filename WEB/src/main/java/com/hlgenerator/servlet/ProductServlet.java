@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -34,10 +35,111 @@ public class ProductServlet extends HttpServlet {
         if ("view".equals(action)) {
             viewProduct(request, response);
         } else if ("page".equals(action) || action == null) {
-            // Hiển thị trang quản lý sản phẩm
             showProductsPage(request, response);
+        } else if ("edit".equals(action)) {
+            showEditProductPage(request, response);
+        } else if ("add".equals(action)) {
+            showAddProductPage(request, response);
         } else {
             getAllProducts(request, response);
+        }
+    }
+    
+    /**
+     * Hiển thị trang quản lý sản phẩm với tất cả dữ liệu cần thiết
+     * Tác giả: Sơn Lê
+     */
+    private void showProductsPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            // Lấy danh sách sản phẩm
+            List<Product> products = productDAO.getAllProducts();
+            
+            // Lấy danh sách nhà cung cấp cho dropdown
+            com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
+            List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
+            
+            // Lấy thống kê sản phẩm
+            Map<String, Integer> statistics = productDAO.getAllStatistics();
+            
+            // Lấy danh sách danh mục
+            List<String> categories = productDAO.getAllCategories();
+            
+            // Set attributes cho JSP
+            request.setAttribute("products", products);
+            request.setAttribute("suppliers", suppliers);
+            request.setAttribute("statistics", statistics);
+            request.setAttribute("categories", categories);
+            
+            // Forward to JSP
+            request.getRequestDispatcher("/products.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải dữ liệu: " + e.getMessage());
+            request.getRequestDispatcher("/products.jsp").forward(request, response);
+        }
+    }
+    
+    /**
+     * Hiển thị trang thêm sản phẩm với dữ liệu cần thiết
+     * Tác giả: Sơn Lê
+     */
+    private void showAddProductPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            // Lấy danh sách nhà cung cấp
+            com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
+            List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
+            
+            // Lấy danh sách danh mục
+            List<String> categories = productDAO.getAllCategories();
+            
+            request.setAttribute("suppliers", suppliers);
+            request.setAttribute("categories", categories);
+            request.setAttribute("action", "add");
+            
+            request.getRequestDispatcher("/products.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải dữ liệu: " + e.getMessage());
+            request.getRequestDispatcher("/products.jsp").forward(request, response);
+        }
+    }
+    
+    /**
+     * Hiển thị trang sửa sản phẩm với dữ liệu cần thiết
+     * Tác giả: Sơn Lê
+     */
+    private void showEditProductPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            int productId = Integer.parseInt(request.getParameter("id"));
+            
+            // Lấy thông tin sản phẩm
+            Product product = productDAO.getProductById(productId);
+            if (product == null) {
+                request.setAttribute("error", "Không tìm thấy sản phẩm");
+                request.getRequestDispatcher("/products.jsp").forward(request, response);
+                return;
+            }
+            
+            // Lấy danh sách nhà cung cấp
+            com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
+            List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
+            
+            // Lấy danh sách danh mục
+            List<String> categories = productDAO.getAllCategories();
+            
+            request.setAttribute("product", product);
+            request.setAttribute("suppliers", suppliers);
+            request.setAttribute("categories", categories);
+            request.setAttribute("action", "edit");
+            
+            request.getRequestDispatcher("/products.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải dữ liệu: " + e.getMessage());
+            request.getRequestDispatcher("/products.jsp").forward(request, response);
         }
     }
 
@@ -53,7 +155,7 @@ public class ProductServlet extends HttpServlet {
         } else {
             // Xử lý request thông thường (không có file upload)
             String action = request.getParameter("action");
-            System.out.println("=== DOPOST DEBUG ===");
+            System.out.println("DEBUG");
             System.out.println("Received action: '" + action + "'");
             System.out.println("Content-Type: " + request.getContentType());
             
@@ -65,10 +167,7 @@ public class ProductServlet extends HttpServlet {
             }
         }
     }
-    
-    /**
-     * Xử lý request multipart form data (có file upload)
-     */
+
     private void handleMultipartRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
             // Tạo factory và upload handler
@@ -206,7 +305,7 @@ public class ProductServlet extends HttpServlet {
         String fileName = fileItem.getName();
         String extension = FilenameUtils.getExtension(fileName).toLowerCase();
         if (!extension.matches("jpg|jpeg|png|gif")) {
-            throw new Exception("Invalid file format. Only JPG, PNG, GIF are allowed.");
+            throw new Exception("Invalid file format. Only JPG, PNG, GIF.");
         }
         
         // Tạo tên file unique
@@ -684,27 +783,9 @@ public class ProductServlet extends HttpServlet {
                           unitPrice, supplierId, specifications, imageUrl, warrantyMonths, status);
     }
 
-    // Method để hiển thị trang quản lý sản phẩm
-    private void showProductsPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        try {
-            
-            List<Product> products = productDAO.getAllProducts();
-            request.setAttribute("products", products);
-                       
-            java.util.Map<String, Integer> stats = productDAO.getAllStatistics();
-            request.setAttribute("stats", stats);
-                       
-            java.util.List<String> categories = productDAO.getAllCategories();
-            request.setAttribute("categories", categories);
-            
-            request.getRequestDispatcher("/products.jsp").forward(request, response);
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lỗi khi tải dữ liệu sản phẩm: " + e.getMessage());
-        }
-    }
     
+    
+
     private String escapeJson(String str) {
         if (str == null) return "";
         return str.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");

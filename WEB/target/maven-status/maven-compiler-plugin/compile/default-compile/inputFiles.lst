@@ -1,30 +1,30 @@
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
-D:\upgit\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportRequestServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\New new\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
