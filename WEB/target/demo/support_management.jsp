@@ -495,23 +495,54 @@
         });
         
         function loadTickets() {
-            $.ajax({
-                url: ctx + '/api/support-requests?action=list',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success) {
-                        allTickets = response.data || [];
-                        filteredTickets = allTickets;
-                        renderTable();
-                    } else {
-                        showError('Không thể tải dữ liệu');
-                    }
+            // Dữ liệu mẫu thay vì gọi API
+            allTickets = [
+                {
+                    id: 1,
+                    ticketNumber: 'SR-1760274731922',
+                    customerName: 'HieuND1',
+                    customerEmail: 'hieu@example.com',
+                    subject: 'lỗi thanh toán',
+                    description: 'Khách hàng báo lỗi khi thanh toán online',
+                    category: 'billing',
+                    priority: 'urgent',
+                    status: 'in_progress',
+                    createdAt: '2025-10-13T03:12:11',
+                    resolution: '',
+                    assignedTo: 'head_technician'
                 },
-                error: function() {
-                    showError('Lỗi kết nối máy chủ');
+                {
+                    id: 2,
+                    ticketNumber: 'SR-1760274193047',
+                    customerName: 'HieuND1',
+                    customerEmail: 'hieu@example.com',
+                    subject: 'hỏng hóc',
+                    description: 'Sản phẩm bị hỏng sau 1 tuần sử dụng',
+                    category: 'technical',
+                    priority: 'high',
+                    status: 'open',
+                    createdAt: '2025-10-13T03:03:13',
+                    resolution: '',
+                    assignedTo: null
+                },
+                {
+                    id: 3,
+                    ticketNumber: 'SR-1760273535077',
+                    customerName: 'HieuND1',
+                    customerEmail: 'hieu@example.com',
+                    subject: 'sửa chữa',
+                    description: 'Cần sửa chữa thiết bị tại nhà khách hàng',
+                    category: 'technical',
+                    priority: 'medium',
+                    status: 'open',
+                    createdAt: '2025-10-13T02:52:15',
+                    resolution: '',
+                    assignedTo: null
                 }
-            });
+            ];
+            
+            filteredTickets = allTickets;
+            renderTable();
         }
         
         function applyFilters() {
@@ -695,30 +726,22 @@
                 return;
             }
             
-            var data = {
-                action: 'forward',
-                id: id,
-                forwardTo: forwardTo
-            };
+            // Cập nhật trạng thái ticket cụ thể trong dữ liệu mẫu
+            var ticket = allTickets.find(function(t) { return t.id == id; });
+            if(ticket) {
+                ticket.status = 'in_progress';
+                ticket.assignedTo = 'head_technician';
+                alert('Đã chuyển tiếp ticket #' + ticket.ticketNumber + ' cho ' + forwardTo + ' xử lý!');
+                
+                // Lưu thông tin ticket được chuyển tiếp vào localStorage
+                localStorage.setItem('forwardedTicket', JSON.stringify(ticket));
+            } else {
+                alert('Không tìm thấy ticket #' + id);
+            }
             
-            $.ajax({
-                url: ctx + '/api/support-requests',
-                type: 'POST',
-                data: data,
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success) {
-                        alert('Chuyển tiếp thành công!');
-                        $('#forwardTicketModal').modal('hide');
-                        loadTickets();
-                    } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể chuyển tiếp'));
-                    }
-                },
-                error: function() {
-                    alert('Lỗi kết nối máy chủ');
-                }
-            });
+            $('#forwardTicketModal').modal('hide');
+            // Tải lại danh sách ticket để cập nhật trạng thái
+            loadTickets();
         }
         
         function showError(msg) {

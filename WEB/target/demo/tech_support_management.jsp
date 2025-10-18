@@ -529,6 +529,28 @@
         $(document).ready(function() {
             loadTickets();
             
+            // Check if there's a forwarded ticket in localStorage
+            var forwardedTicket = localStorage.getItem('forwardedTicket');
+            if(forwardedTicket) {
+                try {
+                    var ticket = JSON.parse(forwardedTicket);
+                    // Tìm và cập nhật ticket tương ứng trong danh sách
+                    var existingTicket = allTickets.find(function(t) { return t.id == ticket.id; });
+                    if(existingTicket) {
+                        existingTicket.status = ticket.status;
+                        existingTicket.assignedTo = ticket.assignedTo;
+                    }
+                    // Xóa thông tin đã xử lý
+                    localStorage.removeItem('forwardedTicket');
+                    // Auto-open the ticket detail modal after data is loaded
+                    setTimeout(function() {
+                        viewTicketDetail(ticket.id);
+                    }, 1000);
+                } catch(e) {
+                    console.log('Error parsing forwarded ticket:', e);
+                }
+            }
+            
             // Filter button
             $('#btnFilter').click(function() {
                 applyFilters();
@@ -560,24 +582,55 @@
         });
         
         function loadTickets() {
-            $.ajax({
-                url: ctx + '/api/support-requests?action=list',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success) {
-                        allTickets = response.data || [];
-                        filteredTickets = allTickets;
-                        renderTable();
-                        updateStatistics();
-                    } else {
-                        showError('Không thể tải dữ liệu');
-                    }
+            // Dữ liệu mẫu thay vì gọi API
+            allTickets = [
+                {
+                    id: 1,
+                    ticketNumber: 'SR-1760274731922',
+                    customerName: 'HieuND1',
+                    customerEmail: 'hieu@example.com',
+                    subject: 'lỗi thanh toán',
+                    description: 'Khách hàng báo lỗi khi thanh toán online',
+                    category: 'billing',
+                    priority: 'urgent',
+                    status: 'in_progress',
+                    createdAt: '2025-10-13T03:12:11',
+                    resolution: '',
+                    assignedTo: 'head_technician'
                 },
-                error: function() {
-                    showError('Lỗi kết nối máy chủ');
+                {
+                    id: 2,
+                    ticketNumber: 'SR-1760274193047',
+                    customerName: 'HieuND1',
+                    customerEmail: 'hieu@example.com',
+                    subject: 'hỏng hóc',
+                    description: 'Sản phẩm bị hỏng sau 1 tuần sử dụng',
+                    category: 'technical',
+                    priority: 'high',
+                    status: 'open',
+                    createdAt: '2025-10-13T03:03:13',
+                    resolution: '',
+                    assignedTo: null
+                },
+                {
+                    id: 3,
+                    ticketNumber: 'SR-1760273535077',
+                    customerName: 'HieuND1',
+                    customerEmail: 'hieu@example.com',
+                    subject: 'sửa chữa',
+                    description: 'Cần sửa chữa thiết bị tại nhà khách hàng',
+                    category: 'technical',
+                    priority: 'medium',
+                    status: 'open',
+                    createdAt: '2025-10-13T02:52:15',
+                    resolution: '',
+                    assignedTo: null
                 }
-            });
+            ];
+            
+            filteredTickets = allTickets;
+            renderTable();
+            updateStatistics();
         }
         
         function updateStatistics() {
@@ -622,22 +675,27 @@
                 return;
             }
             
-            filteredTickets.forEach(function(ticket) {
-                var row = '<tr>' +
-                    '<td>' + (ticket.ticketNumber || '#' + ticket.id) + '</td>' +
-                    '<td>' + (ticket.customerName || 'N/A') + '</td>' +
-                    '<td>' + (ticket.subject || '') + '</td>' +
-                    '<td>' + getCategoryBadge(ticket.category) + '</td>' +
-                    '<td>' + getPriorityBadge(ticket.priority) + '</td>' +
-                    '<td>' + getStatusBadge(ticket.status) + '</td>' +
-                    '<td>' + formatDate(ticket.createdAt) + '</td>' +
-                    '<td class="ticket-actions">' +
-                        '<button class="btn btn-info btn-view" data-id="' + ticket.id + '"><i class="fa fa-eye"></i> Xem</button>' +
-                        '<button class="btn btn-success btn-create-work-order" data-id="' + ticket.id + '"><i class="fa fa-plus"></i> Tạo WO</button>' +
-                    '</td>' +
-                '</tr>';
-                tbody.append(row);
-            });
+             filteredTickets.forEach(function(ticket) {
+                 var userRole = '<%= userRole %>';
+                 var actionButtons = '<button class="btn btn-info btn-view" data-id="' + ticket.id + '"><i class="fa fa-eye"></i> Xem</button>';
+                 
+                 // Chỉ hiển thị nút "Tạo WO" cho head_technician và admin
+                 if (userRole === 'head_technician' || userRole === 'admin') {
+                     actionButtons += '<button class="btn btn-success btn-create-work-order" data-id="' + ticket.id + '"><i class="fa fa-plus"></i> Tạo WO</button>';
+                 }
+                 
+                 var row = '<tr>' +
+                     '<td>' + (ticket.ticketNumber || '#' + ticket.id) + '</td>' +
+                     '<td>' + (ticket.customerName || 'N/A') + '</td>' +
+                     '<td>' + (ticket.subject || '') + '</td>' +
+                     '<td>' + getCategoryBadge(ticket.category) + '</td>' +
+                     '<td>' + getPriorityBadge(ticket.priority) + '</td>' +
+                     '<td>' + getStatusBadge(ticket.status) + '</td>' +
+                     '<td>' + formatDate(ticket.createdAt) + '</td>' +
+                     '<td class="ticket-actions">' + actionButtons + '</td>' +
+                 '</tr>';
+                 tbody.append(row);
+             });
             
             // Bind view button
             $('.btn-view').click(function() {
@@ -705,6 +763,8 @@
             var ticket = allTickets.find(function(t) { return t.id == id; });
             if(!ticket) return;
             
+            var userRole = '<%= userRole %>';
+            
             $('#detail_ticket_id').val(ticket.id);
             $('#detail_ticket_number').text(ticket.ticketNumber || '#' + ticket.id);
             $('#detail_customer').text(ticket.customerName || 'N/A');
@@ -717,6 +777,15 @@
             $('#detail_created').text(formatDate(ticket.createdAt));
             $('#detail_resolution').val(ticket.resolution || '');
             $('#detail_notes').val('');
+            
+            // Phân quyền hiển thị nút và chỉnh sửa
+            if (userRole === 'head_technician' || userRole === 'admin') {
+                $('#btnSaveTicket').show();
+                $('#detail_category, #detail_priority, #detail_status, #detail_resolution, #detail_notes').prop('readonly', false);
+            } else {
+                $('#btnSaveTicket').hide();
+                $('#detail_category, #detail_priority, #detail_status, #detail_resolution, #detail_notes').prop('readonly', true);
+            }
             
             $('#ticketDetailModal').modal('show');
         }
