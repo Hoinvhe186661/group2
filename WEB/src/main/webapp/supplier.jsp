@@ -101,7 +101,7 @@
                         </a>
                     </li>
                     <li class="active">
-                        <a href="<%=request.getContextPath()%>/supplier.jsp">
+                        <a href="<%=request.getContextPath()%>/supplier">
                             <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
                         </a>
                     </li>
@@ -165,34 +165,34 @@
                         <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Xóa nhà cung cấp thành công.
                     </div>
                 <%
-                    } else if (validationError != null && !validationError.trim().isEmpty()) {
+                    } else if ("validation_error".equals(message)) {
                 %>
                     <div class="alert alert-warning alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <i class="fa fa-exclamation-triangle"></i> <strong>Lỗi xác thực dữ liệu:</strong><br>
-                        <%= validationError %>
+                        <%= error != null ? error : "Dữ liệu không hợp lệ" %>
                     </div>
                 <%
-                    } else if (databaseError != null && !databaseError.trim().isEmpty()) {
+                    } else if ("database_error".equals(message)) {
                 %>
                     <div class="alert alert-danger alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <i class="fa fa-database"></i> <strong>Lỗi cơ sở dữ liệu:</strong><br>
-                        <%= databaseError %>
+                        <%= error != null ? error : "Lỗi không xác định" %>
                     </div>
                 <%
-                    } else if (systemError != null && !systemError.trim().isEmpty()) {
+                    } else if ("system_error".equals(message)) {
                 %>
                     <div class="alert alert-danger alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <i class="fa fa-exclamation-circle"></i> <strong>Lỗi hệ thống:</strong><br>
-                        <%= systemError %>
+                        <%= error != null ? error : "Lỗi không xác định" %>
                     </div>
                 <%
                     } else if (error != null && !error.trim().isEmpty()) {

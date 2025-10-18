@@ -164,7 +164,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="<%=request.getContextPath()%>/supplier.jsp">
+                        <a href="<%=request.getContextPath()%>/supplier">
                             <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
                         </a>
                     </li>
