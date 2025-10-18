@@ -10,8 +10,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.List;
 
-@WebServlet("/api/suppliers")
+@WebServlet("/supplier")
 public class SupplierServlet extends HttpServlet {
     private SupplierDAO supplierDAO;
 
@@ -22,72 +23,272 @@ public class SupplierServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String action = request.getParameter("action");
-        if (action == null || action.isEmpty()) {
-            response.sendRedirect(request.getContextPath() + "/supplier.jsp");
-            return;
+        
+        if ("view".equals(action)) {
+            viewSupplier(request, response);
+        } else if ("page".equals(action) || action == null) {
+            showSuppliersPage(request, response);
+        } else if ("edit".equals(action)) {
+            showEditSupplierPage(request, response);
+        } else if ("add".equals(action)) {
+            showAddSupplierPage(request, response);
+        } else {
+            getAllSuppliers(request, response);
         }
+    }
+    
+    /**
+     * Hiển thị trang quản lý nhà cung cấp với tất cả dữ liệu cần thiết
+     * Tác giả: Sơn Lê
+     */
+    private void showSuppliersPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            // Lấy danh sách nhà cung cấp
+            List<Supplier> suppliers = supplierDAO.getAllSuppliers();
+            
+            // Set attributes cho JSP
+            request.setAttribute("suppliers", suppliers);
+            
+            // Forward to JSP
+            request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải dữ liệu: " + e.getMessage());
+            request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+        }
+    }
+    
+    /**
+     * Hiển thị trang thêm nhà cung cấp với dữ liệu cần thiết
+     * Tác giả: Sơn Lê
+     */
+    private void showAddSupplierPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            request.setAttribute("action", "add");
+            request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải dữ liệu: " + e.getMessage());
+            request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+        }
+    }
+    
+    /**
+     * Hiển thị trang sửa nhà cung cấp với dữ liệu cần thiết
+     * Tác giả: Sơn Lê
+     */
+    private void showEditSupplierPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            int supplierId = Integer.parseInt(request.getParameter("id"));
+            
+            // Lấy thông tin nhà cung cấp
+            Supplier supplier = supplierDAO.getSupplierById(supplierId);
+            if (supplier == null) {
+                request.setAttribute("error", "Không tìm thấy nhà cung cấp");
+                request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+                return;
+            }
+            
+            request.setAttribute("supplier", supplier);
+            request.setAttribute("action", "edit");
+            
+            request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải dữ liệu: " + e.getMessage());
+            request.getRequestDispatcher("/supplier.jsp").forward(request, response);
+        }
+    }
+    
+    /**
+     * Xem chi tiết nhà cung cấp qua AJAX
+     * Tác giả: Sơn Lê
+     */
+    private void viewSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        if ("view".equals(action)) {
-            try {
-                int id = Integer.parseInt(request.getParameter("id"));
-                Supplier s = supplierDAO.getSupplierById(id);
-                if (s != null) {
-                    // Escape JSON strings properly
-                    String supplierCode = escapeJsonString(s.getSupplierCode());
-                    String companyName = escapeJsonString(s.getCompanyName());
-                    String contactPerson = escapeJsonString(s.getContactPerson());
-                    String email = escapeJsonString(s.getEmail());
-                    String phone = escapeJsonString(s.getPhone());
-                    String address = escapeJsonString(s.getAddress());
-                    String bankInfo = escapeJsonString(s.getBankInfo());
-                    String status = escapeJsonString(s.getStatus());
-                    
-                    response.getWriter().write("{\"success\":true,\"data\":{\"id\":" + s.getId() + 
-                        ",\"supplierCode\":\"" + supplierCode + 
-                        "\",\"companyName\":\"" + companyName + 
-                        "\",\"contactPerson\":\"" + contactPerson + 
-                        "\",\"email\":\"" + email + 
-                        "\",\"phone\":\"" + phone + 
-                        "\",\"address\":\"" + address + 
-                        "\",\"bankInfo\":\"" + bankInfo + 
-                        "\",\"status\":\"" + status + "\"}}");
-                } else {
-                    response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy nhà cung cấp\"}");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                response.getWriter().write("{\"success\":false,\"message\":\"Lỗi: " + e.getMessage() + "\"}");
+        
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            Supplier s = supplierDAO.getSupplierById(id);
+            if (s != null) {
+                // Escape JSON strings properly
+                String supplierCode = escapeJsonString(s.getSupplierCode());
+                String companyName = escapeJsonString(s.getCompanyName());
+                String contactPerson = escapeJsonString(s.getContactPerson());
+                String email = escapeJsonString(s.getEmail());
+                String phone = escapeJsonString(s.getPhone());
+                String address = escapeJsonString(s.getAddress());
+                String bankInfo = escapeJsonString(s.getBankInfo());
+                String status = escapeJsonString(s.getStatus());
+                
+                response.getWriter().write("{\"success\":true,\"data\":{\"id\":" + s.getId() + 
+                    ",\"supplierCode\":\"" + supplierCode + 
+                    "\",\"companyName\":\"" + companyName + 
+                    "\",\"contactPerson\":\"" + contactPerson + 
+                    "\",\"email\":\"" + email + 
+                    "\",\"phone\":\"" + phone + 
+                    "\",\"address\":\"" + address + 
+                    "\",\"bankInfo\":\"" + bankInfo + 
+                    "\",\"status\":\"" + status + "\"}}");
+            } else {
+                response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy nhà cung cấp\"}");
             }
-        } else {
-            response.getWriter().write("{\"success\":false,\"message\":\"Hành động không hỗ trợ\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"Lỗi: " + e.getMessage() + "\"}");
+        }
+    }
+    
+    /**
+     * Lấy tất cả nhà cung cấp qua AJAX
+     * Tác giả: Sơn Lê
+     */
+    private void getAllSuppliers(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
+        try {
+            List<Supplier> suppliers = supplierDAO.getAllSuppliers();
+            response.getWriter().write("{\"success\":true,\"data\":" + suppliers + "}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"Lỗi: " + e.getMessage() + "\"}");
         }
     }
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
         String action = request.getParameter("action");
-        if ("add".equals(action)) {
-            Supplier s = buildSupplierFromRequest(request);
-            if (s.getStatus() == null || s.getStatus().isEmpty()) s.setStatus("active");
-            boolean ok = supplierDAO.addSupplier(s);
-            redirect(request, response, ok, supplierDAO.getLastError(), "supplier.jsp", ok ? "add_ok" : "add_err");
-        } else if ("update".equals(action)) {
-            Supplier s = buildSupplierFromRequest(request);
-            try { s.setId(Integer.parseInt(request.getParameter("id"))); } catch (Exception ignore) {}
-            boolean ok = supplierDAO.updateSupplier(s);
-            redirect(request, response, ok, supplierDAO.getLastError(), "supplier.jsp", ok ? "upd_ok" : "upd_err");
-        } else if ("delete".equals(action)) {
-            int id = Integer.parseInt(request.getParameter("id"));
-            boolean ok = supplierDAO.deleteSupplier(id);
-            redirect(request, response, ok, supplierDAO.getLastError(), "supplier.jsp", ok ? "del_ok" : "del_err");
-        } else {
-            response.sendRedirect(request.getContextPath() + "/supplier.jsp?message=unsupported");
+        
+        try {
+            if ("add".equals(action)) {
+                addSupplier(request, response);
+            } else if ("update".equals(action)) {
+                updateSupplier(request, response);
+            } else if ("delete".equals(action)) {
+                deleteSupplier(request, response);
+            } else {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=unsupported");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/supplier?message=system_error&error=" + 
+                URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+    
+    /**
+     * Thêm nhà cung cấp mới
+     * Tác giả: Sơn Lê
+     */
+    private void addSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            Supplier supplier = buildSupplierFromRequest(request);
+            if (supplier.getStatus() == null || supplier.getStatus().isEmpty()) {
+                supplier.setStatus("active");
+            }
+            
+            // Validation
+            if (supplier.getSupplierCode() == null || supplier.getSupplierCode().trim().isEmpty()) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Mã nhà cung cấp không được để trống", "UTF-8"));
+                return;
+            }
+            
+            if (supplier.getCompanyName() == null || supplier.getCompanyName().trim().isEmpty()) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Tên công ty không được để trống", "UTF-8"));
+                return;
+            }
+            
+            boolean success = supplierDAO.addSupplier(supplier);
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=success");
+            } else {
+                String error = supplierDAO.getLastError();
+                response.sendRedirect(request.getContextPath() + "/supplier?message=database_error&error=" + 
+                    URLEncoder.encode(error != null ? error : "Lỗi không xác định", "UTF-8"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/supplier?message=system_error&error=" + 
+                URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+    
+    /**
+     * Cập nhật nhà cung cấp
+     * Tác giả: Sơn Lê
+     */
+    private void updateSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            int supplierId = Integer.parseInt(request.getParameter("id"));
+            Supplier supplier = buildSupplierFromRequest(request);
+            supplier.setId(supplierId);
+            
+            // Validation
+            if (supplier.getSupplierCode() == null || supplier.getSupplierCode().trim().isEmpty()) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Mã nhà cung cấp không được để trống", "UTF-8"));
+                return;
+            }
+            
+            if (supplier.getCompanyName() == null || supplier.getCompanyName().trim().isEmpty()) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Tên công ty không được để trống", "UTF-8"));
+                return;
+            }
+            
+            boolean success = supplierDAO.updateSupplier(supplier);
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=update_success");
+            } else {
+                String error = supplierDAO.getLastError();
+                response.sendRedirect(request.getContextPath() + "/supplier?message=database_error&error=" + 
+                    URLEncoder.encode(error != null ? error : "Lỗi không xác định", "UTF-8"));
+            }
+        } catch (NumberFormatException e) {
+            response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                URLEncoder.encode("ID nhà cung cấp không hợp lệ", "UTF-8"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/supplier?message=system_error&error=" + 
+                URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+    
+    /**
+     * Xóa nhà cung cấp
+     * Tác giả: Sơn Lê
+     */
+    private void deleteSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            int supplierId = Integer.parseInt(request.getParameter("id"));
+            
+            boolean success = supplierDAO.deleteSupplier(supplierId);
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=delete_success");
+            } else {
+                String error = supplierDAO.getLastError();
+                response.sendRedirect(request.getContextPath() + "/supplier?message=database_error&error=" + 
+                    URLEncoder.encode(error != null ? error : "Lỗi không xác định", "UTF-8"));
+            }
+        } catch (NumberFormatException e) {
+            response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                URLEncoder.encode("ID nhà cung cấp không hợp lệ", "UTF-8"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/supplier?message=system_error&error=" + 
+                URLEncoder.encode(e.getMessage(), "UTF-8"));
         }
     }
 
@@ -121,14 +322,6 @@ public class SupplierServlet extends HttpServlet {
         return s;
     }
 
-    private void redirect(HttpServletRequest req, HttpServletResponse resp, boolean ok, String err, String page, String flag) throws IOException {
-        if (ok) {
-            resp.sendRedirect(req.getContextPath() + "/" + page + "?message=" + flag);
-        } else {
-            String e = err != null ? URLEncoder.encode(err, "UTF-8") : "";
-            resp.sendRedirect(req.getContextPath() + "/" + page + "?message=" + flag + "&error=" + e);
-        }
-    }
 
     
     private boolean isValidJson(String json) {

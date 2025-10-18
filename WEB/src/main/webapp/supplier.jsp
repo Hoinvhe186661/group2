@@ -138,7 +138,7 @@
                     String databaseError = request.getParameter("database_error");
                     String systemError = request.getParameter("system_error");
                     
-                    if ("add_ok".equals(message)) {
+                    if ("success".equals(message)) {
                 %>
                     <div class="alert alert-success alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -147,7 +147,7 @@
                         <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Thêm nhà cung cấp thành công.
                     </div>
                 <%
-                    } else if ("upd_ok".equals(message)) {
+                    } else if ("update_success".equals(message)) {
                 %>
                     <div class="alert alert-success alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -156,40 +156,13 @@
                         <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Cập nhật nhà cung cấp thành công.
                     </div>
                 <%
-                    } else if ("del_ok".equals(message)) {
+                    } else if ("delete_success".equals(message)) {
                 %>
                     <div class="alert alert-success alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                         <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Xóa nhà cung cấp thành công.
-                    </div>
-                <%
-                    } else if ("add_err".equals(message)) {
-                %>
-                    <div class="alert alert-danger alert-dismissible">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                        <i class="fa fa-times-circle"></i> <strong>Lỗi!</strong> Không thể thêm nhà cung cấp. <%= error != null ? error : "" %>
-                    </div>
-                <%
-                    } else if ("upd_err".equals(message)) {
-                %>
-                    <div class="alert alert-danger alert-dismissible">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                        <i class="fa fa-times-circle"></i> <strong>Lỗi!</strong> Không thể cập nhật nhà cung cấp. <%= error != null ? error : "" %>
-                    </div>
-                <%
-                    } else if ("del_err".equals(message)) {
-                %>
-                    <div class="alert alert-danger alert-dismissible">
-                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                        <i class="fa fa-times-circle"></i> <strong>Lỗi!</strong> Không thể xóa nhà cung cấp. <%= error != null ? error : "" %>
                     </div>
                 <%
                     } else if (validationError != null && !validationError.trim().isEmpty()) {
