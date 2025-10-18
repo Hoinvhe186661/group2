@@ -162,8 +162,8 @@
                         </a>
                     </li>
                     <li>
-                        <a href="my_tasks.jsp">
-                            <i class="fa fa-tasks"></i> <span>Nhiệm vụ của tôi</span>
+                        <a href="tech_support_management.jsp">
+                            <i class="fa fa-ticket"></i> <span>Yêu cầu hỗ trợ kỹ thuật</span>
                         </a>
                     </li>
                     <li>
