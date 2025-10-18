@@ -427,28 +427,12 @@
                             <label class="col-sm-3 control-label">Chuyển đến:</label>
                             <div class="col-sm-9">
                                 <select class="form-control" id="forward_to_user" required>
-                                    <option value="">-- Chọn nhân viên --</option>
-                                    <option value="admin">Admin</option>
-                                    <option value="technical_support">Hỗ trợ kỹ thuật</option>
-                                    <option value="billing_support">Hỗ trợ thanh toán</option>
-                                    <option value="manager">Quản lý</option>
+                                    <option value="">-- Chọn --</option>
+                                    <option value="head_technician">Trưởng phòng kỹ thuật</option>
                                 </select>
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Lý do chuyển tiếp:</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="forward_reason" rows="3" placeholder="Nhập lý do chuyển tiếp..." required></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Ghi chú thêm:</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="forward_notes" rows="2" placeholder="Ghi chú bổ sung..."></textarea>
-                            </div>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -698,8 +682,6 @@
             $('#forward_ticket_number').text(ticket.ticketNumber || '#' + ticket.id);
             $('#forward_subject').text(ticket.subject || '');
             $('#forward_to_user').val('');
-            $('#forward_reason').val('');
-            $('#forward_notes').val('');
             
             $('#forwardTicketModal').modal('show');
         }
@@ -707,25 +689,16 @@
         function confirmForwardTicket() {
             var id = $('#forward_ticket_id').val();
             var forwardTo = $('#forward_to_user').val();
-            var reason = $('#forward_reason').val();
-            var notes = $('#forward_notes').val();
             
             if(!forwardTo) {
                 alert('Vui lòng chọn người nhận!');
                 return;
             }
             
-            if(!reason.trim()) {
-                alert('Vui lòng nhập lý do chuyển tiếp!');
-                return;
-            }
-            
             var data = {
                 action: 'forward',
                 id: id,
-                forwardTo: forwardTo,
-                reason: reason,
-                notes: notes
+                forwardTo: forwardTo
             };
             
             $.ajax({
