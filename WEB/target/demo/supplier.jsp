@@ -1,4 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -98,7 +101,7 @@
                         </a>
                     </li>
                     <li class="active">
-                        <a href="<%=request.getContextPath()%>/supplier.jsp">
+                        <a href="<%=request.getContextPath()%>/supplier">
                             <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
                         </a>
                     </li>
@@ -128,6 +131,82 @@
         </aside>
         <aside class="right-side">
             <section class="content">
+                <%
+                    String message = request.getParameter("message");
+                    String error = request.getParameter("error");
+                    String validationError = request.getParameter("validation_error");
+                    String databaseError = request.getParameter("database_error");
+                    String systemError = request.getParameter("system_error");
+                    
+                    if ("success".equals(message)) {
+                %>
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Thêm nhà cung cấp thành công.
+                    </div>
+                <%
+                    } else if ("update_success".equals(message)) {
+                %>
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Cập nhật nhà cung cấp thành công.
+                    </div>
+                <%
+                    } else if ("delete_success".equals(message)) {
+                %>
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-check-circle"></i> <strong>Thành công!</strong> Xóa nhà cung cấp thành công.
+                    </div>
+                <%
+                    } else if ("validation_error".equals(message)) {
+                %>
+                    <div class="alert alert-warning alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-exclamation-triangle"></i> <strong>Lỗi xác thực dữ liệu:</strong><br>
+                        <%= error != null ? error : "Dữ liệu không hợp lệ" %>
+                    </div>
+                <%
+                    } else if ("database_error".equals(message)) {
+                %>
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-database"></i> <strong>Lỗi cơ sở dữ liệu:</strong><br>
+                        <%= error != null ? error : "Lỗi không xác định" %>
+                    </div>
+                <%
+                    } else if ("system_error".equals(message)) {
+                %>
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-exclamation-circle"></i> <strong>Lỗi hệ thống:</strong><br>
+                        <%= error != null ? error : "Lỗi không xác định" %>
+                    </div>
+                <%
+                    } else if (error != null && !error.trim().isEmpty()) {
+                %>
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <i class="fa fa-times-circle"></i> <strong>Lỗi:</strong> <%= error %>
+                    </div>
+                <%
+                    }
+                %>
+                
                 <div class="panel">
                     <header class="panel-heading">
                         <h3>Danh sách nhà cung cấp</h3>
@@ -210,28 +289,35 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <%
-                                    com.hlgenerator.dao.SupplierDAO sdao = new com.hlgenerator.dao.SupplierDAO();
-                                    java.util.List<com.hlgenerator.model.Supplier> suppliers = sdao.getAllSuppliers();
-                                    for (com.hlgenerator.model.Supplier s : suppliers) {
-                                %>
-                                <tr>
-                                    <td><%= s.getId() %></td>
-                                    <td><%= s.getSupplierCode() %></td>
-                                    <td><%= s.getCompanyName() %></td>
-                                    <td><%= s.getContactPerson() %></td>
-                                    <td><%= s.getEmail() %></td>
-                                    <td><%= s.getPhone() %></td>
-                                    <td><span class="label <%= "active".equals(s.getStatus()) ? "label-success" : "label-default" %>"><%= s.getStatus() %></span></td>
-                                    <td>
-                                        <button class="btn btn-info btn-xs" data-supplier-id="<%= s.getId() %>" onclick="viewSupplier(this)">Xem</button>
-                                        <button class="btn btn-warning btn-xs" data-supplier-id="<%= s.getId() %>" onclick="editSupplier(this)">Sửa</button>
-                                        <button class="btn btn-danger btn-xs" data-supplier-id="<%= s.getId() %>" onclick="deleteSupplier(this)">Xóa</button>
-                                    </td>
-                                </tr>
-                                <%
-                                    }
-                                %>
+                                <c:choose>
+                                    <c:when test="${not empty suppliers}">
+                                        <c:forEach var="supplier" items="${suppliers}">
+                                            <tr>
+                                                <td>${supplier.id}</td>
+                                                <td>${supplier.supplierCode}</td>
+                                                <td>${supplier.companyName}</td>
+                                                <td>${supplier.contactPerson}</td>
+                                                <td>${supplier.email}</td>
+                                                <td>${supplier.phone}</td>
+                                                <td>
+                                                    <span class="label ${supplier.status == 'active' ? 'label-success' : 'label-default'}">
+                                                        ${supplier.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-info btn-xs" data-supplier-id="${supplier.id}" onclick="viewSupplier(this)">Xem</button>
+                                                    <button class="btn btn-warning btn-xs" data-supplier-id="${supplier.id}" onclick="editSupplier(this)">Sửa</button>
+                                                    <button class="btn btn-danger btn-xs" data-supplier-id="${supplier.id}" onclick="deleteSupplier(this)">Xóa</button>
+                                                </td>
+                                            </tr>
+                                        </c:forEach>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <tr>
+                                            <td colspan="8" class="text-center">Không có dữ liệu nhà cung cấp</td>
+                                        </tr>
+                                    </c:otherwise>
+                                </c:choose>
                             </tbody>
                         </table>
                         
@@ -279,7 +365,7 @@
                     <h4 class="modal-title" id="addSupplierModalLabel">Thêm nhà cung cấp</h4>
                 </div>
                 <div class="modal-body">
-                    <form id="addSupplierForm" action="<%=request.getContextPath()%>/api/suppliers" method="post">
+                    <form id="addSupplierForm" action="<%=request.getContextPath()%>/supplier" method="post">
                         <input type="hidden" name="action" value="add">
                         <div class="form-group"><label>Mã NCC</label><input name="supplier_code" class="form-control" required></div>
                         <div class="form-group"><label>Tên công ty</label><input name="company_name" class="form-control" required></div>
@@ -324,7 +410,7 @@
                     <h4 class="modal-title">Sửa nhà cung cấp</h4>
                 </div>
                 <div class="modal-body">
-                    <form id="editSupplierForm" action="<%=request.getContextPath()%>/api/suppliers" method="post">
+                    <form id="editSupplierForm" action="<%=request.getContextPath()%>/supplier" method="post">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_supplier_id">
                         <div class="form-group"><label>Mã NCC</label><input name="supplier_code" id="edit_supplier_code" class="form-control" required></div>
@@ -427,7 +513,7 @@
             }
             
             $.ajax({
-                url: '<%=request.getContextPath()%>/api/suppliers?action=view&id=' + id,
+                url: '<%=request.getContextPath()%>/supplier?action=view&id=' + id,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -473,7 +559,7 @@
             }
             
             $.ajax({
-                url: '<%=request.getContextPath()%>/api/suppliers?action=view&id=' + id,
+                url: '<%=request.getContextPath()%>/supplier?action=view&id=' + id,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -514,7 +600,7 @@
             
             if (confirm('Bạn có chắc chắn muốn xóa nhà cung cấp này?')) {
                 $.ajax({
-                    url: '<%=request.getContextPath()%>/api/suppliers',
+                    url: '<%=request.getContextPath()%>/supplier',
                     type: 'POST',
                     data: {
                         action: 'delete',

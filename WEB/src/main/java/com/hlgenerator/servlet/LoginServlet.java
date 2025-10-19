@@ -23,11 +23,36 @@ public class LoginServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("isLoggedIn") != null) {
             String userRole = (String) session.getAttribute("userRole");
-            if ("customer".equals(userRole)) {
-                response.sendRedirect(request.getContextPath() + "/index.jsp");
-            } else {
-                response.sendRedirect(request.getContextPath() + "/admin.jsp");
+            
+            String redirectUrl = "";
+            switch (userRole) {
+                case "admin":
+                    redirectUrl = "/admin.jsp";
+                    break;
+                case "customer_support":
+                    redirectUrl = "/customersupport.jsp";
+                    break;
+                case "head_technician":
+                    redirectUrl = "/headtech.jsp";
+                    break;
+                case "technical_staff":
+                    redirectUrl = "/technical_staff.jsp";
+                    break;
+                case "storekeeper":
+                    redirectUrl = "/storekeeper.jsp";
+                    break;
+                case "customer":
+                    redirectUrl = "/customer_dashboard.jsp";
+                    break;
+                case "guest":
+                    redirectUrl = "/index.jsp";
+                    break;
+                default:
+                    redirectUrl = "/index.jsp";
+                    break;
             }
+            
+            response.sendRedirect(request.getContextPath() + redirectUrl);
             return;
         }
         
@@ -131,15 +156,37 @@ public class LoginServlet extends HttpServlet {
             
             // Chuyển hướng dựa trên vai trò
             System.out.println("DEBUG: Redirecting user " + username + " with role: '" + userRole + "'");
-            System.out.println("DEBUG: Role comparison - customer.equals(userRole): " + "customer".equals(userRole));
-            System.out.println("DEBUG: Role comparison - userRole.equals('customer'): " + userRole.equals("customer"));
-            if ("customer".equals(userRole)) {
-                System.out.println("DEBUG: Redirecting to about.jsp");
-                response.sendRedirect(request.getContextPath() + "/index.jsp");
-            } else {
-                System.out.println("DEBUG: Redirecting to admin.jsp");
-                response.sendRedirect(request.getContextPath() + "/admin.jsp");
+            
+            String redirectUrl = "";
+            switch (userRole) {
+                case "admin":
+                    redirectUrl = "/admin.jsp";
+                    break;
+                case "customer_support":
+                    redirectUrl = "/customersupport.jsp";
+                    break;
+                case "head_technician":
+                    redirectUrl = "/headtech.jsp";
+                    break;
+                case "technical_staff":
+                    redirectUrl = "/technical_staff.jsp";
+                    break;
+                case "storekeeper":
+                    redirectUrl = "/storekeeper.jsp";
+                    break;
+                case "customer":
+                    redirectUrl = "/customer_dashboard.jsp";
+                    break;
+                case "guest":
+                    redirectUrl = "/index.jsp";
+                    break;
+                default:
+                    redirectUrl = "/index.jsp";
+                    break;
             }
+            
+            System.out.println("DEBUG: Redirecting to: " + redirectUrl);
+            response.sendRedirect(request.getContextPath() + redirectUrl);
             
         } else {
             // Đăng nhập thất bại

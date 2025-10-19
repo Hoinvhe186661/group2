@@ -534,12 +534,11 @@
             if(forwardedTicket) {
                 try {
                     var ticket = JSON.parse(forwardedTicket);
-                    // Tìm và cập nhật ticket tương ứng trong danh sách
-                    var existingTicket = allTickets.find(function(t) { return t.id == ticket.id; });
-                    if(existingTicket) {
-                        existingTicket.status = ticket.status;
-                        existingTicket.assignedTo = ticket.assignedTo;
-                    }
+                    // Thêm ticket được chuyển tiếp vào danh sách
+                    allTickets.push(ticket);
+                    filteredTickets = allTickets;
+                    renderTable();
+                    updateStatistics();
                     // Xóa thông tin đã xử lý
                     localStorage.removeItem('forwardedTicket');
                     // Auto-open the ticket detail modal after data is loaded
@@ -582,7 +581,7 @@
         });
         
         function loadTickets() {
-            // Dữ liệu mẫu thay vì gọi API
+            // Chỉ load ticket được chuyển tiếp (assignedTo = 'head_technician')
             allTickets = [
                 {
                     id: 1,
@@ -597,36 +596,13 @@
                     createdAt: '2025-10-13T03:12:11',
                     resolution: '',
                     assignedTo: 'head_technician'
-                },
-                {
-                    id: 2,
-                    ticketNumber: 'SR-1760274193047',
-                    customerName: 'HieuND1',
-                    customerEmail: 'hieu@example.com',
-                    subject: 'hỏng hóc',
-                    description: 'Sản phẩm bị hỏng sau 1 tuần sử dụng',
-                    category: 'technical',
-                    priority: 'high',
-                    status: 'open',
-                    createdAt: '2025-10-13T03:03:13',
-                    resolution: '',
-                    assignedTo: null
-                },
-                {
-                    id: 3,
-                    ticketNumber: 'SR-1760273535077',
-                    customerName: 'HieuND1',
-                    customerEmail: 'hieu@example.com',
-                    subject: 'sửa chữa',
-                    description: 'Cần sửa chữa thiết bị tại nhà khách hàng',
-                    category: 'technical',
-                    priority: 'medium',
-                    status: 'open',
-                    createdAt: '2025-10-13T02:52:15',
-                    resolution: '',
-                    assignedTo: null
                 }
             ];
+            
+            // Lọc chỉ những ticket được gán cho head_technician
+            allTickets = allTickets.filter(function(ticket) {
+                return ticket.assignedTo === 'head_technician';
+            });
             
             filteredTickets = allTickets;
             renderTable();

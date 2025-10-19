@@ -1,4 +1,24 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+    // Kiểm tra đăng nhập
+    String username = (String) session.getAttribute("username");
+    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
+    
+    if (username == null || isLoggedIn == null || !isLoggedIn) {
+        response.sendRedirect(request.getContextPath() + "/login.jsp");
+        return;
+    }
+    
+    // Kiểm tra quyền truy cập - tất cả role đều có thể gửi yêu cầu hỗ trợ
+    // Nhưng chỉ customer, customer_support, admin mới có thể xem trang này
+    boolean canAccessSupport = "admin".equals(userRole) || "customer_support".equals(userRole) || 
+                              "customer".equals(userRole) || "guest".equals(userRole);
+    if (!canAccessSupport) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
+        return;
+    }
+%>
 <!DOCTYPE html>
 <html lang="vi">
 <head>

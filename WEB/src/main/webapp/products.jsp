@@ -5,10 +5,16 @@
 <%
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
+    
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
+    
+    // Kiểm tra quyền truy cập - tất cả role đều có thể xem sản phẩm
+    // Nhưng chỉ admin, storekeeper mới có thể quản lý
+    boolean canManage = "admin".equals(userRole) || "storekeeper".equals(userRole);
 %>
 <!DOCTYPE html>
 <html>
