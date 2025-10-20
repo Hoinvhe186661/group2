@@ -42,7 +42,7 @@ public class LoginServlet extends HttpServlet {
                     redirectUrl = "/storekeeper.jsp";
                     break;
                 case "customer":
-                    redirectUrl = "/customer_dashboard.jsp";
+                    redirectUrl = "/index.jsp";
                     break;
                 case "guest":
                     redirectUrl = "/index.jsp";
@@ -175,7 +175,7 @@ public class LoginServlet extends HttpServlet {
                     redirectUrl = "/storekeeper.jsp";
                     break;
                 case "customer":
-                    redirectUrl = "/customer_dashboard.jsp";
+                    redirectUrl = "/index.jsp";
                     break;
                 case "guest":
                     redirectUrl = "/index.jsp";

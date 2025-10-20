@@ -174,33 +174,8 @@
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
                     <li class="active">
-                        <a href="technical_staff.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
                         <a href="my_tasks.jsp">
                             <i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="products.jsp">
-                            <i class="fa fa-cogs"></i> <span>Sản phẩm</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="tech_support_management.jsp">
-                            <i class="fa fa-headphones"></i> <span>Hỗ trợ kỹ thuật</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="profile.jsp">
-                            <i class="fa fa-user"></i> <span>Hồ sơ cá nhân</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="settings.jsp">
-                            <i class="fa fa-cog"></i> <span>Cài đặt</span>
                         </a>
                     </li>
                 </ul>

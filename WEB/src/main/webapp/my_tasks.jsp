@@ -13,8 +13,8 @@
 </head>
 <body class="skin-black">
     <header class="header">
-        <a href="admin.jsp" class="logo">
-            Bảng điều khiển quản trị
+        <a href="technical_staff.jsp" class="logo">
+            Nhân Viên Kỹ Thuật
         </a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
@@ -60,32 +60,8 @@
                     </div>
                 </div>
                 <ul class="sidebar-menu">
-                    <li>
-                        <a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a>
-                    </li>
-                    <li>
-                        <a href="product"><i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span></a>
-                    </li>
-                    <li>
-                        <a href="orders.jsp"><i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span></a>
-                    </li>
-                    <li>
-                        <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
-                    </li>
-                    <li>
-                        <a href="customers.jsp"><i class="fa fa-users"></i> <span>Quản lý khách hàng</span></a>
-                    </li>
-                    <li>
-                        <a href="users.jsp"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
-                    </li>
                     <li class="active">
                         <a href="my_tasks.jsp"><i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span></a>
-                    </li>
-                    <li>
-                        <a href="reports.jsp"><i class="fa fa-bar-chart"></i> <span>Báo cáo</span></a>
-                    </li>
-                    <li>
-                        <a href="settings.jsp"><i class="fa fa-cog"></i> <span>Cài đặt</span></a>
                     </li>
                 </ul>
             </section>

@@ -195,51 +195,20 @@
                 <!-- /.search form -->
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
-                    <li class="active">
+                    <li>
                         <a href="customersupport.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="support_management.jsp">
-                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
-                            <small class="badge pull-right bg-red" id="openTickets">0</small>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="customers.jsp">
-                            <i class="fa fa-users"></i> <span>Danh sách khách hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Danh sách sản phẩm</span>
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển khách hàng</span>
                         </a>
                     </li>
                     <li>
                         <a href="contracts.jsp">
-                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
+                            <i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span>
                         </a>
                     </li>
                     <li>
-                        <a href="orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Đơn hàng</span>
-                        </a>
-                    </li>
-                    <li class="treeview">
-                        <a href="#">
-                            <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
-                            <i class="fa fa-angle-left pull-right"></i>
-                        </a>
-                        <ul class="treeview-menu">
-                            <li><a href="#"><i class="fa fa-circle-o"></i> Báo cáo ticket</a></li>
-                            <li><a href="#"><i class="fa fa-circle-o"></i> Đánh giá hỗ trợ</a></li>
-                            <li><a href="#"><i class="fa fa-circle-o"></i> Hiệu suất</a></li>
-                        </ul>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa fa-book"></i> <span>Tài liệu hướng dẫn</span>
+                        <a href="support_management.jsp">
+                            <i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span>
+                            <small class="badge pull-right bg-red" id="openTickets">0</small>
                         </a>
                     </li>
                 </ul>

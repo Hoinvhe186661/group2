@@ -33,8 +33,8 @@
 </head>
 <body class="skin-black">
     <header class="header">
-        <a href="admin.jsp" class="logo">
-            Bảng điều khiển quản trị
+        <a href="customersupport.jsp" class="logo">
+            Hỗ Trợ Khách Hàng
         </a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
@@ -48,7 +48,7 @@
                     <li class="dropdown user user-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <i class="fa fa-user"></i>
-                            <span>Admin <i class="caret"></i></span>
+                            <span><%= (session.getAttribute("fullName") != null && !((String)session.getAttribute("fullName")).isEmpty()) ? (String)session.getAttribute("fullName") : username %> <i class="caret"></i></span>
                         </a>
                         <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
@@ -81,28 +81,13 @@
                 </div>
                 <ul class="sidebar-menu">
                     <li>
-                        <a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a>
-                    </li>
-                    <li>
-                        <a href="product"><i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span></a>
-                    </li>
-                    <li>
-                        <a href="orders.jsp"><i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span></a>
+                        <a href="customersupport.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển khách hàng</span></a>
                     </li>
                     <li class="active">
                         <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
                     </li>
                     <li>
-                        <a href="customers.jsp"><i class="fa fa-users"></i> <span>Quản lý khách hàng</span></a>
-                    </li>
-                    <li>
-                        <a href="users.jsp"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
-                    </li>
-                    <li>
-                        <a href="reports.jsp"><i class="fa fa-bar-chart"></i> <span>Báo cáo</span></a>
-                    </li>
-                    <li>
-                        <a href="settings.jsp"><i class="fa fa-cog"></i> <span>Cài đặt</span></a>
+                        <a href="support_management.jsp"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
                     </li>
                 </ul>
             </section>

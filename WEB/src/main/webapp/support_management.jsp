@@ -137,32 +137,17 @@
                 <ul class="sidebar-menu">
                     <li>
                         <a href="customersupport.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="support_management.jsp">
-                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="customers.jsp">
-                            <i class="fa fa-users"></i> <span>Danh sách khách hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Danh sách sản phẩm</span>
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển khách hàng</span>
                         </a>
                     </li>
                     <li>
                         <a href="contracts.jsp">
-                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
+                            <i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Đơn hàng</span>
+                    <li class="active">
+                        <a href="support_management.jsp">
+                            <i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span>
                         </a>
                     </li>
                 </ul>
