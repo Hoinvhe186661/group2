@@ -9,6 +9,7 @@ public class User {
     private String passwordHash;
     private String fullName;
     private String phone;
+    private Integer customerId; // nullable, only for role 'customer'
     private String role;
     private String permissions;
     private boolean isActive;
@@ -93,6 +94,14 @@ public class User {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public Integer getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(Integer customerId) {
+        this.customerId = customerId;
     }
 
     public String getRole() {

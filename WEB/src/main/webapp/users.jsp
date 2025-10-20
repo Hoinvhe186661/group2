@@ -488,6 +488,13 @@
                                         <option value="guest">Khách</option>
                                     </select>
                                 </div>
+                                <div class="form-group" id="customerSelectGroup" style="display:none;">
+                                    <label for="customerId">Khách hàng:</label>
+                                    <select class="form-control" id="customerId">
+                                        <option value="">Chọn khách hàng</option>
+                                    </select>
+                                    <small class="text-muted">Bắt buộc khi vai trò là Khách hàng</small>
+                                </div>
                                 <div class="form-group">
                                     <label for="permissions">Quyền hạn:</label>
                                     <textarea class="form-control" id="permissions" rows="3" placeholder='["view_users", "manage_users"]'></textarea>
@@ -629,7 +636,42 @@
                     }
                 ]
             });
+
+            // Toggle customer selector when role changes
+            $('#role').on('change', function() {
+                var val = $(this).val();
+                if (val === 'customer') {
+                    $('#customerSelectGroup').show();
+                    ensureCustomersLoaded();
+                } else {
+                    $('#customerSelectGroup').hide();
+                    $('#customerId').val('');
+                }
+            });
         });
+
+        var customersLoaded = false;
+        function ensureCustomersLoaded() {
+            if (customersLoaded) return;
+            $.ajax({
+                url: 'api/customers?action=list',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var customers = response.data || [];
+                        var $sel = $('#customerId');
+                        $sel.empty();
+                        $sel.append('<option value="">Chọn khách hàng</option>');
+                        customers.forEach(function(c) {
+                            var name = (c.companyName && c.companyName.trim()) ? c.companyName : (c.contactPerson || ('KH #' + c.id));
+                            $sel.append('<option value="' + c.id + '">' + name + ' - ' + (c.email || '') + '</option>');
+                        });
+                        customersLoaded = true;
+                    }
+                }
+            });
+        }
 
         // Hàm refresh bảng sau khi thao tác
         function refreshTable() {
@@ -732,6 +774,19 @@
             document.getElementById('role').value = user.role;
             document.getElementById('permissions').value = user.permissions || '[]';
             document.getElementById('isActive').checked = user.isActive;
+            // handle customer selector for edit
+            if (user.role === 'customer') {
+                $('#customerSelectGroup').show();
+                ensureCustomersLoaded();
+                setTimeout(function(){
+                    if (user.customerId) {
+                        $('#customerId').val(String(user.customerId));
+                    }
+                }, 200);
+            } else {
+                $('#customerSelectGroup').hide();
+                $('#customerId').val('');
+            }
         }
 
         function changePasswordUser(id) {
@@ -899,6 +954,7 @@
             var fullName = document.getElementById('fullName').value;
             var phone = document.getElementById('phone').value;
             var role = document.getElementById('role').value;
+            var customerId = document.getElementById('customerId').value;
             var permissions = document.getElementById('permissions').value;
             var isActive = document.getElementById('isActive').checked;
 
@@ -929,6 +985,15 @@
                 return;
             }
 
+            // Require customer selection for role 'customer'
+            if (role === 'customer') {
+                if (!customerId) {
+                    showAlert('Vui lòng chọn khách hàng cho tài khoản vai trò Khách hàng', 'warning');
+                    $('#customerId').focus();
+                    return;
+                }
+            }
+
             var formData = {
                 username: username,
                 email: email,
@@ -938,6 +1003,10 @@
                 permissions: permissions || '[]',
                 isActive: isActive
             };
+
+            if (role === 'customer') {
+                formData.customerId = customerId;
+            }
 
             // Only include password for new users
             if (!currentEditingUser) {

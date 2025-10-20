@@ -36,16 +36,21 @@ public class UserDAO extends DBConnect {
         if (!checkConnection()) {
             return false;
         }
-        String sql = "INSERT INTO users (username, email, password_hash, full_name, phone, role, permissions, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO users (username, email, password_hash, full_name, phone, customer_id, role, permissions, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
             ps.setString(3, user.getPasswordHash());
             ps.setString(4, user.getFullName());
             ps.setString(5, user.getPhone());
-            ps.setString(6, user.getRole());
-            ps.setString(7, user.getPermissions());
-            ps.setBoolean(8, user.isActive());
+            if (user.getCustomerId() == null) {
+                ps.setNull(6, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(6, user.getCustomerId());
+            }
+            ps.setString(7, user.getRole());
+            ps.setString(8, user.getPermissions());
+            ps.setBoolean(9, user.isActive());
             int result = ps.executeUpdate();
             return result > 0;
         } catch (SQLException e) {
@@ -80,6 +85,10 @@ public class UserDAO extends DBConnect {
                     rs.getTimestamp("created_at"),
                     rs.getTimestamp("updated_at")
                 );
+                int cid = rs.getInt("customer_id");
+                if (!rs.wasNull()) {
+                    user.setCustomerId(cid);
+                }
                 users.add(user);
             }
             if (!hasData) {
@@ -105,7 +114,7 @@ public class UserDAO extends DBConnect {
             
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new User(
+                    User user = new User(
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("email"),
@@ -118,6 +127,11 @@ public class UserDAO extends DBConnect {
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
                     );
+                    int cid = rs.getInt("customer_id");
+                    if (!rs.wasNull()) {
+                        user.setCustomerId(cid);
+                    }
+                    return user;
                 }
             }
         } catch (SQLException e) {
@@ -140,7 +154,7 @@ public class UserDAO extends DBConnect {
             
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new User(
+                    User user = new User(
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("email"),
@@ -153,6 +167,11 @@ public class UserDAO extends DBConnect {
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
                     );
+                    int cid = rs.getInt("customer_id");
+                    if (!rs.wasNull()) {
+                        user.setCustomerId(cid);
+                    }
+                    return user;
                 }
             }
         } catch (SQLException e) {
@@ -175,7 +194,7 @@ public class UserDAO extends DBConnect {
             
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return new User(
+                    User user = new User(
                         rs.getInt("id"),
                         rs.getString("username"),
                         rs.getString("email"),
@@ -188,6 +207,11 @@ public class UserDAO extends DBConnect {
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
                     );
+                    int cid = rs.getInt("customer_id");
+                    if (!rs.wasNull()) {
+                        user.setCustomerId(cid);
+                    }
+                    return user;
                 }
             }
         } catch (SQLException e) {
@@ -202,17 +226,22 @@ public class UserDAO extends DBConnect {
         if (!checkConnection()) {
             return false;
         }
-        String sql = "UPDATE users SET username=?, email=?, password_hash=?, full_name=?, phone=?, role=?, permissions=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?";
+        String sql = "UPDATE users SET username=?, email=?, password_hash=?, full_name=?, phone=?, customer_id=?, role=?, permissions=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
             ps.setString(3, user.getPasswordHash());
             ps.setString(4, user.getFullName());
             ps.setString(5, user.getPhone());
-            ps.setString(6, user.getRole());
-            ps.setString(7, user.getPermissions());
-            ps.setBoolean(8, user.isActive());
-            ps.setInt(9, user.getId());
+            if (user.getCustomerId() == null) {
+                ps.setNull(6, java.sql.Types.INTEGER);
+            } else {
+                ps.setInt(6, user.getCustomerId());
+            }
+            ps.setString(7, user.getRole());
+            ps.setString(8, user.getPermissions());
+            ps.setBoolean(9, user.isActive());
+            ps.setInt(10, user.getId());
             int result = ps.executeUpdate();
             return result > 0;
         } catch (SQLException e) {

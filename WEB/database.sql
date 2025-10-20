@@ -10,12 +10,22 @@ CREATE TABLE users (
     reset_token_expires_at DATETIME,
     full_name VARCHAR(100),
     phone VARCHAR(20),
+    customer_id INT NULL,
     role ENUM('admin', 'customer_support', 'technical_staff', 'head_technician', 'storekeeper', 'customer', 'guest') NOT NULL,
     permissions JSON,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Add index for faster joins on customer_id
+CREATE INDEX idx_users_customer_id ON users(customer_id);
+
+-- Add foreign key constraint for customer_id
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    ON DELETE SET NULL;
 
 -- 2. CUSTOMERS
 CREATE TABLE customers (

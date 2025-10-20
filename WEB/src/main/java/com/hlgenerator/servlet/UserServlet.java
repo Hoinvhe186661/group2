@@ -229,6 +229,7 @@ public class UserServlet extends HttpServlet {
             String role = request.getParameter("role");
             String permissions = request.getParameter("permissions");
             String isActiveStr = request.getParameter("isActive");
+            String customerIdParam = request.getParameter("customerId");
 
             // Validate required fields
             if (username == null || username.trim().isEmpty() ||
@@ -268,6 +269,26 @@ public class UserServlet extends HttpServlet {
                 isActiveStr != null ? Boolean.parseBoolean(isActiveStr) : true
             );
 
+            // If role is customer, require customerId and set it
+            if ("customer".equalsIgnoreCase(role)) {
+                Integer customerId = null;
+                if (customerIdParam != null && !customerIdParam.trim().isEmpty()) {
+                    try {
+                        customerId = Integer.parseInt(customerIdParam.trim());
+                    } catch (NumberFormatException e) {
+                        sendErrorResponse(out, "customerId không hợp lệ", 400);
+                        return;
+                    }
+                }
+                if (customerId == null) {
+                    sendErrorResponse(out, "Vui lòng chọn khách hàng cho tài khoản vai trò Khách hàng", 400);
+                    return;
+                }
+                user.setCustomerId(customerId);
+            } else {
+                user.setCustomerId(null);
+            }
+
             // Add to database
             boolean success = userDAO.addUser(user);
             
@@ -304,6 +325,7 @@ public class UserServlet extends HttpServlet {
             String role = request.getParameter("role");
             String permissions = request.getParameter("permissions");
             String isActiveStr = request.getParameter("isActive");
+            String customerIdParam = request.getParameter("customerId");
 
             // Validate required fields
             if (username == null || username.trim().isEmpty() ||
@@ -343,6 +365,26 @@ public class UserServlet extends HttpServlet {
             existingUser.setPermissions(permissions != null ? permissions.trim() : "[]");
             if (isActiveStr != null) {
                 existingUser.setActive(Boolean.parseBoolean(isActiveStr));
+            }
+
+            // Handle customerId based on role
+            if ("customer".equalsIgnoreCase(role)) {
+                Integer customerId = null;
+                if (customerIdParam != null && !customerIdParam.trim().isEmpty()) {
+                    try {
+                        customerId = Integer.parseInt(customerIdParam.trim());
+                    } catch (NumberFormatException e) {
+                        sendErrorResponse(out, "customerId không hợp lệ", 400);
+                        return;
+                    }
+                }
+                if (customerId == null) {
+                    sendErrorResponse(out, "Vui lòng chọn khách hàng cho tài khoản vai trò Khách hàng", 400);
+                    return;
+                }
+                existingUser.setCustomerId(customerId);
+            } else {
+                existingUser.setCustomerId(null);
             }
 
             // Update in database
