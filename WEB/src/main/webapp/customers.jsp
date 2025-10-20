@@ -548,8 +548,8 @@
                             <input type="text" class="form-control" id="userContract" required>
                         </div>
                         <div class="form-group">
-                            <label>Email:</label>
-                            <input type="email" class="form-control" id="customerEmail" required>
+                            <label>Email: <small class="text-muted"></small></label>
+                            <input type="email" class="form-control" id="customerEmail" placeholder="" required>
                         </div>
                         <div class="form-group">
                             <label>Số điện thoại:</label>
@@ -781,11 +781,11 @@
                     return;
                 }
 
-                // Ràng buộc: Email phải là @gmail.com
+                // Ràng buộc: Email phải là @gmail.com hoặc @fpt.edu.vn
                 var email = (formData.customerEmail || '').trim();
-                var emailRegex = /^[A-Za-z0-9._%+-]+@gmail\.com$/i;
+                var emailRegex = /^[A-Za-z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/i;
                 if (!emailRegex.test(email)) {
-                    alert('Email phải có định dạng @gmail.com');
+                    alert('Email phải có định dạng @gmail.com hoặc @fpt.edu.vn');
                     $('#customerEmail').focus();
                     return;
                 }

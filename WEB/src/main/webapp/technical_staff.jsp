@@ -17,349 +17,515 @@
     }
 %>
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Nhân viên Kỹ thuật - HL Generator Solutions</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>Dashboard Nhân viên Kỹ thuật | HL Generator Solutions</title>
+    <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+    <meta name="description" content="Technical Staff Dashboard for HL Generator Solutions">
+    <meta name="keywords" content="Technical, Staff, Dashboard, Generator">
+    
+    <!-- bootstrap 3.0.2 -->
+    <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <!-- font Awesome -->
+    <link href="css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+    <!-- Ionicons -->
+    <link href="css/ionicons.min.css" rel="stylesheet" type="text/css" />
+    <!-- Morris chart -->
+    <link href="css/morris/morris.css" rel="stylesheet" type="text/css" />
+    <!-- jvectormap -->
+    <link href="css/jvectormap/jquery-jvectormap-1.2.2.css" rel="stylesheet" type="text/css" />
+    <!-- Date Picker -->
+    <link href="css/datepicker/datepicker3.css" rel="stylesheet" type="text/css" />
+    <!-- Daterange picker -->
+    <link href="css/daterangepicker/daterangepicker-bs3.css" rel="stylesheet" type="text/css" />
+    <!-- iCheck for checkboxes and radio inputs -->
+    <link href="css/iCheck/all.css" rel="stylesheet" type="text/css" />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <!-- Theme style -->
+    <link href="css/style.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Custom styles for technical staff -->
     <style>
-        :root {
-            --primary-red: #dc3545;
-            --primary-yellow: #ffc107;
-            --dark-grey: #343a40;
-            --light-grey: #f8f9fa;
-            --white: #ffffff;
-            --success: #28a745;
-            --warning: #ffc107;
-            --info: #17a2b8;
-        }
-
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: var(--light-grey);
-        }
-
-        .sidebar {
-            background: var(--dark-grey);
-            min-height: 100vh;
-            padding: 0;
-        }
-
-        .sidebar .nav-link {
-            color: #adb5bd;
-            padding: 12px 20px;
-            border-radius: 0;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar .nav-link:hover {
-            background-color: var(--primary-red);
-            color: var(--white);
-        }
-
-        .sidebar .nav-link.active {
-            background-color: var(--primary-red);
-            color: var(--white);
-        }
-
-        .main-content {
-            padding: 20px;
-        }
-
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-red), #c82333);
-            color: var(--white);
-            border-radius: 10px 10px 0 0 !important;
-            font-weight: 600;
-        }
-
-        .stat-card {
-            background: var(--white);
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-red);
-            border-color: var(--primary-red);
-        }
-
-        .btn-primary:hover {
-            background-color: #c82333;
-            border-color: #c82333;
-        }
-
-        .table th {
-            background-color: var(--light-grey);
-            border-top: none;
-            font-weight: 600;
-        }
-
-        .badge {
-            font-size: 0.8rem;
-            padding: 6px 12px;
-        }
+        .st-orange { background-color: #ff9800 !important; }
+        .st-purple { background-color: #9c27b0 !important; }
+        .st-cyan { background-color: #00bcd4 !important; }
+        .st-pink { background-color: #e91e63 !important; }
     </style>
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
 </head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar">
-                <div class="p-3">
-                    <h5 class="text-white mb-4">
-                        <i class="fas fa-wrench me-2"></i>
-                        Nhân viên Kỹ thuật
-                    </h5>
-                    <nav class="nav flex-column">
-                        <a class="nav-link active" href="technical_staff.jsp">
-                            <i class="fas fa-tachometer-alt me-2"></i>
-                            Dashboard
+<body class="skin-black">
+    <!-- header logo: style can be found in header.less -->
+    <header class="header">
+        <a href="technical_staff.jsp" class="logo">
+            Nhân viên Kỹ thuật
+        </a>
+        <!-- Header Navbar: style can be found in header.less -->
+        <nav class="navbar navbar-static-top" role="navigation">
+            <!-- Sidebar toggle button-->
+            <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+            <div class="navbar-right">
+                <ul class="nav navbar-nav">
+                    <!-- Messages: style can be found in dropdown.less-->
+                    <li class="dropdown messages-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <i class="fa fa-envelope"></i>
+                            <span class="label label-success">3</span>
                         </a>
-                        <a class="nav-link" href="my_tasks.jsp">
-                            <i class="fas fa-tasks me-2"></i>
-                            Nhiệm vụ của tôi
+                        <ul class="dropdown-menu">
+                            <li class="header">Bạn có 3 tin nhắn</li>
+                            <li>
+                                <!-- inner menu: contains the actual data -->
+                                <ul class="menu">
+                                    <li><!-- start message -->
+                                        <a href="#">
+                                            <div class="pull-left">
+                                                <img src="img/26115.jpg" class="img-circle" alt="User Image"/>
+                                            </div>
+                                            <h4>
+                                                Nhiệm vụ mới
+                                            </h4>
+                                            <p>Có nhiệm vụ mới cần xử lý</p>
+                                            <small class="pull-right"><i class="fa fa-clock-o"></i> 5 phút</small>
+                                        </a>
+                                    </li><!-- end message -->
+                                    <li>
+                                        <a href="#">
+                                            <div class="pull-left">
+                                                <img src="img/26115.jpg" class="img-circle" alt="user image"/>
+                                            </div>
+                                            <h4>
+                                                Bảo dưỡng định kỳ
+                                            </h4>
+                                            <p>Nhắc nhở bảo dưỡng máy phát điện</p>
+                                            <small class="pull-right"><i class="fa fa-clock-o"></i> 2 giờ</small>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="footer"><a href="#">Xem tất cả tin nhắn</a></li>
+                        </ul>
+                    </li>
+                    <!-- User Account: style can be found in dropdown.less -->
+                    <li class="dropdown user user-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <i class="fa fa-user"></i>
+                            <span><%= username %> <i class="caret"></i></span>
                         </a>
-                        <a class="nav-link" href="products.jsp">
-                            <i class="fas fa-cogs me-2"></i>
-                            Sản phẩm
-                        </a>
-                        <a class="nav-link" href="profile.jsp">
-                            <i class="fas fa-user me-2"></i>
-                            Hồ sơ cá nhân
-                        </a>
-                        <a class="nav-link" href="logout">
-                            <i class="fas fa-sign-out-alt me-2"></i>
-                            Đăng xuất
-                        </a>
-                    </nav>
-                </div>
+                        <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
+                            <li class="dropdown-header text-center">Tài khoản</li>
+                            <li>
+                                <a href="profile.jsp">
+                                <i class="fa fa-user fa-fw pull-right"></i>
+                                    Hồ sơ
+                                </a>
+                                <a href="settings.jsp">
+                                <i class="fa fa-cog fa-fw pull-right"></i>
+                                    Cài đặt
+                                </a>
+                            </li>
+                            <li class="divider"></li>
+                            <li>
+                                <a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
+        </nav>
+    </header>
+    
+    <div class="wrapper row-offcanvas row-offcanvas-left">
+        <!-- Left side column. contains the logo and sidebar -->
+        <aside class="left-side sidebar-offcanvas">
+            <!-- sidebar: style can be found in sidebar.less -->
+            <section class="sidebar">
+                <!-- Sidebar user panel -->
+                <div class="user-panel">
+                    <div class="pull-left image">
+                        <img src="img/26115.jpg" class="img-circle" alt="User Image" />
+                    </div>
+                    <div class="pull-left info">
+                        <p>Xin chào, <%= username %></p>
+                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
+                    </div>
+                </div>
+                <!-- search form -->
+                <form action="#" method="get" class="sidebar-form">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
+                        <span class="input-group-btn">
+                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </form>
+                <!-- /.search form -->
+                <!-- sidebar menu: : style can be found in sidebar.less -->
+                <ul class="sidebar-menu">
+                    <li class="active">
+                        <a href="technical_staff.jsp">
+                            <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="my_tasks.jsp">
+                            <i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="products.jsp">
+                            <i class="fa fa-cogs"></i> <span>Sản phẩm</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="tech_support_management.jsp">
+                            <i class="fa fa-headphones"></i> <span>Hỗ trợ kỹ thuật</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="profile.jsp">
+                            <i class="fa fa-user"></i> <span>Hồ sơ cá nhân</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="settings.jsp">
+                            <i class="fa fa-cog"></i> <span>Cài đặt</span>
+                        </a>
+                    </li>
+                </ul>
+            </section>
+            <!-- /.sidebar -->
+        </aside>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 main-content">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0">
-                        <i class="fas fa-tachometer-alt me-2"></i>
-                        Dashboard Nhân viên Kỹ thuật
-                    </h2>
-                    <div class="text-muted">
-                        Xin chào, <strong><%= username %></strong>
+        <aside class="right-side">
+            <!-- Main content -->
+            <section class="content">
+                <div class="row" style="margin-bottom:5px;">
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-red"><i class="fa fa-tasks"></i></span>
+                            <div class="sm-st-info">
+                                <span id="totalTasks">0</span>
+                                Tổng nhiệm vụ
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-violet"><i class="fa fa-clock-o"></i></span>
+                            <div class="sm-st-info">
+                                <span id="pendingTasks">0</span>
+                                Đang chờ
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-blue"><i class="fa fa-play"></i></span>
+                            <div class="sm-st-info">
+                                <span id="inProgressTasks">0</span>
+                                Đang thực hiện
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-green"><i class="fa fa-check"></i></span>
+                            <div class="sm-st-info">
+                                <span id="completedTasks">0</span>
+                                Hoàn thành
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row" style="margin-bottom:5px;">
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-orange"><i class="fa fa-cogs"></i></span>
+                            <div class="sm-st-info">
+                                <span id="maintenanceTasks">0</span>
+                                Bảo dưỡng
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-purple"><i class="fa fa-wrench"></i></span>
+                            <div class="sm-st-info">
+                                <span id="repairTasks">0</span>
+                                Sửa chữa
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-cyan"><i class="fa fa-search"></i></span>
+                            <div class="sm-st-info">
+                                <span id="inspectionTasks">0</span>
+                                Kiểm tra
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-pink"><i class="fa fa-calendar"></i></span>
+                            <div class="sm-st-info">
+                                <span id="urgentTasks">0</span>
+                                Khẩn cấp
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Statistics Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-icon text-primary">
-                                <i class="fas fa-tasks"></i>
-                            </div>
-                            <div class="stat-number text-primary" id="totalTasks">0</div>
-                            <div class="stat-label">Tổng nhiệm vụ</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-icon text-warning">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="stat-number text-warning" id="pendingTasks">0</div>
-                            <div class="stat-label">Đang chờ</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-icon text-info">
-                                <i class="fas fa-play"></i>
-                            </div>
-                            <div class="stat-number text-info" id="inProgressTasks">0</div>
-                            <div class="stat-label">Đang thực hiện</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stat-card">
-                            <div class="stat-icon text-success">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <div class="stat-number text-success" id="completedTasks">0</div>
-                            <div class="stat-label">Hoàn thành</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Tasks -->
+                <!-- Main row -->
                 <div class="row">
                     <div class="col-md-8">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-list me-2"></i>
-                                    Nhiệm vụ gần đây
-                                </h5>
+                        <!--recent tasks start-->
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Nhiệm vụ gần đây
+                            </header>
+                            <div class="panel-body table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Mô tả</th>
+                                            <th>Trạng thái</th>
+                                            <th>Ưu tiên</th>
+                                            <th>Ngày tạo</th>
+                                            <th>Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentTasksTable">
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">
+                                                <i class="fa fa-spinner fa-spin"></i>
+                                                Đang tải dữ liệu...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="card-body">
-                                <div class="table-responsive">
-                                    <table class="table table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>ID</th>
-                                                <th>Mô tả</th>
-                                                <th>Trạng thái</th>
-                                                <th>Ưu tiên</th>
-                                                <th>Ngày tạo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="recentTasksTable">
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted">
-                                                    <i class="fas fa-spinner fa-spin me-2"></i>
-                                                    Đang tải dữ liệu...
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                        </section>
+                        <!--recent tasks end-->
                     </div>
-
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-bell me-2"></i>
-                                    Thông báo
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Bạn có 2 nhiệm vụ mới cần xử lý
-                                </div>
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    Nhiệm vụ #123 sắp hết hạn
+                    <div class="col-lg-4">
+                        <!--notifications start-->
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Thông báo
+                            </header>
+                            <div class="panel-body" id="noti-box">
+                                <div class="alert alert-block alert-danger">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Cảnh báo!</strong> Nhiệm vụ #123 sắp hết hạn.
                                 </div>
                                 <div class="alert alert-success">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    Nhiệm vụ #120 đã hoàn thành
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Thành công!</strong> Nhiệm vụ #120 đã hoàn thành.
+                                </div>
+                                <div class="alert alert-info">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Thông tin!</strong> Bạn có 2 nhiệm vụ mới.
+                                </div>
+                                <div class="alert alert-warning">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Chú ý!</strong> Kiểm tra máy phát điện định kỳ.
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="card mt-3">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-chart-pie me-2"></i>
-                                    Thống kê tuần
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Nhiệm vụ hoàn thành:</span>
-                                    <strong>8/12</strong>
-                                </div>
-                                <div class="progress mb-3">
-                                    <div class="progress-bar bg-success" style="width: 67%"></div>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Giờ làm việc:</span>
-                                    <strong>32h</strong>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Hiệu suất:</span>
-                                    <strong class="text-success">85%</strong>
-                                </div>
-                            </div>
-                        </div>
+                        </section>
                     </div>
                 </div>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Thống kê tuần
+                            </header>
+                            <div class="panel-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Nhiệm vụ hoàn thành:</span>
+                                            <strong>8/12</strong>
+                                        </div>
+                                        <div class="progress mb-3">
+                                            <div class="progress-bar bg-success" style="width: 67%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Giờ làm việc:</span>
+                                            <strong>32h</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span>Hiệu suất:</span>
+                                            <strong class="text-success">85%</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <canvas id="taskChart" width="200" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <div class="col-md-4">
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Nhiệm vụ theo loại
+                            </header>
+                            <div class="panel-body">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <span class="badge">5</span>
+                                        Bảo dưỡng
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span class="badge">3</span>
+                                        Sửa chữa
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span class="badge">2</span>
+                                        Kiểm tra
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span class="badge">2</span>
+                                        Khẩn cấp
+                                    </li>
+                                </ul>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section><!-- /.content -->
+            <div class="footer-main">
+                Copyright &copy Dashboard Nhân viên Kỹ thuật, 2025
             </div>
-        </div>
-    </div>
+        </aside><!-- /.right-side -->
+    </div><!-- ./wrapper -->
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery 2.0.2 -->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+    <script src="js/jquery.min.js" type="text/javascript"></script>
+    <!-- jQuery UI 1.10.3 -->
+    <script src="js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.min.js" type="text/javascript"></script>
+    <!-- daterangepicker -->
+    <script src="js/plugins/daterangepicker/daterangepicker.js" type="text/javascript"></script>
+    <script src="js/plugins/chart.js" type="text/javascript"></script>
+    <!-- iCheck -->
+    <script src="js/plugins/iCheck/icheck.min.js" type="text/javascript"></script>
+    <!-- Director App -->
+    <script src="js/Director/app.js" type="text/javascript"></script>
+    <!-- Director dashboard demo (This is only for demo purposes) -->
+    <script src="js/Director/dashboard.js" type="text/javascript"></script>
+
     <script>
+        $('#noti-box').slimScroll({
+            height: '400px',
+            size: '5px',
+            BorderRadius: '5px'
+        });
+        
         // Load task statistics
+        $(document).ready(function() {
+            loadTaskStats();
+            loadRecentTasks();
+        });
+        
         function loadTaskStats() {
             // Simulate API call - replace with actual API
             setTimeout(() => {
-                document.getElementById('totalTasks').textContent = '12';
-                document.getElementById('pendingTasks').textContent = '3';
-                document.getElementById('inProgressTasks').textContent = '4';
-                document.getElementById('completedTasks').textContent = '5';
+                $('#totalTasks').text('12');
+                $('#pendingTasks').text('3');
+                $('#inProgressTasks').text('4');
+                $('#completedTasks').text('5');
+                $('#maintenanceTasks').text('5');
+                $('#repairTasks').text('3');
+                $('#inspectionTasks').text('2');
+                $('#urgentTasks').text('2');
             }, 1000);
         }
 
-        // Load recent tasks
         function loadRecentTasks() {
             // Simulate API call - replace with actual API
             setTimeout(() => {
-                const tableBody = document.getElementById('recentTasksTable');
-                tableBody.innerHTML = `
+                const tableBody = $('#recentTasksTable');
+                tableBody.html(`
                     <tr>
                         <td>#123</td>
                         <td>Kiểm tra máy phát điện Cummins 100kVA</td>
-                        <td><span class="badge bg-warning">Đang chờ</span></td>
-                        <td><span class="badge bg-danger">Cao</span></td>
+                        <td><span class="label label-warning">Đang chờ</span></td>
+                        <td><span class="label label-danger">Cao</span></td>
                         <td>18/10/2025</td>
+                        <td><button class="btn btn-xs btn-primary">Xem</button></td>
                     </tr>
                     <tr>
                         <td>#122</td>
                         <td>Bảo dưỡng máy phát điện Denyo 50kVA</td>
-                        <td><span class="badge bg-info">Đang thực hiện</span></td>
-                        <td><span class="badge bg-warning">Trung bình</span></td>
+                        <td><span class="label label-info">Đang thực hiện</span></td>
+                        <td><span class="label label-warning">Trung bình</span></td>
                         <td>17/10/2025</td>
+                        <td><button class="btn btn-xs btn-primary">Xem</button></td>
                     </tr>
                     <tr>
                         <td>#121</td>
                         <td>Thay thế phụ tùng máy phát điện Mitsubishi</td>
-                        <td><span class="badge bg-success">Hoàn thành</span></td>
-                        <td><span class="badge bg-success">Thấp</span></td>
+                        <td><span class="label label-success">Hoàn thành</span></td>
+                        <td><span class="label label-success">Thấp</span></td>
                         <td>16/10/2025</td>
+                        <td><button class="btn btn-xs btn-primary">Xem</button></td>
                     </tr>
-                `;
+                `);
             }, 1500);
         }
-
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTaskStats();
-            loadRecentTasks();
+    </script>
+    
+    <script type="text/javascript">
+        $(function() {
+            "use strict";
+            //TASK CHART
+            var data = {
+                labels: ["Bảo dưỡng", "Sửa chữa", "Kiểm tra", "Khẩn cấp"],
+                datasets: [
+                    {
+                        label: "Nhiệm vụ",
+                        fillColor: "rgba(220,220,220,0.2)",
+                        strokeColor: "rgba(220,220,220,1)",
+                        pointColor: "rgba(220,220,220,1)",
+                        pointStrokeColor: "#fff",
+                        pointHighlightFill: "#fff",
+                        pointHighlightStroke: "rgba(220,220,220,1)",
+                        data: [5, 3, 2, 2]
+                    }
+                ]
+            };
+            new Chart(document.getElementById("taskChart").getContext("2d")).Doughnut(data,{
+                responsive : true,
+                maintainAspectRatio: false,
+            });
         });
     </script>
 </body>

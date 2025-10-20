@@ -458,8 +458,8 @@
                                     <input type="text" class="form-control" id="username" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="email">Email:</label>
-                                    <input type="email" class="form-control" id="email" required>
+                                    <label for="email">Email: <small class="text-muted"></small></label>
+                                    <input type="email" class="form-control" id="email" placeholder="" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="password">Mật khẩu:</label>
@@ -907,10 +907,10 @@
                 return;
             }
 
-            // Email phải là @gmail.com
-            var emailRegex = /^[A-Za-z0-9._%+-]+@gmail\.com$/i;
+            // Email phải là @gmail.com hoặc @fpt.edu.vn
+            var emailRegex = /^[A-Za-z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/i;
             if (!emailRegex.test((email || '').trim())) {
-                showAlert('Email phải có định dạng @gmail.com', 'warning');
+                showAlert('Email phải có định dạng @gmail.com hoặc @fpt.edu.vn', 'warning');
                 document.getElementById('email').focus();
                 return;
             }
