@@ -391,7 +391,12 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <label><strong>Bảo hành (tháng)</strong></label>
-                                                <input type="number" min="0" class="form-control" id="newWarrantyMonths" placeholder="12" style="height: 40px; font-size: 14px;">
+                                                <input type="number" min="0" class="form-control" id="newWarrantyMonths" placeholder="12" readonly style="height: 40px; font-size: 14px; background-color: #f5f5f5;">
+                                            </div>
+                                        </div>
+                                        <div class="row" style="margin-top: 8px;">
+                                            <div class="col-md-6">
+                                                <small id="stockInfo" class="text-muted"></small>
                                             </div>
                                         </div>
                                         
@@ -534,9 +539,9 @@
                     var options = '<option value="">Chọn sản phẩm...</option>';
                     if (resp.data && resp.data.length > 0) {
                         resp.data.forEach(function(product) {
-                            options += '<option value="' + product.id + '" data-description="' + (product.description || '') + '" data-unitprice="' + product.unitPrice + '">' + 
+                            options += '<option value="' + product.id + '" data-description="' + (product.description || '') + '" data-unitprice="' + product.unitPrice + '" data-warranty="' + (product.warrantyMonths != null ? product.warrantyMonths : '') + '" data-quantity="' + (product.quantity != null ? product.quantity : 0) + '">' + 
                                       product.productCode + ' - ' + product.productName + 
-                                      ' (' + parseFloat(product.unitPrice).toLocaleString() + ' VNĐ)</option>';
+                                      ' (' + parseFloat(product.unitPrice).toLocaleString() + ' VNĐ, tồn: ' + (product.quantity != null ? product.quantity : 0) + ')</option>';
                         });
                     } else {
                         options += '<option value="" disabled>Không có sản phẩm nào</option>';
@@ -776,6 +781,18 @@
                 return;
             }
 
+            // Kiểm tra tồn kho trước khi thêm vào danh sách tạm
+            var selectedOption = $('#newProductId').find('option:selected');
+            var stock = parseFloat(selectedOption.data('quantity')) || 0;
+            if (stock <= 0) {
+                showAlert('Sản phẩm đã hết hàng. Không thể thêm.', 'danger');
+                return;
+            }
+            if (parseFloat(quantity) > stock) {
+                showAlert('Số lượng vượt quá tồn kho (' + stock + ').', 'danger');
+                return;
+            }
+
             var product = {
                 productId: parseInt(productId),
                 description: description,
@@ -906,16 +923,41 @@
             var selectedOption = $(this).find('option:selected');
             var description = selectedOption.data('description') || '';
             var unitPrice = selectedOption.data('unitprice') || 0;
-            
+            var warranty = selectedOption.data('warranty');
+            var stock = parseFloat(selectedOption.data('quantity')) || 0;
+
             $('#newDescription').val(description);
             $('#newUnitPrice').val(parseFloat(unitPrice).toLocaleString());
-            
+            if (warranty !== undefined && warranty !== null && warranty !== '') {
+                $('#newWarrantyMonths').val(warranty);
+            } else {
+                $('#newWarrantyMonths').val('');
+            }
+            $('#stockInfo').text('Tồn kho hiện tại: ' + stock);
+
+            // Reset quantity if it exceeds stock
+            var currentQty = parseFloat($('#newQuantity').val());
+            if (!isNaN(currentQty) && currentQty > stock) {
+                $('#newQuantity').val(stock);
+            }
+
             // Tính thành tiền
             calculateLineTotal();
         });
 
         // Event handler cho số lượng
         $(document).on('input', '#newQuantity', function() {
+            var selectedOption = $('#newProductId').find('option:selected');
+            var stock = parseFloat(selectedOption.data('quantity')) || 0;
+            var qty = parseFloat($(this).val()) || 0;
+            if (qty > stock) {
+                $(this).val(stock);
+                showAlert('Số lượng vượt quá tồn kho (' + stock + '). Đã điều chỉnh về mức tối đa.', 'warning');
+            }
+            if (stock <= 0) {
+                $(this).val('');
+                showAlert('Sản phẩm đã hết hàng. Không thể thêm.', 'danger');
+            }
             calculateLineTotal();
         });
 

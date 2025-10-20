@@ -77,7 +77,8 @@ public class ContractServlet extends HttpServlet {
                 String pass = props.getProperty("db.password");
                 
                 try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-                    String sql = "SELECT id, product_code, product_name, description, unit_price FROM products ORDER BY product_name";
+                    String sql = "SELECT p.id, p.product_code, p.product_name, p.description, p.unit_price, p.warranty_months, COALESCE(i.current_stock, 0) AS quantity " +
+                                 "FROM products p LEFT JOIN inventory i ON p.id = i.product_id ORDER BY p.product_name";
                     try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                         java.sql.ResultSet rs = ps.executeQuery();
                         JSONArray arr = new JSONArray();
@@ -88,6 +89,8 @@ public class ContractServlet extends HttpServlet {
                             obj.put("productName", rs.getString("product_name"));
                             obj.put("description", rs.getString("description"));
                             obj.put("unitPrice", rs.getBigDecimal("unit_price"));
+                            obj.put("warrantyMonths", rs.getInt("warranty_months"));
+                            obj.put("quantity", rs.getInt("quantity"));
                             arr.put(obj);
                         }
                         out.print(successJson(arr));
@@ -259,29 +262,72 @@ public class ContractServlet extends HttpServlet {
                 String pass = props.getProperty("db.password");
                 
                 try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-                    for (int i = 0; i < products.length(); i++) {
-                        JSONObject product = products.getJSONObject(i);
-                        
-                        String sql = "INSERT INTO contract_products (contract_id, product_id, description, quantity, unit_price, warranty_months, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
-                        try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-                            ps.setInt(1, contractId);
-                            ps.setInt(2, product.getInt("productId"));
-                            ps.setString(3, product.optString("description", null));
-                            ps.setBigDecimal(4, toBigDecimal(product.opt("quantity")));
-                            ps.setBigDecimal(5, toBigDecimal(product.opt("unitPrice")));
-                            if (product.has("warrantyMonths") && !product.isNull("warrantyMonths")) {
-                                ps.setInt(6, product.getInt("warrantyMonths"));
-                            } else {
-                                ps.setNull(6, java.sql.Types.INTEGER);
+                    boolean oldAutoCommit = conn.getAutoCommit();
+                    conn.setAutoCommit(false);
+                    try {
+                        for (int i = 0; i < products.length(); i++) {
+                            JSONObject product = products.getJSONObject(i);
+                            int productId = product.getInt("productId");
+                            java.math.BigDecimal qty = toBigDecimal(product.opt("quantity"));
+                            if (qty == null) qty = java.math.BigDecimal.ZERO;
+
+                            // Kiểm tra tồn kho hiện tại
+                            int currentStock = 0;
+                            String stockSql = "SELECT COALESCE(current_stock, 0) FROM inventory WHERE product_id = ? FOR UPDATE";
+                            try (java.sql.PreparedStatement ps = conn.prepareStatement(stockSql)) {
+                                ps.setInt(1, productId);
+                                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                                    if (rs.next()) {
+                                        currentStock = rs.getInt(1);
+                                    } else {
+                                        currentStock = 0;
+                                    }
+                                }
                             }
-                            ps.setString(7, product.optString("notes", null));
-                            ps.executeUpdate();
+
+                            if (currentStock <= 0) {
+                                throw new RuntimeException("Sản phẩm ID " + productId + " đã hết hàng");
+                            }
+                            if (qty.compareTo(new java.math.BigDecimal(currentStock)) > 0) {
+                                throw new RuntimeException("Số lượng vượt quá tồn kho cho sản phẩm ID " + productId);
+                            }
+
+                            // Thêm vào contract_products
+                            String insertSql = "INSERT INTO contract_products (contract_id, product_id, description, quantity, unit_price, warranty_months, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                            try (java.sql.PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                                ps.setInt(1, contractId);
+                                ps.setInt(2, productId);
+                                ps.setString(3, product.optString("description", null));
+                                ps.setBigDecimal(4, qty);
+                                ps.setBigDecimal(5, toBigDecimal(product.opt("unitPrice")));
+                                if (product.has("warrantyMonths") && !product.isNull("warrantyMonths")) {
+                                    ps.setInt(6, product.getInt("warrantyMonths"));
+                                } else {
+                                    ps.setNull(6, java.sql.Types.INTEGER);
+                                }
+                                ps.setString(7, product.optString("notes", null));
+                                ps.executeUpdate();
+                            }
+
+                            // Trừ tồn kho
+                            String updateStockSql = "UPDATE inventory SET current_stock = current_stock - ? WHERE product_id = ?";
+                            try (java.sql.PreparedStatement ps = conn.prepareStatement(updateStockSql)) {
+                                ps.setBigDecimal(1, qty);
+                                ps.setInt(2, productId);
+                                ps.executeUpdate();
+                            }
                         }
+                        conn.commit();
+                        conn.setAutoCommit(oldAutoCommit);
+                    } catch (Exception ex) {
+                        try { conn.rollback(); } catch (Exception ignore) {}
+                        throw ex;
                     }
                 }
             }
         } catch (Exception e) {
             System.err.println("Error saving contract products: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
