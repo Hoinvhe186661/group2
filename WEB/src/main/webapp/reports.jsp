@@ -22,7 +22,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="admin.jsp" class="logo">
-            Bảng điều khiển quản trị
+            Bảng điều khiển 
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -79,6 +79,16 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
+                <!-- search form -->
+                <form action="#" method="get" class="sidebar-form">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
+                        <span class="input-group-btn">
+                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </form>
+                <!-- /.search form -->
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
                     <li>
@@ -86,21 +96,11 @@
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="customers.jsp">
-                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
-                        </a>
-                    </li>
+                   
+                    <li class="active"><a href="customers.jsp"><i class="fa fa-users"></i> <span>Quản lý khách
+                        hàng</span></a></li>
+            <li><a href="users.jsp"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
+            </li>
                     <li class="active">
                         <a href="reports.jsp">
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>

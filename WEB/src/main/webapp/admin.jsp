@@ -171,26 +171,7 @@
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="contracts.jsp">
-                            <i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="my_tasks.jsp">
-                            <i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span>
-                        </a>
-                    </li>
+                    
                     <li>
                         <a href="customers.jsp">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>

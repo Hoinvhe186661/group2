@@ -50,7 +50,7 @@
 <body class="skin-black">
     <!-- Header -->
     <header class="header">
-        <a href="admin.jsp" class="logo">Bảng điều khiển quản trị</a>
+        <a href="customers.jsp" class="logo">Bảng điều khiển </a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
                 <span class="sr-only">Toggle navigation</span>
@@ -91,14 +91,20 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
+                <!-- search form -->
+                <form action="#" method="get" class="sidebar-form">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
+                        <span class="input-group-btn">
+                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </form>
+                <!-- /.search form -->
                 
                 <ul class="sidebar-menu">
                     <li><a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a></li>
-                    <li><a href="product"><i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span></a></li>
-                        <li><a href="orders.jsp"><i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span></a>
-                        </li>
-                        <li><a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
-                        </li>
+                    
                         <li class="active"><a href="customers.jsp"><i class="fa fa-users"></i> <span>Quản lý khách
                                     hàng</span></a></li>
                         <li><a href="users.jsp"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
@@ -126,392 +132,179 @@
                             </header>
                             
                             <div class="panel-body table-responsive">
-<% request.setCharacterEncoding("UTF-8"); %>
-                                    <%! private boolean equalsParam(String param, String actual) { if (param==null ||
-                                        param.trim().isEmpty()) return true; String val=actual==null ? "" :
-                                        actual.trim(); return param.trim().equalsIgnoreCase(val); } private String
-                                        typeLabel(String raw) { return (raw !=null && raw.equalsIgnoreCase("company"))
-                                        ? "Doanh nghiệp" : "Cá nhân" ; } private String statusLabel(String raw) { return
-                                        (raw !=null && raw.equalsIgnoreCase("active")) ? "Hoạt động" : "Tạm khóa" ; }
-                                        private String decodeParam(String s){ if(s==null) return null; try{ byte[] b=
-                                        s.getBytes("ISO-8859-1"); return new String(b, "UTF-8").trim(); }catch(Exception
-                                        e){ return s.trim(); } }
-                                    %>
-                                        <% com.hlgenerator.dao.CustomerDAO daoPage=new
-                                            com.hlgenerator.dao.CustomerDAO();
-                                            java.util.List<com.hlgenerator.model.Customer> allCustomers =
-                                            daoPage.getAllCustomers();
-                                            String pCode = decodeParam(request.getParameter("customerCode"));
-                                            String pType = decodeParam(request.getParameter("customerType")); // raw:
-                                            /* individual/company */
-                                            String pStatus = decodeParam(request.getParameter("status")); // raw: active/inactive
-                                            String pContact = decodeParam(request.getParameter("contactPerson"));
-                                            String pAddress = decodeParam(request.getParameter("address"));
+                                <% request.setCharacterEncoding("UTF-8"); %>
+                                <%!
+                                    private boolean equalsParam(String param, String actual) {
+                                        if (param == null || param.trim().isEmpty()) return true;
+                                        String val = actual == null ? "" : actual.trim();
+                                        return param.trim().equalsIgnoreCase(val);
+                                    }
+                                    
+                                    private boolean containsParam(String param, String actual) {
+                                        if (param == null || param.trim().isEmpty()) return true;
+                                        String val = actual == null ? "" : actual.trim().toLowerCase();
+                                        return val.contains(param.trim().toLowerCase());
+                                    }
+                                    
+                                    private String typeLabel(String raw) {
+                                        return (raw != null && raw.equalsIgnoreCase("company")) ? "Doanh nghiệp" : "Cá nhân";
+                                    }
+                                    
+                                    private String statusLabel(String raw) {
+                                        return (raw != null && raw.equalsIgnoreCase("active")) ? "Hoạt động" : "Tạm khóa";
+                                    }
+                                    
+                                    private String decodeParam(String s) {
+                                        if (s == null) return null;
+                                        try {
+                                            byte[] b = s.getBytes("ISO-8859-1");
+                                            return new String(b, "UTF-8").trim();
+                                        } catch (Exception e) {
+                                            return s.trim();
+                                        }
+                                    }
+                                %>
+                                <%
+                                    com.hlgenerator.dao.CustomerDAO daoPage = new com.hlgenerator.dao.CustomerDAO();
+                                    java.util.List<com.hlgenerator.model.Customer> allCustomers = daoPage.getAllCustomers();
+                                    
+                                    String pCode = decodeParam(request.getParameter("customerCode"));
+                                    String pType = decodeParam(request.getParameter("customerType"));
+                                    String pStatus = decodeParam(request.getParameter("status"));
+                                    String pContact = decodeParam(request.getParameter("contactPerson"));
+                                    String pAddress = decodeParam(request.getParameter("address"));
 
-                                            java.util.List<com.hlgenerator.model.Customer> customers = new
-                                                java.util.ArrayList<com.hlgenerator.model.Customer>();
-                                                    for (com.hlgenerator.model.Customer c : allCustomers) {
-                                                    if (!equalsParam(pCode, c.getCustomerCode())) continue;
-                                                    if (!equalsParam(pContact, c.getContactPerson())) continue;
-                                                    if (!equalsParam(pType, c.getCustomerType())) continue; // raw compare
-                                                    if (!equalsParam(pStatus, c.getStatus())) continue; // raw compare
-                                                    if (!equalsParam(pAddress, c.getAddress())) continue;
-                                                    customers.add(c);
-                                                    }
+                                    java.util.List<com.hlgenerator.model.Customer> customers = new java.util.ArrayList<com.hlgenerator.model.Customer>();
+                                    for (com.hlgenerator.model.Customer c : allCustomers) {
+                                        if (!containsParam(pCode, c.getCustomerCode())) continue;
+                                        if (!containsParam(pContact, c.getContactPerson())) continue;
+                                        if (!equalsParam(pType, c.getCustomerType())) continue;
+                                        if (!equalsParam(pStatus, c.getStatus())) continue;
+                                        if (!containsParam(pAddress, c.getAddress())) continue;
+                                        customers.add(c);
+                                    }
 
-                                                    java.util.Set<String> codeOptions = new java.util.TreeSet<String>();
-                                                            java.util.Set<String> contactOptions = new java.util.TreeSet
-                                                                <String>();
-                                                                    java.util.Set<String> typeOptionsRaw = new
-                                                                        java.util.TreeSet<String>(); /*
-                                                                            individual/company */
-                                                                            java.util.Set<String> statusOptionsRaw = new
-                                                                                java.util.TreeSet<String>(); /*
-                                                                                    active/inactive */
-                                                                                    java.util.Set<String> addressOptions
-                                                                                        = new java.util.TreeSet<String>
-                                                                                            ();
-                                                                                            for
-                                                                                            (com.hlgenerator.model.Customer
-                                                                                            c : allCustomers) {
-                                                                                            if (c.getCustomerCode() !=
-                                                                                            null &&
-                                                                                            !c.getCustomerCode().trim().isEmpty())
-                                                                                            codeOptions.add(c.getCustomerCode().trim());
-                                                                                            if (c.getContactPerson() !=
-                                                                                            null &&
-                                                                                            !c.getContactPerson().trim().isEmpty())
-                                                                                            contactOptions.add(c.getContactPerson().trim());
-                                                                                            if (c.getCustomerType() !=
-                                                                                            null &&
-                                                                                            !c.getCustomerType().trim().isEmpty())
-                                                                                            typeOptionsRaw.add(c.getCustomerType().trim());
-                                                                                            if (c.getStatus() != null &&
-                                                                                            !c.getStatus().trim().isEmpty())
-                                                                                            statusOptionsRaw.add(c.getStatus().trim());
-                                                                                            if (c.getAddress() != null
-                                                                                            &&
-                                                                                            !c.getAddress().trim().isEmpty())
-                                                                                            addressOptions.add(c.getAddress().trim());
-                                                                                            }
-                                                                                            %>
-                                                                                            <form class="form-inline"
-                                                                                                method="get"
-                                                                                                action="customers.jsp" accept-charset="UTF-8"
-                                                                                                style="margin-bottom: 10px;">
-                                                                                                <div class="row"
-                                                                                                    style="margin-bottom: 10px;">
-                                                                                                    <div
-                                                                                                        class="col-sm-3">
-                                                                                                        <label
-                                                                                                            for="filterCustomerCode">Mã
-                                                                                                            khách
-                                                                                                            hàng</label>
-                                                                                                        <select
-                                                                                                            id="filterCustomerCode"
-                                                                                                            name="customerCode"
-                                                                                                            class="form-control"
-                                                                                                            style="width:100%">
-                                                                                                            <option
-                                                                                                                value="">
-                                                                                                                Tất cả
-                                                                                                            </option>
-                                                                                                            <% for
-                                                                                                                (String
-                                                                                                                code :
-                                                                                                                codeOptions)
-                                                                                                                { %>
-                                                                                                                <option
-                                                                                                                    value="<%= code %>"
-                                                                                                                    <%=(pCode
-                                                                                                                    !=null
-                                                                                                                    &&
-                                                                                                                    pCode.equals(code))
-                                                                                                                    ? "selected"
-                                                                                                                    : ""
-                                                                                                                    %>>
-                                                                                                                    <%= code
-                                                                                                                        %>
-                                                                                                                </option>
-                                                                                                                <% } %>
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                    <div
-                                                                                                        class="col-sm-3">
-                                                                                                        <label
-                                                                                                            for="filterCustomerType">Loại
-                                                                                                            khách
-                                                                                                            hàng</label>
-                                                                                                        <select
-                                                                                                            id="filterCustomerType"
-                                                                                                            name="customerType"
-                                                                                                            class="form-control"
-                                                                                                            style="width:100%">
-                                                                                                            <option
-                                                                                                                value="">
-                                                                                                                Tất cả
-                                                                                                            </option>
-                                                                                                            <% for
-                                                                                                                (String
-                                                                                                                raw :
-                                                                                                                typeOptionsRaw)
-                                                                                                                { String
-                                                                                                                label=typeLabel(raw);
-                                                                                                                %>
-                                                                                                                <option
-                                                                                                                    value="<%= raw %>"
-                                                                                                                    <%=(pType
-                                                                                                                    !=null
-                                                                                                                    &&
-                                                                                                                    pType.equalsIgnoreCase(raw))
-                                                                                                                    ? "selected"
-                                                                                                                    : ""
-                                                                                                                    %>>
-                                                                                                                    <%= label
-                                                                                                                        %>
-                                                                                                                </option>
-                                                                                                                <% } %>
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                    <div
-                                                                                                        class="col-sm-3">
-                                                                                                        <label
-                                                                                                            for="filterStatus">Trạng
-                                                                                                            thái</label>
-                                                                                                        <select
-                                                                                                            id="filterStatus"
-                                                                                                            name="status"
-                                                                                                            class="form-control"
-                                                                                                            style="width:100%">
-                                                                                                            <option
-                                                                                                                value="">
-                                                                                                                Tất cả
-                                                                                                            </option>
-                                                                                                            <% for
-                                                                                                                (String
-                                                                                                                raw :
-                                                                                                                statusOptionsRaw)
-                                                                                                                { String
-                                                                                                                label=statusLabel(raw);
-                                                                                                                %>
-                                                                                                                <option
-                                                                                                                    value="<%= raw %>"
-                                                                                                                    <%=(pStatus
-                                                                                                                    !=null
-                                                                                                                    &&
-                                                                                                                    pStatus.equalsIgnoreCase(raw))
-                                                                                                                    ? "selected"
-                                                                                                                    : ""
-                                                                                                                    %>>
-                                                                                                                    <%= label
-                                                                                                                        %>
-                                                                                                                </option>
-                                                                                                                <% } %>
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                    <div
-                                                                                                        class="col-sm-3">
-                                                                                                        <label
-                                                                                                            for="filterContactPerson">Người
-                                                                                                            liên
-                                                                                                            hệ</label>
-                                                                                                        <select
-                                                                                                            id="filterContactPerson"
-                                                                                                            name="contactPerson"
-                                                                                                            class="form-control"
-                                                                                                            style="width:100%">
-                                                                                                            <option
-                                                                                                                value="">
-                                                                                                                Tất cả
-                                                                                                            </option>
-                                                                                                            <% for
-                                                                                                                (String
-                                                                                                                ct :
-                                                                                                                contactOptions)
-                                                                                                                { %>
-                                                                                                                <option
-                                                                                                                    value="<%= ct %>"
-                                                                                                                    <%=(pContact
-                                                                                                                    !=null
-                                                                                                                    &&
-                                                                                                                    pContact.equals(ct))
-                                                                                                                    ? "selected"
-                                                                                                                    : ""
-                                                                                                                    %>>
-                                                                                                                    <%= ct
-                                                                                                                        %>
-                                                                                                                </option>
-                                                                                                                <% } %>
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <div class="row"
-                                                                                                    style="margin-bottom: 10px;">
-                                                                                                    <div
-                                                                                                        class="col-sm-3">
-                                                                                                        <label
-                                                                                                            for="filterAddress">Địa
-                                                                                                            chỉ</label>
-                                                                                                        <select
-                                                                                                            id="filterAddress"
-                                                                                                            name="address"
-                                                                                                            class="form-control"
-                                                                                                            style="width:100%">
-                                                                                                            <option
-                                                                                                                value="">
-                                                                                                                Tất cả
-                                                                                                            </option>
-                                                                                                            <% for
-                                                                                                                (String
-                                                                                                                addr :
-                                                                                                                addressOptions)
-                                                                                                                { %>
-                                                                                                                <option
-                                                                                                                    value="<%= addr %>"
-                                                                                                                    <%=(pAddress
-                                                                                                                    !=null
-                                                                                                                    &&
-                                                                                                                    pAddress.equals(addr))
-                                                                                                                    ? "selected"
-                                                                                                                    : ""
-                                                                                                                    %>>
-                                                                                                                    <%= addr
-                                                                                                                        %>
-                                                                                                                </option>
-                                                                                                                <% } %>
-                                                                                                        </select>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                                <div class="row"
-                                                                                                    style="margin-bottom: 10px;">
-                                                                                                    <div
-                                                                                                        class="col-sm-12">
-                                                                                                        <button
-                                                                                                            type="submit"
-                                                                                                            class="btn btn-primary btn-sm"><i
-                                                                                                                class="fa fa-filter"></i>
-                                                                                                            Lọc</button>
-                                                                                                        <a href="customers.jsp"
-                                                                                                            class="btn btn-default btn-sm"><i
-                                                                                                                class="fa fa-times"></i>
-                                                                                                            Xóa lọc</a>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </form>
-                                                                                            <div id="filterSummary"
-                                                                                                style="margin: 5px 0 10px 0;">
-                                                                                            </div>
-                                                                                            <table
-                                                                                                class="table table-hover"
-                                                                                                id="customersTable">
+                                    java.util.Set<String> typeOptionsRaw = new java.util.TreeSet<String>();
+                                    java.util.Set<String> statusOptionsRaw = new java.util.TreeSet<String>();
+                                    
+                                    for (com.hlgenerator.model.Customer c : allCustomers) {
+                                        if (c.getCustomerType() != null && !c.getCustomerType().trim().isEmpty()) {
+                                            typeOptionsRaw.add(c.getCustomerType().trim());
+                                        }
+                                        if (c.getStatus() != null && !c.getStatus().trim().isEmpty()) {
+                                            statusOptionsRaw.add(c.getStatus().trim());
+                                        }
+                                    }
+                                %>
+                                
+                                <form class="form-inline" method="get" action="customers.jsp" accept-charset="UTF-8" style="margin-bottom: 10px;">
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-3">
+                                            <label for="filterCustomerCode">Mã khách hàng</label>
+                                            <input type="text" id="filterCustomerCode" name="customerCode" 
+                                                   class="form-control" placeholder="Tìm kiếm mã khách hàng..." 
+                                                   value="<%= pCode != null ? pCode : "" %>" style="width:100%">
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterCustomerType">Loại khách hàng</label>
+                                            <select id="filterCustomerType" name="customerType" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+                                                <% for (String raw : typeOptionsRaw) { 
+                                                    String label = typeLabel(raw);
+                                                %>
+                                                <option value="<%= raw %>" <%= (pType != null && pType.equalsIgnoreCase(raw)) ? "selected" : "" %>>
+                                                    <%= label %>
+                                                </option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterStatus">Trạng thái</label>
+                                            <select id="filterStatus" name="status" class="form-control" style="width:100%">
+                                                <option value="">Tất cả</option>
+                                                <% for (String raw : statusOptionsRaw) { 
+                                                    String label = statusLabel(raw);
+                                                %>
+                                                <option value="<%= raw %>" <%= (pStatus != null && pStatus.equalsIgnoreCase(raw)) ? "selected" : "" %>>
+                                                    <%= label %>
+                                                </option>
+                                                <% } %>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <label for="filterContactPerson">Người liên hệ</label>
+                                            <input type="text" id="filterContactPerson" name="contactPerson" 
+                                                   class="form-control" placeholder="Tìm kiếm người liên hệ..." 
+                                                   value="<%= pContact != null ? pContact : "" %>" style="width:100%">
+                                        </div>
+                                    </div>
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-3">
+                                            <label for="filterAddress">Địa chỉ</label>
+                                            <input type="text" id="filterAddress" name="address" 
+                                                   class="form-control" placeholder="Tìm kiếm địa chỉ..." 
+                                                   value="<%= pAddress != null ? pAddress : "" %>" style="width:100%">
+                                        </div>
+                                    </div>
+                                    <div class="row" style="margin-bottom: 10px;">
+                                        <div class="col-sm-12">
+                                            <button type="submit" class="btn btn-primary btn-sm">
+                                                <i class="fa fa-filter"></i> Lọc
+                                            </button>
+                                            <a href="customers.jsp" class="btn btn-default btn-sm">
+                                                <i class="fa fa-times"></i> Xóa lọc
+                                            </a>
+                                        </div>
+                                    </div>
+                                </form>
+                                
+                                <div id="filterSummary" style="margin: 5px 0 10px 0;"></div>
+                                
+                                <table class="table table-hover" id="customersTable">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
-                                                                                                        <th>Mã khách
-                                                                                                            hàng</th>
-                                                                                                        <th>Tên công ty
-                                                                                                        </th>
-                                                                                                        <th>Người liên
-                                                                                                            hệ</th>
+                                            <th>Mã khách hàng</th>
+                                            <th>Tên công ty</th>
+                                            <th>Người liên hệ</th>
                                             <th>Email</th>
-                                                                                                        <th>Số điện
-                                                                                                            thoại</th>
+                                            <th>Số điện thoại</th>
                                             <th>Địa chỉ</th>
-                                                                                                        <th>Mã số thuế
-                                                                                                        </th>
-                                                                                                        <th>Loại khách
-                                                                                                            hàng</th>
-                                                                                                        <th>Trạng thái
-                                                                                                        </th>
-                                                                                                        <th>Thao tác
-                                                                                                        </th>
+                                            <th>Mã số thuế</th>
+                                            <th>Loại khách hàng</th>
+                                            <th>Trạng thái</th>
+                                            <th>Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                                                                                    <% for
-                                                                                                        (com.hlgenerator.model.Customer
-                                                                                                        customer :
-                                                                                                        customers) { %>
-                                                                                                        <tr>
-                                                                                                            <td>
-                                                                                                                <%= customer.getId()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getCustomerCode()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getCompanyName()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getContactPerson()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getEmail()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getPhone()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getAddress()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= customer.getTaxCode()
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= typeLabel(customer.getCustomerType())
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= statusLabel(customer.getStatus())
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td
-                                                                                                                class="action-buttons">
-                                                                                                                <button
-                                                                                                                    class="btn btn-info btn-xs"
-                                                                                                                    onclick="viewCustomer('<%= customer.getId() %>')">
-                                                                                                                    <i
-                                                                                                                        class="fa fa-eye"></i>
-                                                                                                                    Xem
+                                        <% for (com.hlgenerator.model.Customer customer : customers) { %>
+                                        <tr>
+                                            <td><%= customer.getId() %></td>
+                                            <td><%= customer.getCustomerCode() %></td>
+                                            <td><%= customer.getCompanyName() %></td>
+                                            <td><%= customer.getContactPerson() %></td>
+                                            <td><%= customer.getEmail() %></td>
+                                            <td><%= customer.getPhone() %></td>
+                                            <td><%= customer.getAddress() %></td>
+                                            <td><%= customer.getTaxCode() %></td>
+                                            <td><%= typeLabel(customer.getCustomerType()) %></td>
+                                            <td><%= statusLabel(customer.getStatus()) %></td>
+                                            <td class="action-buttons">
+                                                <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')">
+                                                    <i class="fa fa-eye"></i> Xem
                                                 </button>
-                                                                                                                <button
-                                                                                                                    class="btn btn-warning btn-xs"
-                                                                                                                    onclick="editCustomer('<%= customer.getId() %>')">
-                                                                                                                    <i
-                                                                                                                        class="fa fa-edit"></i>
-                                                                                                                    Sửa
+                                                <button class="btn btn-warning btn-xs" onclick="editCustomer('<%= customer.getId() %>')">
+                                                    <i class="fa fa-edit"></i> Sửa
                                                 </button>
-                                                                                                                <% if
-                                                                                                                    ("active".equals(customer.getStatus()))
-                                                                                                                    { %>
-                                                                                                                    <button
-                                                                                                                        class="btn btn-danger btn-xs"
-                                                                                                                        onclick="deleteCustomer('<%= customer.getId() %>')">
-                                                                                                                        <i
-                                                                                                                            class="fa fa-trash"></i>
-                                                                                                                        Xóa
-                                                    </button>
-                                                                                                                    <% } else
-                                                                                                                        {
-                                                                                                                        %>
-                                                                                                                        <button
-                                                                                                                            class="btn btn-success btn-xs"
-                                                                                                                            onclick="activateCustomer('<%= customer.getId() %>')">
-                                                                                                                            <i
-                                                                                                                                class="fa fa-unlock"></i>
-                                                                                                                            Kích
-                                                                                                                            hoạt
-                                                    </button>
-                                                                                                                        <% }
-                                                                                                                            %>
+                                                <% if ("active".equals(customer.getStatus())) { %>
+                                                <button class="btn btn-danger btn-xs" onclick="deleteCustomer('<%= customer.getId() %>')">
+                                                    <i class="fa fa-trash"></i> Xóa
+                                                </button>
+                                                <% } else { %>
+                                                <button class="btn btn-success btn-xs" onclick="activateCustomer('<%= customer.getId() %>')">
+                                                    <i class="fa fa-unlock"></i> Kích hoạt
+                                                </button>
+                                                <% } %>
                                             </td>
                                         </tr>
                                         <% } %>
