@@ -599,22 +599,25 @@
             }
             
             if (confirm('Bạn có chắc chắn muốn xóa nhà cung cấp này?')) {
-                $.ajax({
-                    url: '<%=request.getContextPath()%>/supplier',
-                    type: 'POST',
-                    data: {
-                        action: 'delete',
-                        id: id
-                    },
-                    success: function(response) {
-                        // Reload trang để cập nhật danh sách
-                        window.location.reload();
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', error);
-                        alert('Lỗi khi xóa nhà cung cấp: ' + error);
-                    }
-                });
+                // Sử dụng form submit thay vì AJAX để đảm bảo redirect hoạt động
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<%=request.getContextPath()%>/supplier';
+                
+                var actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'delete';
+                form.appendChild(actionInput);
+                
+                var idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = id;
+                form.appendChild(idInput);
+                
+                document.body.appendChild(form);
+                form.submit();
             }
         }
         

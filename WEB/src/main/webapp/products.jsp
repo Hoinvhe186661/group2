@@ -74,6 +74,13 @@
         
         /* Responsive cho filter panel */
         @media (max-width: 768px) {
+            .filter-panel .col-md-3,
+            .filter-panel .col-md-2 {
+                margin-bottom: 10px;
+            }
+        }
+        
+        @media (max-width: 992px) {
             .filter-panel .col-md-3 {
                 margin-bottom: 10px;
             }
@@ -294,11 +301,16 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="row">
-                                            <!-- Tìm kiếm tổng quát -->
+                                            <!-- Lọc theo nhà cung cấp -->
                                             <div class="col-md-3">
                                                 <div class="form-group">
-                                                    <label for="searchProduct" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm sản phẩm:</label>
-                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." oninput="filterProducts()">
+                                                    <label for="filterSupplier" style="font-weight: bold; margin-bottom: 5px;">Nhà cung cấp:</label>
+                                                    <select class="form-control" id="filterSupplier" onchange="filterProducts()">
+                                                        <option value="">Tất cả nhà cung cấp</option>
+                                                        <c:forEach var="supplier" items="${suppliers}">
+                                                            <option value="${supplier.id}">${supplier.companyName} (${supplier.supplierCode})</option>
+                                                        </c:forEach>
+                                                    </select>
                                                 </div>
                                             </div>
                                             
@@ -316,7 +328,7 @@
                                             </div>
                                             
                                             <!-- Lọc theo trạng thái -->
-                                            <div class="col-md-3">
+                                            <div class="col-md-2">
                                                 <div class="form-group">
                                                     <label for="filterStatus" style="font-weight: bold; margin-bottom: 5px;">Trạng thái:</label>
                                                     <select class="form-control" id="filterStatus" onchange="filterProducts()">
@@ -324,6 +336,14 @@
                                                         <option value="active">Đang bán</option>
                                                         <option value="discontinued">Ngừng bán</option>
                                                     </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Tìm kiếm tổng quát -->
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="searchProduct" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
+                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." oninput="filterProducts()">
                                                 </div>
                                             </div>
                                             
@@ -383,7 +403,7 @@
                                             </td>
                                             <td>${product.productName}</td>
                                             <td><fmt:formatNumber value="${product.unitPrice}" type="number" maxFractionDigits="0"/> VNĐ</td>
-                                            <td>
+                                            <td data-supplier-id="${product.supplierId}">
                                                 <c:forEach var="supplier" items="${suppliers}">
                                                     <c:if test="${supplier.id == product.supplierId}">
                                                         ${supplier.companyName}
@@ -1127,6 +1147,7 @@
         
         // Hàm lọc dữ liệu với phân trang cho products
         function filterProductsWithPagination() {
+            var supplierFilter = document.getElementById('filterSupplier').value;
             var categoryFilter = document.getElementById('filterCategory').value.toLowerCase();
             var statusFilter = document.getElementById('filterStatus').value.toLowerCase();
             var searchFilter = document.getElementById('searchProduct').value.toLowerCase();
@@ -1141,6 +1162,7 @@
                 if (cells.length >= 7) {
                     // Lấy dữ liệu từ các cột
                     var productName = cells[2].textContent.trim().toLowerCase();
+                    var supplierName = cells[4].textContent.trim().toLowerCase();
                     var category = cells[5].textContent.trim().toLowerCase();
                     var status = cells[6].textContent.trim().toLowerCase();
                     
@@ -1149,6 +1171,24 @@
                         var rowText = row.textContent.toLowerCase();
                         if (!rowText.includes(searchFilter)) {
                             shouldShow = false;
+                        }
+                    }
+                    
+                    // Kiểm tra lọc theo nhà cung cấp
+                    if (supplierFilter) {
+                        // Tìm supplier ID từ data attribute hoặc từ text content
+                        var supplierId = row.querySelector('[data-supplier-id]');
+                        if (supplierId) {
+                            var rowSupplierId = supplierId.getAttribute('data-supplier-id');
+                            if (rowSupplierId !== supplierFilter) {
+                                shouldShow = false;
+                            }
+                        } else {
+                            // Fallback: so sánh theo tên nhà cung cấp
+                            var expectedSupplierName = getSupplierNameById(supplierFilter);
+                            if (expectedSupplierName && !supplierName.includes(expectedSupplierName.toLowerCase())) {
+                                shouldShow = false;
+                            }
                         }
                     }
                     
@@ -1180,12 +1220,24 @@
         
         // Hàm reset tất cả bộ lọc với phân trang cho products
         function resetFiltersWithPagination() {
+            document.getElementById('filterSupplier').value = '';
             document.getElementById('filterCategory').value = '';
             document.getElementById('filterStatus').value = '';
             document.getElementById('searchProduct').value = '';
             filteredItemsProducts = allItemsProducts.slice();
             currentPageProducts = 1;
             updatePaginationProducts();
+        }
+        
+        // Hàm helper để lấy tên nhà cung cấp theo ID
+        function getSupplierNameById(supplierId) {
+            var supplierSelect = document.getElementById('filterSupplier');
+            for (var i = 0; i < supplierSelect.options.length; i++) {
+                if (supplierSelect.options[i].value === supplierId) {
+                    return supplierSelect.options[i].text.split(' (')[0]; // Lấy tên trước dấu ngoặc
+                }
+            }
+            return null;
         }
         
         // Cập nhật các hàm lọc hiện có để sử dụng phân trang

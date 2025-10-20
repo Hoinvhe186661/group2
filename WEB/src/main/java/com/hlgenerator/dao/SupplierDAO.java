@@ -2,7 +2,6 @@ package com.hlgenerator.dao;
 
 import com.hlgenerator.model.Supplier;
 
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,7 +12,16 @@ public class SupplierDAO extends DBConnect {
     private String lastError;
     public String getLastError() { return lastError; }
 
+    /**
+     * Thêm nhà cung cấp mới vào cơ sở dữ liệu
+     * Tác giả: Sơn Lê
+     */
     public boolean addSupplier(Supplier supplier) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        
         String sql = "INSERT INTO suppliers (supplier_code, company_name, contact_person, email, phone, address, bank_info, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, supplier.getSupplierCode());
@@ -32,8 +40,17 @@ public class SupplierDAO extends DBConnect {
         }
     }
 
+    /**
+     * Lấy danh sách tất cả nhà cung cấp
+     * Tác giả: Sơn Lê
+     */
     public List<Supplier> getAllSuppliers() {
         List<Supplier> list = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return list;
+        }
+        
         String sql = "SELECT * FROM suppliers ORDER BY created_at DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql);
         ResultSet rs = ps.executeQuery()) {
@@ -47,7 +64,16 @@ public class SupplierDAO extends DBConnect {
         return list;
     }
 
+    /**
+     * Lấy nhà cung cấp theo ID
+     * Tác giả: Sơn Lê
+     */
     public Supplier getSupplierById(int id) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return null;
+        }
+        
         String sql = "SELECT * FROM suppliers WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -61,7 +87,16 @@ public class SupplierDAO extends DBConnect {
         return null;
     }
 
+    /**
+     * Cập nhật thông tin nhà cung cấp
+     * Tác giả: Sơn Lê
+     */
     public boolean updateSupplier(Supplier s) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        
         String sql = "UPDATE suppliers SET supplier_code=?, company_name=?, contact_person=?, email=?, phone=?, address=?, bank_info=?, status=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, s.getSupplierCode());
@@ -81,7 +116,16 @@ public class SupplierDAO extends DBConnect {
         }
     }
 
+    /**
+     * Xóa nhà cung cấp theo ID
+     * Tác giả: Sơn Lê
+     */
     public boolean deleteSupplier(int id) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        
         String sql = "DELETE FROM suppliers WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -93,6 +137,10 @@ public class SupplierDAO extends DBConnect {
         }
     }
 
+    /**
+     * Map dữ liệu từ ResultSet thành đối tượng Supplier
+     * Tác giả: Sơn Lê
+     */
     private Supplier mapRow(ResultSet rs) throws SQLException {
         Supplier s = new Supplier();
         s.setId(rs.getInt("id"));
