@@ -525,7 +525,7 @@
       renderPagination(total);
     }
     function load(){
-      fetch(ctx + '/api/support-requests?action=list', {headers:{'Accept':'application/json'}})
+      fetch(ctx + '/api/support-stats?action=list', {headers:{'Accept':'application/json'}})
         .then(r=>r.json()).then(j=>{ 
           allItems = Array.isArray(j.data)? j.data : []; 
           filterItems();
@@ -592,11 +592,13 @@
         const pText = pSel.options[pSel.selectedIndex].textContent;
         composed = '[Sản phẩm: ' + pText + '] ' + composed;
       }
+      data.append('action', 'createSupportRequest');
       data.append('subject', subject);
       data.append('description', composed);
       data.append('category', document.getElementById('category').value || 'general');
+      data.append('priority', 'medium'); // Set priority mặc định
       // backend tự xác định người dùng theo session; không gửi priority/customer/email
-      fetch(ctx + '/api/support-requests', {
+      fetch(ctx + '/api/support-stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
         body: data.toString()
@@ -797,11 +799,13 @@
             var pText = vProduct.options[vProduct.selectedIndex].textContent;
             composed = '[Sản phẩm: ' + pText + '] ' + composed;
           }
+          data.append('action', 'createSupportRequest');
           data.append('subject', subInp.value || '');
           data.append('description', composed);
           data.append('category', catInp.value || 'general');
+          data.append('priority', 'medium');
           data.append('delete_old_id', id); // thêm ID để xóa bản cũ
-          fetch(ctx + '/api/support-requests', {
+          fetch(ctx + '/api/support-stats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: data.toString()
@@ -846,7 +850,7 @@
           data.append('id', id);
           
           console.log('DEBUG: Sending cancel request with:', data.toString());
-          fetch(ctx + '/api/support-requests', {
+          fetch(ctx + '/api/support-stats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: data.toString()

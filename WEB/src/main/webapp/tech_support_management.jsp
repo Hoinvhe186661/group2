@@ -204,6 +204,12 @@
 
             <!-- Main content -->
             <section class="content">
+                <!-- Alert for forwarded tickets -->
+                <div id="forwardedAlert" class="alert alert-info" style="display: none;">
+                    <i class="fa fa-info-circle"></i>
+                    <strong>Thông báo:</strong> Có yêu cầu hỗ trợ mới được chuyển tiếp từ bộ phận khác.
+                </div>
+
                 <!-- Statistics Cards -->
                 <div class="row">
                     <div class="col-md-3">
@@ -581,32 +587,40 @@
         });
         
         function loadTickets() {
-            // Chỉ load ticket được chuyển tiếp (assignedTo = 'head_technician')
-            allTickets = [
-                {
-                    id: 1,
-                    ticketNumber: 'SR-1760274731922',
-                    customerName: 'HieuND1',
-                    customerEmail: 'hieu@example.com',
-                    subject: 'lỗi thanh toán',
-                    description: 'Khách hàng báo lỗi khi thanh toán online',
-                    category: 'billing',
-                    priority: 'urgent',
-                    status: 'in_progress',
-                    createdAt: '2025-10-13T03:12:11',
-                    resolution: '',
-                    assignedTo: 'head_technician'
+            $.ajax({
+                url: ctx + '/api/support-stats?action=list',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        // Lọc chỉ những ticket có internal notes chứa "CHUYỂN TIẾP" (được chuyển tiếp)
+                        allTickets = response.data.filter(function(ticket) {
+                            return ticket.internalNotes && ticket.internalNotes.includes('CHUYỂN TIẾP');
+                        });
+                        
+                        filteredTickets = allTickets;
+                        renderTable();
+                        updateStatistics();
+                        console.log('Đã tải ' + allTickets.length + ' ticket được chuyển tiếp');
+                        
+                        // Hiển thị thông báo nếu có ticket được chuyển tiếp
+                        if (allTickets.length > 0) {
+                            $('#forwardedAlert').show();
+                            $('#forwardedAlert').html('<i class="fa fa-info-circle"></i><strong>Thông báo:</strong> Có ' + allTickets.length + ' yêu cầu hỗ trợ được chuyển tiếp từ bộ phận khác.');
+                            setTimeout(function() {
+                                $('#forwardedAlert').fadeOut();
+                            }, 8000);
+                        }
+                    } else {
+                        console.error('Lỗi tải danh sách ticket:', response.message);
+                        showError('Không thể tải danh sách yêu cầu hỗ trợ');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Không thể tải danh sách ticket:', error);
+                    showError('Lỗi kết nối server');
                 }
-            ];
-            
-            // Lọc chỉ những ticket được gán cho head_technician
-            allTickets = allTickets.filter(function(ticket) {
-                return ticket.assignedTo === 'head_technician';
             });
-            
-            filteredTickets = allTickets;
-            renderTable();
-            updateStatistics();
         }
         
         function updateStatistics() {
@@ -661,7 +675,7 @@
                  }
                  
                  var row = '<tr>' +
-                     '<td>' + (ticket.ticketNumber || '#' + ticket.id) + '</td>' +
+                     '<td><strong>' + (ticket.ticketNumber || '#' + ticket.id) + '</strong></td>' +
                      '<td>' + (ticket.customerName || 'N/A') + '</td>' +
                      '<td>' + (ticket.subject || '') + '</td>' +
                      '<td>' + getCategoryBadge(ticket.category) + '</td>' +
@@ -752,7 +766,7 @@
             $('#detail_status').val(ticket.status || 'open');
             $('#detail_created').text(formatDate(ticket.createdAt));
             $('#detail_resolution').val(ticket.resolution || '');
-            $('#detail_notes').val('');
+            $('#detail_notes').val(ticket.internalNotes || '');
             
             // Phân quyền hiển thị nút và chỉnh sửa
             if (userRole === 'head_technician' || userRole === 'admin') {
@@ -774,11 +788,13 @@
                 category: $('#detail_category').val(),
                 priority: $('#detail_priority').val(),
                 status: $('#detail_status').val(),
-                resolution: $('#detail_resolution').val()
+                resolution: $('#detail_resolution').val(),
+                internalNotes: $('#detail_notes').val()
             };
             
+            console.log('Sending update request:', data);
             $.ajax({
-                url: ctx + '/api/support-requests',
+                url: ctx + '/api/support-stats',
                 type: 'POST',
                 data: data,
                 dataType: 'json',

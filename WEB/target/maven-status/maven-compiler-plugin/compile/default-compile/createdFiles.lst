@@ -1,5 +1,6 @@
 com\hlgenerator\model\Supplier.class
 com\hlgenerator\model\Task.class
+com\hlgenerator\servlet\SupportStatsServlet.class
 com\hlgenerator\servlet\ContractItemsServlet.class
 com\hlgenerator\servlet\ContractServlet.class
 com\hlgenerator\dao\SupportRequestDAO.class
@@ -23,7 +24,6 @@ com\hlgenerator\model\Contract.class
 com\hlgenerator\model\Customer.class
 com\hlgenerator\servlet\SupplierServlet.class
 com\hlgenerator\model\TaskAssignment.class
-com\hlgenerator\servlet\SupportRequestServlet.class
 com\hlgenerator\dao\ProductDAO.class
 com\hlgenerator\dao\TaskDAO.class
 com\hlgenerator\servlet\ProductServlet$ValidationResult.class

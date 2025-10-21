@@ -117,6 +117,7 @@ public class SupportRequestDAO extends DBConnect {
     }
 
     public List<Map<String, Object>> getAllSupportRequests() {
+        System.out.println("Getting all support requests...");
         String sql = "SELECT sr.id, sr.ticket_number, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
                      "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
                      "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
@@ -171,9 +172,11 @@ public class SupportRequestDAO extends DBConnect {
                 out.add(row);
             }
         } catch (SQLException e) {
+            System.out.println("Error in getAllSupportRequests: " + e.getMessage());
             e.printStackTrace();
             lastError = e.getMessage();
         }
+        System.out.println("Returning " + out.size() + " support requests");
         return out;
     }
 
@@ -188,17 +191,36 @@ public class SupportRequestDAO extends DBConnect {
             return false;
         }
         
-        String sql = "UPDATE support_requests SET category = ?, priority = ?, status = ?, resolution = ?, " +
-                     "resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END " +
-                     "WHERE id = ?";
+        String sql;
+        if (category != null) {
+            // Cập nhật tất cả trường bao gồm category
+            sql = "UPDATE support_requests SET category = ?, priority = ?, status = ?, resolution = ?, " +
+                  "resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END " +
+                  "WHERE id = ?";
+        } else {
+            // Chỉ cập nhật priority, status, resolution (không cập nhật category)
+            sql = "UPDATE support_requests SET priority = ?, status = ?, resolution = ?, " +
+                  "resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END " +
+                  "WHERE id = ?";
+        }
+        
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, category);
-            ps.setString(2, priority);
-            ps.setString(3, status);
-            ps.setString(4, resolution);
-            ps.setString(5, status);
-            ps.setString(6, status);
-            ps.setInt(7, id);
+            if (category != null) {
+                ps.setString(1, category);
+                ps.setString(2, priority);
+                ps.setString(3, status);
+                ps.setString(4, resolution);
+                ps.setString(5, status);
+                ps.setString(6, status);
+                ps.setInt(7, id);
+            } else {
+                ps.setString(1, priority);
+                ps.setString(2, status);
+                ps.setString(3, resolution);
+                ps.setString(4, status);
+                ps.setString(5, status);
+                ps.setInt(6, id);
+            }
             
             int result = ps.executeUpdate();
             lastError = null;
@@ -208,6 +230,106 @@ public class SupportRequestDAO extends DBConnect {
             lastError = e.getMessage();
             return false;
         }
+    }
+
+    // Lấy thống kê tổng quan cho dashboard
+    public Map<String, Object> getSupportStats() {
+        Map<String, Object> stats = new HashMap<>();
+        try {
+            // Ticket khẩn cấp
+            String urgentSql = "SELECT COUNT(*) FROM support_requests WHERE priority = 'urgent' AND status IN ('open', 'in_progress')";
+            try (PreparedStatement ps = connection.prepareStatement(urgentSql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    stats.put("urgentTickets", rs.getInt(1));
+                }
+            }
+
+            // Tổng ticket đang mở
+            String openSql = "SELECT COUNT(*) FROM support_requests WHERE status IN ('open', 'in_progress')";
+            try (PreparedStatement ps = connection.prepareStatement(openSql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    stats.put("totalOpenTickets", rs.getInt(1));
+                }
+            }
+
+            // Đã giải quyết hôm nay
+            String resolvedTodaySql = "SELECT COUNT(*) FROM support_requests WHERE DATE(resolved_at) = CURDATE() AND status = 'resolved'";
+            try (PreparedStatement ps = connection.prepareStatement(resolvedTodaySql)) {
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    stats.put("resolvedToday", rs.getInt(1));
+                }
+            }
+
+            // Tỷ lệ hài lòng (giả lập - cần thêm bảng feedback)
+            stats.put("satisfactionRate", "92%");
+
+            // Phân loại theo danh mục
+            String categorySql = "SELECT category, COUNT(*) FROM support_requests WHERE status IN ('open', 'in_progress') GROUP BY category";
+            try (PreparedStatement ps = connection.prepareStatement(categorySql)) {
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    String category = rs.getString(1);
+                    int count = rs.getInt(2);
+                    switch (category) {
+                        case "technical":
+                            stats.put("technicalTickets", count);
+                            break;
+                        case "billing":
+                            stats.put("billingTickets", count);
+                            break;
+                        case "general":
+                            stats.put("generalTickets", count);
+                            break;
+                        case "complaint":
+                            stats.put("complaintTickets", count);
+                            break;
+                    }
+                }
+            }
+
+            // Tin nhắn chưa đọc (giả lập)
+            stats.put("unreadMessages", 4);
+            stats.put("unreadNotifications", 2);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = e.getMessage();
+        }
+        return stats;
+    }
+
+    // Lấy danh sách ticket gần đây
+    public List<Map<String, Object>> getRecentTickets(int limit) {
+        String sql = "SELECT sr.id, sr.ticket_number, sr.subject, sr.category, sr.priority, sr.status, sr.created_at, " +
+                     "c.company_name, c.contact_person " +
+                     "FROM support_requests sr " +
+                     "LEFT JOIN customers c ON sr.customer_id = c.id " +
+                     "ORDER BY sr.created_at DESC LIMIT ?";
+        List<Map<String, Object>> tickets = new ArrayList<>();
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                Map<String, Object> ticket = new HashMap<>();
+                ticket.put("id", rs.getInt("id"));
+                ticket.put("ticketNumber", rs.getString("ticket_number"));
+                ticket.put("subject", rs.getString("subject"));
+                ticket.put("category", rs.getString("category"));
+                ticket.put("priority", rs.getString("priority"));
+                ticket.put("status", rs.getString("status"));
+                ticket.put("customerName", rs.getString("company_name"));
+                ticket.put("contactPerson", rs.getString("contact_person"));
+                ticket.put("createdAt", rs.getTimestamp("created_at"));
+                tickets.add(ticket);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = e.getMessage();
+        }
+        return tickets;
     }
 }
 

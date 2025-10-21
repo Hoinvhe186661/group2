@@ -370,40 +370,9 @@
                                     </thead>
                                     <tbody id="recentTicketsTable">
                                         <tr>
-                                            <td>#TK001</td>
-                                            <td>Nguyễn Văn A</td>
-                                            <td>Máy không khởi động</td>
-                                            <td><span class="label label-info">Kỹ thuật</span></td>
-                                            <td><span class="label label-danger">Khẩn cấp</span></td>
-                                            <td><span class="label label-warning">Đang xử lý</span></td>
-                                            <td>5 phút trước</td>
-                                        </tr>
-                                        <tr>
-                                            <td>#TK002</td>
-                                            <td>Trần Thị B</td>
-                                            <td>Hỏi về bảo hành</td>
-                                            <td><span class="label label-default">Chung</span></td>
-                                            <td><span class="label label-warning">Trung bình</span></td>
-                                            <td><span class="label label-primary">Đang chờ</span></td>
-                                            <td>1 giờ trước</td>
-                                        </tr>
-                                        <tr>
-                                            <td>#TK003</td>
-                                            <td>Lê Văn C</td>
-                                            <td>Thanh toán hóa đơn</td>
-                                            <td><span class="label label-success">Thanh toán</span></td>
-                                            <td><span class="label label-info">Thấp</span></td>
-                                            <td><span class="label label-success">Hoàn thành</span></td>
-                                            <td>2 giờ trước</td>
-                                        </tr>
-                                        <tr>
-                                            <td>#TK004</td>
-                                            <td>Phạm Thị D</td>
-                                            <td>Khiếu nại chất lượng</td>
-                                            <td><span class="label label-danger">Khiếu nại</span></td>
-                                            <td><span class="label label-danger">Cao</span></td>
-                                            <td><span class="label label-warning">Đang xử lý</span></td>
-                                            <td>3 giờ trước</td>
+                                            <td colspan="7" class="text-center">
+                                                <i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -501,46 +470,155 @@
         });
         
         function loadSupportStats() {
-            // Giả lập dữ liệu - sau này sẽ thay bằng API thực
-            $('#urgentTickets').text('3');
-            $('#totalOpenTickets').text('28');
-            $('#resolvedToday').text('15');
-            $('#satisfactionRate').text('92%');
-            
-            $('#technicalTickets').text('12');
-            $('#billingTickets').text('5');
-            $('#generalTickets').text('8');
-            $('#complaintTickets').text('3');
-            
-            $('#openTickets').text('28');
-            $('#unreadMessages').text('4');
-            $('#unreadNotifications').text('2');
-            
-            // Có thể gọi API thực tế như sau:
-            /*
             $.ajax({
-                url: 'api/support?action=getStats',
+                url: 'api/support-stats?action=getStats',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
                         var stats = response.data;
+                        
+                        // Cập nhật thống kê chính
                         $('#urgentTickets').text(stats.urgentTickets || 0);
-                        $('#totalOpenTickets').text(stats.openTickets || 0);
-                        // ... cập nhật các thống kê khác
+                        $('#totalOpenTickets').text(stats.totalOpenTickets || 0);
+                        $('#resolvedToday').text(stats.resolvedToday || 0);
+                        $('#satisfactionRate').text(stats.satisfactionRate || '0%');
+                        
+                        // Cập nhật thống kê theo danh mục
+                        $('#technicalTickets').text(stats.technicalTickets || 0);
+                        $('#billingTickets').text(stats.billingTickets || 0);
+                        $('#generalTickets').text(stats.generalTickets || 0);
+                        $('#complaintTickets').text(stats.complaintTickets || 0);
+                        
+                        // Cập nhật sidebar
+                        $('#openTickets').text(stats.totalOpenTickets || 0);
+                        $('#unreadMessages').text(stats.unreadMessages || 0);
+                        $('#unreadNotifications').text(stats.unreadNotifications || 0);
+                        
+                        console.log('Đã tải thống kê từ database');
+                    } else {
+                        console.error('Lỗi tải thống kê:', response.message);
+                        // Fallback về dữ liệu mặc định
+                        loadDefaultStats();
                     }
                 },
-                error: function() {
-                    console.log('Không thể tải thống kê hỗ trợ');
+                error: function(xhr, status, error) {
+                    console.error('Không thể tải thống kê hỗ trợ:', error);
+                    // Fallback về dữ liệu mặc định
+                    loadDefaultStats();
                 }
             });
-            */
+        }
+        
+        function loadDefaultStats() {
+            // Dữ liệu mặc định khi không kết nối được database
+            $('#urgentTickets').text('0');
+            $('#totalOpenTickets').text('0');
+            $('#resolvedToday').text('0');
+            $('#satisfactionRate').text('0%');
+            
+            $('#technicalTickets').text('0');
+            $('#billingTickets').text('0');
+            $('#generalTickets').text('0');
+            $('#complaintTickets').text('0');
+            
+            $('#openTickets').text('0');
+            $('#unreadMessages').text('0');
+            $('#unreadNotifications').text('0');
         }
         
         function loadRecentTickets() {
-            // Dữ liệu đã được hardcode trong HTML
-            // Sau này có thể load động từ API
-            console.log('Loaded recent tickets');
+            $.ajax({
+                url: 'api/support-stats?action=getRecentTickets&limit=4',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var tickets = response.data;
+                        var tbody = $('#recentTicketsTable');
+                        tbody.empty();
+                        
+                        if (tickets.length === 0) {
+                            tbody.append('<tr><td colspan="7" class="text-center">Chưa có yêu cầu hỗ trợ nào</td></tr>');
+                        } else {
+                            tickets.forEach(function(ticket) {
+                                var row = createTicketRow(ticket);
+                                tbody.append(row);
+                            });
+                        }
+                        
+                        console.log('Đã tải ' + tickets.length + ' ticket gần đây');
+                    } else {
+                        console.error('Lỗi tải danh sách ticket:', response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Không thể tải danh sách ticket:', error);
+                }
+            });
+        }
+        
+        function createTicketRow(ticket) {
+            var categoryLabel = getCategoryLabel(ticket.category);
+            var priorityLabel = getPriorityLabel(ticket.priority);
+            var statusLabel = getStatusLabel(ticket.status);
+            var timeAgo = getTimeAgo(ticket.createdAt);
+            
+            return '<tr>' +
+                '<td>#' + ticket.ticketNumber + '</td>' +
+                '<td>' + (ticket.customerName || ticket.contactPerson || 'N/A') + '</td>' +
+                '<td>' + ticket.subject + '</td>' +
+                '<td>' + categoryLabel + '</td>' +
+                '<td>' + priorityLabel + '</td>' +
+                '<td>' + statusLabel + '</td>' +
+                '<td>' + timeAgo + '</td>' +
+            '</tr>';
+        }
+        
+        function getCategoryLabel(category) {
+            var labels = {
+                'technical': '<span class="label label-info">Kỹ thuật</span>',
+                'billing': '<span class="label label-success">Thanh toán</span>',
+                'general': '<span class="label label-default">Chung</span>',
+                'complaint': '<span class="label label-danger">Khiếu nại</span>'
+            };
+            return labels[category] || '<span class="label label-default">' + category + '</span>';
+        }
+        
+        function getPriorityLabel(priority) {
+            var labels = {
+                'low': '<span class="label label-info">Thấp</span>',
+                'medium': '<span class="label label-warning">Trung bình</span>',
+                'high': '<span class="label label-danger">Cao</span>',
+                'urgent': '<span class="label label-danger">Khẩn cấp</span>'
+            };
+            return labels[priority] || '<span class="label label-default">' + priority + '</span>';
+        }
+        
+        function getStatusLabel(status) {
+            var labels = {
+                'open': '<span class="label label-primary">Đang chờ</span>',
+                'in_progress': '<span class="label label-warning">Đang xử lý</span>',
+                'resolved': '<span class="label label-success">Hoàn thành</span>',
+                'closed': '<span class="label label-default">Đã đóng</span>'
+            };
+            return labels[status] || '<span class="label label-default">' + status + '</span>';
+        }
+        
+        function getTimeAgo(createdAt) {
+            if (!createdAt) return 'N/A';
+            
+            var now = new Date();
+            var created = new Date(createdAt);
+            var diffMs = now - created;
+            var diffMins = Math.floor(diffMs / 60000);
+            var diffHours = Math.floor(diffMins / 60);
+            var diffDays = Math.floor(diffHours / 24);
+            
+            if (diffMins < 1) return 'Vừa xong';
+            if (diffMins < 60) return diffMins + ' phút trước';
+            if (diffHours < 24) return diffHours + ' giờ trước';
+            return diffDays + ' ngày trước';
         }
     </script>
     
