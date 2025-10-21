@@ -290,16 +290,14 @@
     // Chuyển đổi vai trò sang tiếng Việt
     private String roleLabel(String raw) {
         if (raw == null) return "-";
-        switch (raw) {
-            case "admin": return "Quản trị viên";
-            case "customer_support": return "Hỗ trợ khách hàng";
-            case "technical_staff": return "Nhân viên kỹ thuật";
-            case "head_technician": return "Trưởng phòng kỹ thuật";
-            case "storekeeper": return "Thủ kho";
-            case "customer": return "Khách hàng";
-            case "guest": return "Khách";
-            default: return raw;
-        }
+        if ("admin".equals(raw)) return "Quản trị viên";
+        if ("customer_support".equals(raw)) return "Hỗ trợ khách hàng";
+        if ("technical_staff".equals(raw)) return "Nhân viên kỹ thuật";
+        if ("head_technician".equals(raw)) return "Trưởng phòng kỹ thuật";
+        if ("storekeeper".equals(raw)) return "Thủ kho";
+        if ("customer".equals(raw)) return "Khách hàng";
+        if ("guest".equals(raw)) return "Khách";
+        return raw;
     }
     
     // Chuyển đổi trạng thái sang tiếng Việt
@@ -321,7 +319,7 @@
     String pStatus = decodeParam(request.getParameter("status"));
 
     // Lọc danh sách người dùng theo các điều kiện
-    java.util.List<com.hlgenerator.model.User> filteredUsers = new java.util.ArrayList<>();
+    java.util.List<com.hlgenerator.model.User> filteredUsers = new java.util.ArrayList<com.hlgenerator.model.User>();
     for (com.hlgenerator.model.User u : allUsers) {
         // Tìm kiếm theo các trường text
         if (!containsParam(pUsername, u.getUsername())) continue;
@@ -342,7 +340,7 @@
     }
 
     // Lấy danh sách vai trò để hiển thị trong dropdown
-    java.util.Set<String> roles = new java.util.TreeSet<>();
+    java.util.Set<String> roles = new java.util.TreeSet<String>();
     for (com.hlgenerator.model.User u : allUsers) {
         String role = getUserRole(u);
         if (role != null && !role.isEmpty()) {
