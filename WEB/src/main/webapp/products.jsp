@@ -186,21 +186,7 @@
                             <i class="fa fa-archive"></i> <span>Quản lý kho</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/customers.jsp">
-                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/reports.jsp">
-                            <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/settings.jsp">
-                            <i class="fa fa-cog"></i> <span>Cài đặt</span>
-                        </a>
-                    </li>
+                   
                 </ul>
             </section>
             <!-- /.sidebar -->
@@ -888,6 +874,50 @@
         }
 
         function updateProduct() {
+            // Kiểm tra validation trước khi gửi
+            var productCode = $('#edit_product_code').val().trim();
+            var productName = $('#edit_product_name').val().trim();
+            var category = $('#edit_category').val().trim();
+            var unit = $('#edit_unit').val().trim();
+            var unitPrice = $('#edit_unit_price').val();
+            var supplierId = $('#edit_supplier_id').val();
+            
+            if (!productCode) {
+                alert('Mã sản phẩm không được để trống!');
+                $('#edit_product_code').focus();
+                return;
+            }
+            
+            if (!productName) {
+                alert('Tên sản phẩm không được để trống!');
+                $('#edit_product_name').focus();
+                return;
+            }
+            
+            if (!category) {
+                alert('Danh mục không được để trống!');
+                $('#edit_category').focus();
+                return;
+            }
+            
+            if (!unit) {
+                alert('Đơn vị tính không được để trống!');
+                $('#edit_unit').focus();
+                return;
+            }
+            
+            if (!unitPrice || unitPrice <= 0) {
+                alert('Giá bán phải lớn hơn 0!');
+                $('#edit_unit_price').focus();
+                return;
+            }
+            
+            if (!supplierId || supplierId === '') {
+                alert('Vui lòng chọn nhà cung cấp!');
+                $('#edit_supplier_id').focus();
+                return;
+            }
+            
             // Sử dụng FormData để xử lý file upload và form data
             var form = document.getElementById('editProductForm');
             var formData = new FormData(form);
@@ -943,9 +973,46 @@
 
         function submitAddProduct() {
             // Kiểm tra validation trước khi gửi
+            var productCode = $('#product_code').val().trim();
+            var productName = $('#product_name').val().trim();
+            var category = $('#category').val().trim();
+            var unit = $('#unit').val().trim();
+            var unitPrice = $('#unit_price').val();
             var supplierId = $('#supplier_id').val();
+            
+            if (!productCode) {
+                alert('Mã sản phẩm không được để trống!');
+                $('#product_code').focus();
+                return;
+            }
+            
+            if (!productName) {
+                alert('Tên sản phẩm không được để trống!');
+                $('#product_name').focus();
+                return;
+            }
+            
+            if (!category) {
+                alert('Danh mục không được để trống!');
+                $('#category').focus();
+                return;
+            }
+            
+            if (!unit) {
+                alert('Đơn vị tính không được để trống!');
+                $('#unit').focus();
+                return;
+            }
+            
+            if (!unitPrice || unitPrice <= 0) {
+                alert('Giá bán phải lớn hơn 0!');
+                $('#unit_price').focus();
+                return;
+            }
+            
             if (!supplierId || supplierId === '') {
-                alert('Vui lòng chọn nhà cung cấp');
+                alert('Vui lòng chọn nhà cung cấp!');
+                $('#supplier_id').focus();
                 return;
             }
             

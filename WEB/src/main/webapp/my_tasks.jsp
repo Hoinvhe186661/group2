@@ -107,7 +107,7 @@
                                         </div>
                                         <div class="form-group" style="margin-right: 8px;">
                                             <label for="q">Tìm:&nbsp;</label>
-                                            <input type="text" id="q" class="form-control" placeholder="WO/Task/tiêu đề/mô tả">
+                                            <input type="text" id="q" class="form-control" placeholder="Mã nhiệm vụ (vd: T-002)">
                                         </div>
                                         <button class="btn btn-default" type="submit"><i class="fa fa-filter"></i> Lọc</button>
                                         <button class="btn btn-link" type="button" onclick="resetFilters()">Xóa lọc</button>

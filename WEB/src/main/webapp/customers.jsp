@@ -199,12 +199,7 @@
                                 
                                 <form class="form-inline" method="get" action="customers.jsp" accept-charset="UTF-8" style="margin-bottom: 10px;">
                                     <div class="row" style="margin-bottom: 10px;">
-                                        <div class="col-sm-3">
-                                            <label for="filterCustomerCode">Mã khách hàng</label>
-                                            <input type="text" id="filterCustomerCode" name="customerCode" 
-                                                   class="form-control" placeholder="Tìm kiếm mã khách hàng..." 
-                                                   value="<%= pCode != null ? pCode : "" %>" style="width:100%">
-                                        </div>
+                                        
                                         <div class="col-sm-3">
                                             <label for="filterCustomerType">Loại khách hàng</label>
                                             <select id="filterCustomerType" name="customerType" class="form-control" style="width:100%">
@@ -231,20 +226,10 @@
                                                 <% } %>
                                             </select>
                                         </div>
-                                        <div class="col-sm-3">
-                                            <label for="filterContactPerson">Người liên hệ</label>
-                                            <input type="text" id="filterContactPerson" name="contactPerson" 
-                                                   class="form-control" placeholder="Tìm kiếm người liên hệ..." 
-                                                   value="<%= pContact != null ? pContact : "" %>" style="width:100%">
-                                        </div>
+                                        
                                     </div>
                                     <div class="row" style="margin-bottom: 10px;">
-                                        <div class="col-sm-3">
-                                            <label for="filterAddress">Địa chỉ</label>
-                                            <input type="text" id="filterAddress" name="address" 
-                                                   class="form-control" placeholder="Tìm kiếm địa chỉ..." 
-                                                   value="<%= pAddress != null ? pAddress : "" %>" style="width:100%">
-                                        </div>
+                                        
                                     </div>
                                     <div class="row" style="margin-bottom: 10px;">
                                         <div class="col-sm-12">

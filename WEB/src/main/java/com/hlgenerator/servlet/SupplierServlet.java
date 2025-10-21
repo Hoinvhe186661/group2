@@ -45,11 +45,33 @@ public class SupplierServlet extends HttpServlet {
      */
     private void showSuppliersPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
-            // Lấy danh sách nhà cung cấp
-            List<Supplier> suppliers = supplierDAO.getAllSuppliers();
+            // Lấy tham số lọc từ request
+            String companyName = request.getParameter("companyFilter");
+            String contactPerson = request.getParameter("contactFilter");
+            String status = request.getParameter("statusFilter");
+            String keyword = request.getParameter("searchInput");
+            
+            // Lấy danh sách nhà cung cấp (có hoặc không có lọc)
+            List<Supplier> suppliers;
+            if ((companyName != null && !companyName.isEmpty()) || 
+                (contactPerson != null && !contactPerson.isEmpty()) || 
+                (status != null && !status.isEmpty()) || 
+                (keyword != null && !keyword.isEmpty())) {
+                suppliers = supplierDAO.getFilteredSuppliers(companyName, contactPerson, status, keyword);
+            } else {
+                suppliers = supplierDAO.getAllSuppliers();
+            }
+            
+            // Lấy danh sách tất cả để tạo dropdown lọc
+            List<Supplier> allSuppliers = supplierDAO.getAllSuppliers();
             
             // Set attributes cho JSP
             request.setAttribute("suppliers", suppliers);
+            request.setAttribute("allSuppliers", allSuppliers);
+            request.setAttribute("companyFilter", companyName);
+            request.setAttribute("contactFilter", contactPerson);
+            request.setAttribute("statusFilter", status);
+            request.setAttribute("searchInput", keyword);
             
             // Forward to JSP
             request.getRequestDispatcher("/supplier.jsp").forward(request, response);

@@ -86,10 +86,7 @@ public class TaskDAO extends DBConnect {
 			sql.append("AND wo.scheduled_date <= ? ");
 		}
 		if (keyword != null && !keyword.isEmpty()) {
-			sql.append("AND ( ");
-			sql.append("t.task_number LIKE ? OR t.task_description LIKE ? OR ");
-			sql.append("wo.work_order_number LIKE ? OR wo.title LIKE ? ");
-			sql.append(") ");
+			sql.append("AND LOWER(t.task_number) LIKE LOWER(?) ");
 		}
 		sql.append("ORDER BY t.updated_at DESC, t.created_at DESC");
 
@@ -105,31 +102,28 @@ public class TaskDAO extends DBConnect {
 			if (scheduledFrom != null) {
 				ps.setDate(idx++, scheduledFrom);
 			}
-			if (scheduledTo != null) {
-				ps.setDate(idx++, scheduledTo);
-			}
-			if (keyword != null && !keyword.isEmpty()) {
-				String like = "%" + keyword + "%";
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-			}
-			try (ResultSet rs = ps.executeQuery()) {
-				while (rs.next()) {
-					TaskAssignment a = new TaskAssignment();
-					a.setId(rs.getInt("id"));
-					a.setTaskId(rs.getInt("task_id"));
-					a.setUserId(rs.getInt("user_id"));
-					a.setRole(rs.getString("role"));
-					a.setAssignedAt(rs.getTimestamp("assigned_at"));
-					a.setTaskNumber(rs.getString("task_number"));
-					a.setTaskDescription(rs.getString("task_description"));
-					a.setTaskStatus(rs.getString("task_status"));
-					a.setTaskPriority(rs.getString("task_priority"));
-					a.setWorkOrderNumber(rs.getString("work_order_number"));
-					a.setWorkOrderTitle(rs.getString("work_order_title"));
-					results.add(a);
+		if (scheduledTo != null) {
+			ps.setDate(idx++, scheduledTo);
+		}
+		if (keyword != null && !keyword.isEmpty()) {
+			String like = "%" + keyword + "%";
+			ps.setString(idx++, like);
+		}
+		try (ResultSet rs = ps.executeQuery()) {
+			while (rs.next()) {
+				TaskAssignment a = new TaskAssignment();
+				a.setId(rs.getInt("id"));
+				a.setTaskId(rs.getInt("task_id"));
+				a.setUserId(rs.getInt("user_id"));
+				a.setRole(rs.getString("role"));
+				a.setAssignedAt(rs.getTimestamp("assigned_at"));
+				a.setTaskNumber(rs.getString("task_number"));
+				a.setTaskDescription(rs.getString("task_description"));
+				a.setTaskStatus(rs.getString("task_status"));
+				a.setTaskPriority(rs.getString("task_priority"));
+				a.setWorkOrderNumber(rs.getString("work_order_number"));
+				a.setWorkOrderTitle(rs.getString("work_order_title"));
+				results.add(a);
 				}
 			}
 		} catch (SQLException e) {
@@ -157,24 +151,21 @@ public class TaskDAO extends DBConnect {
 		if (scheduledFrom != null) sql.append("AND wo.scheduled_date >= ? ");
 		if (scheduledTo != null) sql.append("AND wo.scheduled_date <= ? ");
 		if (keyword != null && !keyword.isEmpty()) {
-			sql.append("AND (t.task_number LIKE ? OR t.task_description LIKE ? OR wo.work_order_number LIKE ? OR wo.title LIKE ?) ");
+			sql.append("AND LOWER(t.task_number) LIKE LOWER(?) ");
 		}
 		try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
 			int idx = 1;
 			ps.setInt(idx++, userId);
 			if (status != null && !status.isEmpty()) ps.setString(idx++, status);
 			if (priority != null && !priority.isEmpty()) ps.setString(idx++, priority);
-			if (scheduledFrom != null) ps.setDate(idx++, scheduledFrom);
-			if (scheduledTo != null) ps.setDate(idx++, scheduledTo);
-			if (keyword != null && !keyword.isEmpty()) {
-				String like = "%" + keyword + "%";
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-			}
-			try (ResultSet rs = ps.executeQuery()) {
-				if (rs.next()) return rs.getInt("cnt");
+		if (scheduledFrom != null) ps.setDate(idx++, scheduledFrom);
+		if (scheduledTo != null) ps.setDate(idx++, scheduledTo);
+		if (keyword != null && !keyword.isEmpty()) {
+			String like = "%" + keyword + "%";
+			ps.setString(idx++, like);
+		}
+		try (ResultSet rs = ps.executeQuery()) {
+			if (rs.next()) return rs.getInt("cnt");
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -207,7 +198,7 @@ public class TaskDAO extends DBConnect {
 		if (scheduledFrom != null) sql.append("AND wo.scheduled_date >= ? ");
 		if (scheduledTo != null) sql.append("AND wo.scheduled_date <= ? ");
 		if (keyword != null && !keyword.isEmpty()) {
-			sql.append("AND (t.task_number LIKE ? OR t.task_description LIKE ? OR wo.work_order_number LIKE ? OR wo.title LIKE ?) ");
+			sql.append("AND LOWER(t.task_number) LIKE LOWER(?) ");
 		}
 		sql.append("ORDER BY t.updated_at DESC, t.created_at DESC ");
 		sql.append("LIMIT ? OFFSET ?");
@@ -217,17 +208,14 @@ public class TaskDAO extends DBConnect {
 			ps.setInt(idx++, userId);
 			if (status != null && !status.isEmpty()) ps.setString(idx++, status);
 			if (priority != null && !priority.isEmpty()) ps.setString(idx++, priority);
-			if (scheduledFrom != null) ps.setDate(idx++, scheduledFrom);
-			if (scheduledTo != null) ps.setDate(idx++, scheduledTo);
-			if (keyword != null && !keyword.isEmpty()) {
-				String like = "%" + keyword + "%";
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-				ps.setString(idx++, like);
-			}
-			ps.setInt(idx++, limit);
-			ps.setInt(idx, offset);
+		if (scheduledFrom != null) ps.setDate(idx++, scheduledFrom);
+		if (scheduledTo != null) ps.setDate(idx++, scheduledTo);
+		if (keyword != null && !keyword.isEmpty()) {
+			String like = "%" + keyword + "%";
+			ps.setString(idx++, like);
+		}
+		ps.setInt(idx++, limit);
+		ps.setInt(idx, offset);
 			try (ResultSet rs = ps.executeQuery()) {
 				while (rs.next()) {
 					TaskAssignment a = new TaskAssignment();

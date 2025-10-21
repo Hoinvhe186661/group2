@@ -138,6 +138,63 @@ public class SupplierDAO extends DBConnect {
     }
 
     /**
+     * Lấy danh sách nhà cung cấp có lọc và phân trang
+     * Tác giả: Sơn Lê
+     */
+    public List<Supplier> getFilteredSuppliers(String companyName, String contactPerson, String status, String keyword) {
+        List<Supplier> list = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return list;
+        }
+        
+        StringBuilder sql = new StringBuilder("SELECT * FROM suppliers WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        
+        if (companyName != null && !companyName.trim().isEmpty()) {
+            sql.append(" AND company_name = ?");
+            params.add(companyName);
+        }
+        
+        if (contactPerson != null && !contactPerson.trim().isEmpty()) {
+            sql.append(" AND contact_person = ?");
+            params.add(contactPerson);
+        }
+        
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status);
+        }
+        
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (LOWER(supplier_code) LIKE LOWER(?) OR LOWER(company_name) LIKE LOWER(?) OR LOWER(contact_person) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?) OR LOWER(phone) LIKE LOWER(?))");
+            String likeKeyword = "%" + keyword + "%";
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+        }
+        
+        sql.append(" ORDER BY created_at DESC");
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            lastError = e.getMessage();
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /**
      * Map dữ liệu từ ResultSet thành đối tượng Supplier
      * Tác giả: Sơn Lê
      */

@@ -253,14 +253,14 @@
                             <div class="panel-body table-responsive">
 <% request.setCharacterEncoding("UTF-8"); %>
 <%! 
-    // So sánh chính xác (dùng cho dropdown)
+   
     private boolean equalsParam(String param, String actual) {
         if (param == null || param.trim().isEmpty()) return true;
         String val = actual == null ? "" : actual.trim();
         return param.trim().equalsIgnoreCase(val);
     }
     
-    // Tìm kiếm chứa từ khóa (dùng cho ô tìm kiếm)
+   
     private boolean containsParam(String param, String actual) {
         if (param == null || param.trim().isEmpty()) return true;
         String val = actual == null ? "" : actual.trim().toLowerCase();
@@ -277,7 +277,7 @@
         }
     }
     
-    // Lấy vai trò của user
+    
     private String getUserRole(com.hlgenerator.model.User user) {
         try {
             String role = (String)com.hlgenerator.model.User.class.getMethod("getRole").invoke(user);
@@ -287,7 +287,7 @@
         }
     }
     
-    // Chuyển đổi vai trò sang tiếng Việt
+    
     private String roleLabel(String raw) {
         if (raw == null) return "-";
         if ("admin".equals(raw)) return "Quản trị viên";
@@ -306,11 +306,11 @@
     }
 %>
 <%
-    // Load danh sách người dùng
+    
     com.hlgenerator.dao.UserDAO filterDao = new com.hlgenerator.dao.UserDAO();
     java.util.List<com.hlgenerator.model.User> allUsers = filterDao.getAllUsers();
     
-    // Lấy tham số filter từ URL
+   
     String pUsername = decodeParam(request.getParameter("username"));
     String pEmail = decodeParam(request.getParameter("email"));
     String pFullName = decodeParam(request.getParameter("fullName"));
@@ -351,30 +351,7 @@
                                 
                                 <form class="form-inline" method="get" action="users.jsp" accept-charset="UTF-8" style="margin-bottom: 10px;">
                                     <div class="row" style="margin-bottom: 10px;">
-                                        <div class="col-sm-2">
-                                            <label for="filterUsername">Tên đăng nhập</label>
-                                            <input type="text" id="filterUsername" name="username" 
-                                                   class="form-control" placeholder="Tìm kiếm..." 
-                                                   value="<%= pUsername != null ? pUsername : "" %>" style="width:100%">
-                                        </div>
-                                        <div class="col-sm-2">
-                                            <label for="filterEmail">Email</label>
-                                            <input type="text" id="filterEmail" name="email" 
-                                                   class="form-control" placeholder="Tìm kiếm..." 
-                                                   value="<%= pEmail != null ? pEmail : "" %>" style="width:100%">
-                                        </div>
-                                        <div class="col-sm-2">
-                                            <label for="filterFullName">Họ tên</label>
-                                            <input type="text" id="filterFullName" name="fullName" 
-                                                   class="form-control" placeholder="Tìm kiếm..." 
-                                                   value="<%= pFullName != null ? pFullName : "" %>" style="width:100%">
-                                        </div>
-                                        <div class="col-sm-2">
-                                            <label for="filterPhone">Số điện thoại</label>
-                                            <input type="text" id="filterPhone" name="phone" 
-                                                   class="form-control" placeholder="Tìm kiếm..." 
-                                                   value="<%= pPhone != null ? pPhone : "" %>" style="width:100%">
-                                        </div>
+                                        
                                         <div class="col-sm-2">
                                             <label for="filterRole">Vai trò</label>
                                             <select id="filterRole" name="role" class="form-control" style="width:100%">

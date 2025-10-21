@@ -20,6 +20,29 @@
     .nav-icons i { font-size:20px; color:#343a40; cursor:pointer; }
     .nav-icons a { color: inherit; text-decoration: none; transition: color 0.3s ease; }
     .nav-icons a:hover { color: #dc3545; }
+    .management-icon-link { 
+        position: relative; 
+        display: inline-flex; 
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white !important;
+        margin-right: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+    .management-icon-link:hover { 
+        color: white !important; 
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5);
+    }
+    .management-icon-link i { 
+        font-size: 15px; 
+        color: white;
+    }
     .navbar-nav .nav-link { color:#343a40 !important; font-weight:500; margin:0 8px; padding:8px 12px !important; text-transform:uppercase; font-size:14px; }
     .navbar-nav .nav-link:hover { color:#dc3545 !important; }
     .navbar-nav .nav-link.active { color:#dc3545 !important; font-weight:700; }
@@ -57,6 +80,35 @@
             <div class="nav-icons">
                 <c:choose>
                     <c:when test="${sessionScope.isLoggedIn eq true}">
+                        <%-- Icon quản lý cho staff/admin --%>
+                        <c:choose>
+                            <c:when test="${sessionScope.userRole eq 'admin'}">
+                                <a href="${pageContext.request.contextPath}/admin.jsp" class="management-icon-link" title="Trang quản trị">
+                                    <i class="fas fa-user-cog"></i>
+                                </a>
+                            </c:when>
+                            <c:when test="${sessionScope.userRole eq 'customer_support'}">
+                                <a href="${pageContext.request.contextPath}/customersupport.jsp" class="management-icon-link" title="Trang quản lý">
+                                    <i class="fas fa-headset"></i>
+                                </a>
+                            </c:when>
+                            <c:when test="${sessionScope.userRole eq 'head_technician'}">
+                                <a href="${pageContext.request.contextPath}/headtech.jsp" class="management-icon-link" title="Trang quản lý">
+                                    <i class="fas fa-user-tie"></i>
+                                </a>
+                            </c:when>
+                            <c:when test="${sessionScope.userRole eq 'technical_staff'}">
+                                <a href="${pageContext.request.contextPath}/technical_staff.jsp" class="management-icon-link" title="Trang quản lý">
+                                    <i class="fas fa-tools"></i>
+                                </a>
+                            </c:when>
+                            <c:when test="${sessionScope.userRole eq 'storekeeper'}">
+                                <a href="${pageContext.request.contextPath}/product" class="management-icon-link" title="Trang quản lý">
+                                    <i class="fas fa-warehouse"></i>
+                                </a>
+                            </c:when>
+                        </c:choose>
+                        
                         <a href="profile.jsp" class="user-info" style="color: #dc3545; font-weight: 600; margin-right: 15px; text-decoration:none;">
                             <i class="fas fa-user"></i>
                             <c:out value="${empty sessionScope.fullName ? sessionScope.username : sessionScope.fullName}"/>
