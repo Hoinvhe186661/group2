@@ -50,6 +50,16 @@
             transition: border-color 0.3s ease;
         }
         
+        .filter-panel .btn {
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-panel .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
         .filter-panel .form-control:focus {
             border-color: #3c8dbc;
             box-shadow: 0 0 5px rgba(60, 141, 188, 0.3);
@@ -172,7 +182,7 @@
                         </a>
                     </li>
                     <li class="active">
-                        <a href="<%=request.getContextPath()%>/product">
+                        <a href="<%=request.getContextPath()%>/product.jsp">
                             <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
                         </a>
                     </li>
@@ -291,7 +301,7 @@
                                             <div class="col-md-3">
                                                 <div class="form-group">
                                                     <label for="filterSupplier" style="font-weight: bold; margin-bottom: 5px;">Nhà cung cấp:</label>
-                                                    <select class="form-control" id="filterSupplier" onchange="filterProducts()">
+                                                    <select class="form-control" id="filterSupplier">
                                                         <option value="">Tất cả nhà cung cấp</option>
                                                         <c:forEach var="supplier" items="${suppliers}">
                                                             <option value="${supplier.id}">${supplier.companyName} (${supplier.supplierCode})</option>
@@ -304,7 +314,7 @@
                                             <div class="col-md-3">
                                                 <div class="form-group">
                                                     <label for="filterCategory" style="font-weight: bold; margin-bottom: 5px;">Danh mục:</label>
-                                                    <select class="form-control" id="filterCategory" onchange="filterProducts()">
+                                                    <select class="form-control" id="filterCategory">
                                                         <option value="">Tất cả danh mục</option>
                                                         <c:forEach var="category" items="${categories}">
                                                             <option value="${category}">${category}</option>
@@ -317,7 +327,7 @@
                                             <div class="col-md-2">
                                                 <div class="form-group">
                                                     <label for="filterStatus" style="font-weight: bold; margin-bottom: 5px;">Trạng thái:</label>
-                                                    <select class="form-control" id="filterStatus" onchange="filterProducts()">
+                                                    <select class="form-control" id="filterStatus">
                                                         <option value="">Tất cả trạng thái</option>
                                                         <option value="active">Đang bán</option>
                                                         <option value="discontinued">Ngừng bán</option>
@@ -326,10 +336,20 @@
                                             </div>
                                             
                                             <!-- Tìm kiếm tổng quát -->
-                                            <div class="col-md-3">
+                                            <div class="col-md-2">
                                                 <div class="form-group">
                                                     <label for="searchProduct" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
-                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." oninput="filterProducts()">
+                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." onkeypress="if(event.key==='Enter') filterProducts()">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Nút lọc -->
+                                            <div class="col-md-1">
+                                                <div class="form-group">
+                                                    <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
+                                                    <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="filterProducts()" title="Áp dụng bộ lọc">
+                                                        <i class="fa fa-search"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                             
@@ -390,11 +410,7 @@
                                             <td>${product.productName}</td>
                                             <td><fmt:formatNumber value="${product.unitPrice}" type="number" maxFractionDigits="0"/> VNĐ</td>
                                             <td data-supplier-id="${product.supplierId}">
-                                                <c:forEach var="supplier" items="${suppliers}">
-                                                    <c:if test="${supplier.id == product.supplierId}">
-                                                        ${supplier.companyName}
-                                                    </c:if>
-                                                </c:forEach>
+                                                ${not empty product.supplierName ? product.supplierName : 'Chưa có thông tin'}
                                             </td>
                                             <td>${not empty product.category ? product.category : 'Chưa phân loại'}</td>
                                             <td>
@@ -428,9 +444,8 @@
                                 <!-- Phân trang -->
                                 <div class="row" style="margin-top: 20px;">
                                     <div class="col-md-8">
-                                        <div class="dataTables_info" id="productsTable_info" role="status" aria-live="polite">
-                                            Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> 
-                                            trong tổng số <span id="totalRecords">0</span> bản ghi
+                                        <div class="dataTables_info" id="paginationInfo" role="status" aria-live="polite">
+                                            Hiển thị <span id="showingStart">1</span> đến <span id="showingEnd">10</span> trong tổng số <span id="totalRecords">0</span> sản phẩm
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -672,7 +687,8 @@
     <script src="<%=request.getContextPath()%>/js/Director/app.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-
+        // Không cần kiểm tra quyền vì đã đăng nhập với quyền quản lý kho
+        
         // Hàm preview ảnh từ file upload (sửa sản phẩm)
         function previewEditImageFile(input) {
             var wrap = document.getElementById('editImagePreview');
@@ -1205,95 +1221,261 @@
         
         // Hàm chuyển đến trang cho products
         function goToPageProducts(page) {
-            if (page < 1 || page > Math.ceil(filteredItemsProducts.length / itemsPerPageProducts)) {
-                return;
-            }
             currentPageProducts = page;
-            updatePaginationProducts();
+            filterProductsWithPagination();
         }
         
-        // Hàm lọc dữ liệu với phân trang cho products
+        // Hàm lọc sản phẩm sử dụng AJAX (backend processing)
         function filterProductsWithPagination() {
             var supplierFilter = document.getElementById('filterSupplier').value;
-            var categoryFilter = document.getElementById('filterCategory').value.toLowerCase();
-            var statusFilter = document.getElementById('filterStatus').value.toLowerCase();
-            var searchFilter = document.getElementById('searchProduct').value.toLowerCase();
+            var categoryFilter = document.getElementById('filterCategory').value;
+            var statusFilter = document.getElementById('filterStatus').value;
+            var searchFilter = document.getElementById('searchProduct').value;
             
-            filteredItemsProducts = [];
+            console.log('Filtering with:', {
+                supplier: supplierFilter,
+                category: categoryFilter,
+                status: statusFilter,
+                search: searchFilter,
+                page: currentPageProducts
+            });
             
-            for (var i = 0; i < allItemsProducts.length; i++) {
-                var row = allItemsProducts[i];
-                var cells = row.getElementsByTagName('td');
-                var shouldShow = true;
-                
-                if (cells.length >= 7) {
-                    // Lấy dữ liệu từ các cột
-                    var productName = cells[2].textContent.trim().toLowerCase();
-                    var supplierName = cells[4].textContent.trim().toLowerCase();
-                    var category = cells[5].textContent.trim().toLowerCase();
-                    var status = cells[6].textContent.trim().toLowerCase();
-                    
-                    // Kiểm tra tìm kiếm tổng quát
-                    if (searchFilter) {
-                        var rowText = row.textContent.toLowerCase();
-                        if (!rowText.includes(searchFilter)) {
-                            shouldShow = false;
-                        }
+            // Hiển thị loading
+            showLoading();
+            
+            // Gọi AJAX để lọc sản phẩm từ backend
+            $.ajax({
+                url: '<%=request.getContextPath()%>/product?action=filter',
+                type: 'GET',
+                data: {
+                    supplierId: supplierFilter,
+                    category: categoryFilter,
+                    status: statusFilter,
+                    search: searchFilter,
+                    page: currentPageProducts,
+                    pageSize: itemsPerPageProducts
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('AJAX Response:', response);
+                    if (response.success) {
+                        // Cập nhật dữ liệu sản phẩm
+                        updateProductsTable(response.products);
+                        
+                        // Cập nhật thông tin phân trang
+                        updatePaginationInfo(response);
+                        
+                        // Cập nhật dropdown nhà cung cấp và danh mục
+                        updateFilterDropdowns(response.suppliers, response.categories);
+                    } else {
+                        alert('Lỗi khi lọc sản phẩm: ' + (response.message || 'Lỗi không xác định'));
                     }
-                    
-                    // Kiểm tra lọc theo nhà cung cấp
-                    if (supplierFilter) {
-                        // Tìm supplier ID từ data attribute hoặc từ text content
-                        var supplierId = row.querySelector('[data-supplier-id]');
-                        if (supplierId) {
-                            var rowSupplierId = supplierId.getAttribute('data-supplier-id');
-                            if (rowSupplierId !== supplierFilter) {
-                                shouldShow = false;
-                            }
-                        } else {
-                            // Fallback: so sánh theo tên nhà cung cấp
-                            var expectedSupplierName = getSupplierNameById(supplierFilter);
-                            if (expectedSupplierName && !supplierName.includes(expectedSupplierName.toLowerCase())) {
-                                shouldShow = false;
-                            }
-                        }
-                    }
-                    
-                    // Kiểm tra lọc theo danh mục
-                    if (categoryFilter && !category.includes(categoryFilter)) {
-                        shouldShow = false;
-                    }
-                    
-                    // Kiểm tra lọc theo trạng thái
-                    if (statusFilter) {
-                        if (statusFilter === 'active' && !status.includes('đang bán')) {
-                            shouldShow = false;
-                        }
-                        if (statusFilter === 'discontinued' && !status.includes('ngừng bán')) {
-                            shouldShow = false;
-                        }
-                    }
+                    hideLoading();
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    alert('Lỗi kết nối đến server: ' + error);
+                    hideLoading();
                 }
-                
-                if (shouldShow) {
-                    filteredItemsProducts.push(row);
-                }
-            }
-            
-            // Reset về trang 1 khi lọc
-            currentPageProducts = 1;
-            updatePaginationProducts();
+            });
         }
         
-        // Hàm reset tất cả bộ lọc với phân trang cho products
-        function resetFiltersWithPagination() {
-            document.getElementById('filterSupplier').value = '';
-            document.getElementById('filterCategory').value = '';
-            document.getElementById('filterStatus').value = '';
-            document.getElementById('searchProduct').value = '';
-            filteredItemsProducts = allItemsProducts.slice();
-            currentPageProducts = 1;
-            updatePaginationProducts();
+         // Hàm reset tất cả bộ lọc với phân trang cho products
+         function resetFiltersWithPagination() {
+             document.getElementById('filterSupplier').value = '';
+             document.getElementById('filterCategory').value = '';
+             document.getElementById('filterStatus').value = '';
+             document.getElementById('searchProduct').value = '';
+             currentPageProducts = 1;
+             // Reload trang để trở về trạng thái ban đầu thay vì gọi AJAX
+             window.location.reload();
+         }
+        
+        // Hàm cập nhật bảng sản phẩm từ dữ liệu AJAX
+        function updateProductsTable(products) {
+            var table = document.getElementById('productsTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+            
+            console.log('Updating table with products:', products);
+            
+            if (products && products.length > 0) {
+                products.forEach(function(product) {
+                    var row = createProductRow(product);
+                    tbody.appendChild(row);
+                });
+                        } else {
+                var row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" class="text-center">Không tìm thấy sản phẩm nào</td>';
+                tbody.appendChild(row);
+            }
+        }
+        
+        // Hàm tạo một dòng sản phẩm từ dữ liệu JSON
+        function createProductRow(product) {
+            console.log('Creating row for product:', product);
+            var row = document.createElement('tr');
+            
+            // Tạo HTML cho hình ảnh
+            var imageHtml = '';
+            if (product.imageUrl && product.imageUrl.trim() !== '') {
+                var imgUrl = product.imageUrl;
+                if (!imgUrl.startsWith('http') && !imgUrl.startsWith('/')) {
+                    imgUrl = '<%=request.getContextPath()%>/' + imgUrl;
+                } else if (imgUrl.startsWith('/') && !imgUrl.startsWith('<%=request.getContextPath()%>')) {
+                    imgUrl = '<%=request.getContextPath()%>' + imgUrl;
+                }
+                imageHtml = '<img src="' + imgUrl + '" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" alt="Product Image">';
+            } else {
+                imageHtml = '<img src="<%=request.getContextPath()%>/images/sanpham1.jpg" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" alt="Default Image">';
+            }
+            
+            // Tạo HTML cho trạng thái
+            var statusHtml = '';
+            if (product.status === 'active') {
+                statusHtml = '<span class="label label-success">Đang bán</span>';
+            } else {
+                statusHtml = '<span class="label label-warning">Ngừng bán</span>';
+            }
+            
+            // Tạo HTML cho các nút action
+            var actionHtml = '<button class="btn btn-info btn-xs" onclick="viewProduct(this)" data-product-id="' + product.id + '">' +
+                            '<i class="fa fa-eye"></i> Xem</button> ' +
+                            '<button class="btn btn-warning btn-xs" onclick="editProduct(this)" data-product-id="' + product.id + '">' +
+                            '<i class="fa fa-edit"></i> Sửa</button> ' +
+                            '<button class="btn btn-danger btn-xs" onclick="deleteProduct(this)" data-product-id="' + product.id + '">' +
+                            '<i class="fa fa-trash"></i> Xóa</button>';
+            
+            row.innerHTML = 
+                '<td>' + (product.id || '') + '</td>' +
+                '<td>' + imageHtml + '</td>' +
+                '<td>' + (product.productName || '') + '</td>' +
+                '<td>' + new Intl.NumberFormat('vi-VN').format(product.unitPrice || 0) + ' VNĐ</td>' +
+                '<td data-supplier-id="' + (product.supplierId || '') + '">' + (product.supplierName || '') + '</td>' +
+                '<td>' + (product.category || 'Chưa phân loại') + '</td>' +
+                '<td>' + statusHtml + '</td>' +
+                '<td>' + actionHtml + '</td>';
+            return row;
+        }
+        
+        // Hàm cập nhật thông tin phân trang
+        function updatePaginationInfo(response) {
+            currentPageProducts = response.currentPage;
+            var totalPages = response.totalPages;
+            var totalProducts = response.totalProducts;
+            
+            // Cập nhật thông tin hiển thị
+            var startItem = (currentPageProducts - 1) * itemsPerPageProducts + 1;
+            var endItem = Math.min(currentPageProducts * itemsPerPageProducts, totalProducts);
+            
+            document.getElementById('paginationInfo').innerHTML = 
+                'Hiển thị ' + startItem + ' đến ' + endItem + ' trong tổng số ' + totalProducts + ' sản phẩm';
+            
+            // Cập nhật nút phân trang
+            updatePaginationButtons(totalPages);
+        }
+        
+        // Hàm cập nhật dropdown nhà cung cấp và danh mục
+        function updateFilterDropdowns(suppliers, categories) {
+            // Cập nhật dropdown nhà cung cấp
+            var supplierSelect = document.getElementById('filterSupplier');
+            var currentValue = supplierSelect.value;
+            supplierSelect.innerHTML = '<option value="">Tất cả nhà cung cấp</option>';
+            
+            if (suppliers) {
+                suppliers.forEach(function(supplier) {
+                    var option = document.createElement('option');
+                    option.value = supplier.id;
+                    option.textContent = supplier.companyName + ' (' + supplier.supplierCode + ')';
+                    supplierSelect.appendChild(option);
+                });
+            }
+            
+            // Khôi phục giá trị đã chọn
+            supplierSelect.value = currentValue;
+            
+            // Cập nhật dropdown danh mục
+            var categorySelect = document.getElementById('filterCategory');
+            var currentCategoryValue = categorySelect.value;
+            categorySelect.innerHTML = '<option value="">Tất cả danh mục</option>';
+            
+            if (categories) {
+                categories.forEach(function(category) {
+                    var option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categorySelect.appendChild(option);
+                });
+            }
+            
+            // Khôi phục giá trị đã chọn
+            categorySelect.value = currentCategoryValue;
+        }
+        
+        // Hàm hiển thị loading
+        function showLoading() {
+            var table = document.getElementById('productsTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>';
+        }
+        
+        // Hàm ẩn loading
+        function hideLoading() {
+            // Loading sẽ được thay thế bởi dữ liệu thực
+        }
+        
+        // Hàm cập nhật nút phân trang
+        function updatePaginationButtons(totalPages) {
+            var pagination = document.getElementById('pagination');
+            var prevBtn = document.getElementById('prevBtn');
+            var nextBtn = document.getElementById('nextBtn');
+            
+            // Cập nhật trạng thái nút Previous
+            if (currentPageProducts <= 1) {
+                prevBtn.parentElement.classList.add('disabled');
+            } else {
+                prevBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Cập nhật trạng thái nút Next
+            if (currentPageProducts >= totalPages) {
+                nextBtn.parentElement.classList.add('disabled');
+            } else {
+                nextBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Xóa các nút số trang cũ (giữ lại Previous và Next)
+            var pageButtons = pagination.querySelectorAll('.page-link:not(#prevBtn):not(#nextBtn)');
+            pageButtons.forEach(function(btn) {
+                btn.parentElement.remove();
+            });
+            
+            // Tạo nút số trang mới
+            var startPage = Math.max(1, currentPageProducts - 2);
+            var endPage = Math.min(totalPages, currentPageProducts + 2);
+            
+            for (var i = startPage; i <= endPage; i++) {
+                var li = document.createElement('li');
+                li.className = 'paginate_button';
+                if (i === currentPageProducts) {
+                    li.classList.add('active');
+                }
+                
+                var a = document.createElement('a');
+                a.href = '#';
+                a.textContent = i;
+                a.className = 'page-link';
+                a.setAttribute('data-page', i);
+                a.onclick = function(e) {
+                    e.preventDefault();
+                    goToPageProducts(parseInt(this.getAttribute('data-page')));
+                };
+                
+                li.appendChild(a);
+                
+                // Chèn trước nút Next
+                nextBtn.parentElement.parentElement.insertBefore(li, nextBtn.parentElement);
+            }
         }
         
         // Hàm helper để lấy tên nhà cung cấp theo ID
@@ -1316,24 +1498,36 @@
             resetFiltersWithPagination();
         }
         
+        // Biến đã được khai báo ở trên
+        
         // Khởi tạo phân trang khi trang load
         $(document).ready(function() {
-            // Khởi tạo phân trang cho products
-            initializePaginationProducts();
+            // Cập nhật thông tin phân trang cho dữ liệu ban đầu
+            var table = document.getElementById('productsTable');
+            var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            var totalRows = rows.length;
+            
+            // Cập nhật thông tin hiển thị
+            document.getElementById('showingStart').textContent = '1';
+            document.getElementById('showingEnd').textContent = totalRows;
+            document.getElementById('totalRecords').textContent = totalRows;
             
             // Gắn sự kiện cho nút Previous/Next
             $('#prevBtn').on('click', function(e) {
                 e.preventDefault();
                 if (currentPageProducts > 1) {
-                    goToPageProducts(currentPageProducts - 1);
+                    currentPageProducts--;
+                    filterProductsWithPagination();
                 }
             });
             
             $('#nextBtn').on('click', function(e) {
                 e.preventDefault();
-                var totalPages = Math.ceil(filteredItemsProducts.length / itemsPerPageProducts);
+                // Lấy tổng số trang từ response trước đó hoặc ước tính
+                var totalPages = Math.ceil(document.getElementById('paginationInfo').textContent.match(/\d+/g)[2] / itemsPerPageProducts);
                 if (currentPageProducts < totalPages) {
-                    goToPageProducts(currentPageProducts + 1);
+                    currentPageProducts++;
+                    filterProductsWithPagination();
                 }
             });
         });

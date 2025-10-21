@@ -9,6 +9,7 @@ public class Product {
     private String description;
     private double unitPrice;
     private int supplierId;
+    private String supplierName; // Tên nhà cung cấp
     private String specifications;
     private String imageUrl;
     private int warrantyMonths;
@@ -137,5 +138,13 @@ public class Product {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    public String getSupplierName() {
+        return supplierName;
+    }
+
+    public void setSupplierName(String supplierName) {
+        this.supplierName = supplierName;
     }
 }

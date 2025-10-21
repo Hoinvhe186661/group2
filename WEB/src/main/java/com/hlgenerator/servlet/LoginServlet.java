@@ -39,7 +39,7 @@ public class LoginServlet extends HttpServlet {
                     redirectUrl = "/technical_staff.jsp";
                     break;
                 case "storekeeper":
-                    redirectUrl = "/product";
+                    redirectUrl = "/product.jsp";
                     break;
                 case "customer":
                     redirectUrl = "/index.jsp";

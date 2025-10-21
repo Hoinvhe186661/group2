@@ -1,7 +1,11 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.ProductDAO;
+import com.hlgenerator.dao.SupplierDAO;
 import com.hlgenerator.model.Product;
+import com.hlgenerator.model.Supplier;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -18,7 +22,7 @@ import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.io.FilenameUtils;
 
-@WebServlet("/product")
+@WebServlet({"/product", "/product.jsp"})
 public class ProductServlet extends HttpServlet {
     private ProductDAO productDAO;
 
@@ -40,6 +44,11 @@ public class ProductServlet extends HttpServlet {
             showEditProductPage(request, response);
         } else if ("add".equals(action)) {
             showAddProductPage(request, response);
+        } else if ("filter".equals(action)) {
+            filterProducts(request, response);
+        } else if ("jsp".equals(action)) {
+            // Xử lý request từ /product.jsp
+            showProductsPage(request, response);
         } else {
             getAllProducts(request, response);
         }
@@ -54,9 +63,11 @@ public class ProductServlet extends HttpServlet {
             // Lấy danh sách sản phẩm
             List<Product> products = productDAO.getAllProducts();
             
+            
             // Lấy danh sách nhà cung cấp cho dropdown
             com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
             List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
+            
             
             // Lấy thống kê sản phẩm
             Map<String, Integer> statistics = productDAO.getAllStatistics();
@@ -69,6 +80,7 @@ public class ProductServlet extends HttpServlet {
             request.setAttribute("suppliers", suppliers);
             request.setAttribute("statistics", statistics);
             request.setAttribute("categories", categories);
+            
             
             // Forward to JSP
             request.getRequestDispatcher("/products.jsp").forward(request, response);
@@ -789,6 +801,103 @@ public class ProductServlet extends HttpServlet {
     private String escapeJson(String str) {
         if (str == null) return "";
         return str.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+    }
+    
+    /**
+     * Xử lý lọc và tìm kiếm sản phẩm từ backend
+     * Tác giả: Sơn Lê
+     */
+    private void filterProducts(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        // Thiết lập encoding UTF-8
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json; charset=UTF-8");
+        
+        try {
+            // Lấy các tham số lọc từ request
+            String supplierId = request.getParameter("supplierId");
+            String category = request.getParameter("category");
+            String status = request.getParameter("status");
+            String searchTerm = request.getParameter("search");
+            String pageStr = request.getParameter("page");
+            String pageSizeStr = request.getParameter("pageSize");
+            
+            // Thiết lập phân trang
+            int page = 1;
+            int pageSize = 10;
+            
+            if (pageStr != null && !pageStr.isEmpty()) {
+                try {
+                    page = Integer.parseInt(pageStr);
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
+            }
+            
+            if (pageSizeStr != null && !pageSizeStr.isEmpty()) {
+                try {
+                    pageSize = Integer.parseInt(pageSizeStr);
+                } catch (NumberFormatException e) {
+                    pageSize = 10;
+                }
+            }
+            
+            // Khởi tạo DAO
+            SupplierDAO supplierDAO = new SupplierDAO();
+            
+            // Lấy danh sách sản phẩm đã lọc
+            List<Product> products = productDAO.getFilteredProducts(
+                supplierId, category, status, searchTerm, page, pageSize
+            );
+            
+            // Lấy tổng số sản phẩm để tính phân trang
+            int totalProducts = productDAO.getFilteredProductsCount(
+                supplierId, category, status, searchTerm
+            );
+            
+            // Lấy danh sách nhà cung cấp và danh mục cho dropdown
+            List<Supplier> suppliers = supplierDAO.getAllSuppliers();
+            List<String> categories = productDAO.getAllCategories();
+            
+            // Tạo response JSON
+            JsonObject jsonResponse = new JsonObject();
+            jsonResponse.addProperty("success", true);
+            jsonResponse.addProperty("totalProducts", totalProducts);
+            jsonResponse.addProperty("currentPage", page);
+            jsonResponse.addProperty("pageSize", pageSize);
+            jsonResponse.addProperty("totalPages", (int) Math.ceil((double) totalProducts / pageSize));
+            
+            // Chuyển đổi danh sách sản phẩm thành JSON
+            Gson gson = new Gson();
+            jsonResponse.add("products", gson.toJsonTree(products));
+            jsonResponse.add("suppliers", gson.toJsonTree(suppliers));
+            jsonResponse.add("categories", gson.toJsonTree(categories));
+            
+            // Debug log
+            System.out.println("Filter request - supplierId: " + supplierId + ", category: " + category + 
+                             ", status: " + status + ", search: " + searchTerm + ", page: " + page);
+            System.out.println("Found " + products.size() + " products, total: " + totalProducts);
+            
+            // Gửi response
+            PrintWriter out = response.getWriter();
+            out.print(jsonResponse.toString());
+            out.flush();
+            
+        } catch (Exception e) {
+            // Xử lý lỗi
+            JsonObject errorResponse = new JsonObject();
+            errorResponse.addProperty("success", false);
+            errorResponse.addProperty("message", "Lỗi khi lọc sản phẩm: " + e.getMessage());
+            
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            PrintWriter out = response.getWriter();
+            out.print(errorResponse.toString());
+            out.flush();
+            
+            e.printStackTrace();
+        }
     }
     
     // Inner class for validation result
