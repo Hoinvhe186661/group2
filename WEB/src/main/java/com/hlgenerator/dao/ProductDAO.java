@@ -4,27 +4,18 @@ import com.hlgenerator.model.Product;
 import java.sql.*;
 import java.util.*;
 
-/**
- * DAO class để quản lý sản phẩm
- * Tác giả: Sơn Lê
- */
+
 public class ProductDAO {
     private Connection connection;
     private String lastError;
 
-    /**
-     * Constructor - khởi tạo kết nối database
-     * Tác giả: Sơn Lê
-     */
+    
     public ProductDAO() {
         DBConnect dbConnect = new DBConnect();
         this.connection = dbConnect.connection;
     }
 
-    /**
-     * Lấy tất cả sản phẩm
-     * Tác giả: Sơn Lê
-     */
+    
     public List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
         if (connection == null) {
@@ -32,7 +23,7 @@ public class ProductDAO {
             return products;
         }
 
-        String sql = "SELECT * FROM products ORDER BY created_at DESC";
+        String sql = "SELECT p.*, s.company_name as supplier_name FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id ORDER BY p.created_at DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             
@@ -47,17 +38,14 @@ public class ProductDAO {
         return products;
     }
 
-    /**
-     * Lấy sản phẩm theo ID
-     * Tác giả: Sơn Lê
-     */
+    
     public Product getProductById(int id) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
             return null;
         }
 
-        String sql = "SELECT * FROM products WHERE id = ?";
+        String sql = "SELECT p.*, s.company_name as supplier_name FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE p.id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -72,10 +60,7 @@ public class ProductDAO {
         return null;
     }
 
-    /**
-     * Thêm sản phẩm mới
-     * Tác giả: Sơn Lê
-     */
+    
     public boolean addProduct(Product product) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
@@ -108,10 +93,7 @@ public class ProductDAO {
         }
     }
 
-    /**
-     * Cập nhật sản phẩm
-     * Tác giả: Sơn Lê
-     */
+    
     public boolean updateProduct(Product product) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
@@ -145,10 +127,7 @@ public class ProductDAO {
         }
     }
 
-    /**
-     * Xóa sản phẩm
-     * Tác giả: Sơn Lê
-     */
+    
     public boolean deleteProduct(int id) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
@@ -168,8 +147,7 @@ public class ProductDAO {
     }
 
     /**
-     * Lấy danh sách sản phẩm đã lọc với phân trang
-     * Tác giả: Sơn Lê
+     *Lấy danh sách sản phẩm đã lọc với phân trang
      */
     public List<Product> getFilteredProducts(String supplierId, String category, String status, 
                                            String searchTerm, int page, int pageSize) {
@@ -179,7 +157,7 @@ public class ProductDAO {
             return products;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT * FROM products WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT p.*, s.company_name as supplier_name FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         // Thêm điều kiện lọc
@@ -232,7 +210,6 @@ public class ProductDAO {
 
     /**
      * Đếm tổng số sản phẩm đã lọc
-     * Tác giả: Sơn Lê
      */
     public int getFilteredProductsCount(String supplierId, String category, String status, String searchTerm) {
         if (connection == null) {
@@ -240,7 +217,7 @@ public class ProductDAO {
             return 0;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         // Thêm điều kiện lọc
@@ -287,7 +264,6 @@ public class ProductDAO {
 
     /**
      * Lấy tất cả danh mục sản phẩm
-     * Tác giả: Sơn Lê
      */
     public List<String> getAllCategories() {
         List<String> categories = new ArrayList<>();
@@ -312,7 +288,6 @@ public class ProductDAO {
 
     /**
      * Lấy thống kê sản phẩm
-     * Tác giả: Sơn Lê
      */
     public Map<String, Integer> getAllStatistics() {
         Map<String, Integer> statistics = new HashMap<>();
@@ -344,7 +319,6 @@ public class ProductDAO {
 
     /**
      * Tạo đối tượng Product từ ResultSet
-     * Tác giả: Sơn Lê
      */
     private Product createProductFromResultSet(ResultSet rs) throws SQLException {
         Product product = new Product();
@@ -356,6 +330,7 @@ public class ProductDAO {
         product.setUnit(rs.getString("unit"));
         product.setUnitPrice(rs.getDouble("unit_price"));
         product.setSupplierId(rs.getInt("supplier_id"));
+        product.setSupplierName(rs.getString("supplier_name")); // Thêm tên nhà cung cấp
         product.setSpecifications(rs.getString("specifications"));
         product.setImageUrl(rs.getString("image_url"));
         product.setWarrantyMonths(rs.getInt("warranty_months"));
@@ -365,7 +340,6 @@ public class ProductDAO {
 
     /**
      * Lấy lỗi cuối cùng
-     * Tác giả: Sơn Lê
      */
     public String getLastError() {
         return lastError;

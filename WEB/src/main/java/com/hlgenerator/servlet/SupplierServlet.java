@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.List;
 
 @WebServlet("/supplier")
@@ -34,6 +35,10 @@ public class SupplierServlet extends HttpServlet {
             showEditSupplierPage(request, response);
         } else if ("add".equals(action)) {
             showAddSupplierPage(request, response);
+        } else if ("filter".equals(action)) {
+            filterSuppliers(request, response);
+        } else if ("getFilterOptions".equals(action)) {
+            getFilterOptions(request, response);
         } else {
             getAllSuppliers(request, response);
         }
@@ -41,7 +46,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Hiển thị trang quản lý nhà cung cấp với tất cả dữ liệu cần thiết
-     * Tác giả: Sơn Lê
      */
     private void showSuppliersPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
@@ -51,27 +55,49 @@ public class SupplierServlet extends HttpServlet {
             String status = request.getParameter("statusFilter");
             String keyword = request.getParameter("searchInput");
             
-            // Lấy danh sách nhà cung cấp (có hoặc không có lọc)
+            // Lấy tham số phân trang
+            int page = 1;
+            int pageSize = 10;
+            try {
+                String pageParam = request.getParameter("page");
+                if (pageParam != null && !pageParam.trim().isEmpty()) {
+                    page = Integer.parseInt(pageParam);
+                }
+                String pageSizeParam = request.getParameter("pageSize");
+                if (pageSizeParam != null && !pageSizeParam.trim().isEmpty()) {
+                    pageSize = Integer.parseInt(pageSizeParam);
+                }
+            } catch (NumberFormatException e) {
+                // Sử dụng giá trị mặc định nếu parse lỗi
+            }
+            
+            // Lấy danh sách nhà cung cấp với lọc backend
             List<Supplier> suppliers;
+            int totalCount;
+            
             if ((companyName != null && !companyName.isEmpty()) || 
                 (contactPerson != null && !contactPerson.isEmpty()) || 
                 (status != null && !status.isEmpty()) || 
                 (keyword != null && !keyword.isEmpty())) {
-                suppliers = supplierDAO.getFilteredSuppliers(companyName, contactPerson, status, keyword);
+                // Có điều kiện lọc - sử dụng backend filter
+                suppliers = supplierDAO.getSuppliersWithBackendFilter(companyName, contactPerson, status, keyword, page, pageSize);
+                totalCount = supplierDAO.countSuppliersWithFilter(companyName, contactPerson, status, keyword);
             } else {
+                // Không có điều kiện lọc - lấy tất cả
                 suppliers = supplierDAO.getAllSuppliers();
+                totalCount = suppliers.size();
             }
-            
-            // Lấy danh sách tất cả để tạo dropdown lọc
-            List<Supplier> allSuppliers = supplierDAO.getAllSuppliers();
             
             // Set attributes cho JSP
             request.setAttribute("suppliers", suppliers);
-            request.setAttribute("allSuppliers", allSuppliers);
             request.setAttribute("companyFilter", companyName);
             request.setAttribute("contactFilter", contactPerson);
             request.setAttribute("statusFilter", status);
             request.setAttribute("searchInput", keyword);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("pageSize", pageSize);
+            request.setAttribute("totalCount", totalCount);
+            request.setAttribute("totalPages", (int) Math.ceil((double) totalCount / pageSize));
             
             // Forward to JSP
             request.getRequestDispatcher("/supplier.jsp").forward(request, response);
@@ -85,7 +111,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Hiển thị trang thêm nhà cung cấp với dữ liệu cần thiết
-     * Tác giả: Sơn Lê
      */
     private void showAddSupplierPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
@@ -101,7 +126,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Hiển thị trang sửa nhà cung cấp với dữ liệu cần thiết
-     * Tác giả: Sơn Lê
      */
     private void showEditSupplierPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
@@ -129,7 +153,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Xem chi tiết nhà cung cấp qua AJAX
-     * Tác giả: Sơn Lê
      */
     private void viewSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");
@@ -169,7 +192,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Lấy tất cả nhà cung cấp qua AJAX
-     * Tác giả: Sơn Lê
      */
     private void getAllSuppliers(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json");
@@ -178,6 +200,179 @@ public class SupplierServlet extends HttpServlet {
         try {
             List<Supplier> suppliers = supplierDAO.getAllSuppliers();
             response.getWriter().write("{\"success\":true,\"data\":" + suppliers + "}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"Lỗi: " + e.getMessage() + "\"}");
+        }
+    }
+
+    /**
+     * Lấy dữ liệu cho các dropdown filter
+     */
+    private void getFilterOptions(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
+        try {
+            System.out.println("Getting filter options...");
+            // Lấy danh sách tất cả nhà cung cấp để tạo dropdown
+            List<Supplier> allSuppliers = supplierDAO.getAllSuppliers();
+            System.out.println("Found " + allSuppliers.size() + " suppliers");
+            
+            // Tạo danh sách unique companies
+            List<Supplier> companies = new ArrayList<>();
+            List<Supplier> contacts = new ArrayList<>();
+            
+            for (Supplier supplier : allSuppliers) {
+                // Thêm company nếu chưa có
+                boolean companyExists = false;
+                for (Supplier company : companies) {
+                    if (company.getCompanyName() != null && 
+                        company.getCompanyName().equals(supplier.getCompanyName())) {
+                        companyExists = true;
+                        break;
+                    }
+                }
+                if (!companyExists && supplier.getCompanyName() != null && !supplier.getCompanyName().trim().isEmpty()) {
+                    companies.add(supplier);
+                }
+                
+                // Thêm contact nếu chưa có
+                boolean contactExists = false;
+                for (Supplier contact : contacts) {
+                    if (contact.getContactPerson() != null && 
+                        contact.getContactPerson().equals(supplier.getContactPerson())) {
+                        contactExists = true;
+                        break;
+                    }
+                }
+                if (!contactExists && supplier.getContactPerson() != null && !supplier.getContactPerson().trim().isEmpty()) {
+                    contacts.add(supplier);
+                }
+            }
+            
+            // Tạo JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":{");
+            json.append("\"companies\":[");
+            
+            for (int i = 0; i < companies.size(); i++) {
+                Supplier s = companies.get(i);
+                if (i > 0) json.append(",");
+                json.append("{");
+                json.append("\"companyName\":\"").append(escapeJsonString(s.getCompanyName())).append("\",");
+                json.append("\"supplierCode\":\"").append(escapeJsonString(s.getSupplierCode())).append("\"");
+                json.append("}");
+            }
+            
+            json.append("],");
+            json.append("\"contacts\":[");
+            
+            for (int i = 0; i < contacts.size(); i++) {
+                Supplier s = contacts.get(i);
+                if (i > 0) json.append(",");
+                json.append("{");
+                json.append("\"contactPerson\":\"").append(escapeJsonString(s.getContactPerson())).append("\"");
+                json.append("}");
+            }
+            
+            json.append("]");
+            json.append("}}");
+            
+            System.out.println("JSON response: " + json.toString());
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"Lỗi: " + e.getMessage() + "\"}");
+        }
+    }
+
+    /**
+     * Lọc nhà cung cấp qua AJAX với backend SQL query
+     */
+    private void filterSuppliers(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
+        try {
+            // Lấy tham số lọc từ request
+            String companyName = request.getParameter("companyFilter");
+            String contactPerson = request.getParameter("contactFilter");
+            String status = request.getParameter("statusFilter");
+            String keyword = request.getParameter("searchInput");
+            
+            System.out.println("Filter parameters:");
+            System.out.println("  companyName: " + companyName);
+            System.out.println("  contactPerson: " + contactPerson);
+            System.out.println("  status: " + status);
+            System.out.println("  keyword: " + keyword);
+            
+            // Lấy tham số phân trang
+            int page = 1;
+            int pageSize = 10;
+            try {
+                String pageParam = request.getParameter("page");
+                if (pageParam != null && !pageParam.trim().isEmpty()) {
+                    page = Integer.parseInt(pageParam);
+                }
+                String pageSizeParam = request.getParameter("pageSize");
+                if (pageSizeParam != null && !pageSizeParam.trim().isEmpty()) {
+                    pageSize = Integer.parseInt(pageSizeParam);
+                }
+            } catch (NumberFormatException e) {
+                // Sử dụng giá trị mặc định nếu parse lỗi
+            }
+            
+            // Lấy danh sách nhà cung cấp với lọc backend
+            List<Supplier> suppliers;
+            int totalCount;
+            
+            if ((companyName != null && !companyName.isEmpty()) || 
+                (contactPerson != null && !contactPerson.isEmpty()) || 
+                (status != null && !status.isEmpty()) || 
+                (keyword != null && !keyword.isEmpty())) {
+                // Có điều kiện lọc - sử dụng backend filter
+                suppliers = supplierDAO.getSuppliersWithBackendFilter(companyName, contactPerson, status, keyword, page, pageSize);
+                totalCount = supplierDAO.countSuppliersWithFilter(companyName, contactPerson, status, keyword);
+            } else {
+                // Không có điều kiện lọc - lấy tất cả
+                suppliers = supplierDAO.getAllSuppliers();
+                totalCount = suppliers.size();
+            }
+            
+            // Tạo JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":{");
+            json.append("\"suppliers\":[");
+            
+            for (int i = 0; i < suppliers.size(); i++) {
+                Supplier s = suppliers.get(i);
+                if (i > 0) json.append(",");
+                json.append("{");
+                json.append("\"id\":").append(s.getId()).append(",");
+                json.append("\"supplierCode\":\"").append(escapeJsonString(s.getSupplierCode())).append("\",");
+                json.append("\"companyName\":\"").append(escapeJsonString(s.getCompanyName())).append("\",");
+                json.append("\"contactPerson\":\"").append(escapeJsonString(s.getContactPerson())).append("\",");
+                json.append("\"email\":\"").append(escapeJsonString(s.getEmail())).append("\",");
+                json.append("\"phone\":\"").append(escapeJsonString(s.getPhone())).append("\",");
+                json.append("\"address\":\"").append(escapeJsonString(s.getAddress())).append("\",");
+                json.append("\"bankInfo\":\"").append(escapeJsonString(s.getBankInfo())).append("\",");
+                json.append("\"status\":\"").append(escapeJsonString(s.getStatus())).append("\"");
+                json.append("}");
+            }
+            
+            json.append("],");
+            json.append("\"pagination\":{");
+            json.append("\"currentPage\":").append(page).append(",");
+            json.append("\"pageSize\":").append(pageSize).append(",");
+            json.append("\"totalCount\":").append(totalCount).append(",");
+            json.append("\"totalPages\":").append((int) Math.ceil((double) totalCount / pageSize));
+            json.append("}");
+            json.append("}}");
+            
+            response.getWriter().write(json.toString());
+            
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("{\"success\":false,\"message\":\"Lỗi: " + e.getMessage() + "\"}");
@@ -210,7 +405,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Thêm nhà cung cấp mới
-     * Tác giả: Sơn Lê
      */
     private void addSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
@@ -232,6 +426,31 @@ public class SupplierServlet extends HttpServlet {
                 return;
             }
             
+            // Kiểm tra duplicate supplier_code
+            if (supplierDAO.isSupplierCodeExists(supplier.getSupplierCode())) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Mã nhà cung cấp đã tồn tại", "UTF-8"));
+                return;
+            }
+            
+            // Validation email format
+            if (supplier.getEmail() != null && !supplier.getEmail().trim().isEmpty()) {
+                if (!isValidEmail(supplier.getEmail())) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Email không đúng định dạng", "UTF-8"));
+                    return;
+                }
+            }
+            
+            // Validation phone format
+            if (supplier.getPhone() != null && !supplier.getPhone().trim().isEmpty()) {
+                if (!isValidPhone(supplier.getPhone())) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Số điện thoại không đúng định dạng", "UTF-8"));
+                    return;
+                }
+            }
+            
             boolean success = supplierDAO.addSupplier(supplier);
             if (success) {
                 response.sendRedirect(request.getContextPath() + "/supplier?message=success");
@@ -249,7 +468,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Cập nhật nhà cung cấp
-     * Tác giả: Sơn Lê
      */
     private void updateSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
@@ -268,6 +486,31 @@ public class SupplierServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
                     URLEncoder.encode("Tên công ty không được để trống", "UTF-8"));
                 return;
+            }
+            
+            // Kiểm tra duplicate supplier_code (trừ chính nó)
+            if (supplierDAO.isSupplierCodeExists(supplier.getSupplierCode(), supplier.getId())) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Mã nhà cung cấp đã tồn tại", "UTF-8"));
+                return;
+            }
+            
+            // Validation email format
+            if (supplier.getEmail() != null && !supplier.getEmail().trim().isEmpty()) {
+                if (!isValidEmail(supplier.getEmail())) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Email không đúng định dạng", "UTF-8"));
+                    return;
+                }
+            }
+            
+            // Validation phone format
+            if (supplier.getPhone() != null && !supplier.getPhone().trim().isEmpty()) {
+                if (!isValidPhone(supplier.getPhone())) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Số điện thoại không đúng định dạng", "UTF-8"));
+                    return;
+                }
             }
             
             boolean success = supplierDAO.updateSupplier(supplier);
@@ -290,7 +533,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Xóa nhà cung cấp
-     * Tác giả: Sơn Lê
      */
     private void deleteSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
@@ -355,7 +597,7 @@ public class SupplierServlet extends HttpServlet {
     
     private String createBankInfoJson(String bankInfo) {
         // Escape dấu ngoặc kép và các ký tự đặc biệt
-        String escaped = bankInfo.replace("\\", "\\\\")
+        String escaped = (bankInfo != null ? bankInfo : "").replace("\\", "\\\\")
                                 .replace("\"", "\\\"")
                                 .replace("\n", "\\n")
                                 .replace("\r", "\\r")
@@ -394,5 +636,28 @@ public class SupplierServlet extends HttpServlet {
                   .replace("\n", "\\n")
                   .replace("\r", "\\r")
                   .replace("\t", "\\t");
+    }
+    
+    /**
+     * Kiểm tra email có đúng định dạng không
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return true; // Email không bắt buộc
+        }
+        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+        return email.matches(emailRegex);
+    }
+    
+    /**
+     * Kiểm tra số điện thoại có đúng định dạng không
+     */
+    private boolean isValidPhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return true; // Phone không bắt buộc
+        }
+        // Chấp nhận số điện thoại Việt Nam: 0xxxxxxxxx hoặc +84xxxxxxxxx
+        String phoneRegex = "^(0|\\+84)[0-9]{9,10}$";
+        return phone.matches(phoneRegex);
     }
 }

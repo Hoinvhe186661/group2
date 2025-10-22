@@ -14,11 +14,21 @@ public class SupplierDAO extends DBConnect {
 
     /**
      * Thêm nhà cung cấp mới vào cơ sở dữ liệu
-     * Tác giả: Sơn Lê
      */
     public boolean addSupplier(Supplier supplier) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        
+        // Kiểm tra kết nối còn hoạt động không
+        try {
+            if (connection.isClosed()) {
+                lastError = "Kết nối cơ sở dữ liệu đã bị đóng";
+                return false;
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi kiểm tra kết nối: " + e.getMessage();
             return false;
         }
         
@@ -34,7 +44,7 @@ public class SupplierDAO extends DBConnect {
             ps.setString(8, supplier.getStatus());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            lastError = e.getMessage();
+            lastError = "Lỗi thêm nhà cung cấp: " + e.getMessage();
             e.printStackTrace();
             return false;
         }
@@ -42,12 +52,22 @@ public class SupplierDAO extends DBConnect {
 
     /**
      * Lấy danh sách tất cả nhà cung cấp
-     * Tác giả: Sơn Lê
      */
     public List<Supplier> getAllSuppliers() {
         List<Supplier> list = new ArrayList<>();
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return list;
+        }
+        
+        // Kiểm tra kết nối còn hoạt động không
+        try {
+            if (connection.isClosed()) {
+                lastError = "Kết nối cơ sở dữ liệu đã bị đóng";
+                return list;
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi kiểm tra kết nối: " + e.getMessage();
             return list;
         }
         
@@ -58,7 +78,7 @@ public class SupplierDAO extends DBConnect {
                 list.add(mapRow(rs));
             }
         } catch (SQLException e) {
-            lastError = e.getMessage();
+            lastError = "Lỗi lấy danh sách nhà cung cấp: " + e.getMessage();
             e.printStackTrace();
         }
         return list;
@@ -66,7 +86,6 @@ public class SupplierDAO extends DBConnect {
 
     /**
      * Lấy nhà cung cấp theo ID
-     * Tác giả: Sơn Lê
      */
     public Supplier getSupplierById(int id) {
         if (connection == null) {
@@ -89,7 +108,6 @@ public class SupplierDAO extends DBConnect {
 
     /**
      * Cập nhật thông tin nhà cung cấp
-     * Tác giả: Sơn Lê
      */
     public boolean updateSupplier(Supplier s) {
         if (connection == null) {
@@ -118,7 +136,6 @@ public class SupplierDAO extends DBConnect {
 
     /**
      * Xóa nhà cung cấp theo ID
-     * Tác giả: Sơn Lê
      */
     public boolean deleteSupplier(int id) {
         if (connection == null) {
@@ -139,12 +156,22 @@ public class SupplierDAO extends DBConnect {
 
     /**
      * Lấy danh sách nhà cung cấp có lọc và phân trang
-     * Tác giả: Sơn Lê
      */
     public List<Supplier> getFilteredSuppliers(String companyName, String contactPerson, String status, String keyword) {
         List<Supplier> list = new ArrayList<>();
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return list;
+        }
+        
+        // Kiểm tra kết nối còn hoạt động không
+        try {
+            if (connection.isClosed()) {
+                lastError = "Kết nối cơ sở dữ liệu đã bị đóng";
+                return list;
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi kiểm tra kết nối: " + e.getMessage();
             return list;
         }
         
@@ -188,15 +215,192 @@ public class SupplierDAO extends DBConnect {
                 }
             }
         } catch (SQLException e) {
-            lastError = e.getMessage();
+            lastError = "Lỗi lọc nhà cung cấp: " + e.getMessage();
             e.printStackTrace();
         }
         return list;
     }
 
     /**
+     * Lấy danh sách nhà cung cấp với lọc backend bằng SQL query
+     */
+    public List<Supplier> getSuppliersWithBackendFilter(String companyName, String contactPerson, String status, String keyword, int page, int pageSize) {
+        List<Supplier> list = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return list;
+        }
+        
+        // Kiểm tra kết nối còn hoạt động không
+        try {
+            if (connection.isClosed()) {
+                lastError = "Kết nối cơ sở dữ liệu đã bị đóng";
+                return list;
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi kiểm tra kết nối: " + e.getMessage();
+            return list;
+        }
+        
+        StringBuilder sql = new StringBuilder("SELECT * FROM suppliers WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        
+        // Lọc theo tên công ty (partial match từ dropdown)
+        if (companyName != null && !companyName.trim().isEmpty()) {
+            sql.append(" AND LOWER(company_name) LIKE LOWER(?)");
+            params.add("%" + companyName + "%");
+        }
+        
+        // Lọc theo người liên hệ (partial match từ dropdown)
+        if (contactPerson != null && !contactPerson.trim().isEmpty()) {
+            sql.append(" AND LOWER(contact_person) LIKE LOWER(?)");
+            params.add("%" + contactPerson + "%");
+        }
+        
+        // Lọc theo trạng thái
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status);
+        }
+        
+        // Tìm kiếm tổng quát - tìm kiếm trong tất cả các trường
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (LOWER(supplier_code) LIKE LOWER(?) OR LOWER(company_name) LIKE LOWER(?) OR LOWER(contact_person) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?) OR LOWER(phone) LIKE LOWER(?) OR LOWER(address) LIKE LOWER(?) OR LOWER(bank_info) LIKE LOWER(?))");
+            String likeKeyword = "%" + keyword + "%";
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+        }
+        
+        sql.append(" ORDER BY created_at DESC");
+        
+        // Thêm phân trang
+        if (page > 0 && pageSize > 0) {
+            int offset = (page - 1) * pageSize;
+            sql.append(" LIMIT ? OFFSET ?");
+            params.add(pageSize);
+            params.add(offset);
+        }
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi lọc nhà cung cấp: " + e.getMessage();
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /**
+     * Đếm tổng số nhà cung cấp với điều kiện lọc
+     */
+    public int countSuppliersWithFilter(String companyName, String contactPerson, String status, String keyword) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return 0;
+        }
+        
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM suppliers WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        
+        // Lọc theo tên công ty (partial match từ dropdown)
+        if (companyName != null && !companyName.trim().isEmpty()) {
+            sql.append(" AND LOWER(company_name) LIKE LOWER(?)");
+            params.add("%" + companyName + "%");
+        }
+        
+        // Lọc theo người liên hệ (partial match từ dropdown)
+        if (contactPerson != null && !contactPerson.trim().isEmpty()) {
+            sql.append(" AND LOWER(contact_person) LIKE LOWER(?)");
+            params.add("%" + contactPerson + "%");
+        }
+        
+        // Lọc theo trạng thái
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status);
+        }
+        
+        // Tìm kiếm tổng quát - tìm kiếm trong tất cả các trường
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (LOWER(supplier_code) LIKE LOWER(?) OR LOWER(company_name) LIKE LOWER(?) OR LOWER(contact_person) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?) OR LOWER(phone) LIKE LOWER(?) OR LOWER(address) LIKE LOWER(?) OR LOWER(bank_info) LIKE LOWER(?))");
+            String likeKeyword = "%" + keyword + "%";
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+            params.add(likeKeyword);
+        }
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi đếm nhà cung cấp: " + e.getMessage();
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    /**
+     * Kiểm tra supplier_code có tồn tại không
+     */
+    public boolean isSupplierCodeExists(String supplierCode) {
+        return isSupplierCodeExists(supplierCode, -1);
+    }
+    
+    /**
+     * Kiểm tra supplier_code có tồn tại không (trừ ID hiện tại)
+     */
+    public boolean isSupplierCodeExists(String supplierCode, int excludeId) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) FROM suppliers WHERE supplier_code = ?";
+        if (excludeId > 0) {
+            sql += " AND id != ?";
+        }
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, supplierCode);
+            if (excludeId > 0) {
+                ps.setInt(2, excludeId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            lastError = e.getMessage();
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    /**
      * Map dữ liệu từ ResultSet thành đối tượng Supplier
-     * Tác giả: Sơn Lê
      */
     private Supplier mapRow(ResultSet rs) throws SQLException {
         Supplier s = new Supplier();

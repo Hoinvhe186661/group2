@@ -20,6 +20,68 @@
     <link href="<%=request.getContextPath()%>/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
     <link href="<%=request.getContextPath()%>/css/ionicons.min.css" rel="stylesheet" type="text/css" />
     <link href="<%=request.getContextPath()%>/css/style.css" rel="stylesheet" type="text/css" />
+    
+    <style>
+        /* CSS cho phần lọc nhà cung cấp */
+        .filter-panel {
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-panel .form-control {
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            transition: border-color 0.3s ease;
+        }
+        
+        .filter-panel .btn {
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-panel .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .filter-panel .form-control:focus {
+            border-color: #3c8dbc;
+            box-shadow: 0 0 5px rgba(60, 141, 188, 0.3);
+        }
+        
+        .filter-panel label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .filter-panel .btn-warning {
+            background-color: #f0ad4e;
+            border-color: #eea236;
+            color: #fff;
+        }
+        
+        .filter-panel .btn-warning:hover {
+            background-color: #ec971f;
+            border-color: #d58512;
+        }
+        
+        /* Responsive cho filter panel */
+        @media (max-width: 768px) {
+            .filter-panel .col-md-3,
+            .filter-panel .col-md-2 {
+                margin-bottom: 10px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .filter-panel .col-md-3 {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
 </head>
 <body class="skin-black">
     <header class="header">
@@ -202,30 +264,16 @@
                             <i class="fa fa-plus"></i> Thêm nhà cung cấp
                         </button>
                         
-                        <!-- Bộ lọc và tìm kiếm -->
-                        <form action="<%=request.getContextPath()%>/supplier" method="get" id="filterForm">
-                            <input type="hidden" name="action" value="page">
-                            <div class="row" style="margin-bottom: 15px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">
+                        <!-- Phần lọc nhà cung cấp -->
+                        <div class="panel-body filter-panel">
+                            <div class="row">
                                 <div class="col-md-12">
                                     <div class="row">
                                         <!-- Lọc theo tên công ty -->
                                         <div class="col-md-3">
                                             <div class="form-group">
-                                                <label for="companyFilter" style="font-weight: bold; margin-bottom: 5px;">Tên công ty:</label>
-                                                <select id="companyFilter" name="companyFilter" class="form-control">
-                                                    <option value="">Tất cả công ty</option>
-                                                    <c:if test="${not empty allSuppliers}">
-                                                        <c:set var="companies" value="${java.util.LinkedHashSet()}" />
-                                                        <c:forEach var="s" items="${allSuppliers}">
-                                                            <c:if test="${not empty s.companyName}">
-                                                                ${companies.add(s.companyName)}
-                                                            </c:if>
-                                                        </c:forEach>
-                                                        <c:forEach var="company" items="${companies}">
-                                                            <option value="${company}" ${companyFilter eq company ? 'selected' : ''}>${company}</option>
-                                                        </c:forEach>
-                                                    </c:if>
-                                                </select>
+                                                <label for="companyFilter" style="font-weight: bold; margin-bottom: 5px;">Nhà cung cấp:</label>
+                                                <input type="text" id="companyFilter" name="companyFilter" class="form-control" placeholder="Nhập tên công ty..." value="${companyFilter}" title="Tìm kiếm theo tên công ty (partial match)">
                                             </div>
                                         </div>
                                         
@@ -233,20 +281,7 @@
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label for="contactFilter" style="font-weight: bold; margin-bottom: 5px;">Người liên hệ:</label>
-                                                <select id="contactFilter" name="contactFilter" class="form-control">
-                                                    <option value="">Tất cả người liên hệ</option>
-                                                    <c:if test="${not empty allSuppliers}">
-                                                        <c:set var="contacts" value="${java.util.LinkedHashSet()}" />
-                                                        <c:forEach var="s" items="${allSuppliers}">
-                                                            <c:if test="${not empty s.contactPerson}">
-                                                                ${contacts.add(s.contactPerson)}
-                                                            </c:if>
-                                                        </c:forEach>
-                                                        <c:forEach var="contact" items="${contacts}">
-                                                            <option value="${contact}" ${contactFilter eq contact ? 'selected' : ''}>${contact}</option>
-                                                        </c:forEach>
-                                                    </c:if>
-                                                </select>
+                                                <input type="text" id="contactFilter" name="contactFilter" class="form-control" placeholder="Nhập tên người liên hệ..." value="${contactFilter}" title="Tìm kiếm theo tên người liên hệ (partial match)">
                                             </div>
                                         </div>
                                         
@@ -263,31 +298,36 @@
                                         </div>
                                         
                                         <!-- Tìm kiếm tổng quát -->
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <div class="form-group">
                                                 <label for="searchInput" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
-                                                <input type="text" id="searchInput" name="searchInput" class="form-control" placeholder="Nhập từ khóa tìm kiếm..." value="${searchInput}">
+                                                <input type="text" id="searchInput" name="searchInput" class="form-control" placeholder="Tìm theo mã, tên, liên hệ, email, SĐT, địa chỉ..." value="${searchInput}" onkeypress="if(event.key==='Enter') filterSuppliers()" title="Tìm kiếm trong tất cả các trường: mã NCC, tên công ty, người liên hệ, email, số điện thoại, địa chỉ, thông tin ngân hàng">
                                             </div>
                                         </div>
                                         
-                                        <!-- Nút lọc và reset -->
+                                        <!-- Nút lọc -->
                                         <div class="col-md-1">
                                             <div class="form-group">
-                                                <label style="color: transparent; margin-bottom: 5px;">Action</label>
-                                                <div>
-                                                    <button type="submit" class="btn btn-primary btn-sm" title="Lọc" style="margin-right: 2px;">
-                                                        <i class="fa fa-filter"></i>
-                                                    </button>
-                                                    <a href="<%=request.getContextPath()%>/supplier" class="btn btn-warning btn-sm" title="Xóa tất cả bộ lọc">
-                                                        <i class="fa fa-refresh"></i>
-                                                    </a>
-                                                </div>
+                                                <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
+                                                <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="filterSuppliers()" title="Áp dụng bộ lọc">
+                                                    <i class="fa fa-search"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Nút reset -->
+                                        <div class="col-md-1">
+                                            <div class="form-group">
+                                                <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                                                <button type="button" class="btn btn-warning btn-sm" style="width: 100%;" onclick="resetFilters()" title="Xóa tất cả bộ lọc">
+                                                    <i class="fa fa-refresh"></i>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </form>
+                        </div>
                         
                         <table class="table table-hover" id="suppliersTable">
                             <thead>
@@ -383,10 +423,10 @@
                         <input type="hidden" name="action" value="add">
                         <div class="form-group"><label>Mã NCC</label><input name="supplier_code" class="form-control" required></div>
                         <div class="form-group"><label>Tên công ty</label><input name="company_name" class="form-control" required></div>
-                        <div class="form-group"><label>Người liên hệ</label><input name="contact_person" class="form-control"></div>
-                        <div class="form-group"><label>Email</label><input type="email" name="email" class="form-control"></div>
-                        <div class="form-group"><label>Điện thoại</label><input name="phone" class="form-control"></div>
-                        <div class="form-group"><label>Địa chỉ</label><textarea name="address" class="form-control" rows="2"></textarea></div>
+                        <div class="form-group"><label>Người liên hệ</label><input name="contact_person" class="form-control" required></div>
+                        <div class="form-group"><label>Email</label><input type="email" name="email" class="form-control" required></div>
+                        <div class="form-group"><label>Điện thoại</label><input name="phone" class="form-control" required></div>
+                        <div class="form-group"><label>Địa chỉ</label><textarea name="address" class="form-control" rows="2" required></textarea></div>
                         <div class="form-group">
                             <label>Thông tin ngân hàng</label>
                             <div class="row">
@@ -429,10 +469,10 @@
                         <input type="hidden" name="id" id="edit_supplier_id">
                         <div class="form-group"><label>Mã NCC</label><input name="supplier_code" id="edit_supplier_code" class="form-control" required></div>
                         <div class="form-group"><label>Tên công ty</label><input name="company_name" id="edit_company_name" class="form-control" required></div>
-                        <div class="form-group"><label>Người liên hệ</label><input name="contact_person" id="edit_contact_person" class="form-control"></div>
-                        <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_email" class="form-control"></div>
-                        <div class="form-group"><label>Điện thoại</label><input name="phone" id="edit_phone" class="form-control"></div>
-                        <div class="form-group"><label>Địa chỉ</label><textarea name="address" id="edit_address" class="form-control" rows="2"></textarea></div>
+                        <div class="form-group"><label>Người liên hệ</label><input name="contact_person" id="edit_contact_person" class="form-control" required></div>
+                        <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_email" class="form-control" required></div>
+                        <div class="form-group"><label>Điện thoại</label><input name="phone" id="edit_phone" class="form-control" required></div>
+                        <div class="form-group"><label>Địa chỉ</label><textarea name="address" id="edit_address" class="form-control" rows="2" required></textarea></div>
                         <div class="form-group">
                             <label>Thông tin ngân hàng</label>
                             <div class="row">
@@ -509,6 +549,10 @@
                 // Validation
                 var supplierCode = $('input[name="supplier_code"]', this).val().trim();
                 var companyName = $('input[name="company_name"]', this).val().trim();
+                var contactPerson = $('input[name="contact_person"]', this).val().trim();
+                var email = $('input[name="email"]', this).val().trim();
+                var phone = $('input[name="phone"]', this).val().trim();
+                var address = $('textarea[name="address"]', this).val().trim();
                 
                 if (!supplierCode) {
                     e.preventDefault();
@@ -524,6 +568,34 @@
                     return false;
                 }
                 
+                if (!contactPerson) {
+                    e.preventDefault();
+                    alert('Người liên hệ không được để trống!');
+                    $('input[name="contact_person"]', this).focus();
+                    return false;
+                }
+                
+                if (!email) {
+                    e.preventDefault();
+                    alert('Email không được để trống!');
+                    $('input[name="email"]', this).focus();
+                    return false;
+                }
+                
+                if (!phone) {
+                    e.preventDefault();
+                    alert('Số điện thoại không được để trống!');
+                    $('input[name="phone"]', this).focus();
+                    return false;
+                }
+                
+                if (!address) {
+                    e.preventDefault();
+                    alert('Địa chỉ không được để trống!');
+                    $('textarea[name="address"]', this).focus();
+                    return false;
+                }
+                
                 var bankName = $('#add_bank_name').val();
                 var accountNumber = $('#add_account_number').val();
                 $('#add_bank_info').val(createBankInfoJson(bankName, accountNumber));
@@ -535,6 +607,10 @@
                 // Validation
                 var supplierCode = $('#edit_supplier_code').val().trim();
                 var companyName = $('#edit_company_name').val().trim();
+                var contactPerson = $('#edit_contact_person').val().trim();
+                var email = $('#edit_email').val().trim();
+                var phone = $('#edit_phone').val().trim();
+                var address = $('#edit_address').val().trim();
                 
                 if (!supplierCode) {
                     e.preventDefault();
@@ -547,6 +623,34 @@
                     e.preventDefault();
                     alert('Tên công ty không được để trống!');
                     $('#edit_company_name').focus();
+                    return false;
+                }
+                
+                if (!contactPerson) {
+                    e.preventDefault();
+                    alert('Người liên hệ không được để trống!');
+                    $('#edit_contact_person').focus();
+                    return false;
+                }
+                
+                if (!email) {
+                    e.preventDefault();
+                    alert('Email không được để trống!');
+                    $('#edit_email').focus();
+                    return false;
+                }
+                
+                if (!phone) {
+                    e.preventDefault();
+                    alert('Số điện thoại không được để trống!');
+                    $('#edit_phone').focus();
+                    return false;
+                }
+                
+                if (!address) {
+                    e.preventDefault();
+                    alert('Địa chỉ không được để trống!');
+                    $('#edit_address').focus();
                     return false;
                 }
                 
@@ -673,9 +777,256 @@
             }
         }
         
+        // Biến phân trang cho suppliers
+        var currentPageSuppliers = 1;
+        var itemsPerPageSuppliers = 10;
+        var totalItemsSuppliers = 0;
+        
+        // Hàm lọc nhà cung cấp sử dụng AJAX (backend processing)
+        function filterSuppliers() {
+            var companyFilter = document.getElementById('companyFilter').value;
+            var contactFilter = document.getElementById('contactFilter').value;
+            var statusFilter = document.getElementById('statusFilter').value;
+            var searchFilter = document.getElementById('searchInput').value;
+            
+            console.log('Filtering suppliers with:', {
+                company: companyFilter,
+                contact: contactFilter,
+                status: statusFilter,
+                search: searchFilter,
+                page: currentPageSuppliers
+            });
+            
+            // Hiển thị loading
+            showLoading();
+            
+            // Gọi AJAX để lọc nhà cung cấp từ backend
+            $.ajax({
+                url: '<%=request.getContextPath()%>/supplier?action=filter',
+                type: 'GET',
+                data: {
+                    companyFilter: companyFilter,
+                    contactFilter: contactFilter,
+                    statusFilter: statusFilter,
+                    searchInput: searchFilter,
+                    page: currentPageSuppliers,
+                    pageSize: itemsPerPageSuppliers
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('AJAX Response:', response);
+                    if (response.success) {
+                        // Cập nhật dữ liệu nhà cung cấp
+                        updateSuppliersTable(response.data.suppliers);
+                        
+                        // Cập nhật thông tin phân trang
+                        updatePaginationInfo(response.data.pagination);
+                    } else {
+                        alert('Lỗi khi lọc nhà cung cấp: ' + (response.message || 'Lỗi không xác định'));
+                    }
+                    hideLoading();
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    alert('Lỗi kết nối đến server: ' + error);
+                    hideLoading();
+                }
+            });
+        }
+        
+        // Hàm reset tất cả bộ lọc
+        function resetFilters() {
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('contactFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            currentPageSuppliers = 1;
+            // Reload trang để trở về trạng thái ban đầu
+            window.location.reload();
+        }
+        
+        // Hàm cập nhật bảng nhà cung cấp từ dữ liệu AJAX
+        function updateSuppliersTable(suppliers) {
+            var table = document.getElementById('suppliersTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+            
+            console.log('Updating table with suppliers:', suppliers);
+            
+            if (suppliers && suppliers.length > 0) {
+                suppliers.forEach(function(supplier) {
+                    var row = createSupplierRow(supplier);
+                    tbody.appendChild(row);
+                });
+            } else {
+                var row = document.createElement('tr');
+                row.innerHTML = '<td colspan="8" class="text-center">Không tìm thấy nhà cung cấp nào</td>';
+                tbody.appendChild(row);
+            }
+        }
+        
+        // Hàm tạo một dòng nhà cung cấp từ dữ liệu JSON
+        function createSupplierRow(supplier) {
+            console.log('Creating row for supplier:', supplier);
+            var row = document.createElement('tr');
+            
+            // Tạo HTML cho trạng thái
+            var statusHtml = '';
+            if (supplier.status === 'active') {
+                statusHtml = '<span class="label label-success">Hoạt động</span>';
+            } else {
+                statusHtml = '<span class="label label-default">Không hoạt động</span>';
+            }
+            
+            // Tạo HTML cho các nút action
+            var actionHtml = '<button class="btn btn-info btn-xs" onclick="viewSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+                            '<i class="fa fa-eye"></i> Xem</button> ' +
+                            '<button class="btn btn-warning btn-xs" onclick="editSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+                            '<i class="fa fa-edit"></i> Sửa</button> ' +
+                            '<button class="btn btn-danger btn-xs" onclick="deleteSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+                            '<i class="fa fa-trash"></i> Xóa</button>';
+            
+            row.innerHTML = 
+                '<td>' + (supplier.id || '') + '</td>' +
+                '<td>' + (supplier.supplierCode || '') + '</td>' +
+                '<td>' + (supplier.companyName || '') + '</td>' +
+                '<td>' + (supplier.contactPerson || '') + '</td>' +
+                '<td>' + (supplier.email || '') + '</td>' +
+                '<td>' + (supplier.phone || '') + '</td>' +
+                '<td>' + statusHtml + '</td>' +
+                '<td>' + actionHtml + '</td>';
+            return row;
+        }
+        
+        // Hàm cập nhật thông tin phân trang
+        function updatePaginationInfo(pagination) {
+            currentPageSuppliers = pagination.currentPage;
+            var totalPages = pagination.totalPages;
+            var totalSuppliers = pagination.totalCount;
+            
+            // Cập nhật thông tin hiển thị
+            var startItem = (currentPageSuppliers - 1) * itemsPerPageSuppliers + 1;
+            var endItem = Math.min(currentPageSuppliers * itemsPerPageSuppliers, totalSuppliers);
+            
+            document.getElementById('showingStart').textContent = startItem;
+            document.getElementById('showingEnd').textContent = endItem;
+            document.getElementById('totalRecords').textContent = totalSuppliers;
+            
+            // Cập nhật nút phân trang
+            updatePaginationButtons(totalPages);
+        }
+        
+        // Hàm hiển thị loading
+        function showLoading() {
+            var table = document.getElementById('suppliersTable');
+            var tbody = table.getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>';
+        }
+        
+        // Hàm ẩn loading
+        function hideLoading() {
+            // Loading sẽ được thay thế bởi dữ liệu thực
+        }
+        
+        // Hàm cập nhật nút phân trang
+        function updatePaginationButtons(totalPages) {
+            var pagination = document.getElementById('pagination');
+            var prevBtn = document.getElementById('prevBtn');
+            var nextBtn = document.getElementById('nextBtn');
+            
+            // Cập nhật trạng thái nút Previous
+            if (currentPageSuppliers <= 1) {
+                prevBtn.parentElement.classList.add('disabled');
+            } else {
+                prevBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Cập nhật trạng thái nút Next
+            if (currentPageSuppliers >= totalPages) {
+                nextBtn.parentElement.classList.add('disabled');
+            } else {
+                nextBtn.parentElement.classList.remove('disabled');
+            }
+            
+            // Xóa các nút số trang cũ (giữ lại Previous và Next)
+            var pageButtons = pagination.querySelectorAll('.page-link:not(#prevBtn):not(#nextBtn)');
+            pageButtons.forEach(function(btn) {
+                btn.parentElement.remove();
+            });
+            
+            // Tạo nút số trang mới
+            var startPage = Math.max(1, currentPageSuppliers - 2);
+            var endPage = Math.min(totalPages, currentPageSuppliers + 2);
+            
+            for (var i = startPage; i <= endPage; i++) {
+                var li = document.createElement('li');
+                li.className = 'paginate_button';
+                if (i === currentPageSuppliers) {
+                    li.classList.add('active');
+                }
+                
+                var a = document.createElement('a');
+                a.href = '#';
+                a.textContent = i;
+                a.className = 'page-link';
+                a.setAttribute('data-page', i);
+                a.onclick = function(e) {
+                    e.preventDefault();
+                    goToPageSuppliers(parseInt(this.getAttribute('data-page')));
+                };
+                
+                li.appendChild(a);
+                
+                // Chèn trước nút Next
+                nextBtn.parentElement.parentElement.insertBefore(li, nextBtn.parentElement);
+            }
+        }
+        
+        // Hàm chuyển đến trang cho suppliers
+        function goToPageSuppliers(page) {
+            currentPageSuppliers = page;
+            filterSuppliers();
+        }
+        
+        // Khởi tạo phân trang khi trang load
         $(document).ready(function() {
-            // Không cần JavaScript lọc phức tạp nữa vì đã xử lý ở backend
+            // Load dữ liệu cho dropdown
+            loadFilterOptions();
+            
+            // Cập nhật thông tin phân trang cho dữ liệu ban đầu
+            var table = document.getElementById('suppliersTable');
+            var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            var totalRows = rows.length;
+            
+            // Cập nhật thông tin hiển thị
+            document.getElementById('showingStart').textContent = '1';
+            document.getElementById('showingEnd').textContent = totalRows;
+            document.getElementById('totalRecords').textContent = totalRows;
+            
+            // Gắn sự kiện cho nút Previous/Next
+            $('#prevBtn').on('click', function(e) {
+                e.preventDefault();
+                if (currentPageSuppliers > 1) {
+                    currentPageSuppliers--;
+                    filterSuppliers();
+                }
+            });
+            
+            $('#nextBtn').on('click', function(e) {
+                e.preventDefault();
+                // Lấy tổng số trang từ response trước đó hoặc ước tính
+                var totalPages = Math.ceil(document.getElementById('totalRecords').textContent / itemsPerPageSuppliers);
+                if (currentPageSuppliers < totalPages) {
+                    currentPageSuppliers++;
+                    filterSuppliers();
+                }
+            });
         });
+        
+        // Hàm load dữ liệu cho các dropdown filter
+        function loadFilterOptions() {
+            console.log('Filter options loading skipped - using text inputs instead of dropdowns');
+        }
     </script>
 </body>
 </html>
