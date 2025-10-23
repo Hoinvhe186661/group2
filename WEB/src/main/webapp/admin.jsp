@@ -173,12 +173,12 @@
                     </li>
                     
                     <li>
-                        <a href="customers.jsp">
+                        <a href="customers">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
                         </a>
                     </li>
                     <li>
-                        <a href="users.jsp">
+                        <a href="users">
                             <i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
                         </a>
                     </li>

@@ -115,7 +115,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="customers.jsp">
+                        <a href="customers">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
                         </a>
                     </li>

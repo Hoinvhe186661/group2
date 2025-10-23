@@ -1,21 +1,18 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="java.util.List, java.util.Set, com.hlgenerator.model.Customer, com.hlgenerator.servlet.CustomerManagementServlet.CustomerHelper" %>
 <%
-    // Kiểm tra đăng nhập
-    String username = (String) session.getAttribute("username");
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
-    
-    if (username == null || isLoggedIn == null || !isLoggedIn) {
-        response.sendRedirect(request.getContextPath() + "/login.jsp");
-        return;
-    }
-    
-    // Kiểm tra quyền truy cập - admin, customer_support có thể quản lý khách hàng
-    boolean canManageCustomers = "admin".equals(userRole) || "customer_support".equals(userRole);
-    if (!canManageCustomers) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
-        return;
-    }
+    // Lấy dữ liệu từ request attributes (đã được set bởi servlet)
+    @SuppressWarnings("unchecked")
+    List<Customer> filteredCustomers = (List<Customer>) request.getAttribute("filteredCustomers");
+    @SuppressWarnings("unchecked")
+    Set<String> customerTypes = (Set<String>) request.getAttribute("customerTypes");
+    @SuppressWarnings("unchecked")
+    Set<String> statuses = (Set<String>) request.getAttribute("statuses");
+    String pCode = (String) request.getAttribute("filterCode");
+    String pType = (String) request.getAttribute("filterType");
+    String pStatus = (String) request.getAttribute("filterStatus");
+    String pContact = (String) request.getAttribute("filterContact");
+    String pAddress = (String) request.getAttribute("filterAddress");
 %>
 <!DOCTYPE html>
 <html>
@@ -50,7 +47,7 @@
 <body class="skin-black">
     <!-- Header -->
     <header class="header">
-        <a href="customers.jsp" class="logo">Bảng điều khiển </a>
+        <a href="customers" class="logo">Bảng điều khiển </a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
                 <span class="sr-only">Toggle navigation</span>
@@ -105,9 +102,9 @@
                 <ul class="sidebar-menu">
                     <li><a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a></li>
                     
-                        <li class="active"><a href="customers.jsp"><i class="fa fa-users"></i> <span>Quản lý khách
+                        <li class="active"><a href="customers"><i class="fa fa-users"></i> <span>Quản lý khách
                                     hàng</span></a></li>
-                        <li><a href="users.jsp"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
+                        <li><a href="users"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
                         </li>
                     <li><a href="reports.jsp"><i class="fa fa-bar-chart"></i> <span>Báo cáo</span></a></li>
                     <li><a href="settings.jsp"><i class="fa fa-cog"></i> <span>Cài đặt</span></a></li>
@@ -132,98 +129,44 @@
                             </header>
                             
                             <div class="panel-body table-responsive">
-                                <% request.setCharacterEncoding("UTF-8"); %>
-                                <%!
-                                    private boolean equalsParam(String param, String actual) {
-                                        if (param == null || param.trim().isEmpty()) return true;
-                                        String val = actual == null ? "" : actual.trim();
-                                        return param.trim().equalsIgnoreCase(val);
-                                    }
-                                    
-                                    private boolean containsParam(String param, String actual) {
-                                        if (param == null || param.trim().isEmpty()) return true;
-                                        String val = actual == null ? "" : actual.trim().toLowerCase();
-                                        return val.contains(param.trim().toLowerCase());
-                                    }
-                                    
-                                    private String typeLabel(String raw) {
-                                        return (raw != null && raw.equalsIgnoreCase("company")) ? "Doanh nghiệp" : "Cá nhân";
-                                    }
-                                    
-                                    private String statusLabel(String raw) {
-                                        return (raw != null && raw.equalsIgnoreCase("active")) ? "Hoạt động" : "Tạm khóa";
-                                    }
-                                    
-                                    private String decodeParam(String s) {
-                                        if (s == null) return null;
-                                        try {
-                                            byte[] b = s.getBytes("ISO-8859-1");
-                                            return new String(b, "UTF-8").trim();
-                                        } catch (Exception e) {
-                                            return s.trim();
-                                        }
-                                    }
-                                %>
-                                <%
-                                    com.hlgenerator.dao.CustomerDAO daoPage = new com.hlgenerator.dao.CustomerDAO();
-                                    java.util.List<com.hlgenerator.model.Customer> allCustomers = daoPage.getAllCustomers();
-                                    
-                                    String pCode = decodeParam(request.getParameter("customerCode"));
-                                    String pType = decodeParam(request.getParameter("customerType"));
-                                    String pStatus = decodeParam(request.getParameter("status"));
-                                    String pContact = decodeParam(request.getParameter("contactPerson"));
-                                    String pAddress = decodeParam(request.getParameter("address"));
-
-                                    java.util.List<com.hlgenerator.model.Customer> customers = new java.util.ArrayList<com.hlgenerator.model.Customer>();
-                                    for (com.hlgenerator.model.Customer c : allCustomers) {
-                                        if (!containsParam(pCode, c.getCustomerCode())) continue;
-                                        if (!containsParam(pContact, c.getContactPerson())) continue;
-                                        if (!equalsParam(pType, c.getCustomerType())) continue;
-                                        if (!equalsParam(pStatus, c.getStatus())) continue;
-                                        if (!containsParam(pAddress, c.getAddress())) continue;
-                                        customers.add(c);
-                                    }
-
-                                    java.util.Set<String> typeOptionsRaw = new java.util.TreeSet<String>();
-                                    java.util.Set<String> statusOptionsRaw = new java.util.TreeSet<String>();
-                                    
-                                    for (com.hlgenerator.model.Customer c : allCustomers) {
-                                        if (c.getCustomerType() != null && !c.getCustomerType().trim().isEmpty()) {
-                                            typeOptionsRaw.add(c.getCustomerType().trim());
-                                        }
-                                        if (c.getStatus() != null && !c.getStatus().trim().isEmpty()) {
-                                            statusOptionsRaw.add(c.getStatus().trim());
-                                        }
-                                    }
-                                %>
                                 
-                                <form class="form-inline" method="get" action="customers.jsp" accept-charset="UTF-8" style="margin-bottom: 10px;">
+                                <form class="form-inline" method="get" action="customers" accept-charset="UTF-8" style="margin-bottom: 10px;">
                                     <div class="row" style="margin-bottom: 10px;">
                                         
                                         <div class="col-sm-3">
                                             <label for="filterCustomerType">Loại khách hàng</label>
                                             <select id="filterCustomerType" name="customerType" class="form-control" style="width:100%">
                                                 <option value="">Tất cả</option>
-                                                <% for (String raw : typeOptionsRaw) { 
-                                                    String label = typeLabel(raw);
+                                                <% 
+                                                if (customerTypes != null) {
+                                                    for (String raw : customerTypes) { 
+                                                        String label = CustomerHelper.typeLabel(raw);
                                                 %>
                                                 <option value="<%= raw %>" <%= (pType != null && pType.equalsIgnoreCase(raw)) ? "selected" : "" %>>
                                                     <%= label %>
                                                 </option>
-                                                <% } %>
+                                                <% 
+                                                    } 
+                                                }
+                                                %>
                                             </select>
                                         </div>
                                         <div class="col-sm-3">
                                             <label for="filterStatus">Trạng thái</label>
                                             <select id="filterStatus" name="status" class="form-control" style="width:100%">
                                                 <option value="">Tất cả</option>
-                                                <% for (String raw : statusOptionsRaw) { 
-                                                    String label = statusLabel(raw);
+                                                <% 
+                                                if (statuses != null) {
+                                                    for (String raw : statuses) { 
+                                                        String label = CustomerHelper.statusLabel(raw);
                                                 %>
                                                 <option value="<%= raw %>" <%= (pStatus != null && pStatus.equalsIgnoreCase(raw)) ? "selected" : "" %>>
                                                     <%= label %>
                                                 </option>
-                                                <% } %>
+                                                <% 
+                                                    } 
+                                                }
+                                                %>
                                             </select>
                                         </div>
                                         
@@ -236,7 +179,7 @@
                                             <button type="submit" class="btn btn-primary btn-sm">
                                                 <i class="fa fa-filter"></i> Lọc
                                             </button>
-                                            <a href="customers.jsp" class="btn btn-default btn-sm">
+                                            <a href="customers" class="btn btn-default btn-sm">
                                                 <i class="fa fa-times"></i> Xóa lọc
                                             </a>
                                         </div>
@@ -262,7 +205,10 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <% for (com.hlgenerator.model.Customer customer : customers) { %>
+                                        <% 
+                                        if (filteredCustomers != null) {
+                                            for (Customer customer : filteredCustomers) { 
+                                        %>
                                         <tr>
                                             <td><%= customer.getId() %></td>
                                             <td><%= customer.getCustomerCode() %></td>
@@ -272,8 +218,8 @@
                                             <td><%= customer.getPhone() %></td>
                                             <td><%= customer.getAddress() %></td>
                                             <td><%= customer.getTaxCode() %></td>
-                                            <td><%= typeLabel(customer.getCustomerType()) %></td>
-                                            <td><%= statusLabel(customer.getStatus()) %></td>
+                                            <td><%= CustomerHelper.typeLabel(customer.getCustomerType()) %></td>
+                                            <td><%= CustomerHelper.statusLabel(customer.getStatus()) %></td>
                                             <td class="action-buttons">
                                                 <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')">
                                                     <i class="fa fa-eye"></i> Xem
@@ -292,7 +238,10 @@
                                                 <% } %>
                                             </td>
                                         </tr>
-                                        <% } %>
+                                        <% 
+                                            }
+                                        }
+                                        %>
                                     </tbody>
                                 </table>
                             </div>

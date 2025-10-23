@@ -20,7 +20,7 @@ public class SupportManagementServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Set encoding
+        
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         
@@ -34,24 +34,24 @@ public class SupportManagementServlet extends HttpServlet {
         String username = (String) session.getAttribute("username");
         String userRole = (String) session.getAttribute("userRole");
         
-        // Kiểm tra quyền
+      
         if (!"customer_support".equals(userRole) && !"admin".equals(userRole)) {
             response.sendRedirect(request.getContextPath() + "/index.jsp");
             return;
         }
         
-        // ========== XỬ LÝ LOGIC BACKEND ==========
         
-        // Lấy filter parameters
+        
+        
         String filterStatus = request.getParameter("status");
         String filterPriority = request.getParameter("priority");
         String filterCategory = request.getParameter("category");
         
-        // Lấy dữ liệu từ database
+       
         SupportRequestDAO supportDAO = new SupportRequestDAO();
         List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();
         
-        // Áp dụng filters
+        
         List<Map<String, Object>> filteredTickets = new ArrayList<Map<String, Object>>();
         
         for (Map<String, Object> ticket : allTickets) {
@@ -67,23 +67,23 @@ public class SupportManagementServlet extends HttpServlet {
             }
         }
         
-        // ========== CHUẨN BỊ DỮ LIỆU CHO VIEW ==========
         
-        // Set attributes để JSP hiển thị
+        
+        
         request.setAttribute("tickets", filteredTickets);
         request.setAttribute("filterStatus", filterStatus);
         request.setAttribute("filterPriority", filterPriority);
         request.setAttribute("filterCategory", filterCategory);
         request.setAttribute("totalTickets", filteredTickets.size());
         
-        // Forward đến JSP
+        
         request.getRequestDispatcher("/support_management.jsp").forward(request, response);
     }
     
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        // Nếu có POST action (update, forward ticket), xử lý ở đây
+       
         doGet(request, response);
     }
 }

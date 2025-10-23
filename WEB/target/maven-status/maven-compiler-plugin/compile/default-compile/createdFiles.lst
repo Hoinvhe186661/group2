@@ -6,10 +6,12 @@ com\hlgenerator\servlet\ContractServlet.class
 com\hlgenerator\servlet\SupportManagementServlet.class
 com\hlgenerator\dao\SupportRequestDAO.class
 com\hlgenerator\model\User.class
+com\hlgenerator\servlet\CustomerManagementServlet.class
 com\hlgenerator\model\SupportRequest.class
 com\hlgenerator\servlet\ForgotPasswordServlet.class
 com\hlgenerator\servlet\TaskServlet.class
 com\hlgenerator\model\Product.class
+com\hlgenerator\servlet\UserManagementServlet.class
 com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\dao\UserDAO.class
 com\hlgenerator\servlet\ResetPasswordServlet.class
@@ -17,6 +19,7 @@ com\hlgenerator\model\WorkOrder.class
 com\hlgenerator\servlet\ForgotPasswordServlet$1.class
 com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\LoginServlet.class
+com\hlgenerator\servlet\CustomerManagementServlet$CustomerHelper.class
 com\hlgenerator\dao\ContractDAO.class
 com\hlgenerator\dao\SupplierDAO.class
 com\hlgenerator\servlet\LogoutServlet.class
@@ -29,6 +32,7 @@ com\hlgenerator\servlet\CharacterEncodingFilter.class
 com\hlgenerator\dao\ProductDAO.class
 com\hlgenerator\dao\TaskDAO.class
 com\hlgenerator\servlet\ProductServlet$ValidationResult.class
+com\hlgenerator\servlet\UserManagementServlet$RoleHelper.class
 com\hlgenerator\servlet\ChangePasswordServlet.class
 com\hlgenerator\servlet\ProductServlet.class
 com\hlgenerator\dao\CustomerDAO.class

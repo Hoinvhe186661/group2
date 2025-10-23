@@ -97,9 +97,9 @@
                         </a>
                     </li>
                    
-                    <li class="active"><a href="customers.jsp"><i class="fa fa-users"></i> <span>Quản lý khách
+                    <li class="active"><a href="customers"><i class="fa fa-users"></i> <span>Quản lý khách
                         hàng</span></a></li>
-            <li><a href="users.jsp"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
+            <li><a href="users"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
             </li>
                     <li class="active">
                         <a href="reports.jsp">

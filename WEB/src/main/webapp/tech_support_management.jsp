@@ -177,7 +177,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="customers.jsp">
+                        <a href="customers">
                             <i class="fa fa-users"></i> <span>Danh sách khách hàng</span>
                         </a>
                     </li>

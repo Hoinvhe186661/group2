@@ -1,20 +1,13 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.util.List, java.util.Set, com.hlgenerator.model.User, com.hlgenerator.servlet.UserManagementServlet.RoleHelper" %>
 <%
-    // Kiểm tra đăng nhập
-    String username = (String) session.getAttribute("username");
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
-    
-    if (username == null || isLoggedIn == null || !isLoggedIn) {
-        response.sendRedirect(request.getContextPath() + "/login.jsp");
-        return;
-    }
-    
-    // Kiểm tra quyền truy cập - chỉ admin mới có thể quản lý người dùng
-    if (!"admin".equals(userRole)) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
-        return;
-    }
+    // Lấy dữ liệu từ request attributes (đã được set bởi servlet)
+    @SuppressWarnings("unchecked")
+    List<User> filteredUsers = (List<User>) request.getAttribute("filteredUsers");
+    @SuppressWarnings("unchecked")
+    Set<String> roles = (Set<String>) request.getAttribute("roles");
+    String pRole = (String) request.getAttribute("filterRole");
+    String pStatus = (String) request.getAttribute("filterStatus");
 %>
 <!DOCTYPE html>
 <html>
@@ -135,7 +128,7 @@
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
     <header class="header">
-        <a href="users.jsp" class="logo">
+        <a href="users" class="logo">
             Bảng điều khiển 
         </a>
         <!-- Header Navbar: style can be found in header.less -->
@@ -212,12 +205,12 @@
                     </li>
                     
                     <li>
-                        <a href="customers.jsp">
+                        <a href="customers">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
                         </a>
                     </li>
                     <li class="active">
-                        <a href="users.jsp">
+                        <a href="users">
                             <i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
                         </a>
                     </li>
@@ -251,116 +244,25 @@
                                 </div>
                             </header>
                             <div class="panel-body table-responsive">
-<% request.setCharacterEncoding("UTF-8"); %>
-<%! 
-   
-    private boolean equalsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) return true;
-        String val = actual == null ? "" : actual.trim();
-        return param.trim().equalsIgnoreCase(val);
-    }
-    
-   
-    private boolean containsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) return true;
-        String val = actual == null ? "" : actual.trim().toLowerCase();
-        return val.contains(param.trim().toLowerCase());
-    }
-    
-    // Decode UTF-8 cho tham số
-    private String decodeParam(String s) {
-        if (s == null) return null;
-        try {
-            return new String(s.getBytes("ISO-8859-1"), "UTF-8").trim();
-        } catch (Exception e) { 
-            return s.trim(); 
-        }
-    }
-    
-    
-    private String getUserRole(com.hlgenerator.model.User user) {
-        try {
-            String role = (String)com.hlgenerator.model.User.class.getMethod("getRole").invoke(user);
-            return role != null ? role : (user.getRoleDisplayName() != null ? user.getRoleDisplayName() : "");
-        } catch (Exception e) {
-            return user.getRoleDisplayName() != null ? user.getRoleDisplayName() : "";
-        }
-    }
-    
-    
-    private String roleLabel(String raw) {
-        if (raw == null) return "-";
-        if ("admin".equals(raw)) return "Quản trị viên";
-        if ("customer_support".equals(raw)) return "Hỗ trợ khách hàng";
-        if ("technical_staff".equals(raw)) return "Nhân viên kỹ thuật";
-        if ("head_technician".equals(raw)) return "Trưởng phòng kỹ thuật";
-        if ("storekeeper".equals(raw)) return "Thủ kho";
-        if ("customer".equals(raw)) return "Khách hàng";
-        if ("guest".equals(raw)) return "Khách";
-        return raw;
-    }
-    
-    // Chuyển đổi trạng thái sang tiếng Việt
-    private String statusLabel(boolean active) { 
-        return active ? "Hoạt động" : "Tạm khóa"; 
-    }
-%>
-<%
-    
-    com.hlgenerator.dao.UserDAO filterDao = new com.hlgenerator.dao.UserDAO();
-    java.util.List<com.hlgenerator.model.User> allUsers = filterDao.getAllUsers();
-    
-   
-    String pUsername = decodeParam(request.getParameter("username"));
-    String pEmail = decodeParam(request.getParameter("email"));
-    String pFullName = decodeParam(request.getParameter("fullName"));
-    String pPhone = decodeParam(request.getParameter("phone"));
-    String pRole = decodeParam(request.getParameter("role"));
-    String pStatus = decodeParam(request.getParameter("status"));
-
-    // Lọc danh sách người dùng theo các điều kiện
-    java.util.List<com.hlgenerator.model.User> filteredUsers = new java.util.ArrayList<com.hlgenerator.model.User>();
-    for (com.hlgenerator.model.User u : allUsers) {
-        // Tìm kiếm theo các trường text
-        if (!containsParam(pUsername, u.getUsername())) continue;
-        if (!containsParam(pEmail, u.getEmail())) continue;
-        if (!containsParam(pFullName, u.getFullName())) continue;
-        if (!containsParam(pPhone, u.getPhone())) continue;
-        
-        // So sánh chính xác cho vai trò
-        if (!equalsParam(pRole, getUserRole(u))) continue;
-        
-        // Lọc theo trạng thái
-        if (pStatus != null && !pStatus.trim().isEmpty()) {
-            boolean wantActive = "active".equalsIgnoreCase(pStatus);
-            if (u.isActive() != wantActive) continue;
-        }
-        
-        filteredUsers.add(u);
-    }
-
-    // Lấy danh sách vai trò để hiển thị trong dropdown
-    java.util.Set<String> roles = new java.util.TreeSet<String>();
-    for (com.hlgenerator.model.User u : allUsers) {
-        String role = getUserRole(u);
-        if (role != null && !role.isEmpty()) {
-            roles.add(role);
-        }
-    }
-%>
                                 
-                                <form class="form-inline" method="get" action="users.jsp" accept-charset="UTF-8" style="margin-bottom: 10px;">
+                                <form class="form-inline" method="get" action="users" accept-charset="UTF-8" style="margin-bottom: 10px;">
                                     <div class="row" style="margin-bottom: 10px;">
                                         
                                         <div class="col-sm-2">
                                             <label for="filterRole">Vai trò</label>
                                             <select id="filterRole" name="role" class="form-control" style="width:100%">
                                                 <option value="">Tất cả</option>
-                                                <% for (String r : roles) { %>
+                                                <% 
+                                                if (roles != null) {
+                                                    for (String r : roles) { 
+                                                %>
                                                 <option value="<%= r %>" <%= (pRole != null && pRole.equalsIgnoreCase(r)) ? "selected" : "" %>>
-                                                    <%= roleLabel(r) %>
+                                                    <%= RoleHelper.roleLabel(r) %>
                                                 </option>
-                                                <% } %>
+                                                <% 
+                                                    } 
+                                                }
+                                                %>
                                             </select>
                                         </div>
                                         <div class="col-sm-2">
@@ -377,7 +279,7 @@
                                             <button type="submit" class="btn btn-primary btn-sm">
                                                 <i class="fa fa-filter"></i> Lọc
                                             </button>
-                                            <a href="users.jsp" class="btn btn-default btn-sm">
+                                            <a href="users" class="btn btn-default btn-sm">
                                                 <i class="fa fa-times"></i> Xóa lọc
                                             </a>
                                         </div>
@@ -398,15 +300,18 @@
                                         </tr>
                                     </thead>
                                     <tbody id="usersTableBody">
-                                        <% for (com.hlgenerator.model.User user : filteredUsers) { %>
+                                        <% 
+                                        if (filteredUsers != null) {
+                                            for (User user : filteredUsers) { 
+                                        %>
                                         <tr>
                                             <td><%= user.getId() %></td>
                                             <td><%= user.getUsername() %></td>
                                             <td><%= user.getEmail() %></td>
                                             <td><%= user.getFullName() %></td>
                                             <td><%= user.getPhone() != null ? user.getPhone() : "-" %></td>
-                                            <td><%= roleLabel(getUserRole(user)) %></td>
-                                            <td><%= statusLabel(user.isActive()) %></td>
+                                            <td><%= RoleHelper.roleLabel(user.getRole()) %></td>
+                                            <td><%= RoleHelper.statusLabel(user.isActive()) %></td>
                                             <td>
                                                 <div class="action-buttons">
                                                     <div class="btn-group">
@@ -439,7 +344,10 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                        <% } %>
+                                        <% 
+                                            }
+                                        }
+                                        %>
                                     </tbody>
                                 </table>
                             </div>
@@ -506,10 +414,7 @@
                                     </select>
                                     <small class="text-muted">Bắt buộc khi vai trò là Khách hàng</small>
                                 </div>
-                                <div class="form-group">
-                                    <label for="permissions">Quyền hạn:</label>
-                                    <textarea class="form-control" id="permissions" rows="3" placeholder='["view_users", "manage_users"]'></textarea>
-                                </div>
+                                
                                 <div class="form-group">
                                     <label>
                                         <input type="checkbox" id="isActive" checked> Kích hoạt tài khoản (có thể đăng nhập ngay)
@@ -557,7 +462,6 @@
                         <div class="col-md-6">
                             <h5>Thông tin hệ thống</h5>
                             <p><strong>Vai trò:</strong> <span id="detailRole"></span></p>
-                            <p><strong>Quyền hạn:</strong> <span id="detailPermissions"></span></p>
                             <p><strong>Trạng thái:</strong> <span id="detailStatus"></span></p>
                             <p><strong>Ngày tạo:</strong> <span id="detailCreatedAt"></span></p>
                             <p><strong>Cập nhật lần cuối:</strong> <span id="detailUpdatedAt"></span></p>
