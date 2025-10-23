@@ -85,6 +85,7 @@
                                                 <option value="in_progress">Đang thực hiện</option>
                                                 <option value="completed">Đã hoàn thành</option>
                                                 <option value="cancelled">Đã hủy</option>
+                                                <option value="rejected">Đã từ chối</option>
                                             </select>
                                         </div>
                                         <div class="form-group" style="margin-right: 8px;">
@@ -130,11 +131,12 @@
                                             <th>Ưu tiên</th>
                                             <th>Ngày nhận</th>
                                             <th>Ngày hoàn thành</th>
+                                            <th>Lý do từ chối</th>
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody id="taskBody">
-                                        <tr><td colspan="5" class="text-center text-muted">Đang tải...</td></tr>
+                                        <tr><td colspan="8" class="text-center text-muted">Đang tải...</td></tr>
                                     </tbody>
                                 </table>
                                 <nav aria-label="Task pagination">
@@ -151,11 +153,12 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="js/jquery.min.js" type="text/javascript"></script>
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
+    <input type="hidden" id="currentUserId" value="<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : 0 %>" />
     <script>
-        var currentUserId = <%= session.getAttribute("userId") != null ? session.getAttribute("userId") : 0 %>;
+        var currentUserId = parseInt(document.getElementById('currentUserId').value) || 0;
 
         function badgeForStatus(s){
-            var map = {pending:'label-default', in_progress:'label-warning', completed:'label-success', cancelled:'label-default'};
+            var map = {pending:'label-default', in_progress:'label-warning', completed:'label-success', cancelled:'label-default', rejected:'label-danger'};
             return '<span class="label ' + (map[s]||'label-default') + '">' + (s||'') + '</span>';
         }
 
@@ -171,8 +174,8 @@
             $.getJSON('api/tasks', { action:'listAssigned', userId: currentUserId, status: status, priority: priority, scheduledFrom: scheduledFrom, scheduledTo: scheduledTo, q: q, page: currentPage, size: size }, function(res){
                 var tbody = document.getElementById('taskBody');
                 tbody.innerHTML = '';
-                if(!res.success){ tbody.innerHTML = '<tr><td colspan="5">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
-                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); return; }
+                if(!res.success){ tbody.innerHTML = '<tr><td colspan="8">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
+                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); return; }
                 renderPagination(res.meta);
                 function fmt(ts){
                     if(!ts) return '';
@@ -208,18 +211,21 @@
                     var actions = [];
                     if(it.taskStatus === 'pending'){
                         actions.push('<button class="btn btn-xs btn-primary" onclick="ack(' + it.taskId + ')"><i class="fa fa-check"></i> Nhận</button>');
+                        actions.push('<button class="btn btn-xs btn-danger" onclick="rejectTask(' + it.taskId + ')"><i class="fa fa-times"></i> Từ chối</button>');
                     }
                     if(it.taskStatus === 'in_progress'){
                         actions.push('<button class="btn btn-xs btn-success" onclick="completeTask(' + it.taskId + ')"><i class="fa fa-flag-checkered"></i> Hoàn thành</button>');
                     }
+                    
                     var tr = document.createElement('tr');
-                    tr.innerHTML = '' +
+                    tr.innerHTML = 
                         '<td><div><strong>' + (it.workOrderNumber||'') + '</strong></div><div>' + (it.workOrderTitle||'') + '</div></td>' +
                         '<td><div><strong>' + (it.taskNumber||'') + '</strong></div><div>' + (it.taskDescription||'') + '</div></td>' +
                         '<td>' + badgeForStatus(it.taskStatus) + '</td>' +
                         '<td>' + (it.taskPriority||'') + '</td>' +
                         '<td>' + (fmt(it.startDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
+                        '<td>' + (it.rejectionReason ? '<span class="text-danger">' + it.rejectionReason + '</span>' : '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + actions.join(' ') + '</td>';
                     tbody.appendChild(tr);
                 });
@@ -283,9 +289,21 @@
             });
         }
 
+        function rejectTask(id){
+            var reason = prompt('Lý do từ chối (bắt buộc):', '');
+            if(reason === null) return; // User cancelled
+            if(reason.trim() === ''){
+                alert('Vui lòng nhập lý do từ chối');
+                return;
+            }
+            $.post('api/tasks', { action:'reject', id: id, rejectionReason: reason.trim() }, function(res){
+                try{ res = JSON.parse(res); }catch(e){}
+                alert(res.message||'');
+                if(res.success) loadTasks();
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', loadTasks);
     </script>
 </body>
 </html>
-
-
