@@ -497,8 +497,8 @@
         const status = getStatusText(finalStatus);
         const statusClass = getStatusClass(finalStatus);
         const tr = document.createElement('tr');
-        // Chỉ hiển thị nút hủy khi có thể hủy (pending hoặc open)
-        const canCancel = finalStatus === 'pending' || finalStatus === 'open';
+        // Hiển thị nút hủy cho pending, open, cancelled, closed
+        const canCancel = finalStatus === 'pending' || finalStatus === 'open' || finalStatus === 'cancelled' || finalStatus === 'closed';
         const cancelButton = canCancel ? '<a href="#" class="cancel-link text-danger" data-id="'+ (it.id||'') +'">Hủy</a>' : '';
         // Tính số thứ tự theo thời gian tạo (mới nhất = 1)
         const sequenceNumber = (currentPage - 1) * pageSize + idx + 1;
@@ -893,12 +893,8 @@
         
         // Kiểm tra trạng thái trước khi hủy
         const finalStatus = cancelledItems.has(String(id)) ? 'cancelled' : (it.status || 'pending');
-        if(finalStatus === 'cancelled') {
-          alert('Yêu cầu này đã được hủy rồi!');
-          return;
-        }
-        if(finalStatus !== 'pending' && finalStatus !== 'open') {
-          alert('Chỉ có thể hủy yêu cầu đang chờ xử lý!');
+        if(finalStatus !== 'pending' && finalStatus !== 'open' && finalStatus !== 'cancelled' && finalStatus !== 'closed') {
+          alert('Chỉ có thể hủy yêu cầu đang chờ xử lý, đã hủy hoặc đã đóng!');
           return;
         }
         
