@@ -9,6 +9,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -63,10 +64,29 @@ public class SupportStatsServlet extends HttpServlet {
                 jsonResponse.add("data", gson.toJsonTree(tickets));
                 
             } else if ("getAllTickets".equals(action) || "list".equals(action)) {
-                // Lấy tất cả ticket
-                List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();
-                jsonResponse.addProperty("success", true);
-                jsonResponse.add("data", gson.toJsonTree(allTickets));
+                // Lấy ticket theo khách hàng đang đăng nhập
+                HttpSession session = request.getSession(false);
+                if (session == null || session.getAttribute("isLoggedIn") == null) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Chưa đăng nhập");
+                } else {
+                    // Lấy customerId từ session
+                    Integer customerId = (Integer) session.getAttribute("customerId");
+                    if (customerId == null) {
+                        // Fallback: lấy từ userId nếu không có customerId
+                        Integer userId = (Integer) session.getAttribute("userId");
+                        customerId = userId; // Giả sử userId = customerId
+                    }
+                    
+                    if (customerId != null) {
+                        List<Map<String, Object>> customerTickets = supportDAO.listByCustomerId(customerId);
+                        jsonResponse.addProperty("success", true);
+                        jsonResponse.add("data", gson.toJsonTree(customerTickets));
+                    } else {
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
+                    }
+                }
                 
             } else {
                 System.out.println("Unknown GET action: " + action);
@@ -108,8 +128,25 @@ public class SupportStatsServlet extends HttpServlet {
                 String priority = request.getParameter("priority");
                 String deleteOldId = request.getParameter("delete_old_id");
                 
-                // Lấy customer_id từ session (giả lập)
-                int customerId = 1; // TODO: Lấy từ session thực tế
+                // Lấy customer_id từ session
+                HttpSession session = request.getSession(false);
+                Integer customerId = null;
+                if (session != null) {
+                    customerId = (Integer) session.getAttribute("customerId");
+                    if (customerId == null) {
+                        // Fallback: lấy từ userId nếu không có customerId
+                        Integer userId = (Integer) session.getAttribute("userId");
+                        customerId = userId; // Giả sử userId = customerId
+                    }
+                }
+                
+                if (customerId == null) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
+                    out.print(jsonResponse.toString());
+                    out.flush();
+                    return;
+                }
                 
                 if (subject == null || subject.trim().isEmpty() ||
                     description == null || description.trim().isEmpty() ||
@@ -133,7 +170,7 @@ public class SupportStatsServlet extends HttpServlet {
                         }
                     }
                     
-                    boolean success = supportDAO.create(customerId, subject, description, category, priority);
+                    boolean success = supportDAO.create(customerId.intValue(), subject, description, category, priority);
                     
                     if (success) {
                         jsonResponse.addProperty("success", true);

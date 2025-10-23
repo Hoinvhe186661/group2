@@ -319,6 +319,14 @@
         data.append('role', userData.role || 'customer');
         if (userData.permissions != null) data.append('permissions', String(userData.permissions));
         if (typeof userData.isActive !== 'undefined') data.append('isActive', String(!!userData.isActive));
+        
+        // Thêm customerId nếu có (từ session hoặc customerData)
+        var customerId = '<%= String.valueOf(session.getAttribute("customerId")) %>';
+        if (customerId && customerId !== 'null') {
+          data.append('customerId', customerId);
+        } else if (customerData && customerData.id) {
+          data.append('customerId', customerData.id);
+        }
         fetch('<%=request.getContextPath()%>/api/users?action=update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
@@ -365,17 +373,30 @@
                   method: 'POST',
                   headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
                   body: cdata.toString()
-                }).then(function(rr){ return rr.json(); }).then(function(){
-                  alert('Cập nhật thành công');
-                }).catch(function(){ alert('Cập nhật tài khoản thành công, nhưng cập nhật khách hàng thất bại'); });
+                }).then(function(rr){ return rr.json(); }).then(function(j){
+                  if (j && j.success) {
+                    alert('Cập nhật thành công');
+                  } else {
+                    alert('Cập nhật tài khoản thành công, nhưng cập nhật thông tin khách hàng thất bại: ' + (j && j.message ? j.message : 'Lỗi không xác định'));
+                  }
+                }).catch(function(){ 
+                  alert('Cập nhật tài khoản thành công, nhưng cập nhật thông tin khách hàng thất bại. Vui lòng thử lại sau.'); 
+                });
               } else {
-                alert('Cập nhật thành công');
+                alert('Cập nhật tài khoản thành công');
               }
             } else {
-              alert((j && j.message) ? j.message : 'Không thể cập nhật');
+              // Hiển thị thông báo lỗi chi tiết hơn
+              var errorMsg = (j && j.message) ? j.message : 'Không thể cập nhật';
+              if (errorMsg.includes('Vui lòng chọn khách hàng')) {
+                errorMsg = 'Lỗi: Không tìm thấy thông tin khách hàng. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
+              }
+              alert(errorMsg);
             }
           })
-          .catch(function(){ alert('Lỗi kết nối máy chủ'); });
+          .catch(function(){ 
+            alert('Lỗi kết nối máy chủ. Vui lòng kiểm tra kết nối internet và thử lại.'); 
+          });
       });
     }
 

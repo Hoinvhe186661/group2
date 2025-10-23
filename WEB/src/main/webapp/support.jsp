@@ -487,7 +487,7 @@
     function rows(items){
       tbody.innerHTML = '';
       if(!items || !items.length){
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có yêu cầu nào</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-info-circle"></i> Bạn chưa có yêu cầu hỗ trợ nào. <a href="#" data-bs-toggle="modal" data-bs-target="#supportModal" class="text-primary">Tạo yêu cầu mới</a></td></tr>';
         return;
       }
       items.forEach(function(it, idx){
@@ -555,11 +555,15 @@
     function load(){
       fetch(ctx + '/api/support-stats?action=list', {headers:{'Accept':'application/json'}})
         .then(r=>r.json()).then(j=>{ 
-          allItems = Array.isArray(j.data)? j.data : []; 
-          filterItems();
-          renderPage(1); 
+          if (j && j.success) {
+            allItems = Array.isArray(j.data)? j.data : []; 
+            filterItems();
+            renderPage(1);
+          } else {
+            tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> ' + (j && j.message ? j.message : 'Lỗi tải dữ liệu') + '</td></tr>';
+          }
         })
-        .catch(()=>{tbody.innerHTML='<tr><td colspan="7" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>';});
+        .catch(()=>{tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Lỗi kết nối máy chủ</td></tr>';});
     }
     load();
 
@@ -681,6 +685,21 @@
             const modalEl = document.getElementById('supportModal');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.hide();
+            
+            // Hiển thị thông báo thành công
+            const successAlert = document.createElement('div');
+            successAlert.className = 'alert alert-success alert-dismissible fade show';
+            successAlert.innerHTML = '<i class="fas fa-check-circle"></i> ' + (j.message || 'Yêu cầu hỗ trợ đã được tạo thành công!') + 
+                                   '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+            document.querySelector('.container').insertBefore(successAlert, document.querySelector('.support-header'));
+            
+            // Tự động ẩn thông báo sau 5 giây
+            setTimeout(() => {
+              if (successAlert.parentNode) {
+                successAlert.remove();
+              }
+            }, 5000);
+            
             load();
           } else {
             alert(j && j.message ? j.message : 'Không thể tạo yêu cầu');
@@ -875,6 +894,21 @@
           }).then(r=>r.json()).then(function(j){
             if(j && j.success){
               vm.hide();
+              
+              // Hiển thị thông báo thành công
+              const successAlert = document.createElement('div');
+              successAlert.className = 'alert alert-success alert-dismissible fade show';
+              successAlert.innerHTML = '<i class="fas fa-check-circle"></i> ' + (j.message || 'Yêu cầu hỗ trợ đã được cập nhật thành công!') + 
+                                     '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+              document.querySelector('.container').insertBefore(successAlert, document.querySelector('.support-header'));
+              
+              // Tự động ẩn thông báo sau 5 giây
+              setTimeout(() => {
+                if (successAlert.parentNode) {
+                  successAlert.remove();
+                }
+              }, 5000);
+              
               load();
               renderPage(1);
             } else {
@@ -916,7 +950,20 @@
           }).then(r=>r.json())
             .then(j=>{
               if(j && j.success){
-                alert('Đã hủy yêu cầu thành công!');
+                // Hiển thị thông báo thành công
+                const successAlert = document.createElement('div');
+                successAlert.className = 'alert alert-success alert-dismissible fade show';
+                successAlert.innerHTML = '<i class="fas fa-check-circle"></i> Đã hủy yêu cầu thành công!' + 
+                                       '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                document.querySelector('.container').insertBefore(successAlert, document.querySelector('.support-header'));
+                
+                // Tự động ẩn thông báo sau 3 giây
+                setTimeout(() => {
+                  if (successAlert.parentNode) {
+                    successAlert.remove();
+                  }
+                }, 3000);
+                
                 load(); // Reload danh sách từ server
               } else {
                 // Nếu server từ chối, revert lại trạng thái
