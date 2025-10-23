@@ -12,7 +12,7 @@ public class DBConnect {
     public DBConnect() {
         try {
             String user = "root";
-            String pass = "12345";
+            String pass = "123abc";
             String url = "jdbc:mysql://localhost:3306/hlelectric?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=UTF-8";
             Class.forName("com.mysql.cj.jdbc.Driver");
             connection = DriverManager.getConnection(url, user, pass);
