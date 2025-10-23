@@ -393,6 +393,10 @@ public class SupplierServlet extends HttpServlet {
                 updateSupplier(request, response);
             } else if ("delete".equals(action)) {
                 deleteSupplier(request, response);
+            } else if ("hide".equals(action)) {
+                hideSupplier(request, response);
+            } else if ("show".equals(action)) {
+                showSupplier(request, response);
             } else {
                 response.sendRedirect(request.getContextPath() + "/supplier?message=unsupported");
             }
@@ -545,6 +549,57 @@ public class SupplierServlet extends HttpServlet {
                 String error = supplierDAO.getLastError();
                 response.sendRedirect(request.getContextPath() + "/supplier?message=database_error&error=" + 
                     URLEncoder.encode(error != null ? error : "Lỗi không xác định", "UTF-8"));
+            }
+        } catch (NumberFormatException e) {
+            response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                URLEncoder.encode("ID nhà cung cấp không hợp lệ", "UTF-8"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/supplier?message=system_error&error=" + 
+                URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+
+    /**
+     * Ẩn nhà cung cấp (soft delete) - chuyển status thành 'inactive'
+     * Đồng thời ẩn tất cả sản phẩm của nhà cung cấp này
+     */
+    private void hideSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            int supplierId = Integer.parseInt(request.getParameter("id"));
+            boolean success = supplierDAO.hideSupplier(supplierId);
+            
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=hide_success");
+            } else {
+                String error = supplierDAO.getLastError();
+                response.sendRedirect(request.getContextPath() + "/supplier?message=hide_error&error=" + 
+                    URLEncoder.encode(error != null ? error : "Không thể ẩn nhà cung cấp", "UTF-8"));
+            }
+        } catch (NumberFormatException e) {
+            response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                URLEncoder.encode("ID nhà cung cấp không hợp lệ", "UTF-8"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/supplier?message=system_error&error=" + 
+                URLEncoder.encode(e.getMessage(), "UTF-8"));
+        }
+    }
+    
+    /**
+     * Hiện lại nhà cung cấp - chuyển status thành 'active'
+     */
+    private void showSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            int supplierId = Integer.parseInt(request.getParameter("id"));
+            boolean success = supplierDAO.showSupplier(supplierId);
+            
+            if (success) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=show_success");
+            } else {
+                String error = supplierDAO.getLastError();
+                response.sendRedirect(request.getContextPath() + "/supplier?message=show_error&error=" + 
+                    URLEncoder.encode(error != null ? error : "Không thể hiện nhà cung cấp", "UTF-8"));
             }
         } catch (NumberFormatException e) {
             response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 

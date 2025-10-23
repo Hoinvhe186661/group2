@@ -317,7 +317,7 @@
                                                     <select class="form-control" id="filterStatus">
                                                         <option value="">Tất cả trạng thái</option>
                                                         <option value="active">Đang bán</option>
-                                                        <option value="discontinued">Ngừng bán</option>
+                                                        <option value="discontinued">Tạm ẩn</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -401,20 +401,35 @@
                                             </td>
                                             <td>${not empty product.category ? product.category : 'Chưa phân loại'}</td>
                                             <td>
-                                                <span class="label ${product.status == 'active' ? 'label-success' : 'label-warning'}">
-                                                    ${product.status == 'active' ? 'Đang bán' : 'Ngừng bán'}
+                                                <span class="label ${product.status == 'active' ? 'label-success' : (product.status == 'discontinued' ? 'label-warning' : 'label-default')}">
+                                                    ${product.status == 'active' ? 'Đang bán' : (product.status == 'discontinued' ? 'Tạm ẩn' : 'Ngừng bán')}
                                                 </span>
                                             </td>
                                             <td>
-                                                <button class="btn btn-info btn-xs" data-product-id="${product.id}" onclick="viewProduct(this)">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                                <button class="btn btn-warning btn-xs" data-product-id="${product.id}" onclick="editProduct(this)">
-                                                    <i class="fa fa-edit"></i> Sửa
-                                                </button>
-                                                <button class="btn btn-danger btn-xs" data-product-id="${product.id}" onclick="deleteProduct(this)">
-                                                    <i class="fa fa-trash"></i> Xóa
-                                                </button>
+                                                <c:choose>
+                                                    <c:when test="${product.status == 'active'}">
+                                                        <button class="btn btn-info btn-xs" data-product-id="${product.id}" onclick="viewProduct(this)">
+                                                            <i class="fa fa-eye"></i> Xem
+                                                        </button>
+                                                        <button class="btn btn-warning btn-xs" data-product-id="${product.id}" onclick="editProduct(this)">
+                                                            <i class="fa fa-edit"></i> Sửa
+                                                        </button>
+                                                        <button class="btn btn-default btn-xs" data-product-id="${product.id}" onclick="hideProduct(this)">
+                                                            <i class="fa fa-eye-slash"></i> Ẩn
+                                                        </button>
+                                                        <button class="btn btn-danger btn-xs" data-product-id="${product.id}" onclick="deleteProduct(this)">
+                                                            <i class="fa fa-trash"></i> Xóa
+                                                        </button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button class="btn btn-success btn-xs" data-product-id="${product.id}" onclick="showProduct(this)">
+                                                            <i class="fa fa-eye"></i> Hiện
+                                                        </button>
+                                                        <button class="btn btn-danger btn-xs" data-product-id="${product.id}" onclick="deleteProduct(this)">
+                                                            <i class="fa fa-trash"></i> Xóa
+                                                        </button>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </td>
                                         </tr>
                                                 </c:forEach>
@@ -1086,6 +1101,68 @@
             }
         }
         
+        function hideProduct(element) {
+            var id = $(element).data('product-id');
+            if (!id || id <= 0) {
+                alert('ID sản phẩm không hợp lệ');
+                return;
+            }
+            if (confirm('Bạn có chắc chắn muốn ẩn sản phẩm này?')) {
+                $.ajax({
+                    url: '<%=request.getContextPath()%>/product',
+                    type: 'POST',
+                    data: {
+                        action: 'hide',
+                        id: id
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            window.location.reload();
+                        } else {
+                            alert('Lỗi: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        alert('Lỗi khi ẩn sản phẩm: ' + error);
+                    }
+                });
+            }
+        }
+        
+        function showProduct(element) {
+            var id = $(element).data('product-id');
+            if (!id || id <= 0) {
+                alert('ID sản phẩm không hợp lệ');
+                return;
+            }
+            if (confirm('Bạn có chắc chắn muốn hiện lại sản phẩm này?')) {
+                $.ajax({
+                    url: '<%=request.getContextPath()%>/product',
+                    type: 'POST',
+                    data: {
+                        action: 'show',
+                        id: id
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);
+                            window.location.reload();
+                        } else {
+                            alert('Lỗi: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        alert('Lỗi khi hiện sản phẩm: ' + error);
+                    }
+                });
+            }
+        }
+        
         // Biến phân trang cho products
         var currentPageProducts = 1;
         var itemsPerPageProducts = 10;
@@ -1321,17 +1398,31 @@
             var statusHtml = '';
             if (product.status === 'active') {
                 statusHtml = '<span class="label label-success">Đang bán</span>';
+            } else if (product.status === 'discontinued') {
+                statusHtml = '<span class="label label-warning">Tạm ẩn</span>';
             } else {
-                statusHtml = '<span class="label label-warning">Ngừng bán</span>';
+                statusHtml = '<span class="label label-default">Ngừng bán</span>';
             }
             
-            // Tạo HTML cho các nút action
-            var actionHtml = '<button class="btn btn-info btn-xs" onclick="viewProduct(this)" data-product-id="' + product.id + '">' +
+            // Tạo HTML cho các nút action dựa vào status
+            var actionHtml = '';
+            if (product.status === 'active') {
+                // Sản phẩm active: Hiển thị đầy đủ các nút
+                actionHtml = '<button class="btn btn-info btn-xs" onclick="viewProduct(this)" data-product-id="' + product.id + '">' +
                             '<i class="fa fa-eye"></i> Xem</button> ' +
                             '<button class="btn btn-warning btn-xs" onclick="editProduct(this)" data-product-id="' + product.id + '">' +
                             '<i class="fa fa-edit"></i> Sửa</button> ' +
+                            '<button class="btn btn-default btn-xs" onclick="hideProduct(this)" data-product-id="' + product.id + '">' +
+                            '<i class="fa fa-eye-slash"></i> Ẩn</button> ' +
                             '<button class="btn btn-danger btn-xs" onclick="deleteProduct(this)" data-product-id="' + product.id + '">' +
                             '<i class="fa fa-trash"></i> Xóa</button>';
+            } else {
+                // Sản phẩm đã ẩn: Chỉ hiển thị nút Hiện và Xóa
+                actionHtml = '<button class="btn btn-success btn-xs" onclick="showProduct(this)" data-product-id="' + product.id + '">' +
+                            '<i class="fa fa-eye"></i> Hiện</button> ' +
+                            '<button class="btn btn-danger btn-xs" onclick="deleteProduct(this)" data-product-id="' + product.id + '">' +
+                            '<i class="fa fa-trash"></i> Xóa</button>';
+            }
             
             row.innerHTML = 
                 '<td>' + (product.id || '') + '</td>' +

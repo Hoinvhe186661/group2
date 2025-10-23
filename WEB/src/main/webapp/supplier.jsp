@@ -292,7 +292,7 @@
                                                 <select id="statusFilter" name="statusFilter" class="form-control">
                                                     <option value="">Tất cả trạng thái</option>
                                                     <option value="active" ${statusFilter eq 'active' ? 'selected' : ''}>Hoạt động</option>
-                                                    <option value="inactive" ${statusFilter eq 'inactive' ? 'selected' : ''}>Không hoạt động</option>
+                                                    <option value="inactive" ${statusFilter eq 'inactive' ? 'selected' : ''}>Tạm ẩn</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -354,14 +354,23 @@
                                                 <td>${supplier.email}</td>
                                                 <td>${supplier.phone}</td>
                                                 <td>
-                                                    <span class="label ${supplier.status == 'active' ? 'label-success' : 'label-default'}">
-                                                        ${supplier.status == 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                                                    <span class="label ${supplier.status == 'active' ? 'label-success' : (supplier.status == 'inactive' ? 'label-warning' : 'label-default')}">
+                                                        ${supplier.status == 'active' ? 'Hoạt động' : (supplier.status == 'inactive' ? 'Tạm ẩn' : 'Không hoạt động')}
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <button class="btn btn-info btn-xs" data-supplier-id="${supplier.id}" onclick="viewSupplier(this)">Xem</button>
-                                                    <button class="btn btn-warning btn-xs" data-supplier-id="${supplier.id}" onclick="editSupplier(this)">Sửa</button>
-                                                    <button class="btn btn-danger btn-xs" data-supplier-id="${supplier.id}" onclick="deleteSupplier(this)">Xóa</button>
+                                                    <c:choose>
+                                                        <c:when test="${supplier.status == 'active'}">
+                                                            <button class="btn btn-info btn-xs" data-supplier-id="${supplier.id}" onclick="viewSupplier(this)">Xem</button>
+                                                            <button class="btn btn-warning btn-xs" data-supplier-id="${supplier.id}" onclick="editSupplier(this)">Sửa</button>
+                                                            <button class="btn btn-default btn-xs" data-supplier-id="${supplier.id}" onclick="hideSupplier(this)">Ẩn</button>
+                                                            <button class="btn btn-danger btn-xs" data-supplier-id="${supplier.id}" onclick="deleteSupplier(this)">Xóa</button>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <button class="btn btn-success btn-xs" data-supplier-id="${supplier.id}" onclick="showSupplier(this)">Hiện</button>
+                                                            <button class="btn btn-danger btn-xs" data-supplier-id="${supplier.id}" onclick="deleteSupplier(this)">Xóa</button>
+                                                        </c:otherwise>
+                                                    </c:choose>
                                                 </td>
                                             </tr>
                                         </c:forEach>
@@ -777,6 +786,64 @@
             }
         }
         
+        function hideSupplier(element) {
+            var id = $(element).data('supplier-id');
+            if (!id || id <= 0) {
+                alert('ID nhà cung cấp không hợp lệ');
+                return;
+            }
+            
+            if (confirm('Bạn có chắc chắn muốn ẩn nhà cung cấp này?\n\nLưu ý: Tất cả sản phẩm của nhà cung cấp này cũng sẽ bị ẩn.')) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<%=request.getContextPath()%>/supplier';
+                
+                var actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'hide';
+                form.appendChild(actionInput);
+                
+                var idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = id;
+                form.appendChild(idInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        function showSupplier(element) {
+            var id = $(element).data('supplier-id');
+            if (!id || id <= 0) {
+                alert('ID nhà cung cấp không hợp lệ');
+                return;
+            }
+            
+            if (confirm('Bạn có chắc chắn muốn hiện lại nhà cung cấp này?')) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '<%=request.getContextPath()%>/supplier';
+                
+                var actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'show';
+                form.appendChild(actionInput);
+                
+                var idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'id';
+                idInput.value = id;
+                form.appendChild(idInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
         // Biến phân trang cho suppliers
         var currentPageSuppliers = 1;
         var itemsPerPageSuppliers = 10;
@@ -874,17 +941,31 @@
             var statusHtml = '';
             if (supplier.status === 'active') {
                 statusHtml = '<span class="label label-success">Hoạt động</span>';
+            } else if (supplier.status === 'inactive') {
+                statusHtml = '<span class="label label-warning">Tạm ẩn</span>';
             } else {
                 statusHtml = '<span class="label label-default">Không hoạt động</span>';
             }
             
-            // Tạo HTML cho các nút action
-            var actionHtml = '<button class="btn btn-info btn-xs" onclick="viewSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+            // Tạo HTML cho các nút action dựa vào status
+            var actionHtml = '';
+            if (supplier.status === 'active') {
+                // Nhà cung cấp active: Hiển thị đầy đủ các nút
+                actionHtml = '<button class="btn btn-info btn-xs" onclick="viewSupplier(this)" data-supplier-id="' + supplier.id + '">' +
                             '<i class="fa fa-eye"></i> Xem</button> ' +
                             '<button class="btn btn-warning btn-xs" onclick="editSupplier(this)" data-supplier-id="' + supplier.id + '">' +
                             '<i class="fa fa-edit"></i> Sửa</button> ' +
+                            '<button class="btn btn-default btn-xs" onclick="hideSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+                            '<i class="fa fa-eye-slash"></i> Ẩn</button> ' +
                             '<button class="btn btn-danger btn-xs" onclick="deleteSupplier(this)" data-supplier-id="' + supplier.id + '">' +
                             '<i class="fa fa-trash"></i> Xóa</button>';
+            } else {
+                // Nhà cung cấp đã ẩn: Chỉ hiển thị nút Hiện và Xóa
+                actionHtml = '<button class="btn btn-success btn-xs" onclick="showSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+                            '<i class="fa fa-eye"></i> Hiện</button> ' +
+                            '<button class="btn btn-danger btn-xs" onclick="deleteSupplier(this)" data-supplier-id="' + supplier.id + '">' +
+                            '<i class="fa fa-trash"></i> Xóa</button>';
+            }
             
             row.innerHTML = 
                 '<td>' + (supplier.id || '') + '</td>' +

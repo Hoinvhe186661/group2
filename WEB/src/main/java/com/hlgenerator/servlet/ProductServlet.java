@@ -177,6 +177,10 @@ public class ProductServlet extends HttpServlet {
             
             if ("delete".equals(action)) {
                 deleteProduct(request, response);
+            } else if ("hide".equals(action)) {
+                hideProduct(request, response);
+            } else if ("show".equals(action)) {
+                showProduct(request, response);
             } else {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 response.getWriter().write("{\"success\": false, \"message\": \"Invalid action or missing multipart data\"}");
@@ -584,6 +588,52 @@ public class ProductServlet extends HttpServlet {
             }
         } catch (Exception e) {
             out.write("{\"success\": false, \"message\": \"" + e.getMessage() + "\"}");
+        }
+    }
+    
+    /**
+     * Ẩn sản phẩm (soft delete) - chuyển status thành 'discontinued'
+     */
+    private void hideProduct(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            boolean success = productDAO.hideProduct(id);
+            
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Ẩn sản phẩm thành công\"}");
+            } else {
+                String error = productDAO.getLastError();
+                out.write("{\"success\": false, \"message\": \"" + escapeJson(error != null ? error : "Không thể ẩn sản phẩm") + "\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"success\": false, \"message\": \"Lỗi: " + escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
+     * Hiện lại sản phẩm - chuyển status thành 'active'
+     */
+    private void showProduct(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        try {
+            int id = Integer.parseInt(request.getParameter("id"));
+            boolean success = productDAO.showProduct(id);
+            
+            if (success) {
+                out.write("{\"success\": true, \"message\": \"Hiện sản phẩm thành công\"}");
+            } else {
+                String error = productDAO.getLastError();
+                out.write("{\"success\": false, \"message\": \"" + escapeJson(error != null ? error : "Không thể hiện sản phẩm") + "\"}");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"success\": false, \"message\": \"Lỗi: " + escapeJson(e.getMessage()) + "\"}");
         }
     }
     
