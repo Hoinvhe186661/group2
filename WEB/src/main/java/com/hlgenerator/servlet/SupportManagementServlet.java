@@ -20,9 +20,10 @@ public class SupportManagementServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        
+        // Set encoding TRƯỚC KHI đọc bất kỳ parameter nào
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html; charset=UTF-8");
         
         // Kiểm tra đăng nhập
         HttpSession session = request.getSession(false);
