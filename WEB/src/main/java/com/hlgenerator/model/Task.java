@@ -8,12 +8,13 @@ public class Task {
 	private int workOrderId;
 	private String taskNumber;
 	private String taskDescription;
-	private String status; // pending, in_progress, completed, cancelled
+	private String status; // pending, in_progress, completed, cancelled, rejected
 	private String priority; // low, medium, high, urgent
 	private BigDecimal estimatedHours;
 	private BigDecimal actualHours;
 	private Timestamp startDate;
 	private Timestamp completionDate;
+	private String rejectionReason;
 	private String notes;
 	private Timestamp createdAt;
 	private Timestamp updatedAt;
@@ -47,6 +48,9 @@ public class Task {
 
 	public Timestamp getCompletionDate() { return completionDate; }
 	public void setCompletionDate(Timestamp completionDate) { this.completionDate = completionDate; }
+
+	public String getRejectionReason() { return rejectionReason; }
+	public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
 	public String getNotes() { return notes; }
 	public void setNotes(String notes) { this.notes = notes; }

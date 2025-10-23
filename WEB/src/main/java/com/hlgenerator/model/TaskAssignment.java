@@ -19,6 +19,7 @@ public class TaskAssignment {
 	private Timestamp scheduledDate; // from work_orders
 	private Timestamp startDate;     // from tasks
 	private Timestamp completionDate; // from tasks
+	private String rejectionReason;  // from tasks
 
 	public int getId() { return id; }
 	public void setId(int id) { this.id = id; }
@@ -61,6 +62,29 @@ public class TaskAssignment {
 
 	public Timestamp getCompletionDate() { return completionDate; }
 	public void setCompletionDate(Timestamp completionDate) { this.completionDate = completionDate; }
+
+	public String getRejectionReason() { return rejectionReason; }
+	public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
+
+	public org.json.JSONObject toJSON() {
+		org.json.JSONObject obj = new org.json.JSONObject();
+		obj.put("id", id);
+		obj.put("taskId", taskId);
+		obj.put("userId", userId);
+		obj.put("role", role);
+		obj.put("assignedAt", assignedAt);
+		obj.put("taskNumber", taskNumber);
+		obj.put("taskDescription", taskDescription);
+		obj.put("taskStatus", taskStatus);
+		obj.put("taskPriority", taskPriority);
+		obj.put("workOrderNumber", workOrderNumber);
+		obj.put("workOrderTitle", workOrderTitle);
+		obj.put("scheduledDate", scheduledDate);
+		obj.put("startDate", startDate);
+		obj.put("completionDate", completionDate);
+		obj.put("rejectionReason", rejectionReason);
+		return obj;
+	}
 }
 
 

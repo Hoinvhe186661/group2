@@ -15,7 +15,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
 		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
-		sql.append("t.start_date, t.completion_date ");
+		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
@@ -47,6 +47,7 @@ public class TaskDAO extends DBConnect {
 					a.setScheduledDate(rs.getTimestamp("scheduled_date"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
+					a.setRejectionReason(rs.getString("rejection_reason"));
 					results.add(a);
 				}
 			}
@@ -68,7 +69,8 @@ public class TaskDAO extends DBConnect {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
 		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
-		sql.append("wo.work_order_number, wo.title AS work_order_title ");
+		sql.append("wo.work_order_number, wo.title AS work_order_title, ");
+		sql.append("t.rejection_reason AS rejection_reason ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
@@ -188,7 +190,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
 		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
-		sql.append("t.start_date, t.completion_date ");
+		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
@@ -230,9 +232,11 @@ public class TaskDAO extends DBConnect {
 					a.setTaskPriority(rs.getString("task_priority"));
 					a.setWorkOrderNumber(rs.getString("work_order_number"));
 					a.setWorkOrderTitle(rs.getString("work_order_title"));
+					a.setRejectionReason(rs.getString("rejection_reason"));
 					a.setScheduledDate(rs.getTimestamp("scheduled_date"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
+					a.setRejectionReason(rs.getString("rejection_reason"));
 					results.add(a);
 				}
 			}
@@ -284,6 +288,22 @@ public class TaskDAO extends DBConnect {
 		}
 	}
 
+	public boolean rejectTask(int taskId, String rejectionReason) {
+		System.out.println("TaskDAO - rejectTask called with taskId: " + taskId + ", reason: " + rejectionReason);
+		String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, updated_at = NOW() WHERE id = ?";
+		try (PreparedStatement ps = connection.prepareStatement(sql)) {
+			ps.setString(1, rejectionReason);
+			ps.setInt(2, taskId);
+			int result = ps.executeUpdate();
+			System.out.println("TaskDAO - rejectTask result: " + result);
+			return result > 0;
+		} catch (SQLException e) {
+			System.out.println("TaskDAO - rejectTask error: " + e.getMessage());
+			e.printStackTrace();
+			return false;
+		}
+	}
+
 	private Task mapTask(ResultSet rs) throws SQLException {
 		Task t = new Task();
 		t.setId(rs.getInt("id"));
@@ -296,6 +316,7 @@ public class TaskDAO extends DBConnect {
 		t.setActualHours(rs.getBigDecimal("actual_hours"));
 		t.setStartDate(rs.getTimestamp("start_date"));
 		t.setCompletionDate(rs.getTimestamp("completion_date"));
+		t.setRejectionReason(rs.getString("rejection_reason"));
 		t.setNotes(rs.getString("notes"));
 		t.setCreatedAt(rs.getTimestamp("created_at"));
 		t.setUpdatedAt(rs.getTimestamp("updated_at"));

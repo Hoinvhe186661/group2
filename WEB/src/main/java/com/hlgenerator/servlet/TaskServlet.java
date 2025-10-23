@@ -56,7 +56,11 @@ public class TaskServlet extends HttpServlet {
 				List<TaskAssignment> items = taskDAO.getAssignmentsForUserPaged(userId, status, priority, from, to, keyword, size, offset);
 				JSONObject result = new JSONObject();
 				result.put("success", true);
-				result.put("data", new JSONArray(items));
+				JSONArray dataArray = new JSONArray();
+				for (TaskAssignment item : items) {
+					dataArray.put(item.toJSON());
+				}
+				result.put("data", dataArray);
 				JSONObject meta = new JSONObject();
 				meta.put("page", page);
 				meta.put("size", size);
@@ -95,6 +99,7 @@ public class TaskServlet extends HttpServlet {
 		PrintWriter out = response.getWriter();
 
 		try {
+			System.out.println("TaskServlet - Action: " + action); // Debug log
 			if ("acknowledge".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				boolean ok = taskDAO.updateTaskStatus(taskId, "in_progress", new Timestamp(System.currentTimeMillis()), null, null, null);
@@ -111,8 +116,21 @@ public class TaskServlet extends HttpServlet {
 				String notes = request.getParameter("notes");
 				boolean ok = taskDAO.updateTaskStatus(taskId, null, null, null, notes, null);
 				out.print(jsonResult(ok, ok ? "Đã lưu ghi chú" : "Không thể lưu ghi chú").toString());
+			} else if ("reject".equals(action)) {
+				System.out.println("TaskServlet - Processing reject action"); // Debug log
+				int taskId = Integer.parseInt(request.getParameter("id"));
+				String rejectionReason = request.getParameter("rejectionReason");
+				System.out.println("TaskServlet - TaskId: " + taskId + ", Reason: " + rejectionReason); // Debug log
+				if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
+					out.print(jsonResult(false, "Lý do từ chối không được để trống").toString());
+					return;
+				}
+				boolean ok = rejectTaskDirectly(taskId, rejectionReason.trim());
+				System.out.println("TaskServlet - Reject result: " + ok); // Debug log
+				out.print(jsonResult(ok, ok ? "Đã từ chối nhiệm vụ" : "Không thể từ chối nhiệm vụ").toString());
 			} else {
-				out.print(jsonResult(false, "Hành động không hợp lệ").toString());
+				System.out.println("TaskServlet - Unknown action: " + action); // Debug log
+				out.print(jsonResult(false, "Hành động không hợp lệ: " + action).toString());
 			}
 		} catch (Exception e) {
 			out.print(jsonResult(false, e.getMessage()).toString());
@@ -130,6 +148,32 @@ public class TaskServlet extends HttpServlet {
 		o.put("message", message);
 		return o;
 	}
+
+	private boolean rejectTaskDirectly(int taskId, String rejectionReason) {
+		try {
+			// Sử dụng thông tin từ database.properties
+			java.util.Properties props = new java.util.Properties();
+			java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
+			props.load(input);
+			
+			String url = props.getProperty("db.url");
+			String user = props.getProperty("db.username");
+			String pass = props.getProperty("db.password");
+			
+			try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
+				String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, updated_at = NOW() WHERE id = ?";
+				try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+					ps.setString(1, rejectionReason);
+					ps.setInt(2, taskId);
+					int result = ps.executeUpdate();
+					System.out.println("TaskServlet - Direct reject result: " + result);
+					return result > 0;
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("TaskServlet - Direct reject error: " + e.getMessage());
+			e.printStackTrace();
+			return false;
+		}
+	}
 }
-
-
