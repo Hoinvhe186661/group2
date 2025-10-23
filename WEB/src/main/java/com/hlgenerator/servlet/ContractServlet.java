@@ -47,6 +47,50 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        if ("deleted".equalsIgnoreCase(action)) {
+            // Trả về danh sách hợp đồng đã bị xóa với tìm kiếm, sắp xếp và phân trang
+            String pageParam = request.getParameter("page");
+            String pageSizeParam = request.getParameter("pageSize");
+            String search = request.getParameter("search");
+            String sortBy = request.getParameter("sortBy");
+            String sortDir = request.getParameter("sortDir");
+            
+            System.out.println("Getting deleted contracts - page: " + pageParam + ", pageSize: " + pageSizeParam + ", search: " + search);
+            
+            int page = 1;
+            int pageSize = 10;
+            try { if (pageParam != null) page = Integer.parseInt(pageParam); } catch (Exception ignored) {}
+            try { if (pageSizeParam != null) pageSize = Integer.parseInt(pageSizeParam); } catch (Exception ignored) {}
+            if (page < 1) page = 1;
+            if (pageSize < 1) pageSize = 10;
+            
+            // Lấy danh sách hợp đồng đã bị xóa với phân trang
+            List<Contract> contracts = contractDAO.getDeletedContractsPage(page, pageSize, search, sortBy, sortDir);
+            int totalRecords = contractDAO.countDeletedContracts(search);
+            int totalPages = (int) Math.ceil(totalRecords / (double) pageSize);
+            if (totalPages == 0) totalPages = 1;
+            
+            System.out.println("Found " + contracts.size() + " deleted contracts, total: " + totalRecords);
+            
+            JSONArray arr = new JSONArray();
+            for (Contract c : contracts) {
+                JSONObject contractJson = toJson(c);
+                contractJson.put("deletedByName", c.getDeletedByName());
+                arr.put(contractJson);
+            }
+            
+            JSONObject result = new JSONObject();
+            result.put("data", arr);
+            result.put("totalPages", totalPages);
+            result.put("totalRecords", totalRecords);
+            result.put("currentPage", page);
+            result.put("pageSize", pageSize);
+            
+            System.out.println("Response: " + result.toString());
+            out.print(successJson(result));
+            return;
+        }
+
         if ("customers".equalsIgnoreCase(action)) {
             // Trả về danh sách khách hàng cho dropdown
             com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
@@ -102,6 +146,24 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        if ("check_contract_number".equalsIgnoreCase(action)) {
+            // Kiểm tra trùng lặp số hợp đồng
+            String contractNumber = request.getParameter("contractNumber");
+            if (contractNumber == null || contractNumber.trim().isEmpty()) {
+                out.print(errorJson("Số hợp đồng không được để trống"));
+                return;
+            }
+            
+            boolean exists = contractDAO.isContractNumberExists(contractNumber.trim());
+            boolean existsIncludingDeleted = contractDAO.isContractNumberExistsIncludingDeleted(contractNumber.trim());
+            
+            JSONObject result = new JSONObject();
+            result.put("exists", exists);
+            result.put("existsInTrash", existsIncludingDeleted && !exists);
+            out.print(successJson(result));
+            return;
+        }
+
         // Lấy customerId từ session để lọc hợp đồng
         Integer customerId = null;
         try {
@@ -139,36 +201,149 @@ public class ContractServlet extends HttpServlet {
         try {
             if ("add".equalsIgnoreCase(action)) {
                 Contract c = parseContractFromRequest(request, false);
+                
+                // Validation cơ bản
+                if (c.getContractNumber() == null || c.getContractNumber().trim().isEmpty()) {
+                    out.print(errorJson("Số hợp đồng không được để trống"));
+                    return;
+                }
+                
+                if (c.getCustomerId() <= 0) {
+                    out.print(errorJson("Vui lòng chọn khách hàng"));
+                    return;
+                }
+                
+                // Kiểm tra trùng lặp số hợp đồng (bao gồm cả trong thùng rác)
+                if (contractDAO.isContractNumberExistsIncludingDeleted(c.getContractNumber())) {
+                    // Kiểm tra xem có phải trong thùng rác không
+                    if (contractDAO.isContractNumberExists(c.getContractNumber())) {
+                        out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại. Vui lòng chọn số hợp đồng khác."));
+                    } else {
+                        out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại trong thùng rác. Vui lòng chọn số hợp đồng khác hoặc khôi phục hợp đồng cũ."));
+                    }
+                    return;
+                }
+                
                 boolean ok = contractDAO.addContract(c);
                 if (ok) {
-                    // Lưu sản phẩm nếu có
-                    saveContractProducts(c.getId(), request);
-                    out.print(successMsg("Thêm hợp đồng và sản phẩm thành công"));
+                    try {
+                        // Lưu sản phẩm nếu có
+                        saveContractProducts(c.getId(), request);
+                        out.print(successMsg("Thêm hợp đồng và sản phẩm thành công"));
+                    } catch (Exception e) {
+                        // Nếu lưu sản phẩm lỗi, vẫn báo thành công vì hợp đồng đã được lưu
+                        out.print(successMsg("Thêm hợp đồng thành công, nhưng có lỗi khi lưu sản phẩm: " + e.getMessage()));
+                    }
                 } else {
-                    out.print(errorJson("Thêm hợp đồng thất bại"));
+                    // Kiểm tra lại trùng lặp để đưa ra thông báo cụ thể
+                    if (contractDAO.isContractNumberExistsIncludingDeleted(c.getContractNumber())) {
+                        if (contractDAO.isContractNumberExists(c.getContractNumber())) {
+                            out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại. Vui lòng chọn số hợp đồng khác."));
+                        } else {
+                            out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại trong thùng rác. Vui lòng chọn số hợp đồng khác hoặc khôi phục hợp đồng cũ."));
+                        }
+                    } else {
+                        out.print(errorJson("Thêm hợp đồng thất bại. Vui lòng kiểm tra lại thông tin đã nhập."));
+                    }
                 }
             } else if ("update".equalsIgnoreCase(action)) {
                 Contract c = parseContractFromRequest(request, true);
+                
+                // Validation cơ bản
+                if (c.getContractNumber() == null || c.getContractNumber().trim().isEmpty()) {
+                    out.print(errorJson("Số hợp đồng không được để trống"));
+                    return;
+                }
+                
+                if (c.getCustomerId() <= 0) {
+                    out.print(errorJson("Vui lòng chọn khách hàng"));
+                    return;
+                }
+                
+                // Kiểm tra trùng lặp số hợp đồng (bao gồm cả trong thùng rác, loại trừ chính hợp đồng đang sửa)
+                if (contractDAO.isContractNumberExistsIncludingDeleted(c.getContractNumber(), c.getId())) {
+                    // Kiểm tra xem có phải trong thùng rác không
+                    if (contractDAO.isContractNumberExists(c.getContractNumber(), c.getId())) {
+                        out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại. Vui lòng chọn số hợp đồng khác."));
+                    } else {
+                        out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại trong thùng rác. Vui lòng chọn số hợp đồng khác hoặc khôi phục hợp đồng cũ."));
+                    }
+                    return;
+                }
+                
                 boolean ok = contractDAO.updateContract(c);
                 if (ok) {
-                    // Xóa sản phẩm cũ và lưu mới
-                    deleteContractProducts(c.getId());
-                    saveContractProducts(c.getId(), request);
-                    out.print(successMsg("Cập nhật hợp đồng và sản phẩm thành công"));
+                    try {
+                        // Xóa sản phẩm cũ và lưu mới
+                        deleteContractProducts(c.getId());
+                        saveContractProducts(c.getId(), request);
+                        out.print(successMsg("Cập nhật hợp đồng và sản phẩm thành công"));
+                    } catch (Exception e) {
+                        // Nếu lưu sản phẩm lỗi, vẫn báo thành công vì hợp đồng đã được cập nhật
+                        out.print(successMsg("Cập nhật hợp đồng thành công, nhưng có lỗi khi lưu sản phẩm: " + e.getMessage()));
+                    }
                 } else {
-                    out.print(errorJson("Cập nhật hợp đồng thất bại"));
+                    // Kiểm tra lại trùng lặp để đưa ra thông báo cụ thể
+                    if (contractDAO.isContractNumberExistsIncludingDeleted(c.getContractNumber(), c.getId())) {
+                        if (contractDAO.isContractNumberExists(c.getContractNumber(), c.getId())) {
+                            out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại. Vui lòng chọn số hợp đồng khác."));
+                        } else {
+                            out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại trong thùng rác. Vui lòng chọn số hợp đồng khác hoặc khôi phục hợp đồng cũ."));
+                        }
+                    } else {
+                        out.print(errorJson("Cập nhật hợp đồng thất bại. Vui lòng kiểm tra lại thông tin đã nhập."));
+                    }
                 }
             } else if ("delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
+                // Lấy thông tin người xóa từ session
+                Integer deletedBy = null;
+                try {
+                    Object sessionUserId = request.getSession().getAttribute("userId");
+                    System.out.println("Session userId: " + sessionUserId);
+                    if (sessionUserId != null && !sessionUserId.toString().equals("null")) {
+                        deletedBy = Integer.parseInt(sessionUserId.toString());
+                        System.out.println("Parsed deletedBy: " + deletedBy);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error getting userId from session: " + e.getMessage());
+                }
+                
+                boolean ok;
+                if (deletedBy != null) {
+                    System.out.println("Using deleteContract with deletedBy: " + deletedBy);
+                    ok = contractDAO.deleteContract(id, deletedBy);
+                } else {
+                    System.out.println("Using deleteContract without deletedBy");
+                    ok = contractDAO.deleteContract(id);
+                }
+                System.out.println("Delete result: " + ok);
+                out.print(ok ? successMsg("Đã chuyển hợp đồng vào thùng rác") : errorJson("Xóa hợp đồng thất bại"));
+            } else if ("restore".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
+                String status = param(request, "status");
+                boolean ok;
+                if (status != null && !status.isEmpty()) {
+                    ok = contractDAO.restoreContractWithStatus(id, status);
+                } else {
+                    ok = contractDAO.restoreContract(id);
+                }
+                out.print(ok ? successMsg("Khôi phục hợp đồng thành công") : errorJson("Khôi phục hợp đồng thất bại"));
+            } else if ("permanent_delete".equalsIgnoreCase(action)) {
+                int id = Integer.parseInt(request.getParameter("id"));
                 // Xóa sản phẩm trước
                 deleteContractProducts(id);
-                boolean ok = contractDAO.deleteContract(id);
-                out.print(ok ? successMsg("Xóa hợp đồng thành công") : errorJson("Xóa hợp đồng thất bại"));
+                boolean ok = contractDAO.permanentlyDeleteContract(id);
+                out.print(ok ? successMsg("Xóa vĩnh viễn hợp đồng thành công") : errorJson("Xóa vĩnh viễn hợp đồng thất bại"));
             } else {
                 out.print(errorJson("Hành động không hợp lệ"));
             }
+        } catch (NumberFormatException ex) {
+            out.print(errorJson("Lỗi định dạng số: " + ex.getMessage()));
+        } catch (IllegalArgumentException ex) {
+            out.print(errorJson("Dữ liệu không hợp lệ: " + ex.getMessage()));
         } catch (Exception ex) {
-            out.print(errorJson("Lỗi: " + ex.getMessage()));
+            out.print(errorJson("Lỗi hệ thống: " + ex.getMessage()));
         }
     }
 

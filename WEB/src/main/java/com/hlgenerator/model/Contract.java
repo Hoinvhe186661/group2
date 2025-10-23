@@ -19,6 +19,7 @@ public class Contract {
     private Integer createdBy;
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    private String deletedByName; // Tạm thời để lưu tên người xóa
 
     public Contract() {}
 
@@ -121,6 +122,9 @@ public class Contract {
 
     public Timestamp getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getDeletedByName() { return deletedByName; }
+    public void setDeletedByName(String deletedByName) { this.deletedByName = deletedByName; }
 }
 
 

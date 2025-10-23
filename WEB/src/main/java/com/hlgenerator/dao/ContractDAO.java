@@ -26,8 +26,31 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    public boolean isContractNumberExists(String contractNumber) {
+        return checkContractNumberExists(contractNumber, null, false);
+    }
+
+    public boolean isContractNumberExistsIncludingDeleted(String contractNumber) {
+        return checkContractNumberExists(contractNumber, null, true);
+    }
+
+    public boolean isContractNumberExistsIncludingDeleted(String contractNumber, int excludeId) {
+        return checkContractNumberExists(contractNumber, excludeId, true);
+    }
+
+    public boolean isContractNumberExists(String contractNumber, int excludeId) {
+        return checkContractNumberExists(contractNumber, excludeId, false);
+    }
+
     public boolean addContract(Contract contract) {
         if (!checkConnection()) return false;
+        
+        // Kiểm tra trùng lặp số hợp đồng
+        if (isContractNumberExists(contract.getContractNumber())) {
+            logger.warning("Contract number already exists: " + contract.getContractNumber());
+            return false;
+        }
+        
         String sql = "INSERT INTO contracts (contract_number, customer_id, contract_type, title, start_date, end_date, contract_value, status, terms, signed_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, contract.getContractNumber());
@@ -64,6 +87,13 @@ public class ContractDAO extends DBConnect {
 
     public boolean updateContract(Contract contract) {
         if (!checkConnection()) return false;
+        
+        // Kiểm tra trùng lặp số hợp đồng (loại trừ chính hợp đồng đang sửa)
+        if (isContractNumberExists(contract.getContractNumber(), contract.getId())) {
+            logger.warning("Contract number already exists for update: " + contract.getContractNumber());
+            return false;
+        }
+        
         String sql = "UPDATE contracts SET contract_number=?, customer_id=?, contract_type=?, title=?, start_date=?, end_date=?, contract_value=?, status=?, terms=?, signed_date=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, contract.getContractNumber());
@@ -85,13 +115,29 @@ public class ContractDAO extends DBConnect {
     }
 
     public boolean deleteContract(int id) {
+        return performSoftDelete(id, null);
+    }
+
+    public boolean deleteContract(int id, int deletedBy) {
+        return performSoftDelete(id, deletedBy);
+    }
+
+    public boolean restoreContract(int id) {
+        return performRestore(id, "draft");
+    }
+
+    public boolean restoreContractWithStatus(int id, String status) {
+        return performRestore(id, status);
+    }
+
+    public boolean permanentlyDeleteContract(int id) {
         if (!checkConnection()) return false;
-        String sql = "DELETE FROM contracts WHERE id=?";
+        String sql = "DELETE FROM contracts WHERE id = ? AND status = 'deleted'";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error deleting contract", e);
+            logger.log(Level.SEVERE, "Error permanently deleting contract", e);
             return false;
         }
     }
@@ -115,7 +161,7 @@ public class ContractDAO extends DBConnect {
     public List<Contract> getAllContracts() {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;
-        String sql = "SELECT * FROM contracts ORDER BY id DESC";
+        String sql = "SELECT * FROM contracts WHERE status != 'deleted' ORDER BY id DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(mapRow(rs));
@@ -128,7 +174,7 @@ public class ContractDAO extends DBConnect {
 
     public int countAllContracts() {
         if (!checkConnection()) return 0;
-        String sql = "SELECT COUNT(*) FROM contracts";
+        String sql = "SELECT COUNT(*) FROM contracts WHERE status != 'deleted'";
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             if (rs.next()) {
                 return rs.getInt(1);
@@ -139,10 +185,105 @@ public class ContractDAO extends DBConnect {
         return 0;
     }
 
+    public List<Contract> getDeletedContracts() {
+        List<Contract> list = new ArrayList<>();
+        if (!checkConnection()) return list;
+        String sql = "SELECT c.*, u.full_name as deleted_by_name FROM contracts c " +
+                    "LEFT JOIN users u ON c.deleted_by = u.id " +
+                    "WHERE c.status = 'deleted' ORDER BY c.deleted_at DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Contract contract = mapRow(rs);
+                // Lưu thông tin người xóa vào một field tạm thời
+                contract.setDeletedByName(rs.getString("deleted_by_name"));
+                list.add(contract);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error fetching deleted contracts", e);
+        }
+        return list;
+    }
+
+    public List<Contract> getDeletedContractsPage(int page, int pageSize, String search, String sortBy, String sortDir) {
+        List<Contract> list = new ArrayList<>();
+        if (!checkConnection()) return list;
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        int offset = (page - 1) * pageSize;
+        
+        logger.info("Getting deleted contracts page: " + page + ", size: " + pageSize + ", search: " + search);
+
+        // Xác định cột sắp xếp
+        String orderColumn;
+        if ("id".equalsIgnoreCase(sortBy)) orderColumn = "c.id";
+        else if ("contract_number".equalsIgnoreCase(sortBy)) orderColumn = "c.contract_number";
+        else if ("title".equalsIgnoreCase(sortBy)) orderColumn = "c.title";
+        else if ("deleted_by_name".equalsIgnoreCase(sortBy)) orderColumn = "u.full_name";
+        else orderColumn = "c.deleted_at"; // default
+
+        String direction = "DESC";
+        if ("asc".equalsIgnoreCase(sortDir)) direction = "ASC";
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT c.*, u.full_name as deleted_by_name FROM contracts c ");
+        sql.append("LEFT JOIN users u ON c.deleted_by = u.id ");
+        sql.append("WHERE c.status = 'deleted' ");
+
+        java.util.List<Object> params = new ArrayList<>();
+        addSearchConditions(sql, params, search, "CAST(c.id AS CHAR)", "c.contract_number", "c.title", "u.full_name");
+
+        sql.append("ORDER BY ").append(orderColumn).append(" ").append(direction).append(" LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add(offset);
+
+        logger.info("SQL: " + sql.toString());
+        logger.info("Params: " + params);
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Contract contract = mapRow(rs);
+                    contract.setDeletedByName(rs.getString("deleted_by_name"));
+                    list.add(contract);
+                }
+                logger.info("Found " + list.size() + " deleted contracts");
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error fetching deleted contracts page", e);
+        }
+        return list;
+    }
+
+    public int countDeletedContracts(String search) {
+        if (!checkConnection()) return 0;
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) FROM contracts c ");
+        sql.append("LEFT JOIN users u ON c.deleted_by = u.id ");
+        sql.append("WHERE c.status = 'deleted' ");
+
+        java.util.List<Object> params = new ArrayList<>();
+        addSearchConditions(sql, params, search, "CAST(c.id AS CHAR)", "c.contract_number", "c.title", "u.full_name");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error counting deleted contracts", e);
+        }
+        return 0;
+    }
+
     public List<Contract> getContractsByCustomerId(int customerId) {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;
-        String sql = "SELECT * FROM contracts WHERE customer_id = ? ORDER BY id DESC";
+        String sql = "SELECT * FROM contracts WHERE customer_id = ? AND status != 'deleted' ORDER BY id DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, customerId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -162,7 +303,7 @@ public class ContractDAO extends DBConnect {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
         int offset = (page - 1) * pageSize;
-        String sql = "SELECT * FROM contracts ORDER BY id DESC LIMIT ? OFFSET ?";
+        String sql = "SELECT * FROM contracts WHERE status != 'deleted' ORDER BY id DESC LIMIT ? OFFSET ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, pageSize);
             ps.setInt(2, offset);
@@ -183,19 +324,14 @@ public class ContractDAO extends DBConnect {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COUNT(*) FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE 1=1");
         java.util.List<Object> params = new ArrayList<>();
-        if (status != null && !status.isEmpty()) { sql.append(" AND c.status = ?"); params.add(status); }
-        if (contractType != null && !contractType.isEmpty()) { sql.append(" AND c.contract_type = ?"); params.add(contractType); }
-        if (search != null && !search.isEmpty()) {
-            sql.append(" AND (CAST(c.id AS CHAR) LIKE ? OR c.contract_number LIKE ? OR c.title LIKE ? OR cu.company_name LIKE ? OR cu.contact_person LIKE ? OR cu.customer_code LIKE ?");
-            String like = "%" + search + "%";
-            params.add(like); params.add(like); params.add(like); params.add(like); params.add(like); params.add(like);
-            try {
-                int exactId = Integer.parseInt(search.trim());
-                sql.append(" OR c.id = ?");
-                params.add(exactId);
-            } catch (NumberFormatException ignore) { /* not numeric */ }
-            sql.append(")");
+        if (status != null && !status.isEmpty()) { 
+            sql.append(" AND c.status = ?"); 
+            params.add(status); 
+        } else {
+            sql.append(" AND c.status != 'deleted'");
         }
+        if (contractType != null && !contractType.isEmpty()) { sql.append(" AND c.contract_type = ?"); params.add(contractType); }
+        addSearchConditions(sql, params, search, "CAST(c.id AS CHAR)", "c.contract_number", "c.title", "cu.company_name", "cu.contact_person", "cu.customer_code");
         if (startFrom != null) { sql.append(" AND c.start_date >= ?"); params.add(startFrom); }
         if (startTo != null) { sql.append(" AND c.start_date <= ?"); params.add(startTo); }
         if (endFrom != null) { sql.append(" AND c.end_date >= ?"); params.add(endFrom); }
@@ -235,19 +371,14 @@ public class ContractDAO extends DBConnect {
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT c.* FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE 1=1");
         java.util.List<Object> params = new ArrayList<>();
-        if (status != null && !status.isEmpty()) { sql.append(" AND c.status = ?"); params.add(status); }
-        if (contractType != null && !contractType.isEmpty()) { sql.append(" AND c.contract_type = ?"); params.add(contractType); }
-        if (search != null && !search.isEmpty()) {
-            sql.append(" AND (CAST(c.id AS CHAR) LIKE ? OR c.contract_number LIKE ? OR c.title LIKE ? OR cu.company_name LIKE ? OR cu.contact_person LIKE ? OR cu.customer_code LIKE ?");
-            String like = "%" + search + "%";
-            params.add(like); params.add(like); params.add(like); params.add(like); params.add(like); params.add(like);
-            try {
-                int exactId = Integer.parseInt(search.trim());
-                sql.append(" OR c.id = ?");
-                params.add(exactId);
-            } catch (NumberFormatException ignore) { /* not numeric */ }
-            sql.append(")");
+        if (status != null && !status.isEmpty()) { 
+            sql.append(" AND c.status = ?"); 
+            params.add(status); 
+        } else {
+            sql.append(" AND c.status != 'deleted'");
         }
+        if (contractType != null && !contractType.isEmpty()) { sql.append(" AND c.contract_type = ?"); params.add(contractType); }
+        addSearchConditions(sql, params, search, "CAST(c.id AS CHAR)", "c.contract_number", "c.title", "cu.company_name", "cu.contact_person", "cu.customer_code");
         if (startFrom != null) { sql.append(" AND c.start_date >= ?"); params.add(startFrom); }
         if (startTo != null) { sql.append(" AND c.start_date <= ?"); params.add(startTo); }
         if (endFrom != null) { sql.append(" AND c.end_date >= ?"); params.add(endFrom); }
@@ -266,6 +397,122 @@ public class ContractDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error fetching filtered contracts page", e);
         }
         return list;
+    }
+
+    // Helper method để kiểm tra contract number tồn tại
+    private boolean checkContractNumberExists(String contractNumber, Integer excludeId, boolean includeDeleted) {
+        if (!checkConnection()) return false;
+        
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM contracts WHERE contract_number = ?");
+        if (excludeId != null) {
+            sql.append(" AND id != ?");
+        }
+        if (!includeDeleted) {
+            sql.append(" AND status != 'deleted'");
+        }
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            ps.setString(1, contractNumber);
+            if (excludeId != null) {
+                ps.setInt(2, excludeId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking contract number existence", e);
+            return false;
+        }
+    }
+
+    // Helper method để thực hiện soft delete
+    private boolean performSoftDelete(int id, Integer deletedBy) {
+        if (!checkConnection()) return false;
+        
+        // Kiểm tra xem các cột có tồn tại không
+        String[] columnsToCheck = deletedBy != null ? 
+            new String[]{"deleted_by", "deleted_at"} : 
+            new String[]{"deleted_at"};
+        
+        try {
+            String checkSql = "SELECT " + String.join(", ", columnsToCheck) + " FROM contracts WHERE id = ? LIMIT 1";
+            try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+                checkPs.setInt(1, id);
+                checkPs.executeQuery();
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Columns do not exist, using fallback method", e);
+            // Fallback: chỉ cập nhật status
+            String sql = "UPDATE contracts SET status = 'deleted' WHERE id = ?";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, id);
+                int result = ps.executeUpdate();
+                String logMsg = deletedBy != null ? 
+                    "Fallback soft delete contract ID " + id + " by user " + deletedBy :
+                    "Fallback soft delete contract ID " + id;
+                logger.info(logMsg + ", affected rows: " + result);
+                return result > 0;
+            } catch (SQLException ex) {
+                logger.log(Level.SEVERE, "Error in fallback soft delete", ex);
+                return false;
+            }
+        }
+        
+        // Soft delete với deleted_at và deleted_by (nếu có)
+        String sql = deletedBy != null ? 
+            "UPDATE contracts SET status = 'deleted', deleted_by = ?, deleted_at = CURRENT_TIMESTAMP WHERE id = ?" :
+            "UPDATE contracts SET status = 'deleted', deleted_at = CURRENT_TIMESTAMP WHERE id = ?";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            if (deletedBy != null) {
+                ps.setInt(1, deletedBy);
+                ps.setInt(2, id);
+            } else {
+                ps.setInt(1, id);
+            }
+            int result = ps.executeUpdate();
+            String logMsg = deletedBy != null ? 
+                "Soft delete contract ID " + id + " by user " + deletedBy :
+                "Soft delete contract ID " + id;
+            logger.info(logMsg + ", affected rows: " + result);
+            return result > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error soft deleting contract", e);
+            return false;
+        }
+    }
+
+    // Helper method để restore contract
+    private boolean performRestore(int id, String status) {
+        if (!checkConnection()) return false;
+        String sql = "UPDATE contracts SET status = ? WHERE id = ? AND status = 'deleted'";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error restoring contract", e);
+            return false;
+        }
+    }
+
+    // Helper method để thêm search conditions
+    private void addSearchConditions(StringBuilder sql, List<Object> params, String search, String... columns) {
+        if (search != null && !search.isEmpty()) {
+            sql.append(" AND (");
+            for (int i = 0; i < columns.length; i++) {
+                if (i > 0) sql.append(" OR ");
+                sql.append(columns[i]).append(" LIKE ?");
+                params.add("%" + search + "%");
+            }
+            // Thêm exact ID search nếu search là số
+            try {
+                int exactId = Integer.parseInt(search.trim());
+                sql.append(" OR c.id = ?");
+                params.add(exactId);
+            } catch (NumberFormatException ignore) { /* not numeric */ }
+            sql.append(")");
+        }
     }
 
     private Contract mapRow(ResultSet rs) throws SQLException {
