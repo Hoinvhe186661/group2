@@ -4,6 +4,7 @@
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
     String userRole = (String) session.getAttribute("userRole");
+    String currentStatus = request.getParameter("status");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
@@ -30,6 +31,49 @@
     <link href="css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <style>
+        .has-error {
+            border-color: #a94442 !important;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 6px #ce8483 !important;
+        }
+        .help-block.text-danger {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        .text-danger {
+            color: #a94442 !important;
+        }
+        .form-group label .text-danger {
+            font-weight: bold;
+        }
+        
+        /* Style cho thông báo trong modal */
+        #contractErrorAlert {
+            border-radius: 6px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #contractErrorAlert.alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        #contractErrorAlert.alert-danger {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        #contractErrorAlert.alert-warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        #contractErrorAlert.alert-info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+    </style>
 </head>
 <body class="skin-black">
     <header class="header">
@@ -75,19 +119,19 @@
                         <img src="img/26115.jpg" class="img-circle" alt="User Image" />
                     </div>
                     <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
+                        <p>Xin chào, Admin</p>
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
                 <ul class="sidebar-menu">
                     <li>
-                        <a href="customersupport.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a>
-                    </li>
-                    <li>
-                        <a href="support-management"><i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
+                        <a href="customersupport.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển khách hàng</span></a>
                     </li>
                     <li class="active">
-                        <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span></a>
+                        <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
+                    </li>
+                    <li>
+                        <a href="support_management.jsp"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
                     </li>
                 </ul>
             </section>
@@ -101,12 +145,31 @@
                             <header class="panel-heading">
                                 <h3>Quản lý hợp đồng</h3>
                                 <div class="panel-tools">
+                                    <% if (!"deleted".equals(currentStatus)) { %>
                                     <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#contractModal">
                                         <i class="fa fa-plus"></i> Thêm hợp đồng mới
                                     </button>
+                                    <% } %>
+                                    <button class="btn btn-warning btn-sm" onclick="showDeletedContracts()" style="margin-left: 5px;">
+                                        <i class="fa fa-trash"></i> Thùng rác
+                                    </button>
+                                    <% if ("deleted".equals(currentStatus)) { %>
+                                    <a href="contracts.jsp" class="btn btn-success btn-sm" style="margin-left: 5px;">
+                                        <i class="fa fa-arrow-left"></i> Quay lại danh sách chính
+                                    </a>
+                                    <% } %>
                                 </div>
                             </header>
                             <div class="panel-body table-responsive">
+                                <%
+                                    if ("deleted".equals(currentStatus)) {
+                                %>
+                                <div class="alert alert-warning" style="margin-bottom: 15px;">
+                                    <i class="fa fa-exclamation-triangle"></i> 
+                                    <strong>Đang xem hợp đồng đã bị xóa</strong> - Các hợp đồng này đã được chuyển vào thùng rác. 
+                                    Bạn có thể khôi phục hoặc xóa vĩnh viễn chúng.
+                                </div>
+                                <% } %>
                                 <form class="form-inline" method="get" action="contracts.jsp" style="margin-bottom: 15px;">
                                     <div class="form-group" style="margin-right: 10px;">
                                         <label for="statusFilter">Trạng thái:&nbsp;</label>
@@ -117,6 +180,7 @@
                                             <option value="completed">Hoàn thành</option>
                                             <option value="terminated">Chấm dứt</option>
                                             <option value="expired">Hết hạn</option>
+                                            <option value="deleted">Đã xóa</option>
                                         </select>
                                     </div>
                                     <div class="form-group" style="margin-right: 10px;">
@@ -218,8 +282,13 @@
                                             <td><%= c.getStatus() %></td>
                                             <td>
                                                 <button class="btn btn-info btn-xs" onclick="viewContract('<%= c.getId() %>')"><i class="fa fa-eye"></i> Xem</button>
-                                                <button class="btn btn-warning btn-xs" onclick="editContract('<%= c.getId() %>')"><i class="fa fa-edit"></i> Sửa</button>
-                                                <button class="btn btn-danger btn-xs" onclick="deleteContract('<%= c.getId() %>')"><i class="fa fa-trash"></i> Xóa</button>
+                                                <% if (!"deleted".equals(c.getStatus())) { %>
+                                                    <button class="btn btn-warning btn-xs" onclick="editContract('<%= c.getId() %>')"><i class="fa fa-edit"></i> Sửa</button>
+                                                    <button class="btn btn-danger btn-xs" onclick="deleteContract('<%= c.getId() %>')"><i class="fa fa-trash"></i> Xóa</button>
+                                                <% } else { %>
+                                                    <button class="btn btn-success btn-xs" onclick="restoreContract('<%= c.getId() %>')"><i class="fa fa-undo"></i> Khôi phục</button>
+                                                    <button class="btn btn-danger btn-xs" onclick="permanentlyDeleteContract('<%= c.getId() %>')"><i class="fa fa-trash"></i> Xóa vĩnh viễn</button>
+                                                <% } %>
                                             </td>
                                         </tr>
                                         <% } %>
@@ -246,56 +315,70 @@
                     <h4 class="modal-title" id="contractModalLabel">Thêm hợp đồng mới</h4>
                 </div>
                 <div class="modal-body">
+                    <!-- Vùng hiển thị thông báo lỗi -->
+                    <div id="contractErrorAlert" class="alert alert-danger alert-dismissible" style="display: none; margin-bottom: 20px;">
+                        <button type="button" class="close" onclick="hideModalAlert()" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                        <span id="contractErrorText"></span>
+                    </div>
+                    
                     <form id="contractForm">
                         <input type="hidden" id="contractId">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="contractNumber">Số hợp đồng</label>
+                                    <label for="contractNumber">Số hợp đồng <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="contractNumber" required>
+                                    <div class="help-block text-danger" id="contractNumberError" style="display: none;"></div>
+                                    <small class="text-muted">Số hợp đồng phải duy nhất và không được trống</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="customerId">Khách hàng</label>
+                                    <label for="customerId">Khách hàng <span class="text-danger">*</span></label>
                                     <select class="form-control" id="customerId" required>
                                         <option value="">Chọn khách hàng...</option>
                                     </select>
+                                    <div class="help-block text-danger" id="customerIdError" style="display: none;"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="contractType">Loại hợp đồng</label>
-                                    <input type="text" class="form-control" id="contractType">
+                                    <input type="text" class="form-control" id="contractType" placeholder="VD: Service, Maintenance, Supply">
                                 </div>
                                 <div class="form-group">
                                     <label for="title">Tiêu đề</label>
-                                    <input type="text" class="form-control" id="title">
+                                    <input type="text" class="form-control" id="title" placeholder="Nhập tiêu đề hợp đồng">
                                 </div>
                                 <div class="form-group">
                                     <label for="terms">Điều khoản</label>
-                                    <textarea class="form-control" id="terms" rows="4"></textarea>
+                                    <textarea class="form-control" id="terms" rows="4" placeholder="Nhập các điều khoản của hợp đồng"></textarea>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="startDate">Ngày bắt đầu</label>
                                     <input type="date" class="form-control" id="startDate">
+                                    <div class="help-block text-danger" id="startDateError" style="display: none;"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="endDate">Ngày kết thúc</label>
                                     <input type="date" class="form-control" id="endDate">
+                                    <div class="help-block text-danger" id="endDateError" style="display: none;"></div>
                                 </div>
                                 <div class="form-group">
                                     <label for="signedDate">Ngày ký</label>
                                     <input type="date" class="form-control" id="signedDate">
                                 </div>
                                 <div class="form-group">
-                                    <label for="contractValue">Giá trị hợp đồng</label>
+                                    <label for="contractValue">Giá trị hợp đồng (VNĐ)</label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" id="contractValue" step="0.01" min="0">
+                                        <input type="number" class="form-control" id="contractValue" step="0.01" min="0" placeholder="0">
                                         <span class="input-group-btn">
                                             <button class="btn btn-info" type="button" onclick="updateContractValueFromProducts()" title="Tự động cập nhật từ tổng sản phẩm">
                                                 <i class="fa fa-calculator"></i> Tự động
                                             </button>
                                         </span>
                                     </div>
+                                    <div class="help-block text-danger" id="contractValueError" style="display: none;"></div>
                                     <small class="text-muted">Nhấn "Tự động" để cập nhật từ tổng giá trị sản phẩm</small>
                                 </div>
                                 <div class="form-group">
@@ -461,6 +544,150 @@
                 <div class="modal-body" id="contractDetail"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal thùng rác -->
+    <div class="modal fade" id="deletedContractsModal" tabindex="-1" role="dialog" aria-labelledby="deletedContractsModalLabel">
+        <div class="modal-dialog modal-xl" role="document" style="width: 95%; max-width: 1400px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="deletedContractsModalLabel">Thùng rác - Hợp đồng đã xóa</h4>
+                </div>
+                <div class="modal-body">
+                    <!-- Form tìm kiếm và sắp xếp -->
+                    <div class="row" style="margin-bottom: 15px;">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="deletedSearch">Tìm kiếm:</label>
+                                <input type="text" class="form-control" id="deletedSearch" placeholder="ID, số HĐ, tiêu đề...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="deletedSortBy">Sắp xếp theo:</label>
+                                <select class="form-control" id="deletedSortBy">
+                                    <option value="deleted_at">Ngày xóa</option>
+                                    <option value="id">ID hợp đồng</option>
+                                    <option value="contract_number">Số hợp đồng</option>
+                                    <option value="title">Tiêu đề</option>
+                                    <option value="deleted_by_name">Người xóa</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="deletedSortDir">Thứ tự:</label>
+                                <select class="form-control" id="deletedSortDir">
+                                    <option value="desc">Mới nhất</option>
+                                    <option value="asc">Cũ nhất</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="deletedPageSize">Số dòng:</label>
+                                <select class="form-control" id="deletedPageSize">
+                                    <option value="10">10</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <button class="btn btn-primary form-control" onclick="loadDeletedContracts()">
+                                    <i class="fa fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bảng dữ liệu -->
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover" id="deletedContractsTable">
+                            <thead class="thead-dark" style="position: sticky; top: 0; z-index: 10;">
+                                <tr>
+                                    <th width="8%">ID</th>
+                                    <th width="15%">Số hợp đồng</th>
+                                    <th width="10%">Khách hàng</th>
+                                    <th width="20%">Tiêu đề</th>
+                                    <th width="15%">Người xóa</th>
+                                    <th width="12%">Ngày xóa</th>
+                                    <th width="20%">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deletedContractsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fa fa-spinner fa-spin"></i> Đang tải...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Phân trang -->
+                    <div class="row" style="margin-top: 15px;">
+                        <div class="col-md-12">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div id="deletedPaginationInfo" class="text-muted" style="line-height: 34px;">
+                                        Hiển thị 0 - 0 của 0 bản ghi
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <nav aria-label="Phân trang thùng rác" class="pull-right">
+                                        <ul class="pagination pagination-sm" id="deletedPagination" style="margin: 0;">
+                                            <!-- Sẽ được tạo động bằng JavaScript -->
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chọn trạng thái khi khôi phục -->
+    <div class="modal fade" id="restoreStatusModal" tabindex="-1" role="dialog" aria-labelledby="restoreStatusModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="restoreStatusModalLabel">Chọn trạng thái khôi phục</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Chọn trạng thái cho hợp đồng khi khôi phục:</p>
+                    <div class="form-group">
+                        <label for="restoreStatus">Trạng thái:</label>
+                        <select class="form-control" id="restoreStatus">
+                            <option value="draft">Bản nháp</option>
+                            <option value="active">Hiệu lực</option>
+                            <option value="completed">Hoàn thành</option>
+                            <option value="terminated">Chấm dứt</option>
+                            <option value="expired">Hết hạn</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="restoreContractId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-success" onclick="confirmRestore()">Khôi phục</button>
                 </div>
             </div>
         </div>
@@ -635,6 +862,13 @@
         }
 
         function editContract(id) {
+            // Kiểm tra xem có đang xem hợp đồng đã bị xóa không
+            var currentStatus = '<%= request.getParameter("status") %>';
+            if (currentStatus === 'deleted') {
+                showAlert('Không thể chỉnh sửa hợp đồng đã bị xóa. Vui lòng khôi phục trước.', 'warning');
+                return;
+            }
+            
             $.get('api/contracts', { action: 'get', id: id }, function(resp) {
                 if (resp.success) {
                     var c = resp.data;
@@ -833,6 +1067,9 @@
         }
 
         function saveContract() {
+            // Clear previous errors
+            clearValidationErrors();
+            
             var data = {
                 action: currentEditingId ? 'update' : 'add',
                 id: $('#contractId').val(),
@@ -848,8 +1085,41 @@
                 products: contractProducts // Gửi kèm danh sách sản phẩm
             };
 
-            if (!data.contractNumber || !data.customerId) {
-                showAlert('Vui lòng nhập Số hợp đồng và chọn Khách hàng', 'warning');
+            // Validation
+            var isValid = true;
+            
+            // Kiểm tra trường bắt buộc
+            if (!data.contractNumber || data.contractNumber.trim() === '') {
+                showFieldError('contractNumber', 'Số hợp đồng không được để trống');
+                isValid = false;
+            }
+            
+            if (!data.customerId || data.customerId === '') {
+                showFieldError('customerId', 'Vui lòng chọn khách hàng');
+                isValid = false;
+            }
+            
+            // Kiểm tra ngày
+            if (data.startDate && data.endDate) {
+                var startDate = new Date(data.startDate);
+                var endDate = new Date(data.endDate);
+                if (endDate <= startDate) {
+                    showFieldError('endDate', 'Ngày kết thúc phải sau ngày bắt đầu');
+                    isValid = false;
+                }
+            }
+            
+            // Kiểm tra giá trị hợp đồng
+            if (data.contractValue && data.contractValue !== '') {
+                var value = parseFloat(data.contractValue);
+                if (isNaN(value) || value < 0) {
+                    showFieldError('contractValue', 'Giá trị hợp đồng phải là số dương');
+                    isValid = false;
+                }
+            }
+            
+            if (!isValid) {
+                showModalAlert('Vui lòng kiểm tra lại các thông tin đã nhập', 'warning');
                 return;
             }
 
@@ -857,9 +1127,48 @@
             data.products = JSON.stringify(contractProducts);
             $.post('api/contracts', data, function(resp) {
                 if (resp.success) {
+                    showModalAlert(resp.message, 'success');
+                    // Đợi 1 giây để người dùng thấy thông báo thành công
+                    setTimeout(function() {
+                        $('#contractModal').modal('hide');
+                        contractProducts = []; // Reset danh sách sản phẩm
+                        location.reload();
+                    }, 1000);
+                } else {
+                    // Hiển thị lỗi cụ thể từ server
+                    if (resp.message && (resp.message.includes('trùng') || resp.message.includes('tồn tại'))) {
+                        showFieldError('contractNumber', resp.message);
+                        showModalAlert(resp.message, 'danger');
+                    } else {
+                        showModalAlert(resp.message, 'danger');
+                    }
+                }
+            }, 'json');
+        }
+        
+        function clearValidationErrors() {
+            $('.help-block.text-danger').hide();
+            $('.form-control').removeClass('has-error');
+            hideModalAlert(); // Ẩn thông báo modal
+        }
+        
+        function showFieldError(fieldId, message) {
+            $('#' + fieldId + 'Error').text(message).show();
+            $('#' + fieldId).addClass('has-error');
+        }
+
+        function deleteContract(id) {
+            // Kiểm tra xem có đang xem hợp đồng đã bị xóa không
+            var currentStatus = '<%= request.getParameter("status") %>';
+            if (currentStatus === 'deleted') {
+                showAlert('Hợp đồng này đã bị xóa. Sử dụng nút "Xóa vĩnh viễn" để xóa hoàn toàn.', 'warning');
+                return;
+            }
+            
+            if (!confirm('Bạn có chắc chắn muốn chuyển hợp đồng này vào thùng rác?')) return;
+            $.post('api/contracts', { action: 'delete', id: id }, function(resp) {
+                if (resp.success) {
                     showAlert(resp.message, 'success');
-                    $('#contractModal').modal('hide');
-                    contractProducts = []; // Reset danh sách sản phẩm
                     location.reload();
                 } else {
                     showAlert(resp.message, 'danger');
@@ -867,12 +1176,243 @@
             }, 'json');
         }
 
-        function deleteContract(id) {
-            if (!confirm('Bạn có chắc chắn muốn xóa hợp đồng này?')) return;
-            $.post('api/contracts', { action: 'delete', id: id }, function(resp) {
+        function showDeletedContracts() {
+            console.log('Opening deleted contracts modal');
+            $('#deletedContractsModal').modal('show');
+            
+            // Test trực tiếp với AJAX đơn giản
+            $.ajax({
+                url: 'api/contracts',
+                type: 'GET',
+                data: { action: 'deleted', page: 1, pageSize: 10 },
+                dataType: 'json',
+                success: function(resp) {
+                    console.log('Direct AJAX test - Response:', resp);
+                    console.log('Direct test - Response keys:', Object.keys(resp));
+                    console.log('Direct test - Response.data:', resp.data);
+                    console.log('Direct test - Response.data type:', typeof resp.data);
+                    
+                    // Kiểm tra cấu trúc response
+                    var dataArray = resp.data;
+                    if (dataArray && dataArray.data && Array.isArray(dataArray.data)) {
+                        dataArray = dataArray.data;
+                        console.log('Direct test - Using nested data, found ' + dataArray.length + ' contracts');
+                    } else if (Array.isArray(dataArray)) {
+                        console.log('Direct test - Using direct data, found ' + dataArray.length + ' contracts');
+                    } else {
+                        console.log('Direct test - no data or error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Direct AJAX test failed:', status, error);
+                    console.error('Response text:', xhr.responseText);
+                }
+            });
+            
+            loadDeletedContracts();
+        }
+
+        // Biến toàn cục cho phân trang thùng rác
+        var deletedContractsCurrentPage = 1;
+        var deletedContractsTotalPages = 1;
+        var deletedContractsTotalRecords = 0;
+
+        function loadDeletedContracts(page) {
+            if (page) deletedContractsCurrentPage = page;
+            
+            var search = $('#deletedSearch').val();
+            var sortBy = $('#deletedSortBy').val();
+            var sortDir = $('#deletedSortDir').val();
+            var pageSize = $('#deletedPageSize').val();
+            
+            var params = {
+                action: 'deleted',
+                page: deletedContractsCurrentPage,
+                pageSize: pageSize,
+                search: search,
+                sortBy: sortBy,
+                sortDir: sortDir
+            };
+            
+            console.log('Loading deleted contracts with params:', params);
+            
+            $.get('api/contracts', params, function(resp) {
+                console.log('Response from server:', resp);
+                console.log('Response type:', typeof resp);
+                console.log('Response success:', resp.success);
+                console.log('Response data:', resp.data);
+                console.log('Response data length:', resp.data ? resp.data.length : 'undefined');
+                
+                // Debug: Kiểm tra tất cả các thuộc tính của response
+                console.log('All response keys:', Object.keys(resp));
+                console.log('Response.data type:', typeof resp.data);
+                console.log('Response.data value:', resp.data);
+                
+                // Test: Kiểm tra xem có phải là string không
+                if (typeof resp === 'string') {
+                    console.log('Response is string, trying to parse JSON');
+                    try {
+                        resp = JSON.parse(resp);
+                        console.log('Parsed response:', resp);
+                    } catch (e) {
+                        console.error('Failed to parse JSON:', e);
+                    }
+                }
+                
+                if (resp && resp.success) {
+                    var tbody = $('#deletedContractsTableBody');
+                    
+                    // Kiểm tra cấu trúc response - có thể data nằm trong resp.data.data
+                    var dataArray = resp.data;
+                    if (dataArray && dataArray.data && Array.isArray(dataArray.data)) {
+                        // Trường hợp: resp.data.data là mảng
+                        dataArray = dataArray.data;
+                        console.log('Using nested data array, found ' + dataArray.length + ' contracts');
+                    } else if (Array.isArray(dataArray)) {
+                        // Trường hợp: resp.data là mảng trực tiếp
+                        console.log('Using direct data array, found ' + dataArray.length + ' contracts');
+                    }
+                    
+                    if (Array.isArray(dataArray) && dataArray.length > 0) {
+                        console.log('Found ' + dataArray.length + ' deleted contracts');
+                        var rows = '';
+                        dataArray.forEach(function(contract) {
+                            console.log('Processing contract:', contract);
+                            var deletedAt = contract.deletedAt || contract.updatedAt || '-';
+                            var deletedByName = contract.deletedByName || 'Không xác định';
+                            
+                            // Format thời gian xóa theo múi giờ Việt Nam
+                            var formattedDeletedAt = formatVietnamTime(deletedAt);
+                            
+                            rows += '<tr>' +
+                                '<td>' + contract.id + '</td>' +
+                                '<td>' + contract.contractNumber + '</td>' +
+                                '<td>' + contract.customerId + '</td>' +
+                                '<td>' + (contract.title || '-') + '</td>' +
+                                '<td>' + deletedByName + '</td>' +
+                                '<td>' + formattedDeletedAt + '</td>' +
+                                '<td>' +
+                                    '<button class="btn btn-success btn-xs" onclick="restoreContract(' + contract.id + ')" title="Khôi phục">' +
+                                    '<i class="fa fa-undo"></i> Khôi phục</button> ' +
+                                    '<button class="btn btn-danger btn-xs" onclick="permanentlyDeleteContract(' + contract.id + ')" title="Xóa vĩnh viễn">' +
+                                    '<i class="fa fa-trash"></i> Xóa vĩnh viễn</button>' +
+                                '</td>' +
+                            '</tr>';
+                        });
+                        tbody.html(rows);
+                        
+                        // Cập nhật thông tin phân trang
+                        deletedContractsTotalPages = resp.data.totalPages || resp.totalPages || 1;
+                        deletedContractsTotalRecords = resp.data.totalRecords || resp.totalRecords || 0;
+                        updateDeletedPaginationInfo();
+                        renderDeletedPagination();
+                    } else {
+                        console.log('No deleted contracts found - data is empty or not an array');
+                        console.log('Data type:', typeof dataArray);
+                        console.log('Data value:', dataArray);
+                        tbody.html('<tr><td colspan="7" class="text-center text-muted"><i class="fa fa-info-circle"></i> Thùng rác trống</td></tr>');
+                        deletedContractsTotalPages = 1;
+                        deletedContractsTotalRecords = 0;
+                        updateDeletedPaginationInfo();
+                        renderDeletedPagination();
+                    }
+                } else {
+                    console.error('Server error:', resp);
+                    $('#deletedContractsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi: ' + (resp.message || 'Không thể tải dữ liệu') + '</td></tr>');
+                }
+            }, 'json')
+            .fail(function(xhr, status, error) {
+                console.error('AJAX error:', status, error);
+                console.error('XHR response:', xhr.responseText);
+                $('#deletedContractsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi kết nối: ' + error + '</td></tr>');
+            });
+        }
+
+        function updateDeletedPaginationInfo() {
+            var pageSize = parseInt($('#deletedPageSize').val());
+            var start = (deletedContractsCurrentPage - 1) * pageSize + 1;
+            var end = Math.min(deletedContractsCurrentPage * pageSize, deletedContractsTotalRecords);
+            
+            if (deletedContractsTotalRecords === 0) {
+                start = 0;
+                end = 0;
+            }
+            
+            $('#deletedPaginationInfo').text('Hiển thị ' + start + ' - ' + end + ' của ' + deletedContractsTotalRecords + ' bản ghi');
+        }
+
+        function renderDeletedPagination() {
+            var pagination = $('#deletedPagination');
+            pagination.empty();
+            
+            // Luôn hiển thị nút Previous
+            var prevDisabled = deletedContractsCurrentPage <= 1 ? 'disabled' : '';
+            pagination.append('<li class="' + prevDisabled + '"><a href="#" onclick="loadDeletedContracts(' + (deletedContractsCurrentPage - 1) + '); return false;">&laquo;</a></li>');
+            
+            // Nếu chỉ có 1 trang, vẫn hiển thị nút trang đó
+            if (deletedContractsTotalPages <= 1) {
+                pagination.append('<li class="active"><a href="#" onclick="loadDeletedContracts(1); return false;">1</a></li>');
+            } else {
+                // Các nút trang
+                var startPage = Math.max(1, deletedContractsCurrentPage - 2);
+                var endPage = Math.min(deletedContractsTotalPages, deletedContractsCurrentPage + 2);
+                
+                if (startPage > 1) {
+                    pagination.append('<li><a href="#" onclick="loadDeletedContracts(1); return false;">1</a></li>');
+                    if (startPage > 2) {
+                        pagination.append('<li class="disabled"><span>...</span></li>');
+                    }
+                }
+                
+                for (var i = startPage; i <= endPage; i++) {
+                    var active = i === deletedContractsCurrentPage ? 'active' : '';
+                    pagination.append('<li class="' + active + '"><a href="#" onclick="loadDeletedContracts(' + i + '); return false;">' + i + '</a></li>');
+                }
+                
+                if (endPage < deletedContractsTotalPages) {
+                    if (endPage < deletedContractsTotalPages - 1) {
+                        pagination.append('<li class="disabled"><span>...</span></li>');
+                    }
+                    pagination.append('<li><a href="#" onclick="loadDeletedContracts(' + deletedContractsTotalPages + '); return false;">' + deletedContractsTotalPages + '</a></li>');
+                }
+            }
+            
+            // Luôn hiển thị nút Next
+            var nextDisabled = deletedContractsCurrentPage >= deletedContractsTotalPages ? 'disabled' : '';
+            pagination.append('<li class="' + nextDisabled + '"><a href="#" onclick="loadDeletedContracts(' + (deletedContractsCurrentPage + 1) + '); return false;">&raquo;</a></li>');
+        }
+
+        function restoreContract(id) {
+            $('#restoreContractId').val(id);
+            $('#restoreStatusModal').modal('show');
+        }
+
+        function confirmRestore() {
+            var id = $('#restoreContractId').val();
+            var status = $('#restoreStatus').val();
+            
+            $.post('api/contracts', { action: 'restore', id: id, status: status }, function(resp) {
                 if (resp.success) {
-                    showAlert('Đã xóa hợp đồng', 'success');
-                    location.reload();
+                    showAlert(resp.message, 'success');
+                    $('#restoreStatusModal').modal('hide');
+                    loadDeletedContracts(); // Reload danh sách thùng rác
+                    location.reload(); // Reload trang chính để hiển thị hợp đồng đã khôi phục
+                } else {
+                    showAlert(resp.message, 'danger');
+                }
+            }, 'json');
+        }
+
+        function permanentlyDeleteContract(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn hợp đồng này? Hành động này không thể hoàn tác!')) return;
+            $.post('api/contracts', { action: 'permanent_delete', id: id }, function(resp) {
+                if (resp.success) {
+                    showAlert(resp.message, 'success');
+                    loadDeletedContracts(); // Reload danh sách thùng rác
+                    // Reload trang chính sau khi xóa vĩnh viễn
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
                 } else {
                     showAlert(resp.message, 'danger');
                 }
@@ -881,12 +1421,43 @@
 
 
         function showAlert(message, type) {
+            // Kiểm tra xem có đang trong modal không
+            if ($('#contractModal').hasClass('in') || $('#contractModal').is(':visible')) {
+                // Hiển thị trong modal
+                showModalAlert(message, type);
+            } else {
+                // Hiển thị ở trang chính
+                var alertClass = 'alert-' + type;
+                var html = '<div class="alert ' + alertClass + ' alert-dismissible" role="alert">' +
+                           '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                           '<span aria-hidden="true">&times;</span></button>' + message + '</div>';
+                $('.content').prepend(html);
+                setTimeout(function(){ $('.alert').fadeOut(400, function(){ $(this).remove(); }); }, 4000);
+            }
+        }
+        
+        function showModalAlert(message, type) {
             var alertClass = 'alert-' + type;
-            var html = '<div class="alert ' + alertClass + ' alert-dismissible" role="alert">' +
-                       '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
-                       '<span aria-hidden="true">&times;</span></button>' + message + '</div>';
-            $('.content').prepend(html);
-            setTimeout(function(){ $('.alert').fadeOut(400, function(){ $(this).remove(); }); }, 4000);
+            var iconClass = type === 'success' ? 'fa-check-circle' : 
+                           type === 'warning' ? 'fa-exclamation-triangle' : 
+                           type === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle';
+            
+            $('#contractErrorAlert')
+                .removeClass('alert-success alert-warning alert-info alert-danger')
+                .addClass(alertClass)
+                .show();
+            
+            $('#contractErrorText').html('<i class="fa ' + iconClass + '"></i> ' + message);
+            
+            // Tự động ẩn sau 5 giây (trừ khi là success thì ẩn sau 2 giây)
+            var hideDelay = type === 'success' ? 2000 : 5000;
+            setTimeout(function() {
+                $('#contractErrorAlert').fadeOut(400);
+            }, hideDelay);
+        }
+        
+        function hideModalAlert() {
+            $('#contractErrorAlert').hide();
         }
 
         function formatDateInput(value) {
@@ -900,6 +1471,29 @@
             } catch (e) { return ''; }
         }
 
+        // Hàm format thời gian theo múi giờ Việt Nam
+        function formatVietnamTime(dateString) {
+            if (!dateString || dateString === '-') return '-';
+            try {
+                var date = new Date(dateString);
+                if (isNaN(date.getTime())) return dateString;
+                
+                // Database lưu theo UTC, cần trừ đi 7 tiếng để có múi giờ Việt Nam
+                var vietnamTime = new Date(date.getTime() - (7 * 60 * 60 * 1000));
+                return vietnamTime.toLocaleString('vi-VN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            } catch (e) {
+                console.error('Error formatting Vietnam time:', e);
+                return dateString;
+            }
+        }
+
         // Reset form when modal is closed
         $('#contractModal').on('hidden.bs.modal', function() {
             document.getElementById('contractForm').reset();
@@ -909,6 +1503,7 @@
             $('#contractModalLabel').text('Thêm hợp đồng mới');
             $('#contractProductsTableBody').html('');
             hideAddProductForm(); // Ẩn form sản phẩm
+            clearValidationErrors(); // Clear validation errors
         });
         
         // Ẩn form sản phẩm khi mở modal thêm mới
@@ -916,6 +1511,76 @@
             hideAddProductForm();
             isEditingMode = false; // Reset về chế độ thêm mới
             loadProducts(); // Load danh sách sản phẩm khi mở modal
+            clearValidationErrors(); // Clear validation errors
+        });
+        
+        // Real-time validation
+        $(document).on('blur', '#contractNumber', function() {
+            var value = $(this).val().trim();
+            if (value === '') {
+                showFieldError('contractNumber', 'Số hợp đồng không được để trống');
+            } else {
+                // Kiểm tra trùng lặp số hợp đồng
+                checkContractNumberExists(value);
+            }
+        });
+        
+        function checkContractNumberExists(contractNumber) {
+            if (!contractNumber || contractNumber.trim() === '') return;
+            
+            $.get('api/contracts', { action: 'check_contract_number', contractNumber: contractNumber }, function(resp) {
+                if (resp.exists) {
+                    showFieldError('contractNumber', 'Số hợp đồng "' + contractNumber + '" đã tồn tại. Vui lòng chọn số khác.');
+                } else if (resp.existsInTrash) {
+                    showFieldError('contractNumber', 'Số hợp đồng "' + contractNumber + '" đã tồn tại trong thùng rác. Vui lòng chọn số khác hoặc khôi phục hợp đồng cũ.');
+                } else {
+                    $('#contractNumberError').hide();
+                    $('#contractNumber').removeClass('has-error');
+                }
+            }, 'json').fail(function() {
+                // Nếu không kiểm tra được, ẩn lỗi
+                $('#contractNumberError').hide();
+                $('#contractNumber').removeClass('has-error');
+            });
+        }
+        
+        $(document).on('change', '#customerId', function() {
+            var value = $(this).val();
+            if (value === '') {
+                showFieldError('customerId', 'Vui lòng chọn khách hàng');
+            } else {
+                $('#customerIdError').hide();
+                $(this).removeClass('has-error');
+            }
+        });
+        
+        $(document).on('blur', '#contractValue', function() {
+            var value = $(this).val();
+            if (value !== '') {
+                var numValue = parseFloat(value);
+                if (isNaN(numValue) || numValue < 0) {
+                    showFieldError('contractValue', 'Giá trị hợp đồng phải là số dương');
+                } else {
+                    $('#contractValueError').hide();
+                    $(this).removeClass('has-error');
+                }
+            }
+        });
+        
+        $(document).on('change', '#startDate, #endDate', function() {
+            var startDate = $('#startDate').val();
+            var endDate = $('#endDate').val();
+            
+            if (startDate && endDate) {
+                var start = new Date(startDate);
+                var end = new Date(endDate);
+                if (end <= start) {
+                    showFieldError('endDate', 'Ngày kết thúc phải sau ngày bắt đầu');
+                } else {
+                    $('#endDateError').hide();
+                    $('#endDate').removeClass('has-error');
+                }
+            }
         });
 
         // Event handler cho dropdown sản phẩm
@@ -978,6 +1643,24 @@
             $('#contractValue').val(total);
             showAlert('Đã cập nhật giá trị hợp đồng: ' + total.toLocaleString() + ' VNĐ', 'success');
         }
+
+        // Event handlers cho modal thùng rác
+        $(document).on('change', '#deletedPageSize', function() {
+            deletedContractsCurrentPage = 1;
+            loadDeletedContracts();
+        });
+
+        $(document).on('change', '#deletedSortBy, #deletedSortDir', function() {
+            deletedContractsCurrentPage = 1;
+            loadDeletedContracts();
+        });
+
+        $(document).on('keypress', '#deletedSearch', function(e) {
+            if (e.which === 13) { // Enter key
+                deletedContractsCurrentPage = 1;
+                loadDeletedContracts();
+            }
+        });
     </script>
 </body>
 </html>
