@@ -131,7 +131,7 @@
                         <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
                     </li>
                     <li>
-                        <a href="support_management.jsp"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
+                        <a href="support-management"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
                     </li>
                 </ul>
             </section>

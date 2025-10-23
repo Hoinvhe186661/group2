@@ -1,8 +1,9 @@
 package com.hlgenerator.servlet;
 
-import com.hlgenerator.dao.SupportRequestDAO;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -10,10 +11,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Map;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.hlgenerator.dao.SupportRequestDAO;
 
 @WebServlet("/api/support-stats")
 public class SupportStatsServlet extends HttpServlet {
@@ -64,27 +65,36 @@ public class SupportStatsServlet extends HttpServlet {
                 jsonResponse.add("data", gson.toJsonTree(tickets));
                 
             } else if ("getAllTickets".equals(action) || "list".equals(action)) {
-                // Lấy ticket theo khách hàng đang đăng nhập
+                // Lấy ticket theo role người dùng
                 HttpSession session = request.getSession(false);
                 if (session == null || session.getAttribute("isLoggedIn") == null) {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Chưa đăng nhập");
                 } else {
-                    // Lấy customerId từ session
-                    Integer customerId = (Integer) session.getAttribute("customerId");
-                    if (customerId == null) {
-                        // Fallback: lấy từ userId nếu không có customerId
-                        Integer userId = (Integer) session.getAttribute("userId");
-                        customerId = userId; // Giả sử userId = customerId
-                    }
+                    String userRole = (String) session.getAttribute("userRole");
                     
-                    if (customerId != null) {
-                        List<Map<String, Object>> customerTickets = supportDAO.listByCustomerId(customerId);
-                        jsonResponse.addProperty("success", true);
-                        jsonResponse.add("data", gson.toJsonTree(customerTickets));
+                    // Nếu là customer, chỉ lấy ticket của họ
+                    if ("customer".equals(userRole)) {
+                        Integer customerId = (Integer) session.getAttribute("customerId");
+                        if (customerId == null) {
+                            // Fallback: lấy từ userId nếu không có customerId
+                            Integer userId = (Integer) session.getAttribute("userId");
+                            customerId = userId;
+                        }
+                        
+                        if (customerId != null) {
+                            List<Map<String, Object>> customerTickets = supportDAO.listByCustomerId(customerId);
+                            jsonResponse.addProperty("success", true);
+                            jsonResponse.add("data", gson.toJsonTree(customerTickets));
+                        } else {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
+                        }
                     } else {
-                        jsonResponse.addProperty("success", false);
-                        jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
+                        // Nếu là admin, customer_support, technical_staff, guest - lấy tất cả tickets
+                        List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();
+                        jsonResponse.addProperty("success", true);
+                        jsonResponse.add("data", gson.toJsonTree(allTickets));
                     }
                 }
                 
@@ -109,16 +119,19 @@ public class SupportStatsServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
+         // QUAN TRỌNG: Phải set encoding TRƯỚC KHI đọc bất kỳ parameter nào
         request.setCharacterEncoding("UTF-8");
-        response.setContentType("application/json");
+        response.setContentType("application/json; charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
         
         PrintWriter out = response.getWriter();
         JsonObject jsonResponse = new JsonObject();
         
+        // ĐÚNG: Bây giờ mới đọc parameters sau khi đã set encoding
+        String action = request.getParameter("action");
+        System.out.println("POST Action received: " + action);
+        
         try {
-            String action = request.getParameter("action");
-            System.out.println("POST Action received: " + action);
             
             if ("createSupportRequest".equals(action)) {
                 // Tạo yêu cầu hỗ trợ mới
