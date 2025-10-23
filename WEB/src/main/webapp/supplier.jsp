@@ -355,7 +355,7 @@
                                                 <td>${supplier.phone}</td>
                                                 <td>
                                                     <span class="label ${supplier.status == 'active' ? 'label-success' : 'label-default'}">
-                                                        ${supplier.status}
+                                                        ${supplier.status == 'active' ? 'Hoạt động' : 'Không hoạt động'}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -441,8 +441,8 @@
                         </div>
                         <div class="form-group"><label>Trạng thái</label>
                             <select class="form-control" name="status">
-                                <option value="active" selected>active</option>
-                                <option value="inactive">inactive</option>
+                                <option value="active" selected>Hoạt động</option>
+                                <option value="inactive">Không hoạt động</option>
                             </select>
                         </div>
                     </form>
@@ -487,8 +487,8 @@
                         </div>
                         <div class="form-group"><label>Trạng thái</label>
                             <select class="form-control" name="status" id="edit_status">
-                                <option value="active">active</option>
-                                <option value="inactive">inactive</option>
+                                <option value="active">Hoạt động</option>
+                                <option value="inactive">Không hoạt động</option>
                             </select>
                         </div>
                     </form>

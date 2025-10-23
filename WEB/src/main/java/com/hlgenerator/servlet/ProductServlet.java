@@ -34,6 +34,10 @@ public class ProductServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Thiết lập encoding UTF-8 TRƯỚC KHI đọc parameters
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        
         String action = request.getParameter("action");
         
         if ("view".equals(action)) {
@@ -823,6 +827,15 @@ public class ProductServlet extends HttpServlet {
             String searchTerm = request.getParameter("search");
             String pageStr = request.getParameter("page");
             String pageSizeStr = request.getParameter("pageSize");
+            
+            // Debug UTF-8 encoding
+            System.out.println("=== FILTER REQUEST DEBUG ===");
+            System.out.println("Category received: " + category);
+            if (category != null) {
+                System.out.println("Category bytes: " + java.util.Arrays.toString(category.getBytes("UTF-8")));
+                System.out.println("Category length: " + category.length());
+            }
+            System.out.println("Search received: " + searchTerm);
             
             // Thiết lập phân trang
             int page = 1;

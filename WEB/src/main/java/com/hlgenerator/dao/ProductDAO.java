@@ -157,42 +157,61 @@ public class ProductDAO {
             return products;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT p.*, s.company_name as supplier_name FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT p.*, s.company_name as supplier_name " +
+                                             "FROM products p " +
+                                             "LEFT JOIN suppliers s ON p.supplier_id = s.id " +
+                                             "WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         // Thêm điều kiện lọc
         if (supplierId != null && !supplierId.trim().isEmpty()) {
-            sql.append(" AND supplier_id = ?");
+            sql.append(" AND p.supplier_id = ?");
             params.add(Integer.parseInt(supplierId));
         }
 
         if (category != null && !category.trim().isEmpty()) {
-            sql.append(" AND category = ?");
-            params.add(category);
+            sql.append(" AND BINARY p.category = BINARY ?");
+            params.add(category.trim());
         }
 
         if (status != null && !status.trim().isEmpty()) {
-            sql.append(" AND status = ?");
-            params.add(status);
+            sql.append(" AND p.status = ?");
+            params.add(status.trim());
         }
 
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            sql.append(" AND (LOWER(product_code) LIKE LOWER(?) OR LOWER(product_name) LIKE LOWER(?) " +
-                      "OR LOWER(description) LIKE LOWER(?))");
-            String likeTerm = "%" + searchTerm + "%";
-            params.add(likeTerm);
-            params.add(likeTerm);
-            params.add(likeTerm);
+            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ? OR p.description LIKE ? " +
+                      "OR p.category LIKE ? OR s.company_name LIKE ? OR CAST(p.unit_price AS CHAR) LIKE ? " +
+                      "OR CASE WHEN p.status = 'active' THEN 'Đang bán' WHEN p.status = 'discontinued' THEN 'Ngừng bán' ELSE p.status END LIKE ?)");
+            String likeTerm = "%" + searchTerm.trim() + "%";
+            params.add(likeTerm); // product_code
+            params.add(likeTerm); // product_name
+            params.add(likeTerm); // description
+            params.add(likeTerm); // category
+            params.add(likeTerm); // supplier_name
+            params.add(likeTerm); // unit_price
+            params.add(likeTerm); // status (tiếng Việt)
         }
 
-        sql.append(" ORDER BY created_at DESC");
+        sql.append(" ORDER BY p.created_at DESC");
         sql.append(" LIMIT ? OFFSET ?");
         params.add(pageSize);
         params.add((page - 1) * pageSize);
 
+        // Debug log
+        System.out.println("=== FILTER PRODUCTS SQL DEBUG ===");
+        System.out.println("SQL Query: " + sql.toString());
+        System.out.println("Parameters: " + params);
+
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            // Set parameters với UTF-8 encoding
             for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
+                Object param = params.get(i);
+                if (param instanceof String) {
+                    ps.setString(i + 1, (String) param);
+                } else {
+                    ps.setObject(i + 1, param);
+                }
             }
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -202,6 +221,8 @@ public class ProductDAO {
                 }
             }
         } catch (SQLException e) {
+            System.err.println("SQL Error: " + e.getMessage());
+            System.err.println("SQL Query: " + sql.toString());
             e.printStackTrace();
             lastError = "Lỗi khi lấy danh sách sản phẩm đã lọc: " + e.getMessage();
         }
@@ -217,37 +238,55 @@ public class ProductDAO {
             return 0;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products p LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE 1=1");
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products p " +
+                                             "LEFT JOIN suppliers s ON p.supplier_id = s.id " +
+                                             "WHERE 1=1");
         List<Object> params = new ArrayList<>();
 
         // Thêm điều kiện lọc
         if (supplierId != null && !supplierId.trim().isEmpty()) {
-            sql.append(" AND supplier_id = ?");
+            sql.append(" AND p.supplier_id = ?");
             params.add(Integer.parseInt(supplierId));
         }
 
         if (category != null && !category.trim().isEmpty()) {
-            sql.append(" AND category = ?");
-            params.add(category);
+            sql.append(" AND BINARY p.category = BINARY ?");
+            params.add(category.trim());
         }
 
         if (status != null && !status.trim().isEmpty()) {
-            sql.append(" AND status = ?");
-            params.add(status);
+            sql.append(" AND p.status = ?");
+            params.add(status.trim());
         }
 
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            sql.append(" AND (LOWER(product_code) LIKE LOWER(?) OR LOWER(product_name) LIKE LOWER(?) " +
-                      "OR LOWER(description) LIKE LOWER(?))");
-            String likeTerm = "%" + searchTerm + "%";
-            params.add(likeTerm);
-            params.add(likeTerm);
-            params.add(likeTerm);
+            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ? OR p.description LIKE ? " +
+                      "OR p.category LIKE ? OR s.company_name LIKE ? OR CAST(p.unit_price AS CHAR) LIKE ? " +
+                      "OR CASE WHEN p.status = 'active' THEN 'Đang bán' WHEN p.status = 'discontinued' THEN 'Ngừng bán' ELSE p.status END LIKE ?)");
+            String likeTerm = "%" + searchTerm.trim() + "%";
+            params.add(likeTerm); // product_code
+            params.add(likeTerm); // product_name
+            params.add(likeTerm); // description
+            params.add(likeTerm); // category
+            params.add(likeTerm); // supplier_name
+            params.add(likeTerm); // unit_price
+            params.add(likeTerm); // status (tiếng Việt)
         }
 
+        // Debug log
+        System.out.println("=== COUNT PRODUCTS SQL DEBUG ===");
+        System.out.println("SQL Query: " + sql.toString());
+        System.out.println("Parameters: " + params);
+
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            // Set parameters với UTF-8 encoding
             for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
+                Object param = params.get(i);
+                if (param instanceof String) {
+                    ps.setString(i + 1, (String) param);
+                } else {
+                    ps.setObject(i + 1, param);
+                }
             }
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -256,6 +295,8 @@ public class ProductDAO {
                 }
             }
         } catch (SQLException e) {
+            System.err.println("SQL Count Error: " + e.getMessage());
+            System.err.println("SQL Query: " + sql.toString());
             e.printStackTrace();
             lastError = "Lỗi khi đếm sản phẩm: " + e.getMessage();
         }

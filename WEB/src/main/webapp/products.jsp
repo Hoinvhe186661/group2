@@ -297,21 +297,8 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="row">
-                                            <!-- Lọc theo nhà cung cấp -->
-                                            <div class="col-md-3">
-                                                <div class="form-group">
-                                                    <label for="filterSupplier" style="font-weight: bold; margin-bottom: 5px;">Nhà cung cấp:</label>
-                                                    <select class="form-control" id="filterSupplier">
-                                                        <option value="">Tất cả nhà cung cấp</option>
-                                                        <c:forEach var="supplier" items="${suppliers}">
-                                                            <option value="${supplier.id}">${supplier.companyName} (${supplier.supplierCode})</option>
-                                                        </c:forEach>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
                                             <!-- Lọc theo danh mục -->
-                                            <div class="col-md-3">
+                                            <div class="col-md-4">
                                                 <div class="form-group">
                                                     <label for="filterCategory" style="font-weight: bold; margin-bottom: 5px;">Danh mục:</label>
                                                     <select class="form-control" id="filterCategory">
@@ -324,7 +311,7 @@
                                             </div>
                                             
                                             <!-- Lọc theo trạng thái -->
-                                            <div class="col-md-2">
+                                            <div class="col-md-3">
                                                 <div class="form-group">
                                                     <label for="filterStatus" style="font-weight: bold; margin-bottom: 5px;">Trạng thái:</label>
                                                     <select class="form-control" id="filterStatus">
@@ -336,10 +323,10 @@
                                             </div>
                                             
                                             <!-- Tìm kiếm tổng quát -->
-                                            <div class="col-md-2">
+                                            <div class="col-md-3">
                                                 <div class="form-group">
                                                     <label for="searchProduct" style="font-weight: bold; margin-bottom: 5px;">Tìm kiếm:</label>
-                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Nhập tên hoặc mã sản phẩm..." onkeypress="if(event.key==='Enter') filterProducts()">
+                                                    <input type="text" class="form-control" id="searchProduct" placeholder="Tìm theo tên, giá, nhà cung cấp, danh mục..." onkeypress="if(event.key==='Enter') filterProducts()">
                                                 </div>
                                             </div>
                                             
@@ -1227,13 +1214,11 @@
         
         // Hàm lọc sản phẩm sử dụng AJAX (backend processing)
         function filterProductsWithPagination() {
-            var supplierFilter = document.getElementById('filterSupplier').value;
             var categoryFilter = document.getElementById('filterCategory').value;
             var statusFilter = document.getElementById('filterStatus').value;
             var searchFilter = document.getElementById('searchProduct').value;
             
             console.log('Filtering with:', {
-                supplier: supplierFilter,
                 category: categoryFilter,
                 status: statusFilter,
                 search: searchFilter,
@@ -1243,12 +1228,12 @@
             // Hiển thị loading
             showLoading();
             
-            // Gọi AJAX để lọc sản phẩm từ backend
+            // Gọi AJAX để lọc sản phẩm từ backend với UTF-8 encoding
             $.ajax({
-                url: '<%=request.getContextPath()%>/product?action=filter',
+                url: '<%=request.getContextPath()%>/product',
                 type: 'GET',
                 data: {
-                    supplierId: supplierFilter,
+                    action: 'filter',
                     category: categoryFilter,
                     status: statusFilter,
                     search: searchFilter,
@@ -1256,6 +1241,9 @@
                     pageSize: itemsPerPageProducts
                 },
                 dataType: 'json',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+                },
                 success: function(response) {
                     console.log('AJAX Response:', response);
                     if (response.success) {
@@ -1265,7 +1253,7 @@
                         // Cập nhật thông tin phân trang
                         updatePaginationInfo(response);
                         
-                        // Cập nhật dropdown nhà cung cấp và danh mục
+                        // Cập nhật dropdown danh mục
                         updateFilterDropdowns(response.suppliers, response.categories);
                     } else {
                         alert('Lỗi khi lọc sản phẩm: ' + (response.message || 'Lỗi không xác định'));
@@ -1282,7 +1270,6 @@
         
          // Hàm reset tất cả bộ lọc với phân trang cho products
          function resetFiltersWithPagination() {
-             document.getElementById('filterSupplier').value = '';
              document.getElementById('filterCategory').value = '';
              document.getElementById('filterStatus').value = '';
              document.getElementById('searchProduct').value = '';
@@ -1375,25 +1362,8 @@
             updatePaginationButtons(totalPages);
         }
         
-        // Hàm cập nhật dropdown nhà cung cấp và danh mục
+        // Hàm cập nhật dropdown danh mục
         function updateFilterDropdowns(suppliers, categories) {
-            // Cập nhật dropdown nhà cung cấp
-            var supplierSelect = document.getElementById('filterSupplier');
-            var currentValue = supplierSelect.value;
-            supplierSelect.innerHTML = '<option value="">Tất cả nhà cung cấp</option>';
-            
-            if (suppliers) {
-                suppliers.forEach(function(supplier) {
-                    var option = document.createElement('option');
-                    option.value = supplier.id;
-                    option.textContent = supplier.companyName + ' (' + supplier.supplierCode + ')';
-                    supplierSelect.appendChild(option);
-                });
-            }
-            
-            // Khôi phục giá trị đã chọn
-            supplierSelect.value = currentValue;
-            
             // Cập nhật dropdown danh mục
             var categorySelect = document.getElementById('filterCategory');
             var currentCategoryValue = categorySelect.value;
