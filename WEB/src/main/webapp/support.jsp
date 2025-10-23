@@ -128,9 +128,9 @@
             <h4 class="support-title">Yêu cầu hỗ trợ</h4>
             <a href="#" class="create-request-link" data-bs-toggle="modal" data-bs-target="#supportModal">Tạo yêu cầu mới +</a>
         </div>
-        <div class="d-flex align-items-center gap-2 support-search" style="min-width:480px;">
-            <input type="text" class="form-control" placeholder="Tìm kiếm..." style="max-width:280px;">
-            <select id="filterStatus" class="form-select" style="max-width:160px;">
+        <div class="d-flex align-items-center gap-2 support-search" style="min-width:580px;">
+            <input type="text" class="form-control" placeholder="Tìm kiếm..." style="max-width:200px;" id="searchInput">
+            <select id="filterStatus" class="form-select" style="max-width:140px;">
               <option value="">Tất cả trạng thái</option>
               <option value="waiting">Chờ xử lý</option>
               <option value="in_progress">Đang xử lý</option>
@@ -138,23 +138,29 @@
               <option value="cancelled">Đã hủy</option>
               <option value="closed">Đã đóng</option>
             </select>
-            <select id="filterCategory" class="form-select" style="max-width:160px;">
+            <select id="filterCategory" class="form-select" style="max-width:140px;">
               <option value="">Tất cả loại</option>
               <option value="technical">Kỹ thuật</option>
               <option value="billing">Thanh toán</option>
               <option value="general">Chung</option>
               <option value="complaint">Khiếu nại</option>
             </select>
+            <button type="button" class="btn btn-primary btn-sm" id="filterBtn" style="min-width:60px;">
+              <i class="fas fa-filter"></i> Lọc
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="clearFilterBtn" style="min-width:60px;">
+              <i class="fas fa-times"></i> Xóa
+            </button>
         </div>
     </div>
     <div class="table-responsive">
         <table class="table support-table align-middle">
             <thead>
                 <tr>
-                  <th style="cursor: pointer;">ID <span id="sortIdArrow"></span></th>
+                  <th style="cursor: pointer;">ID <span id="sortIdArrow">↕</span></th>
                     <th>Loại yêu cầu</th>
                     <th>Tiêu đề</th>
-                    <th style="cursor: pointer;">Ngày tạo <span id="sortDateArrow"></span></th>
+                    <th style="cursor: pointer;">Ngày tạo <span id="sortDateArrow">↕</span></th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                 </tr>
@@ -570,29 +576,49 @@
       document.getElementById('sortDateArrow').textContent = sortDirectionDate ? ' ↑' : ' ↓';
     });
 
-    // Thêm chức năng tìm kiếm
-    const searchInput = document.querySelector('.support-search input');
+    // Thêm chức năng tìm kiếm và lọc
+    const searchInput = document.getElementById('searchInput');
     const statusSelect = document.getElementById('filterStatus');
     const categorySelect = document.getElementById('filterCategory');
+    const filterBtn = document.getElementById('filterBtn');
+    const clearFilterBtn = document.getElementById('clearFilterBtn');
+    
+    // Hàm áp dụng bộ lọc
+    function applyFilters() {
+      searchTerm = searchInput ? searchInput.value.trim() : '';
+      filterStatus = statusSelect ? statusSelect.value : '';
+      filterCategory = categorySelect ? categorySelect.value : '';
+      filterItems();
+      renderPage(1);
+    }
+    
+    // Hàm xóa bộ lọc
+    function clearFilters() {
+      if (searchInput) searchInput.value = '';
+      if (statusSelect) statusSelect.selectedIndex = 0;
+      if (categorySelect) categorySelect.selectedIndex = 0;
+      searchTerm = '';
+      filterStatus = '';
+      filterCategory = '';
+      filterItems();
+      renderPage(1);
+    }
+    
+    // Event listeners
+    if (filterBtn) {
+      filterBtn.addEventListener('click', applyFilters);
+    }
+    
+    if (clearFilterBtn) {
+      clearFilterBtn.addEventListener('click', clearFilters);
+    }
+    
+    // Cho phép Enter để lọc
     if (searchInput) {
-      searchInput.addEventListener('input', function(e) {
-        searchTerm = e.target.value;
-        filterItems();
-        renderPage(1);
-      });
-    }
-    if (statusSelect) {
-      statusSelect.addEventListener('change', function(){
-        filterStatus = this.value;
-        filterItems();
-        renderPage(1);
-      });
-    }
-    if (categorySelect) {
-      categorySelect.addEventListener('change', function(){
-        filterCategory = this.value;
-        filterItems();
-        renderPage(1);
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          applyFilters();
+        }
       });
     }
 
