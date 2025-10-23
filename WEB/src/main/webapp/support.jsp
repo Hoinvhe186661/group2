@@ -151,10 +151,10 @@
         <table class="table support-table align-middle">
             <thead>
                 <tr>
-                    <th>ID</th>
+                  <th style="cursor: pointer;">ID <span id="sortIdArrow"></span></th>
                     <th>Loại yêu cầu</th>
                     <th>Tiêu đề</th>
-                    <th>Ngày tạo</th>
+                    <th style="cursor: pointer;">Ngày tạo <span id="sortDateArrow"></span></th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                 </tr>
@@ -420,6 +420,8 @@
     let searchTerm = ''; // Lưu từ khóa tìm kiếm
     let filterStatus = ''; // Lọc theo trạng thái
     let filterCategory = ''; // Lọc theo loại yêu cầu
+    let sortDirectionId = true; // true = tăng dần, false = giảm dần
+    let sortDirectionDate = true; // true = tăng dần, false = giảm dần
     function formatDate(it){
       if (it.createdDate && typeof it.createdDate === 'string' && it.createdDate.includes('-')) {
         var parts = it.createdDate.split('-');
@@ -524,6 +526,26 @@
       rows(pageItems);
       renderPagination(total);
     }
+    
+    // Hàm sắp xếp theo ID
+    function sortById(ascending) {
+      filteredItems.sort((a, b) => {
+        const idA = parseInt(a.id) || 0;
+        const idB = parseInt(b.id) || 0;
+        return ascending ? idA - idB : idB - idA;
+      });
+      renderPage(1);
+    }
+    
+    // Hàm sắp xếp theo ngày tạo
+    function sortByDate(ascending) {
+      filteredItems.sort((a, b) => {
+        const dateA = new Date(a.createdDate || a.createdAt || 0);
+        const dateB = new Date(b.createdDate || b.createdAt || 0);
+        return ascending ? dateA - dateB : dateB - dateA;
+      });
+      renderPage(1);
+    }
     function load(){
       fetch(ctx + '/api/support-stats?action=list', {headers:{'Accept':'application/json'}})
         .then(r=>r.json()).then(j=>{ 
@@ -534,6 +556,19 @@
         .catch(()=>{tbody.innerHTML='<tr><td colspan="7" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>';});
     }
     load();
+
+    // Thêm event listener cho sắp xếp
+    document.querySelector('th:nth-child(1)').addEventListener('click', function() {
+      sortDirectionId = !sortDirectionId;
+      sortById(sortDirectionId);
+      document.getElementById('sortIdArrow').textContent = sortDirectionId ? ' ↑' : ' ↓';
+    });
+    
+    document.querySelector('th:nth-child(4)').addEventListener('click', function() {
+      sortDirectionDate = !sortDirectionDate;
+      sortByDate(sortDirectionDate);
+      document.getElementById('sortDateArrow').textContent = sortDirectionDate ? ' ↑' : ' ↓';
+    });
 
     // Thêm chức năng tìm kiếm
     const searchInput = document.querySelector('.support-search input');
@@ -628,7 +663,9 @@
         .catch(()=> alert('Lỗi kết nối máy chủ'));
     });
 
-    // View detail handler
+    
+   
+     // View detail handler
     tbody.addEventListener('click', function(e){
       const viewLink = e.target.closest('a.view-link');
       const cancelLink = e.target.closest('a.cancel-link');
