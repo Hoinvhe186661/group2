@@ -1,9 +1,8 @@
 package com.hlgenerator.servlet;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.List;
-import java.util.Map;
+import com.hlgenerator.dao.SupportRequestDAO;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -11,10 +10,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.hlgenerator.dao.SupportRequestDAO;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Map;
 
 @WebServlet("/api/support-stats")
 public class SupportStatsServlet extends HttpServlet {
@@ -65,38 +64,59 @@ public class SupportStatsServlet extends HttpServlet {
                 jsonResponse.add("data", gson.toJsonTree(tickets));
                 
             } else if ("getAllTickets".equals(action) || "list".equals(action)) {
-                // Lấy ticket theo role người dùng
+                // Lấy ticket theo khách hàng đang đăng nhập
                 HttpSession session = request.getSession(false);
                 if (session == null || session.getAttribute("isLoggedIn") == null) {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Chưa đăng nhập");
                 } else {
-                    String userRole = (String) session.getAttribute("userRole");
+                    // Lấy customerId từ session
+                    Integer customerId = (Integer) session.getAttribute("customerId");
+                    if (customerId == null) {
+                        // Fallback: lấy từ userId nếu không có customerId
+                        Integer userId = (Integer) session.getAttribute("userId");
+                        customerId = userId; // Giả sử userId = customerId
+                    }
                     
-                    // Nếu là customer, chỉ lấy ticket của họ
-                    if ("customer".equals(userRole)) {
-                        Integer customerId = (Integer) session.getAttribute("customerId");
-                        if (customerId == null) {
-                            // Fallback: lấy từ userId nếu không có customerId
-                            Integer userId = (Integer) session.getAttribute("userId");
-                            customerId = userId;
-                        }
-                        
-                        if (customerId != null) {
-                            List<Map<String, Object>> customerTickets = supportDAO.listByCustomerId(customerId);
-                            jsonResponse.addProperty("success", true);
-                            jsonResponse.add("data", gson.toJsonTree(customerTickets));
-                        } else {
-                            jsonResponse.addProperty("success", false);
-                            jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
-                        }
-                    } else {
-                        // Nếu là admin, customer_support, technical_staff, guest - lấy tất cả tickets
-                        List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();
+                    if (customerId != null) {
+                        List<Map<String, Object>> customerTickets = supportDAO.listByCustomerId(customerId);
                         jsonResponse.addProperty("success", true);
-                        jsonResponse.add("data", gson.toJsonTree(allTickets));
+                        jsonResponse.add("data", gson.toJsonTree(customerTickets));
+                    } else {
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
                     }
                 }
+                
+            } else if ("getTechnicalStaff".equals(action)) {
+                // Lấy danh sách nhân viên kỹ thuật
+                com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
+                java.util.List<com.hlgenerator.model.User> headTechs = userDAO.getUsersByRole("head_technician");
+                java.util.List<com.hlgenerator.model.User> techStaffs = userDAO.getUsersByRole("technical_staff");
+                
+                // Combine lists
+                java.util.List<Map<String, Object>> allTechStaff = new java.util.ArrayList<>();
+                
+                for (com.hlgenerator.model.User user : headTechs) {
+                    Map<String, Object> techUser = new java.util.HashMap<>();
+                    techUser.put("id", user.getId());
+                    techUser.put("name", user.getFullName());
+                    techUser.put("role", "Trưởng phòng Kỹ thuật");
+                    techUser.put("email", user.getEmail());
+                    allTechStaff.add(techUser);
+                }
+                
+                for (com.hlgenerator.model.User user : techStaffs) {
+                    Map<String, Object> techUser = new java.util.HashMap<>();
+                    techUser.put("id", user.getId());
+                    techUser.put("name", user.getFullName());
+                    techUser.put("role", "Kỹ thuật viên");
+                    techUser.put("email", user.getEmail());
+                    allTechStaff.add(techUser);
+                }
+                
+                jsonResponse.addProperty("success", true);
+                jsonResponse.add("data", gson.toJsonTree(allTechStaff));
                 
             } else {
                 System.out.println("Unknown GET action: " + action);
@@ -119,7 +139,7 @@ public class SupportStatsServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-         // QUAN TRỌNG: Phải set encoding TRƯỚC KHI đọc bất kỳ parameter nào
+        // QUAN TRỌNG: Phải set encoding TRƯỚC KHI đọc bất kỳ parameter nào
         request.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
@@ -127,11 +147,10 @@ public class SupportStatsServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
         JsonObject jsonResponse = new JsonObject();
         
-        // ĐÚNG: Bây giờ mới đọc parameters sau khi đã set encoding
-        String action = request.getParameter("action");
-        System.out.println("POST Action received: " + action);
-        
         try {
+            // ĐÚNG: Đọc parameters sau khi đã set encoding, TRONG try block
+            String action = request.getParameter("action");
+            System.out.println("POST Action received: " + action);
             
             if ("createSupportRequest".equals(action)) {
                 // Tạo yêu cầu hỗ trợ mới
@@ -141,21 +160,72 @@ public class SupportStatsServlet extends HttpServlet {
                 String priority = request.getParameter("priority");
                 String deleteOldId = request.getParameter("delete_old_id");
                 
+                System.out.println("DEBUG: subject=" + subject + ", category=" + category);
+                
                 // Lấy customer_id từ session
                 HttpSession session = request.getSession(false);
                 Integer customerId = null;
+                Integer userId = null;
+                String userRole = null;
+                
                 if (session != null) {
                     customerId = (Integer) session.getAttribute("customerId");
-                    if (customerId == null) {
-                        // Fallback: lấy từ userId nếu không có customerId
-                        Integer userId = (Integer) session.getAttribute("userId");
-                        customerId = userId; // Giả sử userId = customerId
+                    userId = (Integer) session.getAttribute("userId");
+                    userRole = (String) session.getAttribute("userRole");
+                    System.out.println("DEBUG: customerId=" + customerId + ", userId=" + userId + ", userRole=" + userRole);
+                    
+                    // Nếu không có customerId, tự động tạo/lấy customer từ user info
+                    if (customerId == null && userId != null) {
+                        try {
+                            com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
+                            String email = (String) session.getAttribute("email");
+                            String fullName = (String) session.getAttribute("fullName");
+                            String username = (String) session.getAttribute("username");
+                            
+                            System.out.println("DEBUG: Attempting to get/create customer for email=" + email);
+                            
+                            // Tìm customer theo email
+                            com.hlgenerator.model.Customer customer = null;
+                            if (email != null && !email.trim().isEmpty()) {
+                                customer = customerDAO.getCustomerByEmail(email.trim());
+                            }
+                            
+                            // Nếu không tìm thấy, tạo customer mới
+                            if (customer == null) {
+                                String code = customerDAO.generateNextCustomerCode();
+                                com.hlgenerator.model.Customer newCustomer = new com.hlgenerator.model.Customer();
+                                newCustomer.setCustomerCode(code);
+                                newCustomer.setCompanyName(fullName != null ? fullName : username);
+                                newCustomer.setContactPerson(fullName != null ? fullName : username);
+                                newCustomer.setEmail(email != null ? email.trim() : "");
+                                newCustomer.setPhone("");
+                                newCustomer.setAddress("");
+                                newCustomer.setTaxCode("");
+                                newCustomer.setCustomerType("individual");
+                                newCustomer.setStatus("active");
+                                
+                                if (customerDAO.addCustomer(newCustomer)) {
+                                    customer = customerDAO.getCustomerByEmail(email != null ? email.trim() : "");
+                                    System.out.println("DEBUG: Created new customer with ID " + (customer != null ? customer.getId() : "null"));
+                                }
+                            }
+                            
+                            if (customer != null) {
+                                customerId = customer.getId();
+                                session.setAttribute("customerId", customerId);
+                                System.out.println("DEBUG: Set customerId to " + customerId);
+                            }
+                        } catch (Exception e) {
+                            System.out.println("ERROR: Failed to get/create customer: " + e.getMessage());
+                            e.printStackTrace();
+                        }
                     }
                 }
                 
                 if (customerId == null) {
+                    System.out.println("ERROR: customerId is still null after attempting to create");
                     jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không tìm thấy thông tin khách hàng");
+                    jsonResponse.addProperty("message", "Không thể xác định thông tin khách hàng. Vui lòng liên hệ quản trị viên.");
                     out.print(jsonResponse.toString());
                     out.flush();
                     return;
@@ -165,9 +235,11 @@ public class SupportStatsServlet extends HttpServlet {
                     description == null || description.trim().isEmpty() ||
                     category == null || category.trim().isEmpty()) {
                     
+                    System.out.println("ERROR: Missing required fields");
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Vui lòng điền đầy đủ thông tin");
                 } else {
+                    System.out.println("DEBUG: Calling supportDAO.create()...");
                     // Set priority mặc định nếu không có
                     if (priority == null || priority.trim().isEmpty()) {
                         priority = "medium";
@@ -184,16 +256,21 @@ public class SupportStatsServlet extends HttpServlet {
                     }
                     
                     boolean success = supportDAO.create(customerId.intValue(), subject, description, category, priority);
+                    System.out.println("DEBUG: supportDAO.create() returned: " + success);
                     
                     if (success) {
                         jsonResponse.addProperty("success", true);
                         jsonResponse.addProperty("message", "Yêu cầu hỗ trợ đã được tạo thành công");
                         jsonResponse.addProperty("ticketNumber", "SR-" + System.currentTimeMillis());
+                        System.out.println("SUCCESS: Support request created");
                     } else {
+                        String error = supportDAO.getLastError();
+                        System.out.println("ERROR: Failed to create - " + error);
                         jsonResponse.addProperty("success", false);
-                        jsonResponse.addProperty("message", "Lỗi tạo yêu cầu: " + supportDAO.getLastError());
+                        jsonResponse.addProperty("message", "Lỗi tạo yêu cầu: " + error);
                     }
                 }
+                System.out.println("DEBUG: End of createSupportRequest block");
                 
             } else if ("cancel".equals(action)) {
                 // Hủy yêu cầu hỗ trợ
@@ -257,39 +334,79 @@ public class SupportStatsServlet extends HttpServlet {
                 }
                 
             } else if ("forward".equals(action)) {
-                // Chuyển tiếp yêu cầu hỗ trợ
+                // Chuyển tiếp yêu cầu hỗ trợ KỸ THUẬT
                 String idParam = request.getParameter("id");
-                String department = request.getParameter("department");
                 String forwardNote = request.getParameter("forwardNote");
                 String forwardPriority = request.getParameter("forwardPriority");
+                String assignedToParam = request.getParameter("assignedTo");
+                
+                System.out.println("DEBUG: Forward action - ID=" + idParam + ", assignedTo=" + assignedToParam);
                 
                 if (idParam == null || idParam.trim().isEmpty()) {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Thiếu thông tin ID");
-                } else if (department == null || department.trim().isEmpty()) {
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Vui lòng chọn bộ phận chuyển tiếp");
                 } else {
                     try {
                         int id = Integer.parseInt(idParam);
+                        
+                        // Kiểm tra xem ticket có tồn tại và có phải technical không
+                        Map<String, Object> ticket = supportDAO.getSupportRequestById(id);
+                        if (ticket == null) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy ticket");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
+                        }
+                        
+                        String currentCategory = (String) ticket.get("category");
+                        System.out.println("DEBUG: Current category=" + currentCategory);
+                        
+                        // CHỈ cho phép forward ticket technical
+                        if (!"technical".equals(currentCategory)) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Chỉ có thể chuyển tiếp yêu cầu kỹ thuật!");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
+                        }
                         
                         // Set default values
                         if (forwardNote == null) forwardNote = "";
                         if (forwardPriority == null) forwardPriority = "medium";
                         
-                        // Cập nhật ticket với thông tin chuyển tiếp
-                        String departmentName = "head_technical".equals(department) ? "Trưởng phòng Kỹ thuật" : department;
-                        String newInternalNotes = "CHUYỂN TIẾP - Bộ phận: " + departmentName + 
-                                                (forwardNote.isEmpty() ? "" : ", Ghi chú: " + forwardNote);
+                        // Parse assignedTo
+                        Integer assignedToId = null;
+                        if (assignedToParam != null && !assignedToParam.trim().isEmpty()) {
+                            try {
+                                assignedToId = Integer.parseInt(assignedToParam);
+                                System.out.println("DEBUG: Assigning to user ID: " + assignedToId);
+                            } catch (NumberFormatException e) {
+                                System.out.println("WARNING: Invalid assignedTo value: " + assignedToParam);
+                            }
+                        }
                         
-                        boolean success = supportDAO.updateSupportRequest(id, null, forwardPriority, "in_progress", "", newInternalNotes);
+                        // Cập nhật ticket: đặt category='technical', status='in_progress', assign người nhận
+                        String newInternalNotes = "CHUYỂN TIẾP ĐẾN BỘ PHẬN KỸ THUẬT" + 
+                                                (forwardNote.isEmpty() ? "" : " - Ghi chú: " + forwardNote);
+                        
+                        System.out.println("DEBUG: Updating ticket for forward - priority=" + forwardPriority + ", assignedTo=" + assignedToId);
+                        
+                        // Update: set category to 'technical', update priority, status, add notes, assign user
+                        boolean success = supportDAO.updateSupportRequest(id, "technical", forwardPriority, "in_progress", null, newInternalNotes, assignedToId);
                         
                         if (success) {
+                            System.out.println("SUCCESS: Ticket forwarded to technical department");
+                            String message = "Đã chuyển tiếp yêu cầu đến Bộ phận Kỹ thuật thành công!";
+                            if (assignedToId != null) {
+                                message += " (Đã phân công)";
+                            }
                             jsonResponse.addProperty("success", true);
-                            jsonResponse.addProperty("message", "Chuyển tiếp yêu cầu thành công đến " + departmentName);
+                            jsonResponse.addProperty("message", message);
                         } else {
+                            System.out.println("ERROR: Failed to forward - " + supportDAO.getLastError());
                             jsonResponse.addProperty("success", false);
-                            jsonResponse.addProperty("message", "Lỗi chuyển tiếp yêu cầu: " + supportDAO.getLastError());
+                            jsonResponse.addProperty("message", "Lỗi chuyển tiếp: " + supportDAO.getLastError());
                         }
                     } catch (NumberFormatException e) {
                         jsonResponse.addProperty("success", false);
@@ -310,7 +427,9 @@ public class SupportStatsServlet extends HttpServlet {
             jsonResponse.addProperty("message", "Lỗi server: " + e.getMessage());
         }
         
-        out.print(jsonResponse.toString());
+        String responseStr = jsonResponse.toString();
+        System.out.println("DEBUG: Sending response: " + responseStr);
+        out.print(responseStr);
         out.flush();
     }
 }

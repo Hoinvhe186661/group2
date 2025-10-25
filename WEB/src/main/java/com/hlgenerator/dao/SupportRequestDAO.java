@@ -181,6 +181,11 @@ public class SupportRequestDAO extends DBConnect {
     }
 
     public boolean updateSupportRequest(int id, String category, String priority, String status, String resolution, String internalNotes) {
+        return updateSupportRequest(id, category, priority, status, resolution, internalNotes, null);
+    }
+    
+    // Overload method with assignedTo parameter
+    public boolean updateSupportRequest(int id, String category, String priority, String status, String resolution, String internalNotes, Integer assignedTo) {
         try {
             if (connection == null || connection.isClosed()) {
                 lastError = "DB connection is not available";
@@ -191,35 +196,58 @@ public class SupportRequestDAO extends DBConnect {
             return false;
         }
         
-        String sql;
+        // Build dynamic SQL based on which fields are provided
+        StringBuilder sql = new StringBuilder("UPDATE support_requests SET ");
+        List<Object> params = new ArrayList<>();
+        boolean first = true;
+        
         if (category != null) {
-            // Cập nhật tất cả trường bao gồm category
-            sql = "UPDATE support_requests SET category = ?, priority = ?, status = ?, resolution = ?, " +
-                  "resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END " +
-                  "WHERE id = ?";
-        } else {
-            // Chỉ cập nhật priority, status, resolution (không cập nhật category)
-            sql = "UPDATE support_requests SET priority = ?, status = ?, resolution = ?, " +
-                  "resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END " +
-                  "WHERE id = ?";
+            sql.append("category = ?");
+            params.add(category);
+            first = false;
         }
         
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            if (category != null) {
-                ps.setString(1, category);
-                ps.setString(2, priority);
-                ps.setString(3, status);
-                ps.setString(4, resolution);
-                ps.setString(5, status);
-                ps.setString(6, status);
-                ps.setInt(7, id);
-            } else {
-                ps.setString(1, priority);
-                ps.setString(2, status);
-                ps.setString(3, resolution);
-                ps.setString(4, status);
-                ps.setString(5, status);
-                ps.setInt(6, id);
+        if (priority != null) {
+            if (!first) sql.append(", ");
+            sql.append("priority = ?");
+            params.add(priority);
+            first = false;
+        }
+        
+        if (status != null) {
+            if (!first) sql.append(", ");
+            sql.append("status = ?, resolved_at = CASE WHEN ? = 'resolved' OR ? = 'closed' THEN NOW() ELSE resolved_at END");
+            params.add(status);
+            params.add(status);
+            params.add(status);
+            first = false;
+        }
+        
+        if (resolution != null) {
+            if (!first) sql.append(", ");
+            sql.append("resolution = ?");
+            params.add(resolution);
+            first = false;
+        }
+        
+        if (assignedTo != null) {
+            if (!first) sql.append(", ");
+            sql.append("assigned_to = ?");
+            params.add(assignedTo);
+            first = false;
+        }
+        
+        sql.append(" WHERE id = ?");
+        params.add(id);
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof Integer) {
+                    ps.setInt(i + 1, (Integer) param);
+                } else {
+                    ps.setString(i + 1, (String) param);
+                }
             }
             
             int result = ps.executeUpdate();
@@ -330,6 +358,57 @@ public class SupportRequestDAO extends DBConnect {
             lastError = e.getMessage();
         }
         return tickets;
+    }
+
+    // Lấy chi tiết một support request theo ID
+    public Map<String, Object> getSupportRequestById(int id) {
+        System.out.println("Getting support request by id: " + id);
+        String sql = "SELECT sr.id, sr.ticket_number, sr.customer_id, sr.subject, sr.description, sr.category, " +
+                     "sr.priority, sr.status, sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                     "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
+                     "c.address as customer_address, " +
+                     "u.full_name as assigned_to_name, u.email as assigned_to_email " +
+                     "FROM support_requests sr " +
+                     "LEFT JOIN customers c ON sr.customer_id = c.id " +
+                     "LEFT JOIN users u ON sr.assigned_to = u.id " +
+                     "WHERE sr.id = ?";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Map<String, Object> ticket = new HashMap<>();
+                ticket.put("id", rs.getInt("id"));
+                ticket.put("ticketNumber", rs.getString("ticket_number"));
+                ticket.put("customerId", rs.getInt("customer_id"));
+                ticket.put("subject", rs.getString("subject"));
+                ticket.put("description", rs.getString("description"));
+                ticket.put("category", rs.getString("category"));
+                ticket.put("priority", rs.getString("priority"));
+                ticket.put("status", rs.getString("status"));
+                ticket.put("assignedTo", rs.getObject("assigned_to"));
+                ticket.put("assignedToName", rs.getString("assigned_to_name"));
+                ticket.put("assignedToEmail", rs.getString("assigned_to_email"));
+                ticket.put("history", rs.getString("history"));
+                ticket.put("resolution", rs.getString("resolution"));
+                ticket.put("customerName", rs.getString("company_name"));
+                ticket.put("customerContact", rs.getString("contact_person"));
+                ticket.put("customerEmail", rs.getString("customer_email"));
+                ticket.put("customerPhone", rs.getString("customer_phone"));
+                ticket.put("customerAddress", rs.getString("customer_address"));
+                ticket.put("createdAt", rs.getTimestamp("created_at"));
+                ticket.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                
+                System.out.println("Found ticket: " + ticket.get("ticketNumber"));
+                return ticket;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error in getSupportRequestById: " + e.getMessage());
+            e.printStackTrace();
+            lastError = e.getMessage();
+        }
+        System.out.println("No ticket found with id: " + id);
+        return null;
     }
 }
 

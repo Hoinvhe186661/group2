@@ -42,12 +42,12 @@ public class CustomerManagementServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Cấu hình encoding
+       
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
         
-        // Kiểm tra đăng nhập
+        
         HttpSession session = request.getSession(false);
         String username = (String) session.getAttribute("username");
         Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -66,19 +66,19 @@ public class CustomerManagementServlet extends HttpServlet {
         }
         
         try {
-            // Lấy tất cả khách hàng từ database
+            
             List<Customer> allCustomers = customerDAO.getAllCustomers();
             
-            // Lấy các tham số filter từ request
+            
         
             String pType = decodeParam(request.getParameter("customerType"));
             String pStatus = decodeParam(request.getParameter("status"));
             
             
-            // Lọc danh sách khách hàng
+            
             List<Customer> filteredCustomers = filterCustomers(allCustomers,  pType, pStatus);
             
-            // Lấy danh sách loại khách hàng và trạng thái để hiển thị trong dropdown
+            
             Set<String> customerTypes = extractCustomerTypes(allCustomers);
             Set<String> statuses = extractStatuses(allCustomers);
             
@@ -91,7 +91,7 @@ public class CustomerManagementServlet extends HttpServlet {
             request.setAttribute("filterStatus", pStatus != null ? pStatus : "");
            
             
-            // Forward đến JSP để hiển thị
+            
             request.getRequestDispatcher("/customers.jsp").forward(request, response);
             
         } catch (Exception e) {
@@ -101,9 +101,7 @@ public class CustomerManagementServlet extends HttpServlet {
         }
     }
     
-    /**
-     * Lọc danh sách khách hàng dựa trên các tiêu chí
-     */
+    
     private List<Customer> filterCustomers(List<Customer> allCustomers, 
                                           String type, String status) {
         List<Customer> filtered = new ArrayList<>();
@@ -111,10 +109,10 @@ public class CustomerManagementServlet extends HttpServlet {
         for (Customer c : allCustomers) {
            
             
-            // So sánh chính xác cho loại khách hàng
+            
             if (!equalsParam(type, c.getCustomerType())) continue;
             
-            // So sánh chính xác cho trạng thái
+            
             if (!equalsParam(status, c.getStatus())) continue;
             
     
@@ -151,27 +149,21 @@ public class CustomerManagementServlet extends HttpServlet {
         return statuses;
     }
     
-    /**
-     * So sánh chính xác (equals) giữa tham số filter và giá trị thực tế
-     */
+    
     private boolean equalsParam(String param, String actual) {
         if (param == null || param.trim().isEmpty()) return true;
         String val = actual == null ? "" : actual.trim();
         return param.trim().equalsIgnoreCase(val);
     }
     
-    /**
-     * Kiểm tra xem giá trị thực tế có chứa tham số filter hay không
-     */
+    
     private boolean containsParam(String param, String actual) {
         if (param == null || param.trim().isEmpty()) return true;
         String val = actual == null ? "" : actual.trim().toLowerCase();
         return val.contains(param.trim().toLowerCase());
     }
     
-    /**
-     * Decode UTF-8 cho tham số
-     */
+    
     private String decodeParam(String s) {
         if (s == null) return null;
         try {
@@ -181,9 +173,7 @@ public class CustomerManagementServlet extends HttpServlet {
         }
     }
     
-    /**
-     * Utility class để chuyển đổi mã loại khách hàng và trạng thái sang label tiếng Việt
-     */
+    
     public static class CustomerHelper {
         public static String typeLabel(String raw) {
             if (raw == null) return "-";

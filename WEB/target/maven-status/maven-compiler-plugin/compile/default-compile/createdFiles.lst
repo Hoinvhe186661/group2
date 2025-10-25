@@ -1,5 +1,6 @@
 com\hlgenerator\model\Supplier.class
 com\hlgenerator\model\Task.class
+com\hlgenerator\servlet\SupportDetailServlet.class
 com\hlgenerator\servlet\SupportStatsServlet.class
 com\hlgenerator\servlet\ContractItemsServlet.class
 com\hlgenerator\servlet\ContractServlet.class
@@ -14,6 +15,8 @@ com\hlgenerator\model\Product.class
 com\hlgenerator\servlet\UserManagementServlet.class
 com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\dao\UserDAO.class
+com\hlgenerator\servlet\EncodingTestServlet.class
+com\hlgenerator\servlet\TechSupportManagementServlet.class
 com\hlgenerator\servlet\ResetPasswordServlet.class
 com\hlgenerator\model\WorkOrder.class
 com\hlgenerator\servlet\ForgotPasswordServlet$1.class

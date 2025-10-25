@@ -42,12 +42,12 @@ public class UserManagementServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         
-        // Set UTF-8 encoding
+       
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
         
-        // Kiểm tra đăng nhập
+        
         HttpSession session = request.getSession(false);
         String username = (String) session.getAttribute("username");
         Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -58,17 +58,17 @@ public class UserManagementServlet extends HttpServlet {
             return;
         }
         
-        // Kiểm tra quyền truy cập - chỉ admin mới có thể quản lý người dùng
+        
         if (!"admin".equals(userRole)) {
             response.sendRedirect(request.getContextPath() + "/403.jsp");
             return;
         }
         
         try {
-            // Lấy tất cả người dùng từ database
+            
             List<User> allUsers = userDAO.getAllUsers();
             
-            // Lấy các tham số filter từ request
+            
             String pUsername = decodeParam(request.getParameter("username"));
             String pEmail = decodeParam(request.getParameter("email"));
             String pFullName = decodeParam(request.getParameter("fullName"));
@@ -76,13 +76,11 @@ public class UserManagementServlet extends HttpServlet {
             String pRole = decodeParam(request.getParameter("role"));
             String pStatus = decodeParam(request.getParameter("status"));
             
-            // Lọc danh sách người dùng
             List<User> filteredUsers = filterUsers(allUsers, pUsername, pEmail, pFullName, pPhone, pRole, pStatus);
             
-            // Lấy danh sách vai trò để hiển thị trong dropdown
             Set<String> roles = extractRoles(allUsers);
             
-            // Đặt dữ liệu vào request attributes
+            
             request.setAttribute("filteredUsers", filteredUsers);
             request.setAttribute("roles", roles);
             request.setAttribute("filterUsername", pUsername != null ? pUsername : "");
@@ -92,7 +90,7 @@ public class UserManagementServlet extends HttpServlet {
             request.setAttribute("filterRole", pRole != null ? pRole : "");
             request.setAttribute("filterStatus", pStatus != null ? pStatus : "");
             
-            // Forward đến JSP để hiển thị
+            
             request.getRequestDispatcher("/users.jsp").forward(request, response);
             
         } catch (Exception e) {
@@ -110,16 +108,16 @@ public class UserManagementServlet extends HttpServlet {
         List<User> filtered = new ArrayList<>();
         
         for (User user : allUsers) {
-            // Tìm kiếm theo các trường text (contains)
+            
             if (!containsParam(username, user.getUsername())) continue;
             if (!containsParam(email, user.getEmail())) continue;
             if (!containsParam(fullName, user.getFullName())) continue;
             if (!containsParam(phone, user.getPhone())) continue;
             
-            // So sánh chính xác cho vai trò
+           
             if (!equalsParam(role, getUserRole(user))) continue;
             
-            // Lọc theo trạng thái
+            
             if (status != null && !status.trim().isEmpty()) {
                 boolean wantActive = "active".equalsIgnoreCase(status);
                 if (user.isActive() != wantActive) continue;
@@ -131,9 +129,7 @@ public class UserManagementServlet extends HttpServlet {
         return filtered;
     }
     
-    /**
-     * Trích xuất danh sách vai trò từ tất cả người dùng
-     */
+   
     private Set<String> extractRoles(List<User> users) {
         Set<String> roles = new TreeSet<>();
         for (User user : users) {
@@ -154,18 +150,14 @@ public class UserManagementServlet extends HttpServlet {
         return param.trim().equalsIgnoreCase(val);
     }
     
-    /**
-     * Kiểm tra xem giá trị thực tế có chứa tham số filter hay không
-     */
+    
     private boolean containsParam(String param, String actual) {
         if (param == null || param.trim().isEmpty()) return true;
         String val = actual == null ? "" : actual.trim().toLowerCase();
         return val.contains(param.trim().toLowerCase());
     }
     
-    /**
-     * Decode UTF-8 cho tham số
-     */
+   
     private String decodeParam(String s) {
         if (s == null) return null;
         try {
@@ -175,9 +167,7 @@ public class UserManagementServlet extends HttpServlet {
         }
     }
     
-    /**
-     * Lấy vai trò của người dùng
-     */
+    
     private String getUserRole(User user) {
         try {
             String role = user.getRole();

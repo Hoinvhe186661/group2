@@ -353,9 +353,11 @@
                                                         <button class="btn btn-warning btn-xs edit-ticket-btn" data-ticket-id="${ticket.id}" title="Chỉnh sửa">
                                                             <i class="fa fa-edit"></i> Sửa
                                                         </button>
-                                                        <a href="support_forward.jsp?id=${ticket.id}" class="btn btn-success btn-xs" title="Chuyển tiếp">
+                                                        <c:if test="${ticket.category == 'technical'}">
+                                                            <button class="btn btn-success btn-xs forward-ticket-btn" data-ticket-id="${ticket.id}" data-ticket-number="${ticket.ticketNumber}" title="Chuyển tiếp đến kỹ thuật">
                                                             <i class="fa fa-forward"></i> Chuyển tiếp
-                                                        </a>
+                                                            </button>
+                                                        </c:if>
                                                     </td>
                                                 </tr>
                                                 </c:forEach>
@@ -446,6 +448,64 @@
         </div>
     </div>
 
+    <!-- Modal Chuyển Tiếp Ticket -->
+    <div class="modal fade" id="forwardTicketModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #00a65a; color: white;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity: 0.8;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title">
+                        <i class="fa fa-forward"></i> Chuyển Tiếp Yêu Cầu Kỹ Thuật
+                    </h4>
+                </div>
+                <form id="forwardTicketForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="forward_ticket_id">
+                        
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i>
+                            Yêu cầu <strong id="forward_ticket_number"></strong> sẽ được chuyển tiếp đến Bộ phận Kỹ thuật.
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Chuyển đến: <span class="text-danger">*</span></label>
+                            <select class="form-control" id="forward_assigned_to" required>
+                                <option value="">-- Chọn người nhận --</option>
+                            </select>
+                            <small class="text-muted">Chọn trưởng phòng kỹ thuật hoặc kỹ thuật viên để phân công xử lý</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Độ ưu tiên: <span class="text-danger">*</span></label>
+                            <select class="form-control" id="forward_priority" required>
+                                <option value="low">Thấp</option>
+                                <option value="medium" selected>Trung bình</option>
+                                <option value="high">Cao</option>
+                                <option value="urgent">Khẩn cấp</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Ghi chú chuyển tiếp:</label>
+                            <textarea class="form-control" id="forward_note" rows="3" 
+                                      placeholder="Thêm ghi chú về vấn đề hoặc yêu cầu đặc biệt..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">
+                            <i class="fa fa-times"></i> Hủy
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnForwardTicket">
+                            <i class="fa fa-forward"></i> Chuyển tiếp
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- jQuery 2.0.2 -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="js/jquery.min.js" type="text/javascript"></script>
@@ -485,10 +545,23 @@
                 loadTicketForEdit(ticketId);
             });
 
+            // Xử lý click nút Chuyển tiếp
+            $(document).on('click', '.forward-ticket-btn', function() {
+                var ticketId = $(this).data('ticket-id');
+                var ticketNumber = $(this).data('ticket-number');
+                showForwardModal(ticketId, ticketNumber);
+            });
+
             // Xử lý submit form sửa
             $('#editTicketForm').on('submit', function(e) {
                 e.preventDefault();
                 saveTicketChanges();
+            });
+
+            // Xử lý submit form forward
+            $('#forwardTicketForm').on('submit', function(e) {
+                e.preventDefault();
+                forwardTicket();
             });
         });
 
@@ -797,6 +870,96 @@
                 complete: function() {
                     // Enable button
                     $('#btnSaveTicket').prop('disabled', false).html('<i class="fa fa-save"></i> Lưu thay đổi');
+                }
+            });
+        }
+
+        // Hiển thị modal chuyển tiếp
+        function showForwardModal(ticketId, ticketNumber) {
+            $('#forward_ticket_id').val(ticketId);
+            $('#forward_ticket_number').text(ticketNumber || '#' + ticketId);
+            $('#forward_priority').val('medium');
+            $('#forward_note').val('');
+            $('#forward_assigned_to').html('<option value="">-- Đang tải --</option>');
+            
+            // Load danh sách nhân viên kỹ thuật
+            $.ajax({
+                url: 'api/support-stats?action=getTechnicalStaff',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var options = '<option value="">-- Chọn người nhận --</option>';
+                        $.each(response.data, function(index, staff) {
+                            options += '<option value="' + staff.id + '">' + 
+                                      staff.name + ' (' + staff.role + ')</option>';
+                        });
+                        $('#forward_assigned_to').html(options);
+                    } else {
+                        $('#forward_assigned_to').html('<option value="">Lỗi tải danh sách</option>');
+                        alert('Không thể tải danh sách nhân viên kỹ thuật');
+                    }
+                },
+                error: function() {
+                    $('#forward_assigned_to').html('<option value="">Lỗi tải danh sách</option>');
+                    alert('Lỗi kết nối khi tải danh sách nhân viên kỹ thuật');
+                }
+            });
+            
+            $('#forwardTicketModal').modal('show');
+        }
+
+        // Chuyển tiếp ticket đến bộ phận kỹ thuật
+        function forwardTicket() {
+            var ticketId = $('#forward_ticket_id').val();
+            var priority = $('#forward_priority').val();
+            var note = $('#forward_note').val();
+            var assignedTo = $('#forward_assigned_to').val();
+            
+            if (!ticketId) {
+                alert('Lỗi: Không tìm thấy ID ticket');
+                return;
+            }
+            
+            if (!assignedTo) {
+                alert('Vui lòng chọn người nhận!');
+                return;
+            }
+            
+            // Disable button
+            $('#btnForwardTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
+            
+            var data = {
+                action: 'forward',
+                id: ticketId,
+                forwardPriority: priority,
+                forwardNote: note,
+                assignedTo: assignedTo
+            };
+            
+            $.ajax({
+                url: 'api/support-stats',
+                type: 'POST',
+                data: $.param(data),
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert('✓ ' + response.message);
+                        $('#forwardTicketModal').modal('hide');
+                        // Reload trang
+                        location.reload();
+                    } else {
+                        alert('✗ ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Forward error:', error);
+                    alert('✗ Không thể chuyển tiếp. Vui lòng thử lại!');
+                },
+                complete: function() {
+                    // Enable button
+                    $('#btnForwardTicket').prop('disabled', false).html('<i class="fa fa-forward"></i> Chuyển tiếp');
                 }
             });
         }

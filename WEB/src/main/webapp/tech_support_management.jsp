@@ -587,38 +587,58 @@
         });
         
         function loadTickets() {
+            // Gọi API mới để lấy danh sách ticket technical
             $.ajax({
-                url: ctx + '/api/support-stats?action=list',
+                url: ctx + '/api/tech-support?action=list',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        // Lọc chỉ những ticket có internal notes chứa "CHUYỂN TIẾP" (được chuyển tiếp)
-                        allTickets = response.data.filter(function(ticket) {
-                            return ticket.internalNotes && ticket.internalNotes.includes('CHUYỂN TIẾP');
-                        });
-                        
+                        // Tất cả ticket đã được lọc ở backend (chỉ technical)
+                        allTickets = response.data || [];
                         filteredTickets = allTickets;
                         renderTable();
                         updateStatistics();
-                        console.log('Đã tải ' + allTickets.length + ' ticket được chuyển tiếp');
+                        console.log('Đã tải ' + allTickets.length + ' ticket kỹ thuật');
                         
-                        // Hiển thị thông báo nếu có ticket được chuyển tiếp
-                        if (allTickets.length > 0) {
+                        // Hiển thị thông báo nếu có ticket mới
+                        var newTickets = allTickets.filter(function(t) {
+                            return t.status === 'open' || t.status === 'in_progress';
+                        });
+                        
+                        if (newTickets.length > 0) {
                             $('#forwardedAlert').show();
-                            $('#forwardedAlert').html('<i class="fa fa-info-circle"></i><strong>Thông báo:</strong> Có ' + allTickets.length + ' yêu cầu hỗ trợ được chuyển tiếp từ bộ phận khác.');
+                            $('#forwardedAlert').html('<i class="fa fa-info-circle"></i> <strong>Thông báo:</strong> Có ' + newTickets.length + ' yêu cầu hỗ trợ kỹ thuật cần xử lý.');
                             setTimeout(function() {
                                 $('#forwardedAlert').fadeOut();
                             }, 8000);
                         }
                     } else {
                         console.error('Lỗi tải danh sách ticket:', response.message);
-                        showError('Không thể tải danh sách yêu cầu hỗ trợ');
+                        showError('Không thể tải danh sách yêu cầu hỗ trợ: ' + response.message);
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Không thể tải danh sách ticket:', error);
                     showError('Lỗi kết nối server');
+                }
+            });
+            
+            // Load statistics
+            $.ajax({
+                url: ctx + '/api/tech-support?action=stats',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        $('#totalTickets').text(response.data.total || 0);
+                        $('#openTickets').text(response.data.open || 0);
+                        $('#inProgressTickets').text(response.data.inProgress || 0);
+                        $('#resolvedTickets').text(response.data.resolved || 0);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Không thể tải thống kê:', error);
                 }
             });
         }
@@ -794,21 +814,23 @@
             
             console.log('Sending update request:', data);
             $.ajax({
-                url: ctx + '/api/support-stats',
+                url: ctx + '/api/tech-support',
                 type: 'POST',
-                data: data,
+                data: $.param(data),
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
                 dataType: 'json',
                 success: function(response) {
                     if(response && response.success) {
-                        alert('Cập nhật thành công!');
+                        alert('✓ Cập nhật thành công!');
                         $('#ticketDetailModal').modal('hide');
                         loadTickets();
                     } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể cập nhật'));
+                        alert('✗ Lỗi: ' + (response.message || 'Không thể cập nhật'));
                     }
                 },
-                error: function() {
-                    alert('Lỗi kết nối máy chủ');
+                error: function(xhr, status, error) {
+                    console.error('Error:', error);
+                    alert('✗ Lỗi kết nối máy chủ');
                 }
             });
         }

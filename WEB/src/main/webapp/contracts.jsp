@@ -131,7 +131,7 @@
                         <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
                     </li>
                     <li>
-                        <a href="support-management"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
+                        <a href="support_management.jsp"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
                     </li>
                 </ul>
             </section>
@@ -206,22 +206,6 @@
                                     <div class="form-group" style="margin-right: 10px;">
                                         <label>Đến:&nbsp;</label>
                                         <input type="date" class="form-control" name="endTo">
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label for="sortBy">Sắp xếp:&nbsp;</label>
-                                        <select class="form-control" id="sortBy" name="sortBy">
-                                            <option value="id">ID hợp đồng</option>
-                                            <option value="customerName">Tên khách hàng</option>
-                                            <option value="startDate">Ngày bắt đầu</option>
-                                            <option value="endDate">Ngày kết thúc</option>
-                                            <option value="status">Trạng thái</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <select class="form-control" name="sortDir">
-                                            <option value="desc">Giảm dần</option>
-                                            <option value="asc">Tăng dần</option>
-                                        </select>
                                     </div>
                                     <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
                                     <button type="submit" class="btn btn-default"><i class="fa fa-filter"></i> Lọc</button>
