@@ -92,10 +92,10 @@
                                             <label for="priorityFilter">Ưu tiên:&nbsp;</label>
                                             <select id="priorityFilter" class="form-control">
                                                 <option value="">Tất cả</option>
-                                                <option value="low">Thấp</option>
-                                                <option value="medium">Trung bình</option>
-                                                <option value="high">Cao</option>
                                                 <option value="urgent">Khẩn cấp</option>
+                                                <option value="high">Cao</option>
+                                                <option value="medium">Trung bình</option>
+                                                <option value="low">Thấp</option>
                                             </select>
                                         </div>
                                         <div class="form-group" style="margin-right: 8px;">

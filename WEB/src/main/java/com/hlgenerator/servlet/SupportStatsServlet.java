@@ -88,6 +88,30 @@ public class SupportStatsServlet extends HttpServlet {
                     }
                 }
                 
+            } else if ("getById".equals(action)) {
+                // Lấy chi tiết một support request theo ID
+                String idParam = request.getParameter("id");
+                if (idParam != null && !idParam.trim().isEmpty()) {
+                    try {
+                        int id = Integer.parseInt(idParam);
+                        Map<String, Object> ticket = supportDAO.getSupportRequestById(id);
+                        
+                        if (ticket != null) {
+                            jsonResponse.addProperty("success", true);
+                            jsonResponse.add("data", gson.toJsonTree(ticket));
+                        } else {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy yêu cầu hỗ trợ");
+                        }
+                    } catch (NumberFormatException e) {
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "ID không hợp lệ");
+                    }
+                } else {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Thiếu thông tin ID");
+                }
+                
             } else if ("getTechnicalStaff".equals(action)) {
                 // Lấy danh sách nhân viên kỹ thuật
                 com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();

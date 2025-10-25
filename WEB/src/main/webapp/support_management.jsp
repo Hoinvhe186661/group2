@@ -480,10 +480,10 @@
                         <div class="form-group">
                             <label>Độ ưu tiên: <span class="text-danger">*</span></label>
                             <select class="form-control" id="forward_priority" required>
-                                <option value="low">Thấp</option>
-                                <option value="medium" selected>Trung bình</option>
-                                <option value="high">Cao</option>
                                 <option value="urgent">Khẩn cấp</option>
+                                <option value="high">Cao</option>
+                                <option value="medium" selected>Trung bình</option>
+                                <option value="low">Thấp</option>
                             </select>
                         </div>
                         
@@ -801,10 +801,10 @@
             html += '<div class="form-group">';
             html += '<label>Độ ưu tiên: <span class="text-danger">*</span></label>';
             html += '<select class="form-control" id="edit_priority" required>';
-            html += '<option value="low"' + (ticket.priority === 'low' ? ' selected' : '') + '>Thấp</option>';
-            html += '<option value="medium"' + (ticket.priority === 'medium' ? ' selected' : '') + '>Trung bình</option>';
-            html += '<option value="high"' + (ticket.priority === 'high' ? ' selected' : '') + '>Cao</option>';
             html += '<option value="urgent"' + (ticket.priority === 'urgent' ? ' selected' : '') + '>Khẩn cấp</option>';
+            html += '<option value="high"' + (ticket.priority === 'high' ? ' selected' : '') + '>Cao</option>';
+            html += '<option value="medium"' + (ticket.priority === 'medium' ? ' selected' : '') + '>Trung bình</option>';
+            html += '<option value="low"' + (ticket.priority === 'low' ? ' selected' : '') + '>Thấp</option>';
             html += '</select>';
             html += '</div></div>';
             

@@ -358,9 +358,9 @@
           <div class="col-md-6"><label>Ưu tiên</label>
             <select id="v_priority_inp" class="form-control" disabled>
               <option value="">--</option>
-              <option value="urgent">Cao</option>
-              <option value="high">Trung bình</option>
-              <option value="medium">Thường</option>
+              <option value="urgent">Khẩn cấp</option>
+              <option value="high">Cao</option>
+              <option value="medium">Trung bình</option>
               <option value="low">Thấp</option>
             </select>
           </div>
@@ -898,8 +898,30 @@
         const id = viewLink.getAttribute('data-id');
         const it = allItems.find(function(x){ return String(x.id) === String(id); });
         if(!it) return;
-      document.getElementById('v_ticket').textContent = it.ticketNumber || '';
-      document.getElementById('v_status').textContent = it.status || '';
+        
+        // Load fresh data from server for this specific ticket
+        fetch(ctx + '/api/support-stats?action=getById&id=' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' } })
+          .then(r => r.json())
+          .then(j => {
+            if (j && j.success && j.data) {
+              // Use fresh data from server instead of cached data
+              const freshData = j.data;
+              displayTicketDetail(freshData);
+            } else {
+              // Fallback to cached data if API fails
+              displayTicketDetail(it);
+            }
+          })
+          .catch(error => {
+            console.error('Failed to load fresh ticket data:', error);
+            // Fallback to cached data
+            displayTicketDetail(it);
+          });
+      }
+      
+      function displayTicketDetail(ticketData) {
+      document.getElementById('v_ticket').textContent = ticketData.ticketNumber || '';
+      document.getElementById('v_status').textContent = ticketData.status || '';
       // fill editable inputs
       var catInp = document.getElementById('v_category_inp');
       var priInp = document.getElementById('v_priority_inp');
@@ -907,19 +929,47 @@
       var desInp = document.getElementById('v_description_inp');
       var vContract = document.getElementById('v_contract_select');
       var vProduct = document.getElementById('v_product_select');
-      if (catInp) catInp.value = (it.category||'general');
-      if (priInp) priInp.value = (it.priority ? it.priority : '');
-      if (subInp) subInp.value = (it.subject||'');
-      if (desInp) desInp.value = (it.description||'');
-      const created = formatDate(it);
-      const resolved = (it.resolvedAt ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(it.resolvedAt)) : '');
+      if (catInp) catInp.value = (ticketData.category||'general');
+      if (priInp) priInp.value = (ticketData.priority ? ticketData.priority : '');
+      if (subInp) subInp.value = (ticketData.subject||'');
+      if (desInp) desInp.value = (ticketData.description||'');
+      const created = formatDate(ticketData);
+      const resolved = (ticketData.resolvedAt ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(ticketData.resolvedAt)) : '');
       document.getElementById('v_created').textContent = created;
       document.getElementById('v_resolved').textContent = resolved;
       
       // Hiển thị các trường mới
-      document.getElementById('v_assigned_to').textContent = it.assignedTo || 'Chưa phân công';
-      document.getElementById('v_history').textContent = it.history || 'Chưa có lịch sử';
-      document.getElementById('v_resolution').value = it.resolution || '';
+      document.getElementById('v_assigned_to').textContent = ticketData.assignedTo || 'Chưa phân công';
+      document.getElementById('v_history').textContent = ticketData.history || 'Chưa có lịch sử';
+      document.getElementById('v_resolution').value = ticketData.resolution || '';
+      
+      // Show the modal
+      const vm = bootstrap.Modal.getOrCreateInstance(document.getElementById('viewModal'));
+      vm.show();
+      
+      // reset edit state
+      const enable = document.getElementById('v_enable_edit');
+      const saveBtn = document.getElementById('v_save_btn');
+      [catInp, priInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = true; }});
+      if (enable) enable.checked = false;
+      if (saveBtn) saveBtn.disabled = true;
+      
+      // Kiểm tra trạng thái để quyết định có cho phép chỉnh sửa không
+      const finalStatus = cancelledItems.has(String(ticketData.id)) ? 'cancelled' : (ticketData.status || 'pending');
+      const canEdit = finalStatus === 'pending' || finalStatus === 'open';
+      
+      // Disable checkbox nếu không thể chỉnh sửa
+      if (enable) {
+        enable.disabled = !canEdit;
+        if (!canEdit) {
+          enable.title = 'Yêu cầu đang được thực hiện - không thể chỉnh sửa';
+          enable.parentElement.style.color = '#dc3545';
+          enable.parentElement.innerHTML = '<input class="form-check-input" type="checkbox" id="v_enable_edit" disabled><label class="form-check-label" for="v_enable_edit" style="color: #dc3545;">Chỉnh sửa (Yêu cầu đang được thực hiện)</label>';
+        } else {
+          enable.parentElement.style.color = '';
+        }
+      }
+      
       // Load contracts for view (read-only)
       try {
         // reset
@@ -969,30 +1019,15 @@
             }
           });
       } catch(e) {}
-      const vm = bootstrap.Modal.getOrCreateInstance(document.getElementById('viewModal'));
-      vm.show();
-      // reset edit state
-      const enable = document.getElementById('v_enable_edit');
-      const saveBtn = document.getElementById('v_save_btn');
-      [catInp, priInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = true; }});
-      if (enable) enable.checked = false;
-      if (saveBtn) saveBtn.disabled = true;
       
-      // Kiểm tra trạng thái để quyết định có cho phép chỉnh sửa không
-      const finalStatus = cancelledItems.has(String(id)) ? 'cancelled' : (it.status || 'pending');
-      const canEdit = finalStatus === 'pending' || finalStatus === 'open';
-      
-      // Disable checkbox nếu không thể chỉnh sửa
-      if (enable) {
-        enable.disabled = !canEdit;
-        if (!canEdit) {
-          enable.title = 'Yêu cầu đang được thực hiện - không thể chỉnh sửa';
-          enable.parentElement.style.color = '#dc3545';
-          enable.parentElement.innerHTML = '<input class="form-check-input" type="checkbox" id="v_enable_edit" disabled><label class="form-check-label" for="v_enable_edit" style="color: #dc3545;">Chỉnh sửa (Yêu cầu đang được thực hiện)</label>';
-        } else {
-          enable.parentElement.style.color = '';
-        }
+      // Attach handlers for edit functionality
+      attachEditHandlers(ticketData.id, ticketData.status, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn);
       }
+      
+      function attachEditHandlers(ticketId, ticketStatus, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn) {
+      // Kiểm tra trạng thái để quyết định có cho phép chỉnh sửa không
+      const finalStatus = cancelledItems.has(String(ticketId)) ? 'cancelled' : (ticketStatus || 'pending');
+      const canEdit = finalStatus === 'pending' || finalStatus === 'open';
       
       // attach handlers
       if (enable) {
@@ -1064,7 +1099,7 @@
           data.append('description', composed);
           data.append('category', catInp.value || 'general');
           data.append('priority', 'medium');
-          data.append('delete_old_id', id); // thêm ID để xóa bản cũ
+          data.append('delete_old_id', ticketId); // thêm ID để xóa bản cũ
           fetch(ctx + '/api/support-stats', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
