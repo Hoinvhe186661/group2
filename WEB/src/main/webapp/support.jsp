@@ -111,6 +111,88 @@
             border-color: #80bdff; 
             box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); 
         }
+        
+        /* Success notification modal - Compact alert style */
+        .success-modal .modal-dialog {
+            max-width: 320px;
+            width: 90%;
+            margin: 2% auto;
+        }
+        
+        .success-modal .modal-content {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            background: white;
+        }
+        
+        .success-modal .modal-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 6px 6px 0 0;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .success-modal .modal-body {
+            padding: 0.75rem;
+            text-align: left;
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+        
+        .success-modal .modal-footer {
+            border-top: 1px solid #dee2e6;
+            padding: 0.4rem 0.75rem;
+            justify-content: flex-end;
+            gap: 0.4rem;
+        }
+        
+        .success-btn {
+            background: #007bff;
+            border: 1px solid #007bff;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
+        }
+        
+        .success-btn:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+        
+        .success-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Cancel button style */
+        .cancel-btn {
+            background: #6c757d;
+            border: 1px solid #6c757d;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: background-color 0.15s ease-in-out;
+        }
+        
+        .cancel-btn:hover {
+            background: #545b62;
+            border-color: #545b62;
+        }
+        
+        .cancel-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+        }
     </style>
     </head>
     <body>
@@ -310,6 +392,42 @@
     </div>
   </div>
 </div>
+
+<!-- Modal thông báo thành công - Simple alert style -->
+<div class="modal fade success-modal" id="successModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="successTitle">Thông báo</h5>
+      </div>
+      <div class="modal-body">
+        <div id="successMessage">Thao tác đã được thực hiện thành công.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn success-btn" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal xác nhận hủy yêu cầu -->
+<div class="modal fade success-modal" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Xác nhận</h5>
+      </div>
+      <div class="modal-body">
+        <div id="confirmMessage">Bạn có chắc chắn muốn hủy yêu cầu này?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn cancel-btn" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn success-btn" id="confirmCancelBtn">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // Tự động set ngày hiện tại cho trường "Ngày tạo"
   document.addEventListener('DOMContentLoaded', function() {
@@ -331,6 +449,43 @@
     } catch(e) {}
     
     const ctx = '<%=request.getContextPath()%>';
+    
+    // Hàm hiển thị thông báo thành công - Simple alert style
+    function showSuccessModal(title, message) {
+      const successModal = document.getElementById('successModal');
+      const successTitle = document.getElementById('successTitle');
+      const successMessage = document.getElementById('successMessage');
+      
+      if (successTitle) successTitle.textContent = title || 'Thông báo';
+      if (successMessage) successMessage.textContent = message;
+      
+      const modal = bootstrap.Modal.getOrCreateInstance(successModal);
+      modal.show();
+    }
+    
+    // Hàm hiển thị modal xác nhận hủy yêu cầu
+    function showConfirmModal(message, onConfirm) {
+      const confirmModal = document.getElementById('confirmModal');
+      const confirmMessage = document.getElementById('confirmMessage');
+      const confirmBtn = document.getElementById('confirmCancelBtn');
+      
+      if (confirmMessage) confirmMessage.textContent = message;
+      
+      // Xóa event listener cũ nếu có
+      const newConfirmBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+      
+      // Thêm event listener mới
+      newConfirmBtn.addEventListener('click', function() {
+        const modal = bootstrap.Modal.getInstance(confirmModal);
+        modal.hide();
+        if (onConfirm) onConfirm();
+      });
+      
+      const modal = bootstrap.Modal.getOrCreateInstance(confirmModal);
+      modal.show();
+    }
+    
     // Prefill name/email: first from live API, fallback to session variables
     try {
       const sessionEmail = '<%= String.valueOf(session.getAttribute("email")) %>';
@@ -715,26 +870,8 @@
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.hide();
             
-            // Hiển thị thông báo thành công
-            const successAlert = document.createElement('div');
-            successAlert.className = 'alert alert-success alert-dismissible fade show';
-            successAlert.innerHTML = '<i class="fas fa-check-circle"></i> ' + (j.message || 'Yêu cầu hỗ trợ đã được tạo thành công!') + 
-                                   '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-            
-            // Hiển thị thông báo một cách an toàn
-            const container = document.querySelector('.container');
-            if (container) {
-                container.insertAdjacentElement('afterbegin', successAlert);
-            } else {
-                document.body.appendChild(successAlert);
-            }
-            
-            // Tự động ẩn thông báo sau 5 giây
-            setTimeout(() => {
-              if (successAlert.parentNode) {
-                successAlert.remove();
-              }
-            }, 5000);
+            // Hiển thị thông báo thành công bằng modal
+            showSuccessModal('Tạo yêu cầu thành công!', j.message || 'Yêu cầu hỗ trợ đã được tạo thành công!');
             
             // Tải lại dữ liệu
             load();
@@ -943,26 +1080,8 @@
             if(j && j.success){
               vm.hide();
               
-              // Hiển thị thông báo thành công
-              const successAlert = document.createElement('div');
-              successAlert.className = 'alert alert-success alert-dismissible fade show';
-              successAlert.innerHTML = '<i class="fas fa-check-circle"></i> Yêu cầu hỗ trợ đã được cập nhật thành công!' + 
-                                     '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-              
-              // Hiển thị thông báo một cách an toàn
-              const container = document.querySelector('.container');
-              if (container) {
-                container.insertAdjacentElement('afterbegin', successAlert);
-              } else {
-                document.body.appendChild(successAlert);
-              }
-              
-              // Tự động ẩn thông báo sau 5 giây
-              setTimeout(() => {
-                if (successAlert.parentNode) {
-                  successAlert.remove();
-                }
-              }, 5000);
+              // Hiển thị thông báo thành công bằng modal
+              showSuccessModal('Cập nhật thành công!', 'Yêu cầu hỗ trợ đã được cập nhật thành công!');
               
               load();
               renderPage(1);
@@ -991,7 +1110,9 @@
           return;
         }
         
-        if(confirm('Bạn có chắc chắn muốn hủy yêu cầu này?')) {
+        
+        // Hiển thị modal xác nhận thay vì confirm()
+        showConfirmModal('Bạn có chắc chắn muốn hủy yêu cầu này?', function() {
           // Đánh dấu item đã hủy và cập nhật hiển thị
           cancelledItems.add(String(id));
           renderPage(currentPage); // Cập nhật hiển thị ngay lập tức
@@ -1016,33 +1137,15 @@
             .then(j => {
               console.log('Cancel response data:', j);
               if(j && j.success){
-                // Hiển thị thông báo thành công
-                const successAlert = document.createElement('div');
-                successAlert.className = 'alert alert-success alert-dismissible fade show';
-                successAlert.innerHTML = '<i class="fas fa-check-circle"></i> Đã hủy yêu cầu thành công!' + 
-                                       '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                
-                // Hiển thị thông báo một cách an toàn
-                const container = document.querySelector('.container');
-                if (container) {
-                  container.insertAdjacentElement('afterbegin', successAlert);
-                } else {
-                  document.body.appendChild(successAlert);
-                }
-                
-                // Tự động ẩn thông báo sau 3 giây
-                setTimeout(() => {
-                  if (successAlert.parentNode) {
-                    successAlert.remove();
-                  }
-                }, 3000);
+                // Hiển thị thông báo thành công bằng modal
+                showSuccessModal('Hủy yêu cầu thành công!', 'Đã hủy yêu cầu thành công!');
                 
                 load(); // Reload danh sách từ server
               } else {
                 // Nếu server từ chối, revert lại trạng thái
                 cancelledItems.delete(String(id));
                 renderPage(currentPage);
-                alert(j && j.message ? j.message : 'Không thể hủy yêu cầu');
+                showSuccessModal('Lỗi', j && j.message ? j.message : 'Không thể hủy yêu cầu');
               }
             })
             .catch(error => {
@@ -1050,9 +1153,9 @@
               // Nếu có lỗi kết nối, revert lại trạng thái
               cancelledItems.delete(String(id));
               renderPage(currentPage);
-              alert('Lỗi kết nối máy chủ: ' + error.message);
+              showSuccessModal('Lỗi', 'Lỗi kết nối máy chủ: ' + error.message);
             });
-        }
+        });
       }
     });
   });
