@@ -129,10 +129,13 @@ public class SupportStatsServlet extends HttpServlet {
             e.printStackTrace();
             jsonResponse.addProperty("success", false);
             jsonResponse.addProperty("message", "Lỗi server: " + e.getMessage());
+        } finally {
+            if (out != null) {
+                out.print(jsonResponse.toString());
+                out.flush();
+                out.close();
+            }
         }
-        
-        out.print(jsonResponse.toString());
-        out.flush();
     }
 
     @Override
@@ -140,8 +143,12 @@ public class SupportStatsServlet extends HttpServlet {
             throws ServletException, IOException {
         
         // QUAN TRỌNG: Phải set encoding TRƯỚC KHI đọc bất kỳ parameter nào
-        request.setCharacterEncoding("UTF-8");
-        response.setContentType("application/json; charset=UTF-8");
+        try {
+            request.setCharacterEncoding("UTF-8");
+        } catch (Exception e) {
+            System.out.println("Warning: Could not set request encoding: " + e.getMessage());
+        }
+        response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         
         PrintWriter out = response.getWriter();
@@ -151,6 +158,8 @@ public class SupportStatsServlet extends HttpServlet {
             // ĐÚNG: Đọc parameters sau khi đã set encoding, TRONG try block
             String action = request.getParameter("action");
             System.out.println("POST Action received: " + action);
+            System.out.println("Request method: " + request.getMethod());
+            System.out.println("Content type: " + request.getContentType());
             
             if ("createSupportRequest".equals(action)) {
                 // Tạo yêu cầu hỗ trợ mới
@@ -260,14 +269,19 @@ public class SupportStatsServlet extends HttpServlet {
                     
                     if (success) {
                         jsonResponse.addProperty("success", true);
-                        jsonResponse.addProperty("message", "Yêu cầu hỗ trợ đã được tạo thành công");
-                        jsonResponse.addProperty("ticketNumber", "SR-" + System.currentTimeMillis());
-                        System.out.println("SUCCESS: Support request created");
+                        // Kiểm tra nếu có delete_old_id thì đây là cập nhật, không phải tạo mới
+                        if (deleteOldId != null && !deleteOldId.trim().isEmpty()) {
+                            jsonResponse.addProperty("message", "Yêu cầu hỗ trợ đã được cập nhật thành công");
+                        } else {
+                            jsonResponse.addProperty("message", "Yêu cầu hỗ trợ đã được tạo thành công");
+                            jsonResponse.addProperty("ticketNumber", "SR-" + System.currentTimeMillis());
+                        }
+                        System.out.println("SUCCESS: Support request " + (deleteOldId != null && !deleteOldId.trim().isEmpty() ? "updated" : "created"));
                     } else {
                         String error = supportDAO.getLastError();
                         System.out.println("ERROR: Failed to create - " + error);
                         jsonResponse.addProperty("success", false);
-                        jsonResponse.addProperty("message", "Lỗi tạo yêu cầu: " + error);
+                        jsonResponse.addProperty("message", "Lỗi tạo yêu cầu: " + (error != null ? error : "Unknown error"));
                     }
                 }
                 System.out.println("DEBUG: End of createSupportRequest block");
@@ -425,11 +439,15 @@ public class SupportStatsServlet extends HttpServlet {
             e.printStackTrace();
             jsonResponse.addProperty("success", false);
             jsonResponse.addProperty("message", "Lỗi server: " + e.getMessage());
+        } finally {
+            if (out != null) {
+                String responseStr = jsonResponse.toString();
+                System.out.println("DEBUG: Sending response: " + responseStr);
+                System.out.println("Response length: " + responseStr.length());
+                out.print(responseStr);
+                out.flush();
+                out.close();
+            }
         }
-        
-        String responseStr = jsonResponse.toString();
-        System.out.println("DEBUG: Sending response: " + responseStr);
-        out.print(responseStr);
-        out.flush();
     }
 }

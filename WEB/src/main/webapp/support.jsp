@@ -28,7 +28,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css"/>
+    
     <style>
         :root { --primary-red:#dc3545; --text-dark:#343a40; }
         .top-header { background: var(--primary-red); color:#ffffff; padding:8px 0; font-size:14px; }
@@ -553,17 +553,30 @@
       renderPage(1);
     }
     function load(){
+      console.log('Loading support requests...');
       fetch(ctx + '/api/support-stats?action=list', {headers:{'Accept':'application/json'}})
-        .then(r=>r.json()).then(j=>{ 
+        .then(r => {
+          console.log('Load response status:', r.status);
+          if (!r.ok) {
+            throw new Error('HTTP ' + r.status);
+          }
+          return r.json();
+        })
+        .then(j => { 
+          console.log('Load response data:', j);
           if (j && j.success) {
             allItems = Array.isArray(j.data)? j.data : []; 
             filterItems();
             renderPage(1);
           } else {
+            console.error('Load server error:', j);
             tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> ' + (j && j.message ? j.message : 'Lỗi tải dữ liệu') + '</td></tr>';
           }
         })
-        .catch(()=>{tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Lỗi kết nối máy chủ</td></tr>';});
+        .catch(error => {
+          console.error('Load request failed:', error);
+          tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Lỗi kết nối máy chủ: ' + error.message + '</td></tr>';
+        });
     }
     load();
 
@@ -667,8 +680,24 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
         body: data.toString()
-      }).then(r=>r.json())
-        .then(j=>{
+      }).then(r => {
+        console.log('Response status:', r.status);
+        console.log('Response headers:', r.headers);
+        if (!r.ok) {
+          throw new Error('HTTP ' + r.status);
+        }
+        return r.text().then(text => {
+          console.log('Raw response text:', text);
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('JSON parse error:', e);
+            throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+          }
+        });
+      })
+        .then(j => {
+          console.log('Parsed response data:', j);
           if(j && j.success){
             // Chỉ làm sạch các trường nhập liệu, giữ nguyên Họ tên/Email
             const subjInp = document.getElementById('subject');
@@ -691,7 +720,14 @@
             successAlert.className = 'alert alert-success alert-dismissible fade show';
             successAlert.innerHTML = '<i class="fas fa-check-circle"></i> ' + (j.message || 'Yêu cầu hỗ trợ đã được tạo thành công!') + 
                                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-            document.querySelector('.container').insertBefore(successAlert, document.querySelector('.support-header'));
+            
+            // Hiển thị thông báo một cách an toàn
+            const container = document.querySelector('.container');
+            if (container) {
+                container.insertAdjacentElement('afterbegin', successAlert);
+            } else {
+                document.body.appendChild(successAlert);
+            }
             
             // Tự động ẩn thông báo sau 5 giây
             setTimeout(() => {
@@ -700,12 +736,17 @@
               }
             }, 5000);
             
+            // Tải lại dữ liệu
             load();
           } else {
+            console.error('Server error:', j);
             alert(j && j.message ? j.message : 'Không thể tạo yêu cầu');
           }
         })
-        .catch(()=> alert('Lỗi kết nối máy chủ'));
+        .catch(error => {
+          console.error('Request failed:', error);
+          alert('Lỗi kết nối máy chủ: ' + error.message);
+        });
     });
 
     
@@ -891,16 +932,30 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: data.toString()
-          }).then(r=>r.json()).then(function(j){
+          }).then(r => {
+            console.log('Update response status:', r.status);
+            if (!r.ok) {
+              throw new Error('HTTP ' + r.status);
+            }
+            return r.json();
+          }).then(function(j){
+            console.log('Update response data:', j);
             if(j && j.success){
               vm.hide();
               
               // Hiển thị thông báo thành công
               const successAlert = document.createElement('div');
               successAlert.className = 'alert alert-success alert-dismissible fade show';
-              successAlert.innerHTML = '<i class="fas fa-check-circle"></i> ' + (j.message || 'Yêu cầu hỗ trợ đã được cập nhật thành công!') + 
+              successAlert.innerHTML = '<i class="fas fa-check-circle"></i> Yêu cầu hỗ trợ đã được cập nhật thành công!' + 
                                      '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-              document.querySelector('.container').insertBefore(successAlert, document.querySelector('.support-header'));
+              
+              // Hiển thị thông báo một cách an toàn
+              const container = document.querySelector('.container');
+              if (container) {
+                container.insertAdjacentElement('afterbegin', successAlert);
+              } else {
+                document.body.appendChild(successAlert);
+              }
               
               // Tự động ẩn thông báo sau 5 giây
               setTimeout(() => {
@@ -912,9 +967,13 @@
               load();
               renderPage(1);
             } else {
+              console.error('Update server error:', j);
               alert(j && j.message ? j.message : 'Không thể cập nhật');
             }
-          }).catch(function(){ alert('Lỗi kết nối máy chủ'); });
+          }).catch(function(error){ 
+            console.error('Update request failed:', error);
+            alert('Lỗi kết nối máy chủ: ' + error.message); 
+          });
         };
       }
       }
@@ -947,15 +1006,29 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: data.toString()
-          }).then(r=>r.json())
-            .then(j=>{
+          }).then(r => {
+            console.log('Cancel response status:', r.status);
+            if (!r.ok) {
+              throw new Error('HTTP ' + r.status);
+            }
+            return r.json();
+          })
+            .then(j => {
+              console.log('Cancel response data:', j);
               if(j && j.success){
                 // Hiển thị thông báo thành công
                 const successAlert = document.createElement('div');
                 successAlert.className = 'alert alert-success alert-dismissible fade show';
                 successAlert.innerHTML = '<i class="fas fa-check-circle"></i> Đã hủy yêu cầu thành công!' + 
                                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                document.querySelector('.container').insertBefore(successAlert, document.querySelector('.support-header'));
+                
+                // Hiển thị thông báo một cách an toàn
+                const container = document.querySelector('.container');
+                if (container) {
+                  container.insertAdjacentElement('afterbegin', successAlert);
+                } else {
+                  document.body.appendChild(successAlert);
+                }
                 
                 // Tự động ẩn thông báo sau 3 giây
                 setTimeout(() => {
@@ -972,11 +1045,12 @@
                 alert(j && j.message ? j.message : 'Không thể hủy yêu cầu');
               }
             })
-            .catch(()=> {
+            .catch(error => {
+              console.error('Cancel request failed:', error);
               // Nếu có lỗi kết nối, revert lại trạng thái
               cancelledItems.delete(String(id));
               renderPage(currentPage);
-              alert('Lỗi kết nối máy chủ');
+              alert('Lỗi kết nối máy chủ: ' + error.message);
             });
         }
       }
