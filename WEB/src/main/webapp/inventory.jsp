@@ -148,6 +148,23 @@
                 margin-bottom: 10px;
             }
         }
+        
+        /* Style cho modal form */
+        #stockInModal .table td,
+        #stockOutModal .table td {
+            vertical-align: middle;
+        }
+        
+        #stockInModal .table .btn,
+        #stockOutModal .table .btn {
+            white-space: nowrap;
+        }
+        
+        /* Đảm bảo input trong table không bị quá lớn */
+        #stockInModal .table .form-control,
+        #stockOutModal .table .form-control {
+            font-size: 13px;
+        }
     </style>
     
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -448,11 +465,11 @@
                             <table class="table table-bordered" style="margin-top: 10px;">
                                 <thead>
                                     <tr>
-                                        <th width="35%">Sản phẩm</th>
+                                        <th width="30%">Sản phẩm</th>
                                         <th width="15%">Số lượng</th>
                                         <th width="20%">Đơn giá nhập</th>
-                                        <th width="20%">Vị trí kho</th>
-                                        <th width="10%"></th>
+                                        <th width="25%">Vị trí kho</th>
+                                        <th width="20%" class="text-center">Xóa</th>
                                     </tr>
                                 </thead>
                                 <tbody id="productRowsStockIn">
@@ -518,11 +535,11 @@
                             <table class="table table-bordered" style="margin-top: 10px;">
                                 <thead>
                                     <tr>
-                                        <th width="40%">Sản phẩm</th>
+                                        <th width="30%">Sản phẩm</th>
                                         <th width="15%">Số lượng</th>
                                         <th width="15%">Tồn hiện tại</th>
-                                        <th width="20%">Vị trí kho</th>
-                                        <th width="10%"></th>
+                                        <th width="30%">Vị trí kho</th>
+                                        <th width="10%" class="text-center">Xóa</th>
                                     </tr>
                                 </thead>
                                 <tbody id="productRowsStockOut">
@@ -601,16 +618,50 @@
         var itemsPerPage = 10;
         var allProducts = [];
         
+        // Khởi tạo window.productList
+        window.productList = [];
+        
         // Load dữ liệu khi trang được tải
         $(document).ready(function() {
-            loadInventoryData();
+            console.log('Page loaded, initializing...');
             loadProductsForDropdown();
+            loadInventoryData();
         });
         
         // Hàm load dữ liệu tồn kho
         function loadInventoryData() {
-            // TODO: Gọi API để lấy dữ liệu từ server
-            // Tạm thời dùng dữ liệu mẫu
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: {
+                    action: 'getInventory',
+                    category: $('#filterCategory').val(),
+                    warehouse: $('#filterWarehouse').val(),
+                    stockStatus: $('#filterStockStatus').val(),
+                    search: $('#searchInventory').val(),
+                    page: currentPage,
+                    pageSize: itemsPerPage
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        allProducts = response.data;
+                        updateInventoryTable(response.data);
+                        updatePaginationInfo(response);
+                    } else {
+                        alert('Lỗi khi tải dữ liệu: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    // Fallback to sample data nếu có lỗi
+                    loadSampleData();
+                }
+            });
+        }
+        
+        // Hàm load dữ liệu mẫu (fallback)
+        function loadSampleData() {
             var sampleData = [
                 {
                     id: 1,
@@ -675,14 +726,11 @@
                     '<td>' + item.maxStock + '</td>' +
                     '<td><span class="label ' + (statusClass === 'stock-out' ? 'label-danger' : (statusClass === 'stock-low' ? 'label-warning' : 'label-success')) + '">' + statusText + '</span></td>' +
                     '<td>' +
-                        '<button class="btn btn-success btn-xs" onclick="quickStockIn(' + item.id + ')" title="Nhập nhanh">' +
-                            '<i class="fa fa-arrow-down"></i>' +
+                        '<button class="btn btn-success btn-xs" onclick="quickStockIn(' + (item.productId || item.id) + ')" title="Nhập kho">' +
+                            '<i class="fa fa-arrow-down"></i> Nhập' +
                         '</button> ' +
-                        '<button class="btn btn-warning btn-xs" onclick="quickStockOut(' + item.id + ')" title="Xuất nhanh">' +
-                            '<i class="fa fa-arrow-up"></i>' +
-                        '</button> ' +
-                        '<button class="btn btn-info btn-xs" onclick="viewHistory(' + item.id + ')" title="Xem lịch sử">' +
-                            '<i class="fa fa-history"></i>' +
+                        '<button class="btn btn-warning btn-xs" onclick="quickStockOut(' + (item.productId || item.id) + ')" title="Xuất kho">' +
+                            '<i class="fa fa-arrow-up"></i> Xuất' +
                         '</button>' +
                     '</td>' +
                 '</tr>';
@@ -733,43 +781,97 @@
             $('#totalRecords').text(totalItems);
         }
         
+        // Cập nhật phân trang từ response
+        function updatePaginationInfo(response) {
+            var startItem = (response.currentPage - 1) * response.pageSize + 1;
+            var endItem = Math.min(response.currentPage * response.pageSize, response.totalCount);
+            
+            $('#showingStart').text(response.totalCount > 0 ? startItem : 0);
+            $('#showingEnd').text(endItem);
+            $('#totalRecords').text(response.totalCount);
+        }
+        
         // Load sản phẩm cho dropdown
         function loadProductsForDropdown() {
-            // TODO: Gọi API để lấy danh sách sản phẩm
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { action: 'getProducts' },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Products loaded:', response);
+                    if (response.success && response.data) {
+                        window.productList = response.data;
+                        console.log('Total products:', window.productList.length);
+                    } else {
+                        console.warn('No products found or response failed');
+                        window.productList = [];
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading products:', error);
+                    console.error('Response:', xhr.responseText);
+                    window.productList = [];
+                }
+            });
         }
         
         // Thêm dòng sản phẩm cho form nhập kho
         function addProductRowStockIn() {
+            // Nếu chưa có danh sách sản phẩm, load lại
+            if (!window.productList || window.productList.length === 0) {
+                console.log('Loading products for dropdown...');
+                loadProductsForDropdown();
+                // Chờ một chút để load xong
+                setTimeout(function() {
+                    addProductRowStockIn();
+                }, 500);
+                return;
+            }
+            
+            var productOptions = '<option value="">-- Chọn sản phẩm --</option>';
+            window.productList.forEach(function(p) {
+                productOptions += '<option value="' + p.id + '">' + p.productCode + ' - ' + p.productName + '</option>';
+            });
+            
             var row = '<tr>' +
-                '<td><select class="form-control product-select" required>' +
-                    '<option value="">-- Chọn sản phẩm --</option>' +
-                    '<option value="1">GEN-001 - Máy phát điện 10KVA</option>' +
-                    '<option value="2">GEN-002 - Máy phát điện 20KVA</option>' +
-                '</select></td>' +
-                '<td><input type="number" class="form-control" min="1" required></td>' +
-                '<td><input type="number" class="form-control" min="0" step="1000" placeholder="VNĐ"></td>' +
-                '<td><select class="form-control" required>' +
+                '<td><select class="form-control product-select" required>' + productOptions + '</select></td>' +
+                '<td><input type="number" class="form-control quantity-input" min="1" required placeholder="Số lượng" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></td>' +
+                '<td><input type="number" class="form-control unit-cost-input" min="0" step="1000" placeholder="VNĐ"></td>' +
+                '<td><select class="form-control warehouse-select" required>' +
                     '<option value="Main Warehouse">Kho chính</option>' +
                 '</select></td>' +
-                '<td><button type="button" class="btn btn-danger btn-xs" onclick="$(this).closest(\'tr\').remove()"><i class="fa fa-trash"></i></button></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-danger btn-sm" onclick="$(this).closest(\'tr\').remove()">Xóa</button></td>' +
             '</tr>';
             $('#productRowsStockIn').append(row);
         }
         
         // Thêm dòng sản phẩm cho form xuất kho
         function addProductRowStockOut() {
+            // Nếu chưa có danh sách sản phẩm, load lại
+            if (!window.productList || window.productList.length === 0) {
+                console.log('Loading products for dropdown...');
+                loadProductsForDropdown();
+                // Chờ một chút để load xong
+                setTimeout(function() {
+                    addProductRowStockOut();
+                }, 500);
+                return;
+            }
+            
+            var productOptions = '<option value="">-- Chọn sản phẩm --</option>';
+            window.productList.forEach(function(p) {
+                productOptions += '<option value="' + p.id + '">' + p.productCode + ' - ' + p.productName + '</option>';
+            });
+            
             var row = '<tr>' +
-                '<td><select class="form-control product-select" required>' +
-                    '<option value="">-- Chọn sản phẩm --</option>' +
-                    '<option value="1">GEN-001 - Máy phát điện 10KVA</option>' +
-                    '<option value="2">GEN-002 - Máy phát điện 20KVA</option>' +
-                '</select></td>' +
-                '<td><input type="number" class="form-control" min="1" required></td>' +
-                '<td class="current-stock">--</td>' +
-                '<td><select class="form-control" required>' +
+                '<td><select class="form-control product-select" required>' + productOptions + '</select></td>' +
+                '<td><input type="number" class="form-control quantity-input" min="1" required placeholder="Số lượng" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></td>' +
+                '<td class="current-stock text-center">--</td>' +
+                '<td><select class="form-control warehouse-select" required>' +
                     '<option value="Main Warehouse">Kho chính</option>' +
                 '</select></td>' +
-                '<td><button type="button" class="btn btn-danger btn-xs" onclick="$(this).closest(\'tr\').remove()"><i class="fa fa-trash"></i></button></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-danger btn-sm" onclick="$(this).closest(\'tr\').remove()">Xóa</button></td>' +
             '</tr>';
             $('#productRowsStockOut').append(row);
         }
@@ -777,81 +879,238 @@
         // Submit form nhập kho
         function submitStockIn() {
             var products = [];
+            var hasError = false;
+            
             $('#productRowsStockIn tr').each(function() {
                 var row = $(this);
                 var productId = row.find('.product-select').val();
-                var quantity = row.find('input[type="number"]').eq(0).val();
-                var unitCost = row.find('input[type="number"]').eq(1).val();
-                var warehouse = row.find('select').eq(1).val();
+                var quantity = row.find('.quantity-input').val();
+                var unitCost = row.find('.unit-cost-input').val();
+                var warehouse = row.find('.warehouse-select').val();
+                
+                // Validation
+                if (!productId) {
+                    alert('Vui lòng chọn sản phẩm!');
+                    hasError = true;
+                    return false;
+                }
+                
+                if (!quantity || quantity <= 0 || !Number.isInteger(Number(quantity))) {
+                    alert('Số lượng phải là số nguyên dương!');
+                    hasError = true;
+                    return false;
+                }
+                
+                if (unitCost && unitCost < 0) {
+                    alert('Đơn giá không được âm!');
+                    hasError = true;
+                    return false;
+                }
                 
                 if (productId && quantity) {
                     products.push({
-                        productId: productId,
-                        quantity: quantity,
-                        unitCost: unitCost || 0,
+                        productId: parseInt(productId),
+                        quantity: parseInt(quantity),
+                        unitCost: parseFloat(unitCost) || 0,
                         warehouse: warehouse
                     });
                 }
             });
+            
+            if (hasError) return;
             
             if (products.length === 0) {
                 alert('Vui lòng thêm ít nhất một sản phẩm!');
                 return;
             }
             
-            // TODO: Gửi dữ liệu lên server
-            console.log('Stock In:', products);
-            alert('Nhập kho thành công! (Chức năng đang phát triển)');
-            $('#stockInModal').modal('hide');
-            loadInventoryData();
+            // Gửi dữ liệu lên server
+            var formData = {
+                action: 'stockIn',
+                referenceType: $('select[name="reference_type"]', '#stockInForm').val(),
+                referenceId: $('input[name="reference_id"]', '#stockInForm').val(),
+                notes: $('textarea[name="notes"]', '#stockInForm').val(),
+                products: JSON.stringify(products)
+            };
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert('Nhập kho thành công!');
+                        $('#stockInModal').modal('hide');
+                        loadInventoryData();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    alert('Lỗi kết nối server: ' + error);
+                }
+            });
         }
         
         // Submit form xuất kho
         function submitStockOut() {
             var products = [];
+            var hasError = false;
+            
             $('#productRowsStockOut tr').each(function() {
                 var row = $(this);
                 var productId = row.find('.product-select').val();
-                var quantity = row.find('input[type="number"]').val();
-                var warehouse = row.find('select').eq(1).val();
+                var quantity = row.find('.quantity-input').val();
+                var warehouse = row.find('.warehouse-select').val();
+                
+                // Validation
+                if (!productId) {
+                    alert('Vui lòng chọn sản phẩm!');
+                    hasError = true;
+                    return false;
+                }
+                
+                if (!quantity || quantity <= 0 || !Number.isInteger(Number(quantity))) {
+                    alert('Số lượng phải là số nguyên dương!');
+                    hasError = true;
+                    return false;
+                }
                 
                 if (productId && quantity) {
                     products.push({
-                        productId: productId,
-                        quantity: quantity,
+                        productId: parseInt(productId),
+                        quantity: parseInt(quantity),
                         warehouse: warehouse
                     });
                 }
             });
+            
+            if (hasError) return;
             
             if (products.length === 0) {
                 alert('Vui lòng thêm ít nhất một sản phẩm!');
                 return;
             }
             
-            // TODO: Gửi dữ liệu lên server
-            console.log('Stock Out:', products);
-            alert('Xuất kho thành công! (Chức năng đang phát triển)');
-            $('#stockOutModal').modal('hide');
-            loadInventoryData();
+            // Gửi dữ liệu lên server
+            var formData = {
+                action: 'stockOut',
+                referenceType: $('select[name="reference_type"]', '#stockOutForm').val(),
+                referenceId: $('input[name="reference_id"]', '#stockOutForm').val(),
+                notes: $('textarea[name="notes"]', '#stockOutForm').val(),
+                products: JSON.stringify(products)
+            };
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'POST',
+                data: formData,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert('Xuất kho thành công!');
+                        $('#stockOutModal').modal('hide');
+                        loadInventoryData();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    alert('Lỗi kết nối server: ' + error);
+                }
+            });
         }
         
         // Nhập kho nhanh
         function quickStockIn(productId) {
+            // Reset form trước
+            $('#stockInForm')[0].reset();
+            $('#productRowsStockIn').empty();
+            
+            // Mở modal
             $('#stockInModal').modal('show');
-            // TODO: Pre-fill product
+            
+            // Thêm dòng sản phẩm và pre-fill product ID
+            setTimeout(function() {
+                addProductRowStockIn();
+                // Sau khi thêm row, chọn sản phẩm
+                setTimeout(function() {
+                    if (productId) {
+                        $('#productRowsStockIn tr:first .product-select').val(productId);
+                    }
+                }, 100);
+            }, 100);
         }
         
         // Xuất kho nhanh
         function quickStockOut(productId) {
+            // Reset form trước
+            $('#stockOutForm')[0].reset();
+            $('#productRowsStockOut').empty();
+            
+            // Mở modal
             $('#stockOutModal').modal('show');
-            // TODO: Pre-fill product
+            
+            // Thêm dòng sản phẩm và pre-fill product ID
+            setTimeout(function() {
+                addProductRowStockOut();
+                // Sau khi thêm row, chọn sản phẩm
+                setTimeout(function() {
+                    if (productId) {
+                        $('#productRowsStockOut tr:first .product-select').val(productId);
+                    }
+                }, 100);
+            }, 100);
         }
         
         // Xem lịch sử
         function viewHistory(productId) {
-            $('#stockHistoryModal').modal('show');
-            // TODO: Load history data
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: {
+                    action: 'getHistory',
+                    productId: productId,
+                    limit: 50
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var tbody = $('#historyTableBody');
+                        tbody.empty();
+                        
+                        if (response.data.length === 0) {
+                            tbody.append('<tr><td colspan="6" class="text-center">Chưa có lịch sử</td></tr>');
+                        } else {
+                            response.data.forEach(function(h) {
+                                var movementType = h.movementType === 'in' ? 'Nhập' : (h.movementType === 'out' ? 'Xuất' : 'Điều chỉnh');
+                                var typeClass = h.movementType === 'in' ? 'success' : 'warning';
+                                
+                                var row = '<tr>' +
+                                    '<td>' + new Date(h.createdAt).toLocaleString('vi-VN') + '</td>' +
+                                    '<td>' + h.productCode + ' - ' + h.productName + '</td>' +
+                                    '<td><span class="label label-' + typeClass + '">' + movementType + '</span></td>' +
+                                    '<td>' + h.quantity + '</td>' +
+                                    '<td>' + (h.referenceType || '--') + '</td>' +
+                                    '<td>' + (h.createdByName || '--') + '</td>' +
+                                '</tr>';
+                                tbody.append(row);
+                            });
+                        }
+                        
+                        $('#stockHistoryModal').modal('show');
+                    } else {
+                        alert('Lỗi khi tải lịch sử: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    alert('Lỗi kết nối server: ' + error);
+                }
+            });
         }
         
         // Lọc tồn kho
@@ -899,6 +1158,20 @@
         $('#stockOutModal').on('hidden.bs.modal', function() {
             $('#stockOutForm')[0].reset();
             $('#productRowsStockOut').empty();
+        });
+        
+        // Tự động thêm 1 dòng sản phẩm khi mở modal nhập kho
+        $('#stockInModal').on('shown.bs.modal', function() {
+            if ($('#productRowsStockIn tr').length === 0) {
+                addProductRowStockIn();
+            }
+        });
+        
+        // Tự động thêm 1 dòng sản phẩm khi mở modal xuất kho
+        $('#stockOutModal').on('shown.bs.modal', function() {
+            if ($('#productRowsStockOut tr').length === 0) {
+                addProductRowStockOut();
+            }
         });
     </script>
 </body>
