@@ -682,8 +682,10 @@ public class ProductServlet extends HttpServlet {
         } else {
             try {
                 double price = Double.parseDouble(unitPriceStr.trim());
-                if (price < 0) {
-                    errors.append("Giá sản phẩm phải lớn hơn hoặc bằng 0. ");
+                if (price <= 0) {
+                    errors.append("Giá sản phẩm phải lớn hơn 0. ");
+                } else if (price > 9999999999.99) {
+                    errors.append("Giá sản phẩm không được vượt quá 9999,999,999.99 VNĐ. ");
                 }
             } catch (NumberFormatException e) {
                 errors.append("Giá sản phẩm phải là số hợp lệ. ");
@@ -810,8 +812,10 @@ public class ProductServlet extends HttpServlet {
         } else {
             try {
                 double unitPrice = Double.parseDouble(unitPriceStr.trim());
-                if (unitPrice < 0) {
-                    errors.append("Giá sản phẩm phải lớn hơn hoặc bằng 0. ");
+                if (unitPrice <= 0) {
+                    errors.append("Giá sản phẩm phải lớn hơn 0. ");
+                } else if (unitPrice > 9999999999.99) {
+                    errors.append("Giá sản phẩm không được vượt quá 99,999,999.99 VNĐ. ");
                 }
             } catch (NumberFormatException e) {
                 errors.append("Giá sản phẩm phải là số hợp lệ. ");

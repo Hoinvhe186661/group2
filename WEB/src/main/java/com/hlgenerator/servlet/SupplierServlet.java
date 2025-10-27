@@ -455,6 +455,27 @@ public class SupplierServlet extends HttpServlet {
                 }
             }
             
+            // Validation bank info
+            String[] bankFields = parseBankInfoFields(supplier.getBankInfo());
+            String bankName = bankFields[0];
+            String accountNumber = bankFields[1];
+            
+            if (bankName != null && !bankName.trim().isEmpty()) {
+                if (!isValidBankName(bankName)) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Tên ngân hàng chỉ được nhập chữ cái", "UTF-8"));
+                    return;
+                }
+            }
+            
+            if (accountNumber != null && !accountNumber.trim().isEmpty()) {
+                if (!isValidAccountNumber(accountNumber)) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Số tài khoản chỉ được nhập số", "UTF-8"));
+                    return;
+                }
+            }
+            
             boolean success = supplierDAO.addSupplier(supplier);
             if (success) {
                 response.sendRedirect(request.getContextPath() + "/supplier?message=success");
@@ -513,6 +534,27 @@ public class SupplierServlet extends HttpServlet {
                 if (!isValidPhone(supplier.getPhone())) {
                     response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
                         URLEncoder.encode("Số điện thoại không đúng định dạng", "UTF-8"));
+                    return;
+                }
+            }
+            
+            // Validation bank info
+            String[] bankFields = parseBankInfoFields(supplier.getBankInfo());
+            String bankName = bankFields[0];
+            String accountNumber = bankFields[1];
+            
+            if (bankName != null && !bankName.trim().isEmpty()) {
+                if (!isValidBankName(bankName)) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Tên ngân hàng chỉ được nhập chữ cái", "UTF-8"));
+                    return;
+                }
+            }
+            
+            if (accountNumber != null && !accountNumber.trim().isEmpty()) {
+                if (!isValidAccountNumber(accountNumber)) {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Số tài khoản chỉ được nhập số", "UTF-8"));
                     return;
                 }
             }
@@ -714,5 +756,72 @@ public class SupplierServlet extends HttpServlet {
         // Chấp nhận số điện thoại Việt Nam: 0xxxxxxxxx hoặc +84xxxxxxxxx
         String phoneRegex = "^(0|\\+84)[0-9]{9,10}$";
         return phone.matches(phoneRegex);
+    }
+    
+    /**
+     * Kiểm tra tên ngân hàng chỉ chứa chữ cái và khoảng trắng
+     */
+    private boolean isValidBankName(String bankName) {
+        if (bankName == null || bankName.trim().isEmpty()) {
+            return true; // Bank name không bắt buộc
+        }
+        // Chỉ cho phép chữ cái (có dấu tiếng Việt) và khoảng trắng
+        String bankNameRegex = "^[A-Za-zÀ-ỹ\\s]+$";
+        return bankName.matches(bankNameRegex);
+    }
+    
+    /**
+     * Kiểm tra số tài khoản chỉ chứa số
+     */
+    private boolean isValidAccountNumber(String accountNumber) {
+        if (accountNumber == null || accountNumber.trim().isEmpty()) {
+            return true; // Account number không bắt buộc
+        }
+        // Chỉ cho phép số
+        String accountNumberRegex = "^[0-9]+$";
+        return accountNumber.matches(accountNumberRegex);
+    }
+    
+    /**
+     * Parse bank info JSON để lấy bank_name và account_number
+     */
+    private String[] parseBankInfoFields(String bankInfoJson) {
+        String[] result = new String[2]; // [bank_name, account_number]
+        result[0] = "";
+        result[1] = "";
+        
+        if (bankInfoJson == null || bankInfoJson.trim().isEmpty()) {
+            return result;
+        }
+        
+        try {
+            // Simple JSON parsing for bank_name and account_number
+            String json = bankInfoJson.trim();
+            if (json.startsWith("{") && json.endsWith("}")) {
+                // Extract bank_name
+                int bankNameStart = json.indexOf("\"bank_name\":\"");
+                if (bankNameStart >= 0) {
+                    bankNameStart += 13; // length of "bank_name":"
+                    int bankNameEnd = json.indexOf("\"", bankNameStart);
+                    if (bankNameEnd > bankNameStart) {
+                        result[0] = json.substring(bankNameStart, bankNameEnd);
+                    }
+                }
+                
+                // Extract account_number
+                int accountStart = json.indexOf("\"account_number\":\"");
+                if (accountStart >= 0) {
+                    accountStart += 18; // length of "account_number":"
+                    int accountEnd = json.indexOf("\"", accountStart);
+                    if (accountEnd > accountStart) {
+                        result[1] = json.substring(accountStart, accountEnd);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Return empty values if parsing fails
+        }
+        
+        return result;
     }
 }

@@ -440,10 +440,12 @@
                             <label>Thông tin ngân hàng</label>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <input name="bank_name" id="add_bank_name" class="form-control" placeholder="Tên ngân hàng">
+                                    <input name="bank_name" id="add_bank_name" class="form-control" placeholder="Tên ngân hàng" pattern="[A-Za-zÀ-ỹ\s]+" title="Chỉ được nhập chữ cái và khoảng trắng">
+                                    <small class="form-text text-muted">Chỉ nhập chữ cái</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <input name="account_number" id="add_account_number" class="form-control" placeholder="Số tài khoản">
+                                    <input name="account_number" id="add_account_number" class="form-control" placeholder="Số tài khoản" pattern="[0-9]+" title="Chỉ được nhập số">
+                                    <small class="form-text text-muted">Chỉ nhập số</small>
                                 </div>
                             </div>
                             <input type="hidden" name="bank_info" id="add_bank_info">
@@ -486,10 +488,12 @@
                             <label>Thông tin ngân hàng</label>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <input name="bank_name" id="edit_bank_name" class="form-control" placeholder="Tên ngân hàng">
+                                    <input name="bank_name" id="edit_bank_name" class="form-control" placeholder="Tên ngân hàng" pattern="[A-Za-zÀ-ỹ\s]+" title="Chỉ được nhập chữ cái và khoảng trắng">
+                                    <small class="form-text text-muted">Chỉ nhập chữ cái</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <input name="account_number" id="edit_account_number" class="form-control" placeholder="Số tài khoản">
+                                    <input name="account_number" id="edit_account_number" class="form-control" placeholder="Số tài khoản" pattern="[0-9]+" title="Chỉ được nhập số">
+                                    <small class="form-text text-muted">Chỉ nhập số</small>
                                 </div>
                             </div>
                             <input type="hidden" name="bank_info" id="edit_bank_info">
@@ -605,8 +609,25 @@
                     return false;
                 }
                 
-                var bankName = $('#add_bank_name').val();
-                var accountNumber = $('#add_account_number').val();
+                var bankName = $('#add_bank_name').val().trim();
+                var accountNumber = $('#add_account_number').val().trim();
+                
+                // Validation tên ngân hàng - chỉ chữ cái
+                if (bankName && !/^[A-Za-zÀ-ỹ\s]+$/.test(bankName)) {
+                    e.preventDefault();
+                    alert('Tên ngân hàng chỉ được nhập chữ cái!');
+                    $('#add_bank_name').focus();
+                    return false;
+                }
+                
+                // Validation số tài khoản - chỉ số
+                if (accountNumber && !/^[0-9]+$/.test(accountNumber)) {
+                    e.preventDefault();
+                    alert('Số tài khoản chỉ được nhập số!');
+                    $('#add_account_number').focus();
+                    return false;
+                }
+                
                 $('#add_bank_info').val(createBankInfoJson(bankName, accountNumber));
                 return true;
             });
@@ -663,8 +684,25 @@
                     return false;
                 }
                 
-                var bankName = $('#edit_bank_name').val();
-                var accountNumber = $('#edit_account_number').val();
+                var bankName = $('#edit_bank_name').val().trim();
+                var accountNumber = $('#edit_account_number').val().trim();
+                
+                // Validation tên ngân hàng - chỉ chữ cái
+                if (bankName && !/^[A-Za-zÀ-ỹ\s]+$/.test(bankName)) {
+                    e.preventDefault();
+                    alert('Tên ngân hàng chỉ được nhập chữ cái!');
+                    $('#edit_bank_name').focus();
+                    return false;
+                }
+                
+                // Validation số tài khoản - chỉ số
+                if (accountNumber && !/^[0-9]+$/.test(accountNumber)) {
+                    e.preventDefault();
+                    alert('Số tài khoản chỉ được nhập số!');
+                    $('#edit_account_number').focus();
+                    return false;
+                }
+                
                 $('#edit_bank_info').val(createBankInfoJson(bankName, accountNumber));
                 return true;
             });

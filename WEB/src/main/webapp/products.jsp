@@ -532,8 +532,9 @@
                             <input type="text" class="form-control" id="edit_unit" name="unit">
                         </div>
                         <div class="form-group">
-                            <label for="edit_unit_price">Giá bán</label>
-                            <input type="number" class="form-control" id="edit_unit_price" name="unit_price" min="0" step="0.01">
+                     <label for="edit_unit_price">Giá bán (VNĐ)</label>
+                            <input type="number" class="form-control" id="edit_unit_price" name="unit_price" min="1" max="500,000,0000" step="1000">
+                            <small class="form-text text-muted">Nhập giá từ 1 đến 500,000,000 VNĐ</small>
                         </div>
                         <div class="form-group">
                             <label for="edit_supplier_id">Nhà cung cấp</label>
@@ -624,7 +625,8 @@
                         </div>
                         <div class="form-group">
                             <label for="unit_price">Giá bán (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="unit_price" name="unit_price" min="0" step="1000" required>
+                            <input type="number" class="form-control" id="unit_price" name="unit_price" min="1" max="500000000" step="1000" required>
+                            <small class="form-text text-muted">Nhập giá từ 1 đến 500,000,000 VNĐ</small>
                         </div>
                         <div class="form-group">
                             <label for="supplier_id">Nhà cung cấp <span class="text-danger">*</span></label>
@@ -930,6 +932,12 @@
                 return;
             }
             
+            if (unitPrice > 500000000) {
+                alert('Giá bán không được vượt quá 500,000,000 VNĐ!');
+                $('#edit_unit_price').focus();
+                return;
+            }
+            
             if (!supplierId || supplierId === '') {
                 alert('Vui lòng chọn nhà cung cấp!');
                 $('#edit_supplier_id').focus();
@@ -1024,6 +1032,12 @@
             
             if (!unitPrice || unitPrice <= 0) {
                 alert('Giá bán phải lớn hơn 0!');
+                $('#unit_price').focus();
+                return;
+            }
+            
+            if (unitPrice > 5000000000) {
+                alert('Giá bán không được vượt quá 5000000000 VNĐ!');
                 $('#unit_price').focus();
                 return;
             }
