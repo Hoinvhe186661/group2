@@ -73,6 +73,78 @@
             border-color: #bee5eb;
             color: #0c5460;
         }
+        
+        /* Styles for filter section */
+        .filter-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+            flex: 1 1 auto;
+        }
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #495057;
+        }
+        .filter-group .form-control {
+            height: 36px;
+            font-size: 13px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .filter-actions .btn {
+            height: 36px;
+            padding: 8px 16px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        @media (max-width: 1200px) {
+            .filter-group {
+                min-width: 140px;
+            }
+        }
+        @media (max-width: 992px) {
+            .filter-group {
+                min-width: 120px;
+            }
+        }
+        @media (max-width: 768px) {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-group {
+                min-width: 100%;
+            }
+            .filter-actions {
+                width: 100%;
+            }
+            .filter-actions .btn {
+                flex: 1;
+            }
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -170,53 +242,69 @@
                                     Bạn có thể khôi phục hoặc xóa vĩnh viễn chúng.
                                 </div>
                                 <% } %>
-                                <form class="form-inline" method="get" action="contracts.jsp" style="margin-bottom: 15px;">
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label for="statusFilter">Trạng thái:&nbsp;</label>
-                                        <select class="form-control" id="statusFilter" name="status">
-                                            <option value="">Tất cả</option>
-                                            <option value="draft">Bản nháp</option>
-                                            <option value="active">Hiệu lực</option>
-                                            <option value="completed">Hoàn thành</option>
-                                            <option value="terminated">Chấm dứt</option>
-                                            <option value="expired">Hết hạn</option>
-                                            <option value="deleted">Đã xóa</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label for="typeFilter">Loại:&nbsp;</label>
-                                        <input type="text" class="form-control" id="typeFilter" name="contractType" placeholder="VD: Service">
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label for="search">Tìm kiếm:&nbsp;</label>
-                                        <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH">
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label>Bắt đầu:&nbsp;</label>
-                                        <input type="date" class="form-control" name="startFrom">
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label>Đến:&nbsp;</label>
-                                        <input type="date" class="form-control" name="startTo">
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label>Kết thúc từ:&nbsp;</label>
-                                        <input type="date" class="form-control" name="endFrom">
-                                    </div>
-                                    <div class="form-group" style="margin-right: 10px;">
-                                        <label>Đến:&nbsp;</label>
-                                        <input type="date" class="form-control" name="endTo">
-                                    </div>
-                                    <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
-                                    <button type="submit" class="btn btn-default"><i class="fa fa-filter"></i> Lọc</button>
-                                    <a href="contracts.jsp" class="btn btn-link">Xóa lọc</a>
-                                </form>
+                                <div class="filter-section">
+                                    <form method="get" action="contracts.jsp">
+                                        <div class="filter-row">
+                                            <div class="filter-group">
+                                                <label for="statusFilter">Trạng thái</label>
+                                                <select class="form-control" id="statusFilter" name="status">
+                                                    <option value="">Tất cả</option>
+                                                    <option value="draft">Bản nháp</option>
+                                                    <option value="active">Hiệu lực</option>
+                                                    <option value="completed">Hoàn thành</option>
+                                                    <option value="terminated">Chấm dứt</option>
+                                                    <option value="expired">Hết hạn</option>
+                                                    <option value="deleted">Đã xóa</option>
+                                                </select>
+                                            </div>
+                                            <div class="filter-group">
+                                                <label for="typeFilter">Loại hợp đồng</label>
+                                                <input type="text" class="form-control" id="typeFilter" name="contractType" placeholder="VD: Service">
+                                            </div>
+                                            <div class="filter-group">
+                                                <label for="search">Tìm kiếm</label>
+                                                <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH">
+                                            </div>
+                                        </div>
+                                        <div class="filter-row">
+                                            <div class="filter-group">
+                                                <label for="startFrom">Bắt đầu từ</label>
+                                                <input type="date" class="form-control" id="startFrom" name="startFrom">
+                                            </div>
+                                            <div class="filter-group">
+                                                <label for="startTo">Đến</label>
+                                                <input type="date" class="form-control" id="startTo" name="startTo">
+                                            </div>
+                                            <div class="filter-group">
+                                                <label for="endFrom">Kết thúc từ</label>
+                                                <input type="date" class="form-control" id="endFrom" name="endFrom">
+                                            </div>
+                                            <div class="filter-group">
+                                                <label for="endTo">Đến</label>
+                                                <input type="date" class="form-control" id="endTo" name="endTo">
+                                            </div>
+                                        </div>
+                                        <div class="filter-row">
+                                            <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
+                                            <div class="filter-actions">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fa fa-filter"></i> Lọc
+                                                </button>
+                                                <a href="contracts.jsp" class="btn btn-default">
+                                                    <i class="fa fa-times"></i> Xóa lọc
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
                                 <table class="table table-hover" id="contractsTable">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
+                                            <th>ID KH</th>
                                             <th>Số hợp đồng</th>
-                                            <th>Khách hàng (ID)</th>
+                                            <th>Tên khách hàng</th>
+                                            <th>Số điện thoại</th>
                                             <th>Loại</th>
                                             <th>Tiêu đề</th>
                                             <th>Bắt đầu</th>
@@ -256,8 +344,10 @@
                                         %>
                                         <tr>
                                             <td><%= c.getId() %></td>
-                                            <td><%= c.getContractNumber() %></td>
                                             <td><%= c.getCustomerId() %></td>
+                                            <td><%= c.getContractNumber() %></td>
+                                            <td><%= c.getCustomerName() != null ? c.getCustomerName() : "-" %></td>
+                                            <td><%= c.getCustomerPhone() != null ? c.getCustomerPhone() : "-" %></td>
                                             <td><%= c.getContractType() != null ? c.getContractType() : "-" %></td>
                                             <td><%= c.getTitle() != null ? c.getTitle() : "-" %></td>
                                             <td><%= c.getStartDate() != null ? c.getStartDate() : "-" %></td>
@@ -600,17 +690,18 @@
                             <thead class="thead-dark" style="position: sticky; top: 0; z-index: 10;">
                                 <tr>
                                     <th width="8%">ID</th>
-                                    <th width="15%">Số hợp đồng</th>
-                                    <th width="10%">Khách hàng</th>
-                                    <th width="20%">Tiêu đề</th>
-                                    <th width="15%">Người xóa</th>
-                                    <th width="12%">Ngày xóa</th>
-                                    <th width="20%">Thao tác</th>
+                                    <th width="8%">ID KH</th>
+                                    <th width="14%">Số hợp đồng</th>
+                                    <th width="14%">Tên khách hàng</th>
+                                    <th width="18%">Tiêu đề</th>
+                                    <th width="12%">Người xóa</th>
+                                    <th width="11%">Ngày xóa</th>
+                                    <th width="15%">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody id="deletedContractsTableBody">
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">
+                                    <td colspan="8" class="text-center text-muted">
                                         <i class="fa fa-spinner fa-spin"></i> Đang tải...
                                     </td>
                                 </tr>
@@ -705,7 +796,7 @@
                 "autoWidth": false,
                 "responsive": true,
                 "order": [[0, "desc"]],
-                "columnDefs": [{ "targets": [9], "orderable": false, "searchable": false }]
+                "columnDefs": [{ "targets": [10], "orderable": false, "searchable": false }]
             });
             // Safety: remove filter container if any existed from previous inits
             $('#contractsTable_filter').remove();
@@ -776,7 +867,8 @@
                     var html = '' +
                         '<p><strong>ID:</strong> ' + c.id + '</p>' +
                         '<p><strong>Số hợp đồng:</strong> ' + c.contractNumber + '</p>' +
-                        '<p><strong>Khách hàng (ID):</strong> ' + c.customerId + '</p>' +
+                        '<p><strong>Khách hàng:</strong> ' + (c.customerName || c.customerId) + '</p>' +
+                        '<p><strong>Số điện thoại:</strong> ' + (c.customerPhone || '-') + '</p>' +
                         '<p><strong>Loại:</strong> ' + (c.contractType || '-') + '</p>' +
                         '<p><strong>Tiêu đề:</strong> ' + (c.title || '-') + '</p>' +
                         '<p><strong>Ngày bắt đầu:</strong> ' + (c.startDate || '-') + '</p>' +
@@ -1270,8 +1362,9 @@
                             
                             rows += '<tr>' +
                                 '<td>' + contract.id + '</td>' +
-                                '<td>' + contract.contractNumber + '</td>' +
                                 '<td>' + contract.customerId + '</td>' +
+                                '<td>' + contract.contractNumber + '</td>' +
+                                '<td>' + (contract.customerName || '-') + '</td>' +
                                 '<td>' + (contract.title || '-') + '</td>' +
                                 '<td>' + deletedByName + '</td>' +
                                 '<td>' + formattedDeletedAt + '</td>' +
@@ -1294,7 +1387,7 @@
                         console.log('No deleted contracts found - data is empty or not an array');
                         console.log('Data type:', typeof dataArray);
                         console.log('Data value:', dataArray);
-                        tbody.html('<tr><td colspan="7" class="text-center text-muted"><i class="fa fa-info-circle"></i> Thùng rác trống</td></tr>');
+                        tbody.html('<tr><td colspan="8" class="text-center text-muted"><i class="fa fa-info-circle"></i> Thùng rác trống</td></tr>');
                         deletedContractsTotalPages = 1;
                         deletedContractsTotalRecords = 0;
                         updateDeletedPaginationInfo();
@@ -1302,13 +1395,13 @@
                     }
                 } else {
                     console.error('Server error:', resp);
-                    $('#deletedContractsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi: ' + (resp.message || 'Không thể tải dữ liệu') + '</td></tr>');
+                    $('#deletedContractsTableBody').html('<tr><td colspan="8" class="text-center text-danger">Lỗi: ' + (resp.message || 'Không thể tải dữ liệu') + '</td></tr>');
                 }
             }, 'json')
             .fail(function(xhr, status, error) {
                 console.error('AJAX error:', status, error);
                 console.error('XHR response:', xhr.responseText);
-                $('#deletedContractsTableBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi kết nối: ' + error + '</td></tr>');
+                $('#deletedContractsTableBody').html('<tr><td colspan="8" class="text-center text-danger">Lỗi kết nối: ' + error + '</td></tr>');
             });
         }
 

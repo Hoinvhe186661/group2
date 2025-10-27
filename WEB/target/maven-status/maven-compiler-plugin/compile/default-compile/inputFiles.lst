@@ -1,37 +1,41 @@
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-C:\Users\Admin\Desktop\group2 2410\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\GR2 28 10\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java

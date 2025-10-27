@@ -10,6 +10,103 @@
     <link href="css/font-awesome.min.css" rel="stylesheet" type="text/css" />
     <link href="css/ionicons.min.css" rel="stylesheet" type="text/css" />
     <link href="css/style.css" rel="stylesheet" type="text/css" />
+    <style>
+        /* Styles for filter section */
+        .filter-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .filter-header h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .filter-header i {
+            transition: transform 0.3s;
+        }
+        .filter-header i.rotated {
+            transform: rotate(180deg);
+        }
+        .filter-content {
+            display: none;
+        }
+        .filter-content.show {
+            display: block;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .filter-row:last-child {
+            margin-bottom: 0;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 140px;
+            flex: 1 1 auto;
+        }
+        .filter-group.small {
+            min-width: 100px;
+            flex: 0 0 auto;
+        }
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #495057;
+        }
+        .filter-group .form-control {
+            height: 32px;
+            font-size: 12px;
+            padding: 6px 10px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .filter-actions .btn {
+            height: 32px;
+            padding: 6px 14px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        @media (max-width: 1200px) {
+            .filter-group {
+                min-width: 120px;
+            }
+        }
+        @media (max-width: 768px) {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-group {
+                min-width: 100%;
+            }
+            .filter-actions {
+                width: 100%;
+            }
+            .filter-actions .btn {
+                flex: 1;
+            }
+        }
+    </style>
 </head>
 <body class="skin-black">
     <header class="header">
@@ -76,52 +173,72 @@
                                 <h3>Nhiệm vụ của tôi</h3>
                             </header>
                                 <div class="panel-body table-responsive">
-                                    <form class="form-inline" onsubmit="event.preventDefault(); loadTasks();" style="margin-bottom: 12px;">
-                                        <div class="form-group" style="margin-right: 8px;">
-                                            <label for="statusFilter">Trạng thái:&nbsp;</label>
-                                            <select id="statusFilter" class="form-control">
-                                                <option value="">Tất cả</option>
-                                                <option value="pending">Chờ nhận</option>
-                                                <option value="in_progress">Đang thực hiện</option>
-                                                <option value="completed">Đã hoàn thành</option>
-                                                <option value="cancelled">Đã hủy</option>
-                                                <option value="rejected">Đã từ chối</option>
-                                            </select>
+                                    <div class="filter-section">
+                                        <div class="filter-header" onclick="toggleFilters()">
+                                            <h4><i class="fa fa-filter"></i> Bộ lọc</h4>
+                                            <i class="fa fa-chevron-down" id="filterToggleIcon"></i>
                                         </div>
-                                        <div class="form-group" style="margin-right: 8px;">
-                                            <label for="priorityFilter">Ưu tiên:&nbsp;</label>
-                                            <select id="priorityFilter" class="form-control">
-                                                <option value="">Tất cả</option>
-                                                <option value="urgent">Khẩn cấp</option>
-                                                <option value="high">Cao</option>
-                                                <option value="medium">Trung bình</option>
-                                                <option value="low">Thấp</option>
-                                            </select>
+                                        <div class="filter-content" id="filterContent">
+                                            <form onsubmit="event.preventDefault(); loadTasks();">
+                                                <div class="filter-row">
+                                                    <div class="filter-group">
+                                                        <label for="statusFilter">Trạng thái</label>
+                                                        <select id="statusFilter" class="form-control">
+                                                            <option value="">Tất cả</option>
+                                                            <option value="pending">Chờ nhận</option>
+                                                            <option value="in_progress">Đang thực hiện</option>
+                                                            <option value="completed">Đã hoàn thành</option>
+                                                            <option value="cancelled">Đã hủy</option>
+                                                            <option value="rejected">Đã từ chối</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="filter-group">
+                                                        <label for="priorityFilter">Ưu tiên</label>
+                                                        <select id="priorityFilter" class="form-control">
+                                                            <option value="">Tất cả</option>
+                                                            <option value="urgent">Khẩn cấp</option>
+                                                            <option value="high">Cao</option>
+                                                            <option value="medium">Trung bình</option>
+                                                            <option value="low">Thấp</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="filter-group">
+                                                        <label for="q">Tìm kiếm</label>
+                                                        <input type="text" id="q" class="form-control" placeholder="Mã nhiệm vụ (vd: T-002)">
+                                                    </div>
+                                                </div>
+                                                <div class="filter-row">
+                                                    <div class="filter-group">
+                                                        <label for="scheduledFrom">Ngày bắt đầu từ</label>
+                                                        <input type="date" id="scheduledFrom" class="form-control">
+                                                    </div>
+                                                    <div class="filter-group">
+                                                        <label for="scheduledTo">Đến</label>
+                                                        <input type="date" id="scheduledTo" class="form-control">
+                                                    </div>
+                                                    <div class="filter-group small">
+                                                        <label for="pageSize">Hiển thị</label>
+                                                        <select id="pageSize" class="form-control" onchange="changePageSize()">
+                                                            <option value="5">5</option>
+                                                            <option value="10" selected>10</option>
+                                                            <option value="20">20</option>
+                                                            <option value="50">50</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="filter-row">
+                                                    <div class="filter-actions">
+                                                        <button class="btn btn-primary" type="submit">
+                                                            <i class="fa fa-filter"></i> Lọc
+                                                        </button>
+                                                        <button class="btn btn-default" type="button" onclick="resetFilters()">
+                                                            <i class="fa fa-times"></i> Xóa lọc
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
                                         </div>
-                                        <div class="form-group" style="margin-right: 8px;">
-                                            <label>Bắt đầu:&nbsp;</label>
-                                            <input type="date" id="scheduledFrom" class="form-control">
-                                        </div>
-                                        <div class="form-group" style="margin-right: 8px;">
-                                            <label>Đến:&nbsp;</label>
-                                            <input type="date" id="scheduledTo" class="form-control">
-                                        </div>
-                                        <div class="form-group" style="margin-right: 8px;">
-                                            <label for="q">Tìm:&nbsp;</label>
-                                            <input type="text" id="q" class="form-control" placeholder="Mã nhiệm vụ (vd: T-002)">
-                                        </div>
-                                        <button class="btn btn-default" type="submit"><i class="fa fa-filter"></i> Lọc</button>
-                                        <button class="btn btn-link" type="button" onclick="resetFilters()">Xóa lọc</button>
-                                        <div class="form-group" style="margin-left: 8px;">
-                                            <label for="pageSize">Hiển thị:&nbsp;</label>
-                                            <select id="pageSize" class="form-control" onchange="changePageSize()">
-                                                <option value="5">5</option>
-                                                <option value="10" selected>10</option>
-                                                <option value="20">20</option>
-                                                <option value="50">50</option>
-                                            </select>
-                                        </div>
-                                    </form>
+                                    </div>
                                     <table class="table table-hover">
                                     <thead>
                                         <tr>
@@ -156,6 +273,19 @@
     <input type="hidden" id="currentUserId" value="<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : 0 %>" />
     <script>
         var currentUserId = parseInt(document.getElementById('currentUserId').value) || 0;
+        
+        // Toggle filter visibility
+        function toggleFilters() {
+            var content = document.getElementById('filterContent');
+            var icon = document.getElementById('filterToggleIcon');
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                icon.classList.remove('rotated');
+            } else {
+                content.classList.add('show');
+                icon.classList.add('rotated');
+            }
+        }
 
         function badgeForStatus(s){
             var map = {pending:'label-default', in_progress:'label-warning', completed:'label-success', cancelled:'label-default', rejected:'label-danger'};

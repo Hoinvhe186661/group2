@@ -20,6 +20,8 @@ public class Contract {
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private String deletedByName; // Tạm thời để lưu tên người xóa
+    private String customerName; // Tên khách hàng
+    private String customerPhone; // Số điện thoại khách hàng
 
     public Contract() {}
 
@@ -125,6 +127,12 @@ public class Contract {
 
     public String getDeletedByName() { return deletedByName; }
     public void setDeletedByName(String deletedByName) { this.deletedByName = deletedByName; }
+
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    public String getCustomerPhone() { return customerPhone; }
+    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
 }
 
 

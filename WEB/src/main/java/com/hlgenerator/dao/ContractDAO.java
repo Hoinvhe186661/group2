@@ -144,7 +144,7 @@ public class ContractDAO extends DBConnect {
 
     public Contract getContractById(int id) {
         if (!checkConnection()) return null;
-        String sql = "SELECT * FROM contracts WHERE id=?";
+        String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
@@ -161,7 +161,7 @@ public class ContractDAO extends DBConnect {
     public List<Contract> getAllContracts() {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;
-        String sql = "SELECT * FROM contracts WHERE status != 'deleted' ORDER BY id DESC";
+        String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.status != 'deleted' ORDER BY c.id DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(mapRow(rs));
@@ -188,7 +188,8 @@ public class ContractDAO extends DBConnect {
     public List<Contract> getDeletedContracts() {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;
-        String sql = "SELECT c.*, u.full_name as deleted_by_name FROM contracts c " +
+        String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone, u.full_name as deleted_by_name FROM contracts c " +
+                    "LEFT JOIN customers cu ON cu.id = c.customer_id " +
                     "LEFT JOIN users u ON c.deleted_by = u.id " +
                     "WHERE c.status = 'deleted' ORDER BY c.deleted_at DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
@@ -225,7 +226,8 @@ public class ContractDAO extends DBConnect {
         if ("asc".equalsIgnoreCase(sortDir)) direction = "ASC";
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT c.*, u.full_name as deleted_by_name FROM contracts c ");
+        sql.append("SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone, u.full_name as deleted_by_name FROM contracts c ");
+        sql.append("LEFT JOIN customers cu ON cu.id = c.customer_id ");
         sql.append("LEFT JOIN users u ON c.deleted_by = u.id ");
         sql.append("WHERE c.status = 'deleted' ");
 
@@ -283,7 +285,7 @@ public class ContractDAO extends DBConnect {
     public List<Contract> getContractsByCustomerId(int customerId) {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;
-        String sql = "SELECT * FROM contracts WHERE customer_id = ? AND status != 'deleted' ORDER BY id DESC";
+        String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.customer_id = ? AND c.status != 'deleted' ORDER BY c.id DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, customerId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -303,7 +305,7 @@ public class ContractDAO extends DBConnect {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 10;
         int offset = (page - 1) * pageSize;
-        String sql = "SELECT * FROM contracts WHERE status != 'deleted' ORDER BY id DESC LIMIT ? OFFSET ?";
+        String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.status != 'deleted' ORDER BY c.id DESC LIMIT ? OFFSET ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, pageSize);
             ps.setInt(2, offset);
@@ -369,7 +371,7 @@ public class ContractDAO extends DBConnect {
         if ("asc".equalsIgnoreCase(sortDir)) direction = "ASC";
 
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT c.* FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE 1=1");
+        sql.append("SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE 1=1");
         java.util.List<Object> params = new ArrayList<>();
         if (status != null && !status.isEmpty()) { 
             sql.append(" AND c.status = ?"); 
@@ -532,6 +534,19 @@ public class ContractDAO extends DBConnect {
         c.setCreatedBy(rs.wasNull() ? null : createdBy);
         c.setCreatedAt(rs.getTimestamp("created_at"));
         c.setUpdatedAt(rs.getTimestamp("updated_at"));
+        
+        // Lấy thông tin khách hàng nếu có
+        try {
+            c.setCustomerName(rs.getString("customer_name"));
+        } catch (SQLException e) {
+            // Field không tồn tại trong một số query
+        }
+        try {
+            c.setCustomerPhone(rs.getString("customer_phone"));
+        } catch (SQLException e) {
+            // Field không tồn tại trong một số query
+        }
+        
         return c;
     }
 }
