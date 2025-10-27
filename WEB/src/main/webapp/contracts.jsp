@@ -79,14 +79,38 @@
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
             border-radius: 6px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .filter-header h4 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+        .filter-header i {
+            transition: transform 0.3s;
+        }
+        .filter-header i.rotated {
+            transform: rotate(180deg);
+        }
+        .filter-content {
+            display: none;
+        }
+        .filter-content.show {
+            display: block;
         }
         .filter-row {
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
-            gap: 15px;
+            gap: 10px;
             margin-bottom: 10px;
         }
         .filter-row:last-child {
@@ -95,37 +119,37 @@
         .filter-group {
             display: flex;
             flex-direction: column;
-            min-width: 150px;
+            min-width: 140px;
             flex: 1 1 auto;
+        }
+        .filter-group.small {
+            min-width: 100px;
+            flex: 0 0 auto;
         }
         .filter-group label {
             font-weight: 600;
-            margin-bottom: 5px;
-            font-size: 13px;
+            margin-bottom: 4px;
+            font-size: 12px;
             color: #495057;
         }
         .filter-group .form-control {
-            height: 36px;
-            font-size: 13px;
+            height: 32px;
+            font-size: 12px;
+            padding: 6px 10px;
         }
         .filter-actions {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: flex-end;
         }
         .filter-actions .btn {
-            height: 36px;
-            padding: 8px 16px;
-            font-size: 13px;
+            height: 32px;
+            padding: 6px 14px;
+            font-size: 12px;
             white-space: nowrap;
         }
         
         @media (max-width: 1200px) {
-            .filter-group {
-                min-width: 140px;
-            }
-        }
-        @media (max-width: 992px) {
             .filter-group {
                 min-width: 120px;
             }
@@ -243,59 +267,65 @@
                                 </div>
                                 <% } %>
                                 <div class="filter-section">
-                                    <form method="get" action="contracts.jsp">
-                                        <div class="filter-row">
-                                            <div class="filter-group">
-                                                <label for="statusFilter">Trạng thái</label>
-                                                <select class="form-control" id="statusFilter" name="status">
-                                                    <option value="">Tất cả</option>
-                                                    <option value="draft">Bản nháp</option>
-                                                    <option value="active">Hiệu lực</option>
-                                                    <option value="completed">Hoàn thành</option>
-                                                    <option value="terminated">Chấm dứt</option>
-                                                    <option value="expired">Hết hạn</option>
-                                                    <option value="deleted">Đã xóa</option>
-                                                </select>
+                                    <div class="filter-header" onclick="toggleFilters()">
+                                        <h4><i class="fa fa-filter"></i> Bộ lọc</h4>
+                                        <i class="fa fa-chevron-down" id="filterToggleIcon"></i>
+                                    </div>
+                                    <div class="filter-content" id="filterContent">
+                                        <form method="get" action="contracts.jsp">
+                                            <div class="filter-row">
+                                                <div class="filter-group">
+                                                    <label for="statusFilter">Trạng thái</label>
+                                                    <select class="form-control" id="statusFilter" name="status">
+                                                        <option value="">Tất cả</option>
+                                                        <option value="draft">Bản nháp</option>
+                                                        <option value="active">Hiệu lực</option>
+                                                        <option value="completed">Hoàn thành</option>
+                                                        <option value="terminated">Chấm dứt</option>
+                                                        <option value="expired">Hết hạn</option>
+                                                        <option value="deleted">Đã xóa</option>
+                                                    </select>
+                                                </div>
+                                                <div class="filter-group">
+                                                    <label for="typeFilter">Loại hợp đồng</label>
+                                                    <input type="text" class="form-control" id="typeFilter" name="contractType" placeholder="VD: Service">
+                                                </div>
+                                                <div class="filter-group">
+                                                    <label for="search">Tìm kiếm</label>
+                                                    <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH">
+                                                </div>
                                             </div>
-                                            <div class="filter-group">
-                                                <label for="typeFilter">Loại hợp đồng</label>
-                                                <input type="text" class="form-control" id="typeFilter" name="contractType" placeholder="VD: Service">
+                                            <div class="filter-row">
+                                                <div class="filter-group">
+                                                    <label for="startFrom">Bắt đầu từ</label>
+                                                    <input type="date" class="form-control" id="startFrom" name="startFrom">
+                                                </div>
+                                                <div class="filter-group">
+                                                    <label for="startTo">Đến</label>
+                                                    <input type="date" class="form-control" id="startTo" name="startTo">
+                                                </div>
+                                                <div class="filter-group">
+                                                    <label for="endFrom">Kết thúc từ</label>
+                                                    <input type="date" class="form-control" id="endFrom" name="endFrom">
+                                                </div>
+                                                <div class="filter-group">
+                                                    <label for="endTo">Đến</label>
+                                                    <input type="date" class="form-control" id="endTo" name="endTo">
+                                                </div>
                                             </div>
-                                            <div class="filter-group">
-                                                <label for="search">Tìm kiếm</label>
-                                                <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH">
+                                            <div class="filter-row">
+                                                <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
+                                                <div class="filter-actions">
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="fa fa-filter"></i> Lọc
+                                                    </button>
+                                                    <a href="contracts.jsp" class="btn btn-default">
+                                                        <i class="fa fa-times"></i> Xóa lọc
+                                                    </a>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="filter-row">
-                                            <div class="filter-group">
-                                                <label for="startFrom">Bắt đầu từ</label>
-                                                <input type="date" class="form-control" id="startFrom" name="startFrom">
-                                            </div>
-                                            <div class="filter-group">
-                                                <label for="startTo">Đến</label>
-                                                <input type="date" class="form-control" id="startTo" name="startTo">
-                                            </div>
-                                            <div class="filter-group">
-                                                <label for="endFrom">Kết thúc từ</label>
-                                                <input type="date" class="form-control" id="endFrom" name="endFrom">
-                                            </div>
-                                            <div class="filter-group">
-                                                <label for="endTo">Đến</label>
-                                                <input type="date" class="form-control" id="endTo" name="endTo">
-                                            </div>
-                                        </div>
-                                        <div class="filter-row">
-                                            <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
-                                            <div class="filter-actions">
-                                                <button type="submit" class="btn btn-primary">
-                                                    <i class="fa fa-filter"></i> Lọc
-                                                </button>
-                                                <a href="contracts.jsp" class="btn btn-default">
-                                                    <i class="fa fa-times"></i> Xóa lọc
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </form>
+                                        </form>
+                                    </div>
                                 </div>
                                 <table class="table table-hover" id="contractsTable">
                                     <thead>
@@ -782,6 +812,19 @@
         var isEditingMode = false; // Biến để kiểm tra đang sửa hay thêm mới
 
         var contractProducts = []; // Mảng lưu sản phẩm tạm thời
+        
+        // Toggle filter visibility
+        function toggleFilters() {
+            var content = document.getElementById('filterContent');
+            var icon = document.getElementById('filterToggleIcon');
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                icon.classList.remove('rotated');
+            } else {
+                content.classList.add('show');
+                icon.classList.add('rotated');
+            }
+        }
 
         $(document).ready(function() {
             contractsTable = $('#contractsTable').DataTable({
