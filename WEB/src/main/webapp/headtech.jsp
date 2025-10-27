@@ -10,9 +10,9 @@
         return;
     }
     
-    // Kiểm tra quyền head_technician hoặc admin
-    if (!"head_technician".equals(userRole) && !"admin".equals(userRole)) {
-        response.sendRedirect(request.getContextPath() + "/index.jsp");
+    // CHỈ CHO PHÉP HEAD_TECHNICIAN (không cho admin vào)
+    if (!"head_technician".equals(userRole)) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
 %>
@@ -20,8 +20,10 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lý Kỹ Thuật | HL Generator</title>
+    <title>Bảng Điều Khiển Kỹ Thuật | HL Generator</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+    <meta name="description" content="Technical Dashboard">
+    <meta name="keywords" content="Technical, Dashboard, Bootstrap 3">
     
     <!-- bootstrap 3.0.2 -->
     <link href="css/bootstrap.min.css" rel="stylesheet" type="text/css" />
@@ -29,75 +31,45 @@
     <link href="css/font-awesome.min.css" rel="stylesheet" type="text/css" />
     <!-- Ionicons -->
     <link href="css/ionicons.min.css" rel="stylesheet" type="text/css" />
-    <!-- DATA TABLES -->
-    <link href="css/datatables/dataTables.bootstrap.css" rel="stylesheet" type="text/css" />
+    <!-- Morris chart -->
+    <link href="css/morris/morris.css" rel="stylesheet" type="text/css" />
+    <!-- jvectormap -->
+    <link href="css/jvectormap/jquery-jvectormap-1.2.2.css" rel="stylesheet" type="text/css" />
+    <!-- Date Picker -->
+    <link href="css/datepicker/datepicker3.css" rel="stylesheet" type="text/css" />
+    <!-- Daterange picker -->
+    <link href="css/daterangepicker/daterangepicker-bs3.css" rel="stylesheet" type="text/css" />
+    <!-- iCheck for checkboxes and radio inputs -->
+    <link href="css/iCheck/all.css" rel="stylesheet" type="text/css" />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     <!-- Theme style -->
     <link href="css/style.css" rel="stylesheet" type="text/css" />
 
+    <!-- Custom styles -->
     <style>
-        .work-order-filters {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .filter-group {
-            margin-bottom: 10px;
-        }
-        .badge-urgent { background-color: #d9534f !important; }
-        .badge-high { background-color: #f0ad4e !important; }
-        .badge-medium { background-color: #5bc0de !important; }
-        .badge-low { background-color: #5cb85c !important; }
-        
-        .badge-pending { background-color: #f0ad4e !important; }
-        .badge-in_progress { background-color: #5bc0de !important; }
-        .badge-completed { background-color: #5cb85c !important; }
-        .badge-cancelled { background-color: #777 !important; }
-        
-        .work-order-actions {
-            white-space: nowrap;
-        }
-        .work-order-actions .btn {
-            padding: 2px 8px;
-            font-size: 12px;
-            margin-right: 3px;
-        }
-        .modal-lg {
-            width: 900px;
-        }
-        .task-item {
-            border-left: 3px solid #3c8dbc;
-            padding-left: 10px;
-            margin-bottom: 10px;
-        }
-        .form-horizontal .control-label {
-            text-align: left;
-        }
-        .stats-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .stats-card h3 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: bold;
-        }
-        .stats-card p {
-            margin: 5px 0 0 0;
-            opacity: 0.9;
-        }
+        .st-orange { background-color: #ff9800 !important; }
+        .st-purple { background-color: #9c27b0 !important; }
+        .st-cyan { background-color: #00bcd4 !important; }
+        .st-pink { background-color: #e91e63 !important; }
+        .st-teal { background-color: #009688 !important; }
+        .st-indigo { background-color: #3f51b5 !important; }
     </style>
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
 </head>
 <body class="skin-black">
     <!-- header logo -->
     <header class="header">
-        <a href="admin.jsp" class="logo">
-            Quản Lý Kỹ Thuật
+        <a href="headtech.jsp" class="logo">
+            Bảng Điều Khiển Kỹ Thuật
         </a>
+        <!-- Header Navbar -->
         <nav class="navbar navbar-static-top" role="navigation">
+            <!-- Sidebar toggle button-->
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span>
@@ -106,6 +78,31 @@
             </a>
             <div class="navbar-right">
                 <ul class="nav navbar-nav">
+                    <!-- Notifications -->
+                    <li class="dropdown messages-menu">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <i class="fa fa-bell"></i>
+                            <span class="label label-warning" id="notificationCount">0</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li class="header">Thông báo công việc</li>
+                            <li>
+                                <ul class="menu" id="notificationList">
+                                    <li>
+                                        <a href="#">
+                                            <div class="pull-left">
+                                                <i class="fa fa-warning text-yellow"></i>
+                                            </div>
+                                            <h4>Công việc ưu tiên cao</h4>
+                                            <p>Có <span id="urgentWorkOrders">0</span> công việc cần xử lý gấp</p>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="footer"><a href="tech_support_management.jsp">Xem tất cả</a></li>
+                        </ul>
+                    </li>
+                    <!-- User Account -->
                     <li class="dropdown user user-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <i class="fa fa-user"></i>
@@ -137,6 +134,7 @@
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Left side column -->
         <aside class="left-side sidebar-offcanvas">
+            <!-- sidebar -->
             <section class="sidebar">
                 <!-- Sidebar user panel -->
                 <div class="user-panel">
@@ -148,19 +146,23 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                
+                <!-- search form -->
+                <form action="#" method="get" class="sidebar-form">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
+                        <span class="input-group-btn">
+                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </form>
                 <!-- sidebar menu -->
                 <ul class="sidebar-menu">
-                    <li>
-                        <a href="admin.jsp">
+                    <li class="active">
+                        <a href="headtech.jsp">
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
-                    <li class="active">
-                        <a href="headtech.jsp">
-                            <i class="fa fa-wrench"></i> <span>Quản lý kỹ thuật</span>
-                        </a>
-                    </li>
+                    
                     <li>
                         <a href="tech_support_management.jsp">
                             <i class="fa fa-ticket"></i> <span>Yêu cầu hỗ trợ kỹ thuật</span>
@@ -172,13 +174,13 @@
                         </a>
                     </li>
                     <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Danh sách sản phẩm</span>
+                        <a href="customers">
+                            <i class="fa fa-users"></i> <span>Khách hàng</span>
                         </a>
                     </li>
                     <li>
-                        <a href="customers">
-                            <i class="fa fa-users"></i> <span>Danh sách khách hàng</span>
+                        <a href="product">
+                            <i class="fa fa-shopping-cart"></i> <span>Sản phẩm</span>
                         </a>
                     </li>
                     <li>
@@ -191,338 +193,223 @@
         </aside>
 
         <aside class="right-side">
-            <section class="content-header">
-                <h1>
-                    Quản Lý Kỹ Thuật
-                    <small>Quản lý đơn hàng công việc và nhiệm vụ</small>
-                </h1>
-                <ol class="breadcrumb">
-                    <li><a href="admin.jsp"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
-                    <li class="active">Quản lý kỹ thuật</li>
-                </ol>
-            </section>
-
             <!-- Main content -->
             <section class="content">
-                <!-- Statistics Cards -->
-                <div class="row">
+                <!-- Top Statistics Row 1 -->
+                <div class="row" style="margin-bottom:5px;">
                     <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="totalWorkOrders">0</h3>
-                            <p>Tổng đơn hàng</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="pendingWorkOrders">0</h3>
-                            <p>Chờ xử lý</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="inProgressWorkOrders">0</h3>
-                            <p>Đang thực hiện</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="completedWorkOrders">0</h3>
-                            <p>Hoàn thành</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filters -->
-                <div class="row">
-                    <div class="col-xs-12">
-                        <div class="box">
-                            <div class="box-header">
-                                <h3 class="box-title">Bộ lọc</h3>
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-blue"><i class="fa fa-file-text-o"></i></span>
+                            <div class="sm-st-info">
+                                <span id="totalWorkOrders">0</span>
+                                Tổng đơn hàng
                             </div>
-                            <div class="box-body">
-                                <form class="form-inline" id="filterForm">
-                                    <div class="form-group">
-                                        <label>Trạng thái: </label>
-                                        <select class="form-control input-sm" id="filterStatus" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="pending">Chờ xử lý</option>
-                                            <option value="in_progress">Đang thực hiện</option>
-                                            <option value="completed">Hoàn thành</option>
-                                            <option value="cancelled">Đã hủy</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Độ ưu tiên: </label>
-                                        <select class="form-control input-sm" id="filterPriority" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="urgent">Khẩn cấp</option>
-                                            <option value="high">Cao</option>
-                                            <option value="medium">Trung bình</option>
-                                            <option value="low">Thấp</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Nhân viên: </label>
-                                        <select class="form-control input-sm" id="filterAssignedTo" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="unassigned">Chưa phân công</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Tìm kiếm: </label>
-                                        <input type="text" class="form-control input-sm" id="filterSearch" placeholder="Mã đơn hàng, tiêu đề..." style="width: 200px;">
-                                    </div>
-                                    
-                                    <button type="button" class="btn btn-primary btn-sm" id="btnFilter" style="margin-left: 10px;">
-                                        <i class="fa fa-filter"></i> Lọc
-                                    </button>
-                                    <button type="button" class="btn btn-default btn-sm" id="btnReset">
-                                        <i class="fa fa-refresh"></i> Đặt lại
-                                    </button>
-                                </form>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-violet"><i class="fa fa-clock-o"></i></span>
+                            <div class="sm-st-info">
+                                <span id="pendingWorkOrders">0</span>
+                                Chờ xử lý
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-orange"><i class="fa fa-spinner"></i></span>
+                            <div class="sm-st-info">
+                                <span id="inProgressWorkOrders">0</span>
+                                Đang thực hiện
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-green"><i class="fa fa-check-circle-o"></i></span>
+                            <div class="sm-st-info">
+                                <span id="completedWorkOrders">0</span>
+                                Hoàn thành
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Work Orders Table -->
+                <!-- Top Statistics Row 2 -->
+                <div class="row" style="margin-bottom:5px;">
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-red"><i class="fa fa-ticket"></i></span>
+                            <div class="sm-st-info">
+                                <span id="techTicketsCount">0</span>
+                                Ticket kỹ thuật
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-purple"><i class="fa fa-users"></i></span>
+                            <div class="sm-st-info">
+                                <span id="techStaffCount">0</span>
+                                Nhân viên kỹ thuật
+                            </div>
+                            </div>
+                                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-pink"><i class="fa fa-exclamation-triangle"></i></span>
+                            <div class="sm-st-info">
+                                <span id="urgentCount">0</span>
+                                Ưu tiên cao
+                                    </div>
+                                    </div>
+                                    </div>
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-cyan"><i class="fa fa-clock-o"></i></span>
+                            <div class="sm-st-info">
+                                <span id="totalHours">0</span>
+                                Tổng giờ ước tính
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main row -->
                 <div class="row">
-                    <div class="col-xs-12">
-                        <div class="box">
-                            <div class="box-header">
-                                <h3 class="box-title">Danh sách đơn hàng công việc</h3>
-                                <div class="box-tools">
-                                    <button type="button" class="btn btn-success btn-sm" onclick="location.reload()">
-                                        <i class="fa fa-refresh"></i> Tải lại
+                    <div class="col-md-8">
+                        <!--work orders chart start-->
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Biểu đồ công việc kỹ thuật
+                            </header>
+                            <div class="panel-body">
+                                <canvas id="workOrdersChart" width="600" height="330"></canvas>
+                            </div>
+                        </section>
+                        <!--work orders chart end-->
+                    </div>
+                    <div class="col-lg-4">
+                        <!--notifications start-->
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Cảnh báo & Thông báo
+                            </header>
+                            <div class="panel-body" id="noti-box">
+                                <div class="alert alert-block alert-danger">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
                                     </button>
+                                    <strong>Khẩn cấp!</strong> Có <span id="urgentAlert">0</span> công việc ưu tiên cao cần xử lý ngay.
+                                </div>
+                                <div class="alert alert-warning">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Chú ý!</strong> Có <span id="overdueAlert">0</span> công việc quá hạn.
+                                </div>
+                                <div class="alert alert-info">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Thông tin!</strong> Có <span id="newTicketsAlert">0</span> ticket mới cần phân công.
+                                </div>
+                                <div class="alert alert-success">
+                                    <button data-dismiss="alert" class="close close-sm" type="button">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                    <strong>Tốt!</strong> Đã hoàn thành <span id="completedTodayAlert">0</span> công việc hôm nay.
                                 </div>
                             </div>
-                            <div class="box-body table-responsive">
-                                <table id="workOrdersTable" class="table table-bordered table-striped table-hover">
+                        </section>
+                                </div>
+                            </div>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Đơn hàng công việc gần đây
+                            </header>
+                            <div class="panel-body table-responsive">
+                                <table class="table table-hover" id="recentWorkOrdersTable">
                                     <thead>
                                         <tr>
-                                            <th style="width: 100px;">Mã đơn hàng</th>
+                                            <th>Mã đơn</th>
                                             <th>Khách hàng</th>
                                             <th>Tiêu đề</th>
-                                            <th style="width: 100px;">Độ ưu tiên</th>
-                                            <th style="width: 100px;">Trạng thái</th>
-                                            <th style="width: 100px;">Phân công</th>
-                                            <th style="width: 120px;">Ngày tạo</th>
-                                            <th style="width: 150px;">Thao tác</th>
+                                            <th>Độ ưu tiên</th>
+                                            <th>Trạng thái</th>
+                                            <th>Phân công</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="workOrdersTableBody">
+                                    <tbody id="recentWorkOrdersBody">
                                         <tr>
-                                            <td colspan="8" class="text-center">Đang tải dữ liệu...</td>
+                                            <td colspan="6" class="text-center">Đang tải dữ liệu...</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
+                        </section>
                         </div>
-                    </div>
+                    <div class="col-md-4">
+                        <section class="panel">
+                            <header class="panel-heading">
+                                Nhân viên kỹ thuật
+                            </header>
+                            <div class="panel-body">
+                                <ul class="list-group" id="techStaffList">
+                                    <li class="list-group-item">
+                                        <span class="badge">0</span>
+                                        Đang tải...
+                                    </li>
+                                </ul>
                 </div>
             </section>
-
+                            </div>
+                        </div>
+            </section><!-- /.content -->
             <div class="footer-main">
-                Copyright &copy Hệ thống quản lý kỹ thuật - HL Generator, 2025
-            </div>
-        </aside>
-    </div>
-
-    <!-- Modal Chi tiết Work Order -->
-    <div class="modal fade" id="workOrderDetailModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h4 class="modal-title">Chi tiết đơn hàng công việc</h4>
-                </div>
-                <div class="modal-body">
-                    <form class="form-horizontal" id="workOrderDetailForm">
-                        <input type="hidden" id="detail_work_order_id">
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Mã đơn hàng:</label>
-                            <div class="col-sm-9">
-                                <p class="form-control-static" id="detail_work_order_number"></p>
+                Copyright &copy Bảng điều khiển kỹ thuật - HL Generator, 2025
                             </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Khách hàng:</label>
-                            <div class="col-sm-9">
-                                <p class="form-control-static" id="detail_customer"></p>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Tiêu đề:</label>
-                            <div class="col-sm-9">
-                                <p class="form-control-static" id="detail_title"></p>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Mô tả:</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="detail_description" rows="4" readonly></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Độ ưu tiên:</label>
-                            <div class="col-sm-3">
-                                <select class="form-control" id="detail_priority">
-                                    <option value="urgent">Khẩn cấp</option>
-                                    <option value="high">Cao</option>
-                                    <option value="medium">Trung bình</option>
-                                    <option value="low">Thấp</option>
-                                </select>
-                            </div>
-                            
-                            <label class="col-sm-3 control-label">Trạng thái:</label>
-                            <div class="col-sm-3">
-                                <select class="form-control" id="detail_status">
-                                    <option value="pending">Chờ xử lý</option>
-                                    <option value="in_progress">Đang thực hiện</option>
-                                    <option value="completed">Hoàn thành</option>
-                                    <option value="cancelled">Đã hủy</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Phân công cho:</label>
-                            <div class="col-sm-3">
-                                <select class="form-control" id="detail_assigned_to">
-                                    <option value="">Chưa phân công</option>
-                                </select>
-                            </div>
-                            
-                            <label class="col-sm-3 control-label">Ngày tạo:</label>
-                            <div class="col-sm-3">
-                                <p class="form-control-static" id="detail_created"></p>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Giờ ước tính:</label>
-                            <div class="col-sm-3">
-                                <input type="number" class="form-control" id="detail_estimated_hours" step="0.5" min="0">
-                            </div>
-                            
-                            <label class="col-sm-3 control-label">Giờ thực tế:</label>
-                            <div class="col-sm-3">
-                                <input type="number" class="form-control" id="detail_actual_hours" step="0.5" min="0">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Ngày lên lịch:</label>
-                            <div class="col-sm-3">
-                                <input type="date" class="form-control" id="detail_scheduled_date">
-                            </div>
-                            
-                            <label class="col-sm-3 control-label">Ngày hoàn thành:</label>
-                            <div class="col-sm-3">
-                                <input type="date" class="form-control" id="detail_completion_date">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Ghi chú:</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="detail_notes" rows="3" placeholder="Ghi chú kỹ thuật..."></textarea>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="btnSaveWorkOrder">
-                        <i class="fa fa-save"></i> Lưu thay đổi
-                    </button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
-                </div>
-            </div>
-        </div>
-    </div>
+        </aside><!-- /.right-side -->
+    </div><!-- ./wrapper -->
 
     <!-- jQuery 2.0.2 -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="js/jquery.min.js" type="text/javascript"></script>
+    <!-- jQuery UI 1.10.3 -->
+    <script src="js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
     <!-- Bootstrap -->
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
-    <!-- DATA TABES SCRIPT -->
-    <script src="js/plugins/datatables/jquery.dataTables.js" type="text/javascript"></script>
-    <script src="js/plugins/datatables/dataTables.bootstrap.js" type="text/javascript"></script>
+    <!-- daterangepicker -->
+    <script src="js/plugins/daterangepicker/daterangepicker.js" type="text/javascript"></script>
+    <script src="js/plugins/chart.js" type="text/javascript"></script>
+    <!-- iCheck -->
+    <script src="js/plugins/iCheck/icheck.min.js" type="text/javascript"></script>
     <!-- Director App -->
     <script src="js/Director/app.js" type="text/javascript"></script>
 
     <script>
         var ctx = '<%= request.getContextPath() %>';
         var allWorkOrders = [];
-        var filteredWorkOrders = [];
         var technicalStaff = [];
         
         $(document).ready(function() {
-            loadTechnicalStaff();
+            // Load all dashboard data
             loadWorkOrders();
+            loadTechnicalStaff();
+            loadTechTickets();
             
-            // Filter button
-            $('#btnFilter').click(function() {
-                applyFilters();
-            });
-            
-            // Reset button
-            $('#btnReset').click(function() {
-                $('#filterForm')[0].reset();
-                filteredWorkOrders = allWorkOrders;
-                renderTable();
-            });
-            
-            // Save work order changes
-            $('#btnSaveWorkOrder').click(function() {
-                saveWorkOrderChanges();
-            });
-            
-            // Enter to search
-            $('#filterSearch').keypress(function(e) {
-                if(e.which == 13) {
-                    $('#btnFilter').click();
-                }
+            // Initialize slimScroll for notifications
+            $('#noti-box').slimScroll({
+                height: '400px',
+                size: '5px',
+                BorderRadius: '5px'
             });
         });
         
-        function loadTechnicalStaff() {
-            $.ajax({
-                url: ctx + '/api/users?action=getTechnicalStaff',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success) {
-                        technicalStaff = response.data || [];
-                        populateStaffDropdown();
-                    }
-                },
-                error: function() {
-                    console.log('Không thể tải danh sách nhân viên kỹ thuật');
-                }
-            });
-        }
-        
-        function populateStaffDropdown() {
-            var select = $('#detail_assigned_to');
-            select.empty();
-            select.append('<option value="">Chưa phân công</option>');
-            
-            technicalStaff.forEach(function(staff) {
-                select.append('<option value="' + staff.id + '">' + staff.fullName + '</option>');
-            });
-        }
-        
+        // Load Work Orders
         function loadWorkOrders() {
             $.ajax({
                 url: ctx + '/api/work-orders?action=list',
@@ -531,87 +418,178 @@
                 success: function(response) {
                     if(response && response.success) {
                         allWorkOrders = response.data || [];
-                        filteredWorkOrders = allWorkOrders;
-                        renderTable();
-                        updateStatistics();
-                    } else {
-                        showError('Không thể tải dữ liệu');
+                        updateWorkOrderStatistics();
+                        renderRecentWorkOrders();
+                        renderWorkOrdersChart();
                     }
                 },
                 error: function() {
-                    showError('Lỗi kết nối máy chủ');
+                    console.log('Không thể tải dữ liệu work orders');
                 }
             });
         }
         
-        function updateStatistics() {
+        // Update Work Order Statistics
+        function updateWorkOrderStatistics() {
             var total = allWorkOrders.length;
             var pending = allWorkOrders.filter(w => w.status === 'pending').length;
             var inProgress = allWorkOrders.filter(w => w.status === 'in_progress').length;
             var completed = allWorkOrders.filter(w => w.status === 'completed').length;
+            var urgent = allWorkOrders.filter(w => w.priority === 'urgent' || w.priority === 'high').length;
+            
+            // Calculate total estimated hours
+            var totalHours = 0;
+            allWorkOrders.forEach(function(w) {
+                if(w.estimatedHours) {
+                    totalHours += parseFloat(w.estimatedHours);
+                }
+            });
             
             $('#totalWorkOrders').text(total);
             $('#pendingWorkOrders').text(pending);
             $('#inProgressWorkOrders').text(inProgress);
             $('#completedWorkOrders').text(completed);
+            $('#urgentCount').text(urgent);
+            $('#totalHours').text(totalHours.toFixed(1) + 'h');
+            
+            // Update alerts
+            $('#urgentAlert').text(urgent);
+            $('#urgentWorkOrders').text(urgent);
+            $('#notificationCount').text(urgent);
+            
+            // Calculate completed today (mock data for now)
+            var today = new Date().toISOString().split('T')[0];
+            var completedToday = allWorkOrders.filter(w => 
+                w.status === 'completed' && 
+                w.completionDate && 
+                w.completionDate.includes(today)
+            ).length;
+            $('#completedTodayAlert').text(completedToday);
         }
         
-        function applyFilters() {
-            var status = $('#filterStatus').val();
-            var priority = $('#filterPriority').val();
-            var assignedTo = $('#filterAssignedTo').val();
-            var search = $('#filterSearch').val().toLowerCase();
-            
-            filteredWorkOrders = allWorkOrders.filter(function(workOrder) {
-                var matchStatus = !status || workOrder.status === status;
-                var matchPriority = !priority || workOrder.priority === priority;
-                var matchAssigned = !assignedTo || 
-                    (assignedTo === 'unassigned' && !workOrder.assignedTo) ||
-                    (assignedTo !== 'unassigned' && workOrder.assignedTo == assignedTo);
-                var matchSearch = !search || 
-                    (workOrder.workOrderNumber && workOrder.workOrderNumber.toLowerCase().includes(search)) ||
-                    (workOrder.title && workOrder.title.toLowerCase().includes(search)) ||
-                    (workOrder.description && workOrder.description.toLowerCase().includes(search));
-                
-                return matchStatus && matchPriority && matchAssigned && matchSearch;
-            });
-            
-            renderTable();
-        }
-        
-        function renderTable() {
-            var tbody = $('#workOrdersTableBody');
+        // Render Recent Work Orders Table
+        function renderRecentWorkOrders() {
+            var tbody = $('#recentWorkOrdersBody');
             tbody.empty();
             
-            if(!filteredWorkOrders || filteredWorkOrders.length === 0) {
-                tbody.append('<tr><td colspan="8" class="text-center">Không có dữ liệu</td></tr>');
+            if(!allWorkOrders || allWorkOrders.length === 0) {
+                tbody.append('<tr><td colspan="6" class="text-center">Không có dữ liệu</td></tr>');
                 return;
             }
             
-            filteredWorkOrders.forEach(function(workOrder) {
-                var assignedName = workOrder.assignedToName || 'Chưa phân công';
+            // Get latest 10 work orders
+            var recentOrders = allWorkOrders.slice(0, 10);
+            
+            recentOrders.forEach(function(wo) {
                 var row = '<tr>' +
-                    '<td>' + (workOrder.workOrderNumber || '#' + workOrder.id) + '</td>' +
-                    '<td>' + (workOrder.customerName || 'N/A') + '</td>' +
-                    '<td>' + (workOrder.title || '') + '</td>' +
-                    '<td>' + getPriorityBadge(workOrder.priority) + '</td>' +
-                    '<td>' + getStatusBadge(workOrder.status) + '</td>' +
-                    '<td>' + assignedName + '</td>' +
-                    '<td>' + formatDate(workOrder.createdAt) + '</td>' +
-                    '<td class="work-order-actions">' +
-                        '<button class="btn btn-info btn-view" data-id="' + workOrder.id + '"><i class="fa fa-eye"></i> Xem</button>' +
-                    '</td>' +
+                    '<td>' + (wo.workOrderNumber || '#' + wo.id) + '</td>' +
+                    '<td>' + (wo.customerName || 'N/A') + '</td>' +
+                    '<td>' + (wo.title || '') + '</td>' +
+                    '<td>' + getPriorityBadge(wo.priority) + '</td>' +
+                    '<td>' + getStatusBadge(wo.status) + '</td>' +
+                    '<td>' + (wo.assignedToName || 'Chưa phân công') + '</td>' +
                 '</tr>';
                 tbody.append(row);
             });
-            
-            // Bind view button
-            $('.btn-view').click(function() {
-                var id = $(this).data('id');
-                viewWorkOrderDetail(id);
+        }
+        
+        // Load Technical Staff
+        function loadTechnicalStaff() {
+            $.ajax({
+                url: ctx + '/api/users?role=technical_staff',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if(response && response.success) {
+                        technicalStaff = response.data || [];
+                        $('#techStaffCount').text(technicalStaff.length);
+                        renderTechnicalStaffList();
+                    }
+                },
+                error: function() {
+                    console.log('Không thể tải danh sách nhân viên kỹ thuật');
+                }
             });
         }
         
+        // Render Technical Staff List
+        function renderTechnicalStaffList() {
+            var list = $('#techStaffList');
+            list.empty();
+            
+            if(!technicalStaff || technicalStaff.length === 0) {
+                list.append('<li class="list-group-item">Không có nhân viên</li>');
+                return;
+            }
+            
+            technicalStaff.forEach(function(staff) {
+                // Count assigned work orders
+                var assignedCount = allWorkOrders.filter(w => 
+                    w.assignedTo == staff.id && 
+                    (w.status === 'pending' || w.status === 'in_progress')
+                ).length;
+                
+                list.append(
+                    '<li class="list-group-item">' +
+                        '<span class="badge">' + assignedCount + '</span>' +
+                        staff.fullName +
+                    '</li>'
+                );
+            });
+        }
+        
+        // Load Tech Tickets
+        function loadTechTickets() {
+            $.ajax({
+                url: ctx + '/api/tech-support?action=stats',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if(response && response.success && response.data) {
+                        var openTickets = (response.data.open || 0) + (response.data.inProgress || 0);
+                        var newTickets = response.data.open || 0;
+                        $('#techTicketsCount').text(openTickets);
+                        $('#newTicketsAlert').text(newTickets);
+                    }
+                },
+                error: function() {
+                    console.log('Không thể tải thống kê tickets');
+                }
+            });
+        }
+        
+        // Render Work Orders Chart
+        function renderWorkOrdersChart() {
+            var statusData = {
+                pending: allWorkOrders.filter(w => w.status === 'pending').length,
+                inProgress: allWorkOrders.filter(w => w.status === 'in_progress').length,
+                completed: allWorkOrders.filter(w => w.status === 'completed').length,
+                cancelled: allWorkOrders.filter(w => w.status === 'cancelled').length
+            };
+            
+            var data = {
+                labels: ["Chờ xử lý", "Đang thực hiện", "Hoàn thành", "Đã hủy"],
+                datasets: [
+                    {
+                        label: "Trạng thái công việc",
+                        fillColor: "rgba(151,187,205,0.2)",
+                        strokeColor: "rgba(151,187,205,1)",
+                        pointColor: "rgba(151,187,205,1)",
+                        pointStrokeColor: "#fff",
+                        pointHighlightFill: "#fff",
+                        pointHighlightStroke: "rgba(151,187,205,1)",
+                        data: [statusData.pending, statusData.inProgress, statusData.completed, statusData.cancelled]
+                    }
+                ]
+            };
+            
+            new Chart(document.getElementById("workOrdersChart").getContext("2d")).Bar(data, {
+                responsive: true,
+                maintainAspectRatio: false
+            });
+        }
+        
+        // Helper Functions
         function getPriorityBadge(priority) {
             var labels = {
                 'urgent': 'Khẩn cấp',
@@ -619,8 +597,14 @@
                 'medium': 'Trung bình',
                 'low': 'Thấp'
             };
-            var badge = priority ? 'badge-' + priority : '';
-            return '<span class="badge ' + badge + '">' + (labels[priority] || 'N/A') + '</span>';
+            var colors = {
+                'urgent': 'danger',
+                'high': 'warning',
+                'medium': 'info',
+                'low': 'success'
+            };
+            return '<span class="label label-' + (colors[priority] || 'default') + '">' + 
+                   (labels[priority] || 'N/A') + '</span>';
         }
         
         function getStatusBadge(status) {
@@ -630,80 +614,16 @@
                 'completed': 'Hoàn thành',
                 'cancelled': 'Đã hủy'
             };
-            var badge = status ? 'badge-' + status : '';
-            return '<span class="badge ' + badge + '">' + (labels[status] || 'N/A') + '</span>';
-        }
-        
-        function formatDate(dateStr) {
-            if(!dateStr) return '';
-            try {
-                var date = new Date(dateStr);
-                return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN');
-            } catch(e) {
-                return dateStr;
-            }
-        }
-        
-        function viewWorkOrderDetail(id) {
-            var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
-            if(!workOrder) return;
-            
-            $('#detail_work_order_id').val(workOrder.id);
-            $('#detail_work_order_number').text(workOrder.workOrderNumber || '#' + workOrder.id);
-            $('#detail_customer').text(workOrder.customerName || 'N/A');
-            $('#detail_title').text(workOrder.title || '');
-            $('#detail_description').val(workOrder.description || '');
-            $('#detail_priority').val(workOrder.priority || 'medium');
-            $('#detail_status').val(workOrder.status || 'pending');
-            $('#detail_assigned_to').val(workOrder.assignedTo || '');
-            $('#detail_created').text(formatDate(workOrder.createdAt));
-            $('#detail_estimated_hours').val(workOrder.estimatedHours || '');
-            $('#detail_actual_hours').val(workOrder.actualHours || '');
-            $('#detail_scheduled_date').val(workOrder.scheduledDate || '');
-            $('#detail_completion_date').val(workOrder.completionDate || '');
-            $('#detail_notes').val(workOrder.notes || '');
-            
-            $('#workOrderDetailModal').modal('show');
-        }
-        
-        function saveWorkOrderChanges() {
-            var id = $('#detail_work_order_id').val();
-            var data = {
-                action: 'update',
-                id: id,
-                priority: $('#detail_priority').val(),
-                status: $('#detail_status').val(),
-                assignedTo: $('#detail_assigned_to').val(),
-                estimatedHours: $('#detail_estimated_hours').val(),
-                actualHours: $('#detail_actual_hours').val(),
-                scheduledDate: $('#detail_scheduled_date').val(),
-                completionDate: $('#detail_completion_date').val(),
-                notes: $('#detail_notes').val()
+            var colors = {
+                'pending': 'warning',
+                'in_progress': 'info',
+                'completed': 'success',
+                'cancelled': 'default'
             };
-            
-            $.ajax({
-                url: ctx + '/api/work-orders',
-                type: 'POST',
-                data: data,
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success) {
-                        alert('Cập nhật thành công!');
-                        $('#workOrderDetailModal').modal('hide');
-                        loadWorkOrders();
-                    } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể cập nhật'));
-                    }
-                },
-                error: function() {
-                    alert('Lỗi kết nối máy chủ');
-                }
-            });
-        }
-        
-        function showError(msg) {
-            $('#workOrdersTableBody').html('<tr><td colspan="8" class="text-center text-danger">' + msg + '</td></tr>');
+            return '<span class="label label-' + (colors[status] || 'default') + '">' + 
+                   (labels[status] || 'N/A') + '</span>';
         }
     </script>
 </body>
 </html>
+
