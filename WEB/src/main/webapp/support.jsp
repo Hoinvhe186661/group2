@@ -808,12 +808,37 @@
     document.getElementById('supportForm').addEventListener('submit', function(e){
       e.preventDefault();
       const form = e.target;
-      const data = new URLSearchParams();
-      const subject = document.getElementById('subject').value || '';
-      const baseDesc = document.getElementById('description').value || '';
-      // Lưu hợp đồng/sản phẩm vào mô tả để hiển thị lại ở chi tiết (danh sách sẽ ẩn các tiền tố này)
+      
+      // Validation: Kiểm tra hợp đồng và sản phẩm
       const cSel = document.getElementById('contractSelect');
       const pSel = document.getElementById('contractProductSelect');
+      const subject = document.getElementById('subject').value || '';
+      const description = document.getElementById('description').value || '';
+      
+      // Kiểm tra các trường bắt buộc
+      if (!cSel || !cSel.value || cSel.value.trim() === '') {
+        showSuccessModal('Lỗi', 'Vui lòng chọn hợp đồng trước khi tạo yêu cầu hỗ trợ!');
+        return;
+      }
+      
+      if (!pSel || !pSel.value || pSel.value.trim() === '') {
+        showSuccessModal('Lỗi', 'Vui lòng chọn sản phẩm trong hợp đồng trước khi tạo yêu cầu hỗ trợ!');
+        return;
+      }
+      
+      if (!subject || subject.trim() === '') {
+        showSuccessModal('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu hỗ trợ!');
+        return;
+      }
+      
+      if (!description || description.trim() === '') {
+        showSuccessModal('Lỗi', 'Vui lòng nhập chi tiết vấn đề!');
+        return;
+      }
+      
+      const data = new URLSearchParams();
+      const baseDesc = description;
+      // Lưu hợp đồng/sản phẩm vào mô tả để hiển thị lại ở chi tiết (danh sách sẽ ẩn các tiền tố này)
       const cHas = cSel && cSel.value;
       const pHas = pSel && pSel.value;
       let composed = baseDesc;
