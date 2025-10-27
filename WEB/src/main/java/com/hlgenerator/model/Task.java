@@ -1,7 +1,10 @@
 package com.hlgenerator.model;
 
+import org.json.JSONArray;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Task {
 	private int id;
@@ -16,6 +19,10 @@ public class Task {
 	private Timestamp completionDate;
 	private String rejectionReason;
 	private String notes;
+	private String workDescription; // NEW: Mô tả công việc đã thực hiện
+	private String issuesFound; // NEW: Vấn đề phát sinh
+	private BigDecimal completionPercentage; // NEW: Phần trăm hoàn thành
+	private String attachments; // NEW: JSON string chứa danh sách file
 	private Timestamp createdAt;
 	private Timestamp updatedAt;
 
@@ -54,6 +61,36 @@ public class Task {
 
 	public String getNotes() { return notes; }
 	public void setNotes(String notes) { this.notes = notes; }
+
+	// NEW FIELDS
+	public String getWorkDescription() { return workDescription; }
+	public void setWorkDescription(String workDescription) { this.workDescription = workDescription; }
+
+	public String getIssuesFound() { return issuesFound; }
+	public void setIssuesFound(String issuesFound) { this.issuesFound = issuesFound; }
+
+	public BigDecimal getCompletionPercentage() { return completionPercentage; }
+	public void setCompletionPercentage(BigDecimal completionPercentage) { this.completionPercentage = completionPercentage; }
+
+	public String getAttachments() { return attachments; }
+	public void setAttachments(String attachments) { this.attachments = attachments; }
+
+	// Helper method to parse attachments JSON to List
+	public List<String> getAttachmentsList() {
+		if (attachments == null || attachments.trim().isEmpty()) {
+			return new ArrayList<>();
+		}
+		try {
+			JSONArray arr = new JSONArray(attachments);
+			List<String> list = new ArrayList<>();
+			for (int i = 0; i < arr.length(); i++) {
+				list.add(arr.getString(i));
+			}
+			return list;
+		} catch (Exception e) {
+			return new ArrayList<>();
+		}
+	}
 
 	public Timestamp getCreatedAt() { return createdAt; }
 	public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }

@@ -304,6 +304,47 @@ public class TaskDAO extends DBConnect {
 		}
 	}
 
+	// NEW METHOD: Complete task with detailed report
+	public boolean completeTask(int taskId, java.math.BigDecimal actualHours, 
+	                           java.math.BigDecimal completionPercentage,
+	                           String workDescription, String issuesFound, 
+	                           String notes, List<String> attachments) {
+		String sql = "UPDATE tasks SET " +
+		             "status = 'completed', " +
+		             "completion_date = NOW(), " +
+		             "actual_hours = ?, " +
+		             "completion_percentage = ?, " +
+		             "work_description = ?, " +
+		             "issues_found = ?, " +
+		             "notes = ?, " +
+		             "attachments = ?, " +
+		             "updated_at = NOW() " +
+		             "WHERE id = ?";
+		
+		try (PreparedStatement ps = connection.prepareStatement(sql)) {
+			ps.setBigDecimal(1, actualHours);
+			ps.setBigDecimal(2, completionPercentage);
+			ps.setString(3, workDescription);
+			ps.setString(4, issuesFound);
+			ps.setString(5, notes);
+			
+			// Convert List<String> to JSON string
+			String attachmentsJson = null;
+			if (attachments != null && !attachments.isEmpty()) {
+				org.json.JSONArray jsonArray = new org.json.JSONArray(attachments);
+				attachmentsJson = jsonArray.toString();
+			}
+			ps.setString(6, attachmentsJson);
+			ps.setInt(7, taskId);
+			
+			return ps.executeUpdate() > 0;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
 	private Task mapTask(ResultSet rs) throws SQLException {
 		Task t = new Task();
 		t.setId(rs.getInt("id"));
@@ -318,6 +359,11 @@ public class TaskDAO extends DBConnect {
 		t.setCompletionDate(rs.getTimestamp("completion_date"));
 		t.setRejectionReason(rs.getString("rejection_reason"));
 		t.setNotes(rs.getString("notes"));
+		// NEW FIELDS
+		t.setWorkDescription(rs.getString("work_description"));
+		t.setIssuesFound(rs.getString("issues_found"));
+		t.setCompletionPercentage(rs.getBigDecimal("completion_percentage"));
+		t.setAttachments(rs.getString("attachments"));
 		t.setCreatedAt(rs.getTimestamp("created_at"));
 		t.setUpdatedAt(rs.getTimestamp("updated_at"));
 		return t;

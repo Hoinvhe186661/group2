@@ -7,17 +7,27 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @WebServlet("/api/tasks")
+@MultipartConfig(
+	maxFileSize = 5242880,      // 5MB
+	maxRequestSize = 26214400,  // 25MB
+	fileSizeThreshold = 1048576 // 1MB
+)
 public class TaskServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private TaskDAO taskDAO;
@@ -106,11 +116,48 @@ public class TaskServlet extends HttpServlet {
 				out.print(jsonResult(ok, ok ? "Đã nhận nhiệm vụ" : "Không thể cập nhật").toString());
 			} else if ("complete".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
+				String workDesc = request.getParameter("workDescription");
+				String issuesFound = request.getParameter("issuesFound");
 				String notes = request.getParameter("notes");
 				String actual = request.getParameter("actualHours");
-				BigDecimal actualHours = actual != null && !actual.isEmpty() ? new BigDecimal(actual) : null;
-				boolean ok = taskDAO.updateTaskStatus(taskId, "completed", null, new Timestamp(System.currentTimeMillis()), notes, actualHours);
-				out.print(jsonResult(ok, ok ? "Đã hoàn thành nhiệm vụ" : "Không thể cập nhật").toString());
+				String percentage = request.getParameter("completionPercentage");
+				
+				BigDecimal actualHours = actual != null && !actual.isEmpty() 
+					? new BigDecimal(actual) : null;
+				BigDecimal completionPercentage = percentage != null && !percentage.isEmpty() 
+					? new BigDecimal(percentage) : new BigDecimal(100);
+				
+				// Upload files
+				List<String> uploadedFiles = new ArrayList<>();
+				try {
+					Collection<Part> fileParts = request.getParts();
+					
+					for (Part filePart : fileParts) {
+						if ("files".equals(filePart.getName()) && filePart.getSize() > 0) {
+							String fileName = getFileName(filePart);
+							if (fileName != null && !fileName.isEmpty()) {
+								String uploadPath = getServletContext().getRealPath("/uploads/tasks/");
+								File uploadDir = new File(uploadPath);
+								if (!uploadDir.exists()) uploadDir.mkdirs();
+								
+								String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
+								String filePath = uploadPath + File.separator + uniqueFileName;
+								filePart.write(filePath);
+								
+								// Lưu relative path
+								uploadedFiles.add("uploads/tasks/" + uniqueFileName);
+							}
+						}
+					}
+				} catch (Exception e) {
+					System.out.println("File upload error: " + e.getMessage());
+					// Continue even if file upload fails
+				}
+				
+				// Update task with detailed report
+				boolean ok = taskDAO.completeTask(taskId, actualHours, completionPercentage,
+				                                 workDesc, issuesFound, notes, uploadedFiles);
+				out.print(jsonResult(ok, ok ? "Đã báo cáo hoàn thành!" : "Không thể cập nhật").toString());
 			} else if ("updateNotes".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String notes = request.getParameter("notes");
@@ -175,5 +222,16 @@ public class TaskServlet extends HttpServlet {
 			e.printStackTrace();
 			return false;
 		}
+	}
+
+	private String getFileName(Part part) {
+		String contentDisposition = part.getHeader("content-disposition");
+		if (contentDisposition == null) return null;
+		for (String content : contentDisposition.split(";")) {
+			if (content.trim().startsWith("filename")) {
+				return content.substring(content.indexOf('=') + 1).trim().replace("\"", "");
+			}
+		}
+		return null;
 	}
 }
