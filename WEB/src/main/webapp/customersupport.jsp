@@ -501,40 +501,59 @@
         });
         
         function loadSupportStats() {
-            // Giả lập dữ liệu - sau này sẽ thay bằng API thực
-            $('#urgentTickets').text('3');
-            $('#totalOpenTickets').text('28');
-            $('#resolvedToday').text('15');
-            $('#satisfactionRate').text('92%');
-            
-            $('#technicalTickets').text('12');
-            $('#billingTickets').text('5');
-            $('#generalTickets').text('8');
-            $('#complaintTickets').text('3');
-            
-            $('#openTickets').text('28');
-            $('#unreadMessages').text('4');
-            $('#unreadNotifications').text('2');
-            
-            // Có thể gọi API thực tế như sau:
-            /*
+            // Gọi API thực tế để lấy thống kê từ database
             $.ajax({
-                url: 'api/support?action=getStats',
+                url: 'api/support-stats?action=getStats',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
                         var stats = response.data;
+                        
+                        // Cập nhật thống kê hàng 1
                         $('#urgentTickets').text(stats.urgentTickets || 0);
-                        $('#totalOpenTickets').text(stats.openTickets || 0);
-                        // ... cập nhật các thống kê khác
+                        $('#totalOpenTickets').text(stats.totalOpenTickets || 0);
+                        $('#resolvedToday').text(stats.resolvedToday || 0);
+                        $('#satisfactionRate').text(stats.satisfactionRate || '0%');
+                        
+                        // Cập nhật thống kê hàng 2 - phân loại theo danh mục
+                        $('#technicalTickets').text(stats.technicalTickets || 0);
+                        $('#billingTickets').text(stats.billingTickets || 0);
+                        $('#generalTickets').text(stats.generalTickets || 0);
+                        $('#complaintTickets').text(stats.complaintTickets || 0);
+                        
+                        // Cập nhật badge sidebar
+                        $('#openTickets').text(stats.totalOpenTickets || 0);
+                        $('#unreadMessages').text(stats.unreadMessages || 0);
+                        $('#unreadNotifications').text(stats.unreadNotifications || 0);
+                        
+                        console.log('✓ Thống kê đã được cập nhật từ database');
+                    } else {
+                        console.log('✗ Lỗi khi tải thống kê: ' + response.message);
+                        // Fallback: hiển thị 0
+                        setStatsToZero();
                     }
                 },
-                error: function() {
-                    console.log('Không thể tải thống kê hỗ trợ');
+                error: function(xhr, status, error) {
+                    console.log('✗ Không thể tải thống kê hỗ trợ: ' + error);
+                    // Fallback: hiển thị 0
+                    setStatsToZero();
                 }
             });
-            */
+        }
+        
+        function setStatsToZero() {
+            $('#urgentTickets').text('0');
+            $('#totalOpenTickets').text('0');
+            $('#resolvedToday').text('0');
+            $('#satisfactionRate').text('0%');
+            $('#technicalTickets').text('0');
+            $('#billingTickets').text('0');
+            $('#generalTickets').text('0');
+            $('#complaintTickets').text('0');
+            $('#openTickets').text('0');
+            $('#unreadMessages').text('0');
+            $('#unreadNotifications').text('0');
         }
         
         function loadRecentTickets() {
