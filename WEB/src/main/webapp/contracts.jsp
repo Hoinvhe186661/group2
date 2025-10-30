@@ -227,7 +227,7 @@
                         <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
                     </li>
                     <li>
-                        <a href="support_management.jsp"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
+                        <a href="support-management"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
                     </li>
                 </ul>
             </section>
@@ -827,6 +827,11 @@
         }
 
         $(document).ready(function() {
+            // Kiểm tra và hủy DataTable cũ nếu đã tồn tại
+            if ($.fn.DataTable.isDataTable('#contractsTable')) {
+                $('#contractsTable').DataTable().destroy();
+            }
+            
             contractsTable = $('#contractsTable').DataTable({
                 "language": { "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json" },
                 "processing": false,
@@ -839,7 +844,8 @@
                 "autoWidth": false,
                 "responsive": true,
                 "order": [[0, "desc"]],
-                "columnDefs": [{ "targets": [10], "orderable": false, "searchable": false }]
+                "columnDefs": [{ "targets": [10], "orderable": false, "searchable": false }],
+                "retrieve": true
             });
             // Safety: remove filter container if any existed from previous inits
             $('#contractsTable_filter').remove();

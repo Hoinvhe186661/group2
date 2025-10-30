@@ -116,7 +116,7 @@
                                     </li>
                                 </ul>
                             </li>
-                            <li class="footer"><a href="support_management.jsp">Xem tất cả tin nhắn</a></li>
+                            <li class="footer"><a href="support-management">Xem tất cả tin nhắn</a></li>
                         </ul>
                     </li>
                     <!-- Notifications -->
@@ -409,7 +409,7 @@
                                 </table>
                             </div>
                             <div class="panel-footer">
-                                <a href="support_management.jsp" class="btn btn-primary btn-sm">Xem tất cả yêu cầu</a>
+                                <a href="support-management" class="btn btn-primary btn-sm">Xem tất cả yêu cầu</a>
                             </div>
                         </section>
                     </div>
