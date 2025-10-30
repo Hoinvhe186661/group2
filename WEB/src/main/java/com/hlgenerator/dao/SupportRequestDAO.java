@@ -143,7 +143,7 @@ public class SupportRequestDAO extends DBConnect {
                 row.put("assignedToName", rs.getString("assigned_to_name"));
                 row.put("history", rs.getString("history"));
                 row.put("resolution", rs.getString("resolution"));
-                row.put("customerName", rs.getString("company_name"));
+                row.put("customerName", rs.getString("contact_person"));
                 row.put("customerContact", rs.getString("contact_person"));
                 row.put("customerEmail", rs.getString("customer_email"));
                 row.put("customerPhone", rs.getString("customer_phone"));
@@ -348,7 +348,7 @@ public class SupportRequestDAO extends DBConnect {
                 ticket.put("category", rs.getString("category"));
                 ticket.put("priority", rs.getString("priority"));
                 ticket.put("status", rs.getString("status"));
-                ticket.put("customerName", rs.getString("company_name"));
+                ticket.put("customerName", rs.getString("contact_person"));
                 ticket.put("contactPerson", rs.getString("contact_person"));
                 ticket.put("createdAt", rs.getTimestamp("created_at"));
                 tickets.add(ticket);
@@ -391,7 +391,7 @@ public class SupportRequestDAO extends DBConnect {
                 ticket.put("assignedToEmail", rs.getString("assigned_to_email"));
                 ticket.put("history", rs.getString("history"));
                 ticket.put("resolution", rs.getString("resolution"));
-                ticket.put("customerName", rs.getString("company_name"));
+                ticket.put("customerName", rs.getString("contact_person"));
                 ticket.put("customerContact", rs.getString("contact_person"));
                 ticket.put("customerEmail", rs.getString("customer_email"));
                 ticket.put("customerPhone", rs.getString("customer_phone"));

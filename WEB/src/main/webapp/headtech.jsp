@@ -155,6 +155,7 @@
                         </span>
                     </div>
                 </form>
+                <!-- /.search form -->
                 <!-- sidebar menu -->
                 <ul class="sidebar-menu">
                     <li class="active">
@@ -162,7 +163,6 @@
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
-                    
                     <li>
                         <a href="tech_support_management.jsp">
                             <i class="fa fa-ticket"></i> <span>Yêu cầu hỗ trợ kỹ thuật</span>
@@ -173,23 +173,9 @@
                             <i class="fa fa-file-text-o"></i> <span>Đơn hàng công việc</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="customers">
-                            <i class="fa fa-users"></i> <span>Khách hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Sản phẩm</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="reports.jsp">
-                            <i class="fa fa-bar-chart"></i> <span>Báo cáo kỹ thuật</span>
-                        </a>
-                    </li>
                 </ul>
             </section>
+            <!-- /.sidebar -->
         </aside>
 
         <aside class="right-side">

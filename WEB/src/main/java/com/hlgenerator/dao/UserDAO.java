@@ -1,11 +1,15 @@
 package com.hlgenerator.dao;
 
-import com.hlgenerator.model.User;
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.hlgenerator.model.User;
 
 public class UserDAO extends DBConnect {
     private static final Logger logger = Logger.getLogger(UserDAO.class.getName());
@@ -637,10 +641,11 @@ public class UserDAO extends DBConnect {
                 return false;
             }
             
-            // Update to new password
+            // Update to new password - hash it first
+            String newPasswordHash = sha256(newPassword);
             String updateSql = "UPDATE users SET password_hash = ? WHERE id = ?";
             PreparedStatement updateStmt = connection.prepareStatement(updateSql);
-            updateStmt.setString(1, newPassword);
+            updateStmt.setString(1, newPasswordHash);
             updateStmt.setInt(2, userId);
             
             int rowsAffected = updateStmt.executeUpdate();

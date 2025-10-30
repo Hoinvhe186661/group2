@@ -788,13 +788,14 @@
             
             html += '<div class="col-md-4">';
             html += '<div class="form-group">';
-            html += '<label>Danh mục: <span class="text-danger">*</span></label>';
-            html += '<select class="form-control" id="edit_category" required>';
+            html += '<label>Danh mục:</label>';
+            html += '<select class="form-control" id="edit_category" disabled>';
             html += '<option value="technical"' + (ticket.category === 'technical' ? ' selected' : '') + '>Kỹ thuật</option>';
             html += '<option value="billing"' + (ticket.category === 'billing' ? ' selected' : '') + '>Thanh toán</option>';
             html += '<option value="general"' + (ticket.category === 'general' ? ' selected' : '') + '>Chung</option>';
             html += '<option value="complaint"' + (ticket.category === 'complaint' ? ' selected' : '') + '>Khiếu nại</option>';
             html += '</select>';
+            html += '<small class="text-muted">Danh mục không thể thay đổi</small>';
             html += '</div></div>';
             
             html += '<div class="col-md-4">';
@@ -838,10 +839,9 @@
             // Disable button
             $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang lưu...');
             
-            // Lấy dữ liệu
+            // Lấy dữ liệu (không gửi category vì đã bị disable)
             var data = {
                 id: currentEditTicketId,
-                category: $('#edit_category').val(),
                 priority: $('#edit_priority').val(),
                 status: $('#edit_status').val(),
                 resolution: $('#edit_resolution').val()
