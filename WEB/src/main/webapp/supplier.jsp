@@ -430,7 +430,11 @@
                 <div class="modal-body">
                     <form id="addSupplierForm" action="<%=request.getContextPath()%>/supplier" method="post">
                         <input type="hidden" name="action" value="add">
-                        <div class="form-group"><label>Mã NCC</label><input name="supplier_code" class="form-control" required></div>
+                        <div class="form-group">
+                            <label>Mã NCC</label>
+                            <input name="supplier_code" id="add_supplier_code" class="form-control" required onblur="checkSupplierCodeExists()">
+                            <small class="form-text text-muted" id="supplier_code_feedback"></small>
+                        </div>
                         <div class="form-group"><label>Tên công ty</label><input name="company_name" class="form-control" required></div>
                         <div class="form-group"><label>Người liên hệ</label><input name="contact_person" class="form-control" required></div>
                         <div class="form-group"><label>Email</label><input type="email" name="email" class="form-control" required></div>
@@ -478,8 +482,16 @@
                     <form id="editSupplierForm" action="<%=request.getContextPath()%>/supplier" method="post">
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" id="edit_supplier_id">
-                        <div class="form-group"><label>Mã NCC</label><input name="supplier_code" id="edit_supplier_code" class="form-control" required></div>
-                        <div class="form-group"><label>Tên công ty</label><input name="company_name" id="edit_company_name" class="form-control" required></div>
+                        <div class="form-group">
+                            <label>Mã NCC</label>
+                            <input name="supplier_code" id="edit_supplier_code" class="form-control" required readonly style="background-color: #f5f5f5;">
+                            <small class="form-text text-muted">Mã nhà cung cấp không thể thay đổi</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Tên công ty</label>
+                            <input name="company_name" id="edit_company_name" class="form-control" required readonly style="background-color: #f5f5f5;">
+                            <small class="form-text text-muted">Tên công ty không thể thay đổi</small>
+                        </div>
                         <div class="form-group"><label>Người liên hệ</label><input name="contact_person" id="edit_contact_person" class="form-control" required></div>
                         <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_email" class="form-control" required></div>
                         <div class="form-group"><label>Điện thoại</label><input name="phone" id="edit_phone" class="form-control" required></div>
@@ -535,6 +547,44 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="<%=request.getContextPath()%>/js/bootstrap.min.js" type="text/javascript"></script>
     <script>
+        /**
+         * Kiểm tra mã nhà cung cấp có trùng không
+         * Tác giả: Sơn Lê
+         */
+        function checkSupplierCodeExists() {
+            var supplierCode = $('#add_supplier_code').val().trim();
+            var feedbackElement = $('#supplier_code_feedback');
+            
+            if (!supplierCode) {
+                feedbackElement.text('').removeClass('text-danger text-success');
+                return;
+            }
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/supplier',
+                type: 'GET',
+                data: {
+                    action: 'checkCode',
+                    supplier_code: supplierCode
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.exists) {
+                        feedbackElement.text('Mã nhà cung cấp đã tồn tại trong hệ thống').removeClass('text-success').addClass('text-danger');
+                        $('#add_supplier_code').addClass('is-invalid').removeClass('is-valid');
+                    } else {
+                        feedbackElement.text('Mã nhà cung cấp hợp lệ').removeClass('text-danger').addClass('text-success');
+                        $('#add_supplier_code').addClass('is-valid').removeClass('is-invalid');
+                    }
+                },
+                error: function() {
+                    // Không hiển thị lỗi nếu không kiểm tra được
+                    feedbackElement.text('').removeClass('text-danger text-success');
+                    $('#add_supplier_code').removeClass('is-invalid is-valid');
+                }
+            });
+        }
+        
         // Hàm tạo JSON từ 2 trường bank_name và account_number
         function createBankInfoJson(bankName, accountNumber) {
             var bankNameEscaped = (bankName || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -557,6 +607,13 @@
         
         // Xử lý form submit để ghép JSON
         $(document).ready(function() {
+            // Reset feedback khi đóng modal thêm
+            $('#addSupplierModal').on('hidden.bs.modal', function () {
+                $('#supplier_code_feedback').text('').removeClass('text-danger text-success');
+                $('#add_supplier_code').removeClass('is-invalid is-valid');
+                $('#addSupplierForm')[0].reset();
+            });
+            
             // Form thêm mới
             $('#addSupplierForm').on('submit', function(e) {
                 // Validation
@@ -571,6 +628,15 @@
                     e.preventDefault();
                     alert('Mã nhà cung cấp không được để trống!');
                     $('input[name="supplier_code"]', this).focus();
+                    return false;
+                }
+                
+                // Kiểm tra mã nhà cung cấp có trùng không
+                var hasError = $('#add_supplier_code').hasClass('is-invalid');
+                if (hasError) {
+                    e.preventDefault();
+                    alert('Mã nhà cung cấp đã tồn tại trong hệ thống. Vui lòng chọn mã khác!');
+                    $('#add_supplier_code').focus();
                     return false;
                 }
                 

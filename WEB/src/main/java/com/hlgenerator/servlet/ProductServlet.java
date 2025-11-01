@@ -50,6 +50,8 @@ public class ProductServlet extends HttpServlet {
             showAddProductPage(request, response);
         } else if ("filter".equals(action)) {
             filterProducts(request, response);
+        } else if ("checkCode".equals(action)) {
+            checkProductCodeExists(request, response);
         } else if ("jsp".equals(action)) {
             // Xử lý request từ /product.jsp
             showProductsPage(request, response);
@@ -288,6 +290,31 @@ public class ProductServlet extends HttpServlet {
             System.out.println("Description: " + product.getDescription());
             System.out.println("Specifications: " + product.getSpecifications());
             
+            // Validate số từ của mô tả và thông số kỹ thuật
+            String description = product.getDescription();
+            String specifications = product.getSpecifications();
+            StringBuilder validationErrors = new StringBuilder();
+            
+            if (description != null && !description.trim().isEmpty()) {
+                int descriptionWordCount = countWords(description);
+                if (descriptionWordCount > 150) {
+                    validationErrors.append("Mô tả không được vượt quá 150 từ. Hiện tại: ").append(descriptionWordCount).append(" từ. ");
+                }
+            }
+            
+            if (specifications != null && !specifications.trim().isEmpty()) {
+                int specificationsWordCount = countWords(specifications);
+                if (specificationsWordCount > 150) {
+                    validationErrors.append("Thông số kỹ thuật không được vượt quá 150 từ. Hiện tại: ").append(specificationsWordCount).append(" từ. ");
+                }
+            }
+            
+            if (validationErrors.length() > 0) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write("{\"success\": false, \"message\": \"" + escapeJson(validationErrors.toString()) + "\"}");
+                return;
+            }
+            
             // Xử lý action
             System.out.println("Action received: " + action);
             if ("add".equals(action)) {
@@ -367,17 +394,35 @@ public class ProductServlet extends HttpServlet {
             System.out.println("Description: " + product.getDescription());
             System.out.println("Specifications: " + product.getSpecifications());
             
+            // Kiểm tra trùng mã sản phẩm
+            if (product.getProductCode() != null && !product.getProductCode().trim().isEmpty()) {
+                if (productDAO.isProductCodeExists(product.getProductCode())) {
+                    out.write("{\"success\": false, \"message\": \"Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác.\"}");
+                    return;
+                }
+            }
+            
             boolean success = productDAO.addProduct(product);
             
             if (success) {
                 out.write("{\"success\": true, \"message\": \"Sản phẩm đã được thêm thành công\"}");
             } else {
                 String error = productDAO.getLastError();
-                out.write("{\"success\": false, \"message\": \"Lỗi khi thêm sản phẩm: " + error + "\"}");
+                // Kiểm tra nếu lỗi do trùng mã từ database constraint
+                if (error != null && error.contains("Duplicate entry")) {
+                    out.write("{\"success\": false, \"message\": \"Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác.\"}");
+                } else {
+                    out.write("{\"success\": false, \"message\": \"Lỗi khi thêm sản phẩm: " + escapeJson(error != null ? error : "Lỗi không xác định") + "\"}");
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
-            out.write("{\"success\": false, \"message\": \"Lỗi hệ thống: " + e.getMessage() + "\"}");
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.contains("Duplicate entry")) {
+                out.write("{\"success\": false, \"message\": \"Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác.\"}");
+            } else {
+                out.write("{\"success\": false, \"message\": \"Lỗi hệ thống: " + escapeJson(errorMsg != null ? errorMsg : "Lỗi không xác định") + "\"}");
+            }
         }
     }
     
@@ -394,17 +439,39 @@ public class ProductServlet extends HttpServlet {
             System.out.println("Product: " + product.getProductName());
             System.out.println("Image URL: " + product.getImageUrl());
             
+            // Lấy sản phẩm hiện tại từ database
+            Product existingProduct = productDAO.getProductById(product.getId());
+            if (existingProduct == null) {
+                out.write("{\"success\": false, \"message\": \"Không tìm thấy sản phẩm với ID: " + product.getId() + "\"}");
+                return;
+            }
+            
+            // Không cho phép thay đổi mã sản phẩm và danh mục
+            if (product.getProductCode() != null && !product.getProductCode().equals(existingProduct.getProductCode())) {
+                out.write("{\"success\": false, \"message\": \"Không được phép thay đổi mã sản phẩm.\"}");
+                return;
+            }
+            
+            if (product.getCategory() != null && !product.getCategory().equals(existingProduct.getCategory())) {
+                out.write("{\"success\": false, \"message\": \"Không được phép thay đổi danh mục sản phẩm.\"}");
+                return;
+            }
+            
+            // Khôi phục mã sản phẩm và danh mục từ sản phẩm hiện tại để đảm bảo không bị thay đổi
+            product.setProductCode(existingProduct.getProductCode());
+            product.setCategory(existingProduct.getCategory());
+            
             boolean success = productDAO.updateProduct(product);
             
             if (success) {
                 out.write("{\"success\": true, \"message\": \"Sản phẩm đã được cập nhật thành công\"}");
             } else {
                 String error = productDAO.getLastError();
-                out.write("{\"success\": false, \"message\": \"Lỗi khi cập nhật sản phẩm: " + error + "\"}");
+                out.write("{\"success\": false, \"message\": \"Lỗi khi cập nhật sản phẩm: " + escapeJson(error != null ? error : "Lỗi không xác định") + "\"}");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            out.write("{\"success\": false, \"message\": \"Lỗi hệ thống: " + e.getMessage() + "\"}");
+            out.write("{\"success\": false, \"message\": \"Lỗi hệ thống: " + escapeJson(e.getMessage() != null ? e.getMessage() : "Lỗi không xác định") + "\"}");
         }
     }
     
@@ -637,6 +704,28 @@ public class ProductServlet extends HttpServlet {
         }
     }
     
+    /**
+     * Đếm số từ trong một chuỗi văn bản
+     * @param text - Chuỗi văn bản cần đếm
+     * @return Số từ trong chuỗi
+     */
+    private int countWords(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return 0;
+        }
+        // Loại bỏ khoảng trắng thừa và đếm số từ
+        String trimmed = text.trim().replaceAll("\\s+", " ");
+        String[] words = trimmed.split("\\s+");
+        // Lọc bỏ các phần tử rỗng
+        int count = 0;
+        for (String word : words) {
+            if (word.length() > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
     private ValidationResult validateUpdateData(HttpServletRequest request) {
         StringBuilder errors = new StringBuilder();
         
@@ -647,6 +736,8 @@ public class ProductServlet extends HttpServlet {
         String unitPriceStr = request.getParameter("unit_price");
         String supplierIdStr = request.getParameter("supplier_id");
         String idStr = request.getParameter("id");
+        String description = request.getParameter("description");
+        String specifications = request.getParameter("specifications");
         
         // Validate ID
         if (isEmpty(idStr)) {
@@ -703,6 +794,21 @@ public class ProductServlet extends HttpServlet {
                 }
             } catch (NumberFormatException e) {
                 errors.append("ID nhà cung cấp phải là số nguyên hợp lệ. ");
+            }
+        }
+        
+        // Validate số từ của mô tả
+        if (description != null && !description.trim().isEmpty()) {
+            int descriptionWordCount = countWords(description);
+            if (descriptionWordCount > 150) {
+                errors.append("Mô tả không được vượt quá 150 từ. Hiện tại: " + descriptionWordCount + " từ. ");
+            }
+        }
+        
+        if (specifications != null && !specifications.trim().isEmpty()) {
+            int specificationsWordCount = countWords(specifications);
+            if (specificationsWordCount > 150) {
+                errors.append("Thông số kỹ thuật không được vượt quá 150 từ. Hiện tại: " + specificationsWordCount + " từ. ");
             }
         }
         
@@ -793,10 +899,17 @@ public class ProductServlet extends HttpServlet {
         String unit = request.getParameter("unit");
         String unitPriceStr = request.getParameter("unit_price");
         String supplierIdStr = request.getParameter("supplier_id");
+        String description = request.getParameter("description");
+        String specifications = request.getParameter("specifications");
         
         // Validate required fields
         if (isEmpty(productCode)) {
             errors.append("Mã sản phẩm không được để trống. ");
+        } else {
+            // Kiểm tra trùng mã sản phẩm
+            if (productDAO.isProductCodeExists(productCode)) {
+                errors.append("Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác. ");
+            }
         }
         if (isEmpty(productName)) {
             errors.append("Tên sản phẩm không được để trống. ");
@@ -831,6 +944,22 @@ public class ProductServlet extends HttpServlet {
                 }
             } catch (NumberFormatException e) {
                 errors.append("Nhà cung cấp phải là số nguyên hợp lệ. ");
+            }
+        }
+        
+        // Validate số từ của mô tả
+        if (description != null && !description.trim().isEmpty()) {
+            int descriptionWordCount = countWords(description);
+            if (descriptionWordCount > 150) {
+                errors.append("Mô tả không được vượt quá 150 từ. Hiện tại: " + descriptionWordCount + " từ. ");
+            }
+        }
+        
+        // Validate số từ của thông số kỹ thuật
+        if (specifications != null && !specifications.trim().isEmpty()) {
+            int specificationsWordCount = countWords(specifications);
+            if (specificationsWordCount > 150) {
+                errors.append("Thông số kỹ thuật không được vượt quá 150 từ. Hiện tại: " + specificationsWordCount + " từ. ");
             }
         }
         
@@ -964,6 +1093,29 @@ public class ProductServlet extends HttpServlet {
             out.flush();
             
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Kiểm tra mã sản phẩm có tồn tại không
+     * Tác giả: Sơn Lê
+     */
+    private void checkProductCodeExists(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        try {
+            String productCode = request.getParameter("product_code");
+            if (productCode == null || productCode.trim().isEmpty()) {
+                out.write("{\"exists\": false}");
+                return;
+            }
+            
+            boolean exists = productDAO.isProductCodeExists(productCode.trim());
+            out.write("{\"exists\": " + exists + "}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"exists\": false, \"error\": \"" + escapeJson(e.getMessage()) + "\"}");
         }
     }
     

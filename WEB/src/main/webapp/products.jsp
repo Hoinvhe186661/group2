@@ -513,7 +513,8 @@
                         <input type="hidden" name="id" id="edit_product_id">
                         <div class="form-group">
                             <label for="edit_product_code">Mã sản phẩm</label>
-                            <input type="text" class="form-control" id="edit_product_code" name="product_code" required>
+                            <input type="text" class="form-control" id="edit_product_code" name="product_code" required readonly style="background-color: #f5f5f5;">
+                            <small class="form-text text-muted">Mã sản phẩm không thể thay đổi</small>
                         </div>
                         <div class="form-group">
                             <label for="edit_product_name">Tên sản phẩm</label>
@@ -521,11 +522,15 @@
                         </div>
                         <div class="form-group">
                             <label for="edit_category">Danh mục</label>
-                            <input type="text" class="form-control" id="edit_category" name="category">
+                            <input type="text" class="form-control" id="edit_category" name="category" readonly style="background-color: #f5f5f5;">
+                            <small class="form-text text-muted">Danh mục không thể thay đổi</small>
                         </div>
                         <div class="form-group">
                             <label for="edit_description">Mô tả</label>
-                            <textarea class="form-control" id="edit_description" name="description" rows="2"></textarea>
+                            <textarea class="form-control" id="edit_description" name="description" rows="2" onkeyup="validateWordCount('edit_description', 'edit_description_count')"></textarea>
+                            <small class="form-text text-muted">
+                                <span id="edit_description_count">0</span> / 150 từ
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="edit_unit">Đơn vị tính</label>
@@ -556,7 +561,10 @@
                         </div>
                         <div class="form-group">
                             <label for="edit_specifications">Thông số kỹ thuật</label>
-                            <textarea class="form-control" id="edit_specifications" name="specifications" rows="2"></textarea>
+                            <textarea class="form-control" id="edit_specifications" name="specifications" rows="2" onkeyup="validateWordCount('edit_specifications', 'edit_specifications_count')"></textarea>
+                            <small class="form-text text-muted">
+                                <span id="edit_specifications_count">0</span> / 150 từ
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="edit_product_image">Ảnh sản phẩm</label>
@@ -605,7 +613,8 @@
                         <input type="hidden" name="action" value="add">
                         <div class="form-group">
                             <label for="product_code">Mã sản phẩm <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="product_code" name="product_code" required>
+                            <input type="text" class="form-control" id="product_code" name="product_code" required onblur="checkProductCodeExists()">
+                            <small class="form-text text-muted" id="product_code_feedback"></small>
                         </div>
                         <div class="form-group">
                             <label for="product_name">Tên sản phẩm <span class="text-danger">*</span></label>
@@ -617,7 +626,10 @@
                         </div>
                         <div class="form-group">
                             <label for="description">Mô tả</label>
-                            <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                            <textarea class="form-control" id="description" name="description" rows="2" onkeyup="validateWordCount('description', 'description_count')"></textarea>
+                            <small class="form-text text-muted">
+                                <span id="description_count">0</span> / 150 từ
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="unit">Đơn vị tính <span class="text-danger">*</span></label>
@@ -649,7 +661,10 @@
                         </div>
                         <div class="form-group">
                             <label for="specifications">Thông số kỹ thuật</label>
-                            <textarea class="form-control" id="specifications" name="specifications" rows="2"></textarea>
+                            <textarea class="form-control" id="specifications" name="specifications" rows="2" onkeyup="validateWordCount('specifications', 'specifications_count')"></textarea>
+                            <small class="form-text text-muted">
+                                <span id="specifications_count">0</span> / 150 từ
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="product_image">Ảnh sản phẩm</label>
@@ -692,6 +707,96 @@
 
     <script type="text/javascript">
         // Không cần kiểm tra quyền vì đã đăng nhập với quyền quản lý kho
+        
+        /**
+         * Đếm số từ trong một chuỗi văn bản
+         * Tác giả: Sơn Lê
+         * @param {string} text - Chuỗi văn bản cần đếm
+         * @returns {number} - Số từ trong chuỗi
+         */
+        function countWords(text) {
+            if (!text || text.trim() === '') {
+                return 0;
+            }
+            // Loại bỏ khoảng trắng thừa và đếm số từ
+            var trimmed = text.trim().replace(/\s+/g, ' ');
+            var words = trimmed.split(' ');
+            // Lọc bỏ các phần tử rỗng
+            return words.filter(function(word) {
+                return word.length > 0;
+            }).length;
+        }
+        
+        /**
+         * Kiểm tra mã sản phẩm có trùng không
+         * Tác giả: Sơn Lê
+         */
+        function checkProductCodeExists() {
+            var productCode = $('#product_code').val().trim();
+            var feedbackElement = $('#product_code_feedback');
+            
+            if (!productCode) {
+                feedbackElement.text('').removeClass('text-danger text-success');
+                return;
+            }
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/product',
+                type: 'GET',
+                data: {
+                    action: 'checkCode',
+                    product_code: productCode
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.exists) {
+                        feedbackElement.text('Mã sản phẩm đã tồn tại trong hệ thống').removeClass('text-success').addClass('text-danger');
+                        $('#product_code').addClass('is-invalid').removeClass('is-valid');
+                    } else {
+                        feedbackElement.text('Mã sản phẩm hợp lệ').removeClass('text-danger').addClass('text-success');
+                        $('#product_code').addClass('is-valid').removeClass('is-invalid');
+                    }
+                },
+                error: function() {
+                    // Không hiển thị lỗi nếu không kiểm tra được
+                    feedbackElement.text('').removeClass('text-danger text-success');
+                    $('#product_code').removeClass('is-invalid is-valid');
+                }
+            });
+        }
+        
+        /**
+         * Kiểm tra và hiển thị số từ trong textarea
+         * Tác giả: Sơn Lê
+         * @param {string} textareaId - ID của textarea cần kiểm tra
+         * @param {string} countSpanId - ID của span hiển thị số từ
+         */
+        function validateWordCount(textareaId, countSpanId) {
+            var textarea = document.getElementById(textareaId);
+            var countSpan = document.getElementById(countSpanId);
+            
+            if (!textarea || !countSpan) {
+                return;
+            }
+            
+            var text = textarea.value;
+            var wordCount = countWords(text);
+            var maxWords = 150;
+            
+            // Cập nhật số từ
+            countSpan.textContent = wordCount;
+            
+            // Thay đổi màu sắc nếu vượt quá giới hạn
+            if (wordCount > maxWords) {
+                countSpan.style.color = '#d9534f';
+                countSpan.style.fontWeight = 'bold';
+                textarea.style.borderColor = '#d9534f';
+            } else {
+                countSpan.style.color = '#5cb85c';
+                countSpan.style.fontWeight = 'normal';
+                textarea.style.borderColor = '';
+            }
+        }
         
         // Hàm preview ảnh từ file upload (sửa sản phẩm)
         function previewEditImageFile(input) {
@@ -795,10 +900,22 @@
                 // Reset form
                 document.getElementById('addProductForm').reset();
                 document.getElementById('addImagePreview').style.display = 'none';
+                // Reset số từ
+                validateWordCount('description', 'description_count');
+                validateWordCount('specifications', 'specifications_count');
+                // Reset feedback mã sản phẩm
+                $('#product_code_feedback').text('').removeClass('text-danger text-success');
+                $('#product_code').removeClass('is-invalid is-valid');
                 // Xóa error parameters khỏi URL
                 if (urlParams.has('validation_error') || urlParams.has('database_error') || urlParams.has('system_error')) {
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
+            });
+            
+            // Reset số từ khi đóng modal sửa
+            $('#editProductModal').on('hidden.bs.modal', function () {
+                validateWordCount('edit_description', 'edit_description_count');
+                validateWordCount('edit_specifications', 'edit_specifications_count');
             });
         });
         
@@ -873,6 +990,10 @@
                         $('#edit_warranty_months').val(product.warrantyMonths || '');
                         $('#edit_status').val(product.status || 'active');
                         
+                        // Cập nhật số từ cho mô tả và thông số kỹ thuật
+                        validateWordCount('edit_description', 'edit_description_count');
+                        validateWordCount('edit_specifications', 'edit_specifications_count');
+                        
                         // Hiển thị ảnh hiện tại nếu có
                         if (product.imageUrl && product.imageUrl.trim() !== '') {
                             var img = document.getElementById('editPreviewImg');
@@ -901,6 +1022,8 @@
             var unit = $('#edit_unit').val().trim();
             var unitPrice = $('#edit_unit_price').val();
             var supplierId = $('#edit_supplier_id').val();
+            var description = $('#edit_description').val().trim();
+            var specifications = $('#edit_specifications').val().trim();
             
             if (!productCode) {
                 alert('Mã sản phẩm không được để trống!');
@@ -941,6 +1064,22 @@
             if (!supplierId || supplierId === '') {
                 alert('Vui lòng chọn nhà cung cấp!');
                 $('#edit_supplier_id').focus();
+                return;
+            }
+            
+            // Kiểm tra số từ của mô tả
+            var descriptionWordCount = countWords(description);
+            if (descriptionWordCount > 150) {
+                alert('Mô tả không được vượt quá 150 từ! Hiện tại bạn đã nhập ' + descriptionWordCount + ' từ.');
+                $('#edit_description').focus();
+                return;
+            }
+            
+            // Kiểm tra số từ của thông số kỹ thuật
+            var specificationsWordCount = countWords(specifications);
+            if (specificationsWordCount > 150) {
+                alert('Thông số kỹ thuật không được vượt quá 150 từ! Hiện tại bạn đã nhập ' + specificationsWordCount + ' từ.');
+                $('#edit_specifications').focus();
                 return;
             }
             
@@ -1005,6 +1144,8 @@
             var unit = $('#unit').val().trim();
             var unitPrice = $('#unit_price').val();
             var supplierId = $('#supplier_id').val();
+            var description = $('#description').val().trim();
+            var specifications = $('#specifications').val().trim();
             
             if (!productCode) {
                 alert('Mã sản phẩm không được để trống!');
@@ -1045,6 +1186,33 @@
             if (!supplierId || supplierId === '') {
                 alert('Vui lòng chọn nhà cung cấp!');
                 $('#supplier_id').focus();
+                return;
+            }
+            
+            // Kiểm tra mã sản phẩm có trùng không
+            var productCodeCheck = $('#product_code').val().trim();
+            if (productCodeCheck) {
+                var hasError = $('#product_code').hasClass('is-invalid');
+                if (hasError) {
+                    alert('Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác!');
+                    $('#product_code').focus();
+                    return;
+                }
+            }
+            
+            // Kiểm tra số từ của mô tả
+            var descriptionWordCount = countWords(description);
+            if (descriptionWordCount > 150) {
+                alert('Mô tả không được vượt quá 150 từ! Hiện tại bạn đã nhập ' + descriptionWordCount + ' từ.');
+                $('#description').focus();
+                return;
+            }
+            
+            // Kiểm tra số từ của thông số kỹ thuật
+            var specificationsWordCount = countWords(specifications);
+            if (specificationsWordCount > 150) {
+                alert('Thông số kỹ thuật không được vượt quá 150 từ! Hiện tại bạn đã nhập ' + specificationsWordCount + ' từ.');
+                $('#specifications').focus();
                 return;
             }
             

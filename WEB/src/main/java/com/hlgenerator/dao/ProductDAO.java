@@ -467,6 +467,51 @@ public class ProductDAO {
     }
 
     /**
+     * Kiểm tra mã sản phẩm có tồn tại không
+     * Tác giả: Sơn Lê
+     * @param productCode - Mã sản phẩm cần kiểm tra
+     * @return true nếu mã đã tồn tại, false nếu chưa có
+     */
+    public boolean isProductCodeExists(String productCode) {
+        return isProductCodeExists(productCode, -1);
+    }
+    
+    /**
+     * Kiểm tra mã sản phẩm có tồn tại không (trừ ID hiện tại)
+     * Tác giả: Sơn Lê
+     * @param productCode - Mã sản phẩm cần kiểm tra
+     * @param excludeId - ID sản phẩm cần loại trừ (dùng khi update)
+     * @return true nếu mã đã tồn tại, false nếu chưa có
+     */
+    public boolean isProductCodeExists(String productCode, int excludeId) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) FROM products WHERE product_code = ?";
+        if (excludeId > 0) {
+            sql += " AND id != ?";
+        }
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, productCode);
+            if (excludeId > 0) {
+                ps.setInt(2, excludeId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi khi kiểm tra mã sản phẩm: " + e.getMessage();
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
      * Lấy lỗi cuối cùng
      */
     public String getLastError() {

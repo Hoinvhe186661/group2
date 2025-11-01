@@ -39,6 +39,8 @@ public class SupplierServlet extends HttpServlet {
             filterSuppliers(request, response);
         } else if ("getFilterOptions".equals(action)) {
             getFilterOptions(request, response);
+        } else if ("checkCode".equals(action)) {
+            checkSupplierCodeExists(request, response);
         } else {
             getAllSuppliers(request, response);
         }
@@ -497,6 +499,15 @@ public class SupplierServlet extends HttpServlet {
     private void updateSupplier(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             int supplierId = Integer.parseInt(request.getParameter("id"));
+            
+            // Lấy nhà cung cấp hiện tại từ database
+            Supplier existingSupplier = supplierDAO.getSupplierById(supplierId);
+            if (existingSupplier == null) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Không tìm thấy nhà cung cấp với ID: " + supplierId, "UTF-8"));
+                return;
+            }
+            
             Supplier supplier = buildSupplierFromRequest(request);
             supplier.setId(supplierId);
             
@@ -513,12 +524,22 @@ public class SupplierServlet extends HttpServlet {
                 return;
             }
             
-            // Kiểm tra duplicate supplier_code (trừ chính nó)
-            if (supplierDAO.isSupplierCodeExists(supplier.getSupplierCode(), supplier.getId())) {
+            // Không cho phép thay đổi mã nhà cung cấp và tên công ty
+            if (!supplier.getSupplierCode().equals(existingSupplier.getSupplierCode())) {
                 response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
-                    URLEncoder.encode("Mã nhà cung cấp đã tồn tại", "UTF-8"));
+                    URLEncoder.encode("Không được phép thay đổi mã nhà cung cấp", "UTF-8"));
                 return;
             }
+            
+            if (!supplier.getCompanyName().equals(existingSupplier.getCompanyName())) {
+                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                    URLEncoder.encode("Không được phép thay đổi tên công ty", "UTF-8"));
+                return;
+            }
+            
+            // Khôi phục mã nhà cung cấp và tên công ty từ nhà cung cấp hiện tại để đảm bảo không bị thay đổi
+            supplier.setSupplierCode(existingSupplier.getSupplierCode());
+            supplier.setCompanyName(existingSupplier.getCompanyName());
             
             // Validation email format
             if (supplier.getEmail() != null && !supplier.getEmail().trim().isEmpty()) {
@@ -823,5 +844,27 @@ public class SupplierServlet extends HttpServlet {
         }
         
         return result;
+    }
+    
+    /**
+     * Kiểm tra mã nhà cung cấp có tồn tại không
+     * Tác giả: Sơn Lê
+     */
+    private void checkSupplierCodeExists(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        
+        try {
+            String supplierCode = request.getParameter("supplier_code");
+            if (supplierCode == null || supplierCode.trim().isEmpty()) {
+                response.getWriter().write("{\"exists\": false}");
+                return;
+            }
+            
+            boolean exists = supplierDAO.isSupplierCodeExists(supplierCode.trim());
+            response.getWriter().write("{\"exists\": " + exists + "}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"exists\": false, \"error\": \"" + escapeJsonString(e.getMessage()) + "\"}");
+        }
     }
 }
