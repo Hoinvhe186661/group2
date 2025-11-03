@@ -265,6 +265,11 @@
                             <i class="fa fa-archive"></i> <span>Quản lý kho</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="<%=request.getContextPath()%>/email-management">
+                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
+                        </a>
+                    </li>
                 </ul>
             </section>
             <!-- /.sidebar -->

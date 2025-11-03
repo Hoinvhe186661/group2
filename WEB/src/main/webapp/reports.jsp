@@ -101,6 +101,7 @@
                         hàng</span></a></li>
             <li><a href="users"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
             </li>
+                    <li><a href="email-management"><i class="fa fa-envelope"></i> <span>Quản lý Email</span></a></li>
                     <li class="active">
                         <a href="reports.jsp">
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>

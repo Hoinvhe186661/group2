@@ -1,47 +1,51 @@
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderTaskDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTask.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderTaskServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTaskAssignment.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
-D:\4-11\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderTaskServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTaskAssignment.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\EmailNotificationDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\EmailNotification.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\EmailManagementServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderTaskDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTask.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\service\EmailService.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
+D:\git up code 3 11 2025\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java

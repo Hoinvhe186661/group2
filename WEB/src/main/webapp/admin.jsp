@@ -183,6 +183,11 @@
                         </a>
                     </li>
                     <li>
+                        <a href="email-management">
+                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="reports.jsp">
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
                         </a>
