@@ -39,7 +39,9 @@ public class GuestProductServlet extends HttpServlet {
         
         String action = request.getParameter("action");
         
-        if ("filter".equals(action)) {
+        if ("detail".equals(action)) {
+            showProductDetail(request, response);
+        } else if ("filter".equals(action)) {
             filterProducts(request, response);
         } else if ("page".equals(action) || action == null) {
             showProductsPage(request, response);
@@ -244,6 +246,78 @@ public class GuestProductServlet extends HttpServlet {
             PrintWriter out = response.getWriter();
             out.print(errorResponse.toString());
             out.flush();
+        }
+    }
+
+    /**
+     * Hiển thị trang chi tiết sản phẩm cho guest
+     */
+    private void showProductDetail(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        try {
+            // Debug log
+            System.out.println("=== SHOW PRODUCT DETAIL ===");
+            System.out.println("Action: " + request.getParameter("action"));
+            System.out.println("Product ID: " + request.getParameter("id"));
+            
+            // Lấy product ID từ parameter
+            String productIdStr = request.getParameter("id");
+            if (productIdStr == null || productIdStr.trim().isEmpty()) {
+                System.out.println("ERROR: Product ID is null or empty");
+                request.setAttribute("error", "Không tìm thấy sản phẩm");
+                request.getRequestDispatcher("/guest_products.jsp").forward(request, response);
+                return;
+            }
+            
+            // Xử lý trường hợp ID có ký tự không hợp lệ (như "3:455")
+            // Chỉ lấy phần số trước dấu ":" hoặc khoảng trắng
+            String cleanIdStr = productIdStr.trim();
+            if (cleanIdStr.contains(":")) {
+                cleanIdStr = cleanIdStr.split(":")[0];
+            }
+            if (cleanIdStr.contains(" ")) {
+                cleanIdStr = cleanIdStr.split(" ")[0];
+            }
+            
+            int productId;
+            try {
+                productId = Integer.parseInt(cleanIdStr);
+                System.out.println("Parsed Product ID: " + productId + " (from: " + productIdStr + ")");
+            } catch (NumberFormatException e) {
+                System.out.println("ERROR: Invalid Product ID format: " + productIdStr);
+                request.setAttribute("error", "ID sản phẩm không hợp lệ: " + productIdStr);
+                request.getRequestDispatcher("/guest_products.jsp").forward(request, response);
+                return;
+            }
+            
+            // Lấy thông tin sản phẩm
+            Product product = productDAO.getProductById(productId);
+            
+            if (product == null || !"active".equals(product.getStatus())) {
+                request.setAttribute("error", "Sản phẩm không tồn tại hoặc đã ngừng kinh doanh");
+                request.getRequestDispatcher("/guest_products.jsp").forward(request, response);
+                return;
+            }
+            
+            // Đảm bảo sản phẩm có image_url và description hợp lệ
+            if (product.getImageUrl() == null || product.getImageUrl().trim().isEmpty() || "null".equals(product.getImageUrl())) {
+                product.setImageUrl("images/sanpham1.jpg");
+            }
+            if (product.getDescription() == null || product.getDescription().trim().isEmpty() || "null".equals(product.getDescription())) {
+                String supplierName = product.getSupplierName() != null ? product.getSupplierName() : "nhà cung cấp uy tín";
+                product.setDescription("Sản phẩm chất lượng cao từ " + supplierName);
+            }
+            
+            // Set attribute cho JSP
+            request.setAttribute("product", product);
+            
+            // Forward to JSP
+            request.getRequestDispatcher("/guest_product_detail.jsp").forward(request, response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("error", "Lỗi khi tải thông tin sản phẩm: " + e.getMessage());
+            request.getRequestDispatcher("/guest_products.jsp").forward(request, response);
         }
     }
 }

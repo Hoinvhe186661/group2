@@ -500,7 +500,7 @@
                                                         </c:otherwise>
                                                     </c:choose>
                                                 </div>
-                                                <a href="#" class="product-link">Xem thêm</a>
+                                                <a href="${pageContext.request.contextPath}/guest-products?action=detail&id=${product.id}" class="product-link">Xem thêm</a>
                                             </div>
                                         </div>
                                     </c:forEach>
@@ -543,6 +543,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Lấy context path từ JSP
+        const contextPath = '${pageContext.request.contextPath}';
+        
         let currentPage = 1;
         let currentSort = 'all';
         let currentPriceRange = null;
@@ -666,7 +669,7 @@
                 params.append('supplierId', supplierId);
             });
 
-            fetch('${pageContext.request.contextPath}/guest-products?' + params.toString())
+            fetch(contextPath + '/guest-products?' + params.toString())
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -700,8 +703,8 @@
                 const imgUrl = product.imageUrl && product.imageUrl !== 'null' 
                     ? (product.imageUrl.startsWith('http') || product.imageUrl.startsWith('/')
                         ? product.imageUrl
-                        : '${pageContext.request.contextPath}/' + product.imageUrl)
-                    : '${pageContext.request.contextPath}/images/sanpham1.jpg';
+                        : contextPath + '/' + product.imageUrl)
+                    : contextPath + '/images/sanpham1.jpg';
                 
                 const description = product.description && product.description !== 'null' ? product.description : 
                     ('Sản phẩm chất lượng cao từ ' + (product.supplierName || 'nhà cung cấp uy tín'));
@@ -712,17 +715,36 @@
                     : '';
                 
                 const priceHtml = price ? `<div class="product-price">${price}</div>` : '';
+                
+                // Tạo URL chi tiết sản phẩm - đảm bảo product.id là số nguyên
+                let productId = '';
+                if (product.id !== undefined && product.id !== null) {
+                    // Chuyển đổi thành số nguyên để tránh lỗi
+                    productId = parseInt(product.id, 10);
+                    if (isNaN(productId)) {
+                        console.error('Invalid product ID:', product.id);
+                        productId = '';
+                    }
+                } else {
+                    console.error('Product ID is missing:', product);
+                }
+                const detailUrl = contextPath + '/guest-products?action=detail&id=' + productId;
+                
+                // Debug log
+                if (detailUrl.includes(':') && !detailUrl.startsWith('http')) {
+                    console.warn('URL contains colon:', detailUrl, 'Product:', product);
+                }
 
                 return `
                     <div class="product-card">
                         <div class="product-image-wrapper">
-                            <img src="${imgUrl}" alt="${product.productName}" class="product-image" data-fallback="${pageContext.request.contextPath}/images/sanpham1.jpg">
+                            <img src="${imgUrl}" alt="${product.productName || ''}" class="product-image" data-fallback="${contextPath}/images/sanpham1.jpg">
                         </div>
                         <div class="product-info">
                             <div class="product-title">${product.productName || ''}</div>
                             ${priceHtml}
                             <div class="product-description">${shortDesc}</div>
-                            <a href="#" class="product-link">Xem thêm</a>
+                            <a href="${detailUrl}" class="product-link">Xem thêm</a>
                         </div>
                     </div>
                 `;
