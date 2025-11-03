@@ -123,10 +123,46 @@ public class EmailManagementServlet extends HttpServlet {
             String startDate = request.getParameter("startDate");
             String endDate = request.getParameter("endDate");
             
-            // Get filtered emails
-            List<EmailNotification> emails = emailDAO.getEmailNotificationsWithFilters(
+            // Get pagination parameters
+            int page = 1;
+            int pageSize = 10;
+            try {
+                String pageParam = request.getParameter("page");
+                if (pageParam != null && !pageParam.isEmpty()) {
+                    page = Integer.parseInt(pageParam);
+                    if (page < 1) page = 1;
+                }
+                
+                String pageSizeParam = request.getParameter("pageSize");
+                if (pageSizeParam != null && !pageSizeParam.isEmpty()) {
+                    pageSize = Integer.parseInt(pageSizeParam);
+                    if (pageSize != 10 && pageSize != 25 && pageSize != 50 && pageSize != 100) {
+                        pageSize = 10; // Default
+                    }
+                }
+            } catch (NumberFormatException e) {
+                // Use defaults
+            }
+            
+            // Get all filtered emails
+            List<EmailNotification> allEmails = emailDAO.getEmailNotificationsWithFilters(
                 emailType, status, searchTerm, startDate, endDate
             );
+            
+            // Calculate pagination
+            int totalRecords = allEmails.size();
+            int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+            if (totalPages == 0) totalPages = 1;
+            if (page > totalPages) page = totalPages;
+            
+            int startIndex = (page - 1) * pageSize;
+            int endIndex = Math.min(startIndex + pageSize, totalRecords);
+            
+            // Get paginated emails
+            List<EmailNotification> emails = new ArrayList<>();
+            if (startIndex < totalRecords) {
+                emails = allEmails.subList(startIndex, endIndex);
+            }
             
             request.setAttribute("emails", emails);
             request.setAttribute("filterEmailType", emailType != null ? emailType : "");
@@ -134,6 +170,14 @@ public class EmailManagementServlet extends HttpServlet {
             request.setAttribute("filterSearch", searchTerm != null ? searchTerm : "");
             request.setAttribute("filterStartDate", startDate != null ? startDate : "");
             request.setAttribute("filterEndDate", endDate != null ? endDate : "");
+            
+            // Pagination attributes
+            request.setAttribute("currentPage", page);
+            request.setAttribute("pageSize", pageSize);
+            request.setAttribute("totalRecords", totalRecords);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("startIndex", startIndex + 1);
+            request.setAttribute("endIndex", endIndex);
             
             request.getRequestDispatcher("/email_management.jsp").forward(request, response);
         } catch (Exception e) {

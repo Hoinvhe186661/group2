@@ -26,6 +26,21 @@
     String filterStartDate = (String) request.getAttribute("filterStartDate");
     String filterEndDate = (String) request.getAttribute("filterEndDate");
     
+    // Pagination attributes
+    Integer currentPage = (Integer) request.getAttribute("currentPage");
+    Integer pageSize = (Integer) request.getAttribute("pageSize");
+    Integer totalRecords = (Integer) request.getAttribute("totalRecords");
+    Integer totalPages = (Integer) request.getAttribute("totalPages");
+    Integer startIndex = (Integer) request.getAttribute("startIndex");
+    Integer endIndex = (Integer) request.getAttribute("endIndex");
+    
+    if (currentPage == null) currentPage = 1;
+    if (pageSize == null) pageSize = 25;
+    if (totalRecords == null) totalRecords = 0;
+    if (totalPages == null) totalPages = 1;
+    if (startIndex == null) startIndex = 0;
+    if (endIndex == null) endIndex = 0;
+    
     EmailNotification viewEmail = (EmailNotification) request.getAttribute("email");
     SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
 %>
@@ -128,7 +143,16 @@
                     <div class="col-md-12">
                         <section class="panel">
                             <header class="panel-heading">
-                                <h3><i class="fa fa-envelope"></i> Tạo Email Mới</h3>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h3><i class="fa fa-envelope"></i> Tạo Email Mới</h3>
+                                    </div>
+                                    <div class="col-md-6 text-right">
+                                        <a href="email-management" class="btn btn-default">
+                                            <i class="fa fa-arrow-left"></i> Quay lại danh sách
+                                        </a>
+                                    </div>
+                                </div>
                             </header>
                             <div class="panel-body">
                                 <form id="emailForm" method="post" action="email-management" enctype="multipart/form-data">
@@ -313,6 +337,8 @@
                                 <!-- Filters -->
                                 <div class="filter-section">
                                     <form id="filterForm" method="get" action="email-management">
+                                        <input type="hidden" name="page" value="1">
+                                        <input type="hidden" name="pageSize" value="<%= pageSize %>">
                                         <div class="row">
                                             <div class="col-md-2">
                                                 <div class="form-group">
@@ -363,6 +389,13 @@
                                                         <i class="fa fa-search"></i> Lọc
                                                     </button>
                                                 </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <button type="button" class="btn btn-default btn-sm" onclick="clearFilters()">
+                                                    <i class="fa fa-times"></i> Xóa lọc
+                                                </button>
                                             </div>
                                         </div>
                                     </form>
@@ -420,6 +453,87 @@
                                                } %>
                                         </tbody>
                                     </table>
+                                </div>
+                                
+                                <!-- Pagination -->
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <div class="form-inline">
+                                            <label>Hiển thị:</label>
+                                            <select id="pageSizeSelect" class="form-control" style="width: auto; margin: 0 10px;" onchange="changePageSize(this.value)">
+                                                <option value="10" <%= pageSize == 10 ? "selected" : "" %>>10</option>
+                                                <option value="25" <%= pageSize == 25 ? "selected" : "" %>>25</option>
+                                                <option value="50" <%= pageSize == 50 ? "selected" : "" %>>50</option>
+                                                <option value="100" <%= pageSize == 100 ? "selected" : "" %>>100</option>
+                                            </select>
+                                            <span class="text-muted">
+                                                Hiển thị <%= startIndex %> đến <%= endIndex %> trong tổng số <%= totalRecords %> bản ghi
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <ul class="pagination pull-right" style="margin: 0;">
+                                            <!-- Previous button -->
+                                            <% 
+                                            String prevDisabled = currentPage <= 1 ? "disabled" : "";
+                                            int prevPage = currentPage > 1 ? currentPage - 1 : 1;
+                                            %>
+                                            <li class="<%= prevDisabled %>">
+                                                <% if (currentPage > 1) { %>
+                                                <a href="javascript:void(0)" class="page-link" data-page="<%= prevPage %>">
+                                                    <i class="fa fa-chevron-left"></i> Trước
+                                                </a>
+                                                <% } else { %>
+                                                <a href="javascript:void(0)"><i class="fa fa-chevron-left"></i> Trước</a>
+                                                <% } %>
+                                            </li>
+                                            
+                                            <!-- Page numbers -->
+                                            <%
+                                                int startPage = Math.max(1, currentPage - 2);
+                                                int endPage = Math.min(totalPages, currentPage + 2);
+                                                
+                                                if (startPage > 1) {
+                                            %>
+                                            <li><a href="javascript:void(0)" class="page-link" data-page="1">1</a></li>
+                                            <% if (startPage > 2) { %>
+                                            <li class="disabled"><a href="javascript:void(0)">...</a></li>
+                                            <% } %>
+                                            <% }
+                                                for (int i = startPage; i <= endPage; i++) {
+                                                    String activeClass = (i == currentPage) ? "active" : "";
+                                                    int pageNum = i;
+                                            %>
+                                            <li class="<%= activeClass %>">
+                                                <a href="javascript:void(0)" class="page-link" data-page="<%= pageNum %>"><%= pageNum %></a>
+                                            </li>
+                                            <% }
+                                                if (endPage < totalPages) {
+                                                    if (endPage < totalPages - 1) {
+                                            %>
+                                            <li class="disabled"><a href="javascript:void(0)">...</a></li>
+                                            <% } 
+                                                int lastPage = totalPages;
+                                            %>
+                                            <li><a href="javascript:void(0)" class="page-link" data-page="<%= lastPage %>"><%= lastPage %></a></li>
+                                            <% } %>
+                                            
+                                            <!-- Next button -->
+                                            <% 
+                                            String nextDisabled = currentPage >= totalPages ? "disabled" : "";
+                                            int nextPage = currentPage < totalPages ? currentPage + 1 : totalPages;
+                                            %>
+                                            <li class="<%= nextDisabled %>">
+                                                <% if (currentPage < totalPages) { %>
+                                                <a href="javascript:void(0)" class="page-link" data-page="<%= nextPage %>">
+                                                    Sau <i class="fa fa-chevron-right"></i>
+                                                </a>
+                                                <% } else { %>
+                                                <a href="javascript:void(0)">Sau <i class="fa fa-chevron-right"></i></a>
+                                                <% } %>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </section>
@@ -552,7 +666,85 @@
                     });
                 }
             });
+            
+            // Handle pagination links
+            $('.page-link').on('click', function() {
+                var page = $(this).data('page');
+                if (page) {
+                    goToPage(page);
+                }
+            });
         });
+        
+        // Clear all filters
+        function clearFilters() {
+            window.location.href = 'email-management';
+        }
+        
+        // Go to specific page
+        function goToPage(page) {
+            var url = buildUrlWithParams({ page: page });
+            window.location.href = url;
+        }
+        
+        // Change page size
+        function changePageSize(pageSize) {
+            var url = buildUrlWithParams({ pageSize: pageSize, page: 1 });
+            window.location.href = url;
+        }
+        
+        // Build URL with current filter parameters
+        function buildUrlWithParams(additionalParams) {
+            var url = 'email-management';
+            var params = [];
+            
+            // Get current filter values
+            var emailType = '<%= filterEmailType != null ? filterEmailType : "" %>';
+            var status = '<%= filterStatus != null ? filterStatus : "" %>';
+            var search = '<%= filterSearch != null ? filterSearch : "" %>';
+            var startDate = '<%= filterStartDate != null ? filterStartDate : "" %>';
+            var endDate = '<%= filterEndDate != null ? filterEndDate : "" %>';
+            var currentPageSize = '<%= pageSize %>';
+            
+            // Add filters if they exist
+            if (emailType && emailType !== '') {
+                params.push('emailType=' + encodeURIComponent(emailType));
+            }
+            if (status && status !== '') {
+                params.push('status=' + encodeURIComponent(status));
+            }
+            if (search && search !== '') {
+                params.push('search=' + encodeURIComponent(search));
+            }
+            if (startDate && startDate !== '') {
+                params.push('startDate=' + encodeURIComponent(startDate));
+            }
+            if (endDate && endDate !== '') {
+                params.push('endDate=' + encodeURIComponent(endDate));
+            }
+            
+            // Add or override with additional params
+            if (additionalParams) {
+                if (additionalParams.pageSize) {
+                    params.push('pageSize=' + additionalParams.pageSize);
+                } else if (currentPageSize && currentPageSize !== '') {
+                    params.push('pageSize=' + encodeURIComponent(currentPageSize));
+                }
+                if (additionalParams.page) {
+                    params.push('page=' + additionalParams.page);
+                }
+            } else {
+                if (currentPageSize && currentPageSize !== '') {
+                    params.push('pageSize=' + encodeURIComponent(currentPageSize));
+                }
+            }
+            
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            return url;
+        }
     </script>
 </body>
 </html>
