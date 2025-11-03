@@ -134,7 +134,7 @@
         <ul class="navbar-nav flex-row justify-content-center w-100">
             <li class="nav-item"><a class="nav-link" href="index.jsp" id="nav-home">TRANG CHỦ</a></li>
             <li class="nav-item"><a class="nav-link" href="about.jsp" id="nav-about">GIỚI THIỆU</a></li>
-            <li class="nav-item"><a class="nav-link" href="#products">MÁY PHÁT ĐIỆN</a></li>
+            <li class="nav-item"><a class="nav-link" href="guest-products">MÁY PHÁT ĐIỆN</a></li>
             <li class="nav-item"><a class="nav-link" href="#services">DỊCH VỤ</a></li>
             <li class="nav-item"><a class="nav-link" href="#projects">DỰ ÁN</a></li>
             <li class="nav-item"><a class="nav-link" href="#guide">HƯỚNG DẪN</a></li>
