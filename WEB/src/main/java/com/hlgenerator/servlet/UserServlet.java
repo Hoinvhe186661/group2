@@ -50,9 +50,16 @@ public class UserServlet extends HttpServlet {
         }
 
         String action = request.getParameter("action");
+        String roleParam = request.getParameter("role");
         PrintWriter out = response.getWriter();
 
         try {
+            // Nếu có parameter "role" mà không có action, tự động filter theo role
+            if (roleParam != null && !roleParam.trim().isEmpty() && (action == null || action.isEmpty())) {
+                handleGetUsersByRole(request, out);
+                return;
+            }
+            
             switch (action != null ? action : "list") {
                 case "list":
                     handleGetAllUsers(out);

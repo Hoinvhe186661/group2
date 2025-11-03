@@ -21,6 +21,8 @@ public class WorkOrder {
 	private Integer createdBy;
 	private Timestamp createdAt;
 	private Timestamp updatedAt;
+	private String assignedToName;
+	private String customerName;
 
 	public int getId() {
 		return id;
@@ -148,6 +150,22 @@ public class WorkOrder {
 
 	public void setUpdatedAt(Timestamp updatedAt) {
 		this.updatedAt = updatedAt;
+	}
+
+	public String getAssignedToName() {
+		return assignedToName;
+	}
+
+	public void setAssignedToName(String assignedToName) {
+		this.assignedToName = assignedToName;
+	}
+
+	public String getCustomerName() {
+		return customerName;
+	}
+
+	public void setCustomerName(String customerName) {
+		this.customerName = customerName;
 	}
 }
 

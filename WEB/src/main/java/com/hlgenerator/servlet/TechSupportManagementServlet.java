@@ -110,6 +110,37 @@ public class TechSupportManagementServlet extends HttpServlet {
                 jsonResponse.addProperty("success", true);
                 jsonResponse.add("data", gson.toJsonTree(technicalTickets));
                 
+            } else if ("get".equals(action)) {
+                // Lấy chi tiết ticket theo ID
+                String idParam = request.getParameter("id");
+                if (idParam == null || idParam.isEmpty()) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Thiếu ID ticket");
+                } else {
+                    try {
+                        int ticketId = Integer.parseInt(idParam);
+                        Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                        
+                        if (ticket != null) {
+                            // Chỉ trả về ticket technical
+                            String category = (String) ticket.get("category");
+                            if ("technical".equals(category)) {
+                                jsonResponse.addProperty("success", true);
+                                jsonResponse.add("data", gson.toJsonTree(ticket));
+                            } else {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Ticket không phải loại technical");
+                            }
+                        } else {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy ticket");
+                        }
+                    } catch (NumberFormatException e) {
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "ID không hợp lệ");
+                    }
+                }
+                
             } else if ("stats".equals(action)) {
                 // Thống kê ticket technical
                 List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();

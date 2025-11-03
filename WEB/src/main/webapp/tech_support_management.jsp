@@ -380,34 +380,19 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Danh mục:</label>
                             <div class="col-sm-3">
-                                <select class="form-control" id="detail_category">
-                                    <option value="technical">Kỹ thuật</option>
-                                    <option value="billing">Thanh toán</option>
-                                    <option value="general">Chung</option>
-                                    <option value="complaint">Khiếu nại</option>
-                                </select>
+                                <p class="form-control-static" id="detail_category"></p>
                             </div>
                             
                             <label class="col-sm-3 control-label">Độ ưu tiên:</label>
                             <div class="col-sm-3">
-                                <select class="form-control" id="detail_priority">
-                                    <option value="urgent">Khẩn cấp</option>
-                                    <option value="high">Cao</option>
-                                    <option value="medium">Trung bình</option>
-                                    <option value="low">Thấp</option>
-                                </select>
+                                <p class="form-control-static" id="detail_priority"></p>
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Trạng thái:</label>
                             <div class="col-sm-3">
-                                <select class="form-control" id="detail_status">
-                                    <option value="open">Chờ xử lý</option>
-                                    <option value="in_progress">Đang xử lý</option>
-                                    <option value="resolved">Đã giải quyết</option>
-                                    <option value="closed">Đã đóng</option>
-                                </select>
+                                <p class="form-control-static" id="detail_status"></p>
                             </div>
                             
                             <label class="col-sm-3 control-label">Ngày tạo:</label>
@@ -415,26 +400,9 @@
                                 <p class="form-control-static" id="detail_created"></p>
                             </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Giải pháp kỹ thuật:</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="detail_resolution" rows="3" placeholder="Nhập giải pháp kỹ thuật..."></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Ghi chú kỹ thuật:</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="detail_notes" rows="2" placeholder="Ghi chú cho nhân viên kỹ thuật..."></textarea>
-                            </div>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="btnSaveTicket">
-                        <i class="fa fa-save"></i> Lưu thay đổi
-                    </button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
                 </div>
             </div>
@@ -473,60 +441,32 @@
                         
                         <!-- Thông tin Work Order -->
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Tiêu đề: <span class="text-danger">*</span></label>
+                            <label class="col-sm-3 control-label">Tiêu đề:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="work_order_title" placeholder="Tiêu đề đơn hàng công việc" required maxlength="200">
+                                <input type="text" class="form-control" id="work_order_title" readonly>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Mô tả công việc: <span class="text-danger">*</span></label>
+                            <label class="col-sm-3 control-label">Mô tả công việc:</label>
                             <div class="col-sm-9">
-                                <textarea class="form-control" id="work_order_description" rows="4" placeholder="Mô tả chi tiết công việc cần thực hiện..." required></textarea>
+                                <textarea class="form-control" id="work_order_description" rows="4" readonly></textarea>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Hợp đồng liên quan:</label>
+                            <label class="col-sm-3 control-label">Độ ưu tiên:</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="work_order_contract_id">
-                                    <option value="">-- Không có hợp đồng --</option>
-                                </select>
-                                <small class="help-block">Chọn hợp đồng nếu công việc liên quan đến hợp đồng cụ thể</small>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Độ ưu tiên: <span class="text-danger">*</span></label>
-                            <div class="col-sm-9">
-                                <select class="form-control" id="work_order_priority" required>
-                                    <option value="low">Thấp</option>
-                                    <option value="medium" selected>Trung bình</option>
-                                    <option value="high">Cao</option>
-                                    <option value="urgent">Khẩn cấp</option>
-                                </select>
+                                <input type="text" class="form-control" id="work_order_priority_display" readonly>
+                                <input type="hidden" id="work_order_priority">
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Trạng thái:</label>
                             <div class="col-sm-9">
-                                <select class="form-control" id="work_order_status">
-                                    <option value="pending" selected>Chờ xử lý</option>
-                                    <option value="in_progress">Đang xử lý</option>
-                                    <option value="completed">Hoàn thành</option>
-                                    <option value="cancelled">Đã hủy</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Phân công cho:</label>
-                            <div class="col-sm-9">
-                                <select class="form-control" id="work_order_assigned_to">
-                                    <option value="">-- Chưa phân công --</option>
-                                </select>
-                                <small class="help-block">Chọn nhân viên kỹ thuật thực hiện công việc</small>
+                                <input type="text" class="form-control" id="work_order_status_display" value="Đang xử lý" readonly>
+                                <input type="hidden" id="work_order_status" value="in_progress">
                             </div>
                         </div>
                         
@@ -610,11 +550,6 @@
                 renderTable();
             });
             
-            // Save ticket changes
-            $('#btnSaveTicket').click(function() {
-                saveTicketChanges();
-            });
-            
             // Confirm create work order
             $('#btnConfirmCreateWorkOrder').click(function() {
                 confirmCreateWorkOrder();
@@ -642,6 +577,11 @@
                         renderTable();
                         updateStatistics();
                         console.log('Đã tải ' + allTickets.length + ' ticket kỹ thuật');
+                        // Debug: Kiểm tra customerId trong tickets
+                        if (allTickets.length > 0) {
+                            console.log('Sample ticket có customerId:', allTickets[0].customerId);
+                            console.log('Sample ticket object:', allTickets[0]);
+                        }
                         
                         // Hiển thị thông báo nếu có ticket mới
                         var newTickets = allTickets.filter(function(t) {
@@ -815,162 +755,150 @@
             var ticket = allTickets.find(function(t) { return t.id == id; });
             if(!ticket) return;
             
-            var userRole = '<%= userRole %>';
-            
             $('#detail_ticket_id').val(ticket.id);
             $('#detail_ticket_number').text(ticket.ticketNumber || '#' + ticket.id);
             $('#detail_customer').text(ticket.customerName || 'N/A');
             $('#detail_email').text(ticket.customerEmail || 'N/A');
             $('#detail_subject').text(ticket.subject || '');
             $('#detail_description').val(ticket.description || '');
-            $('#detail_category').val(ticket.category || 'general');
-            $('#detail_priority').val(ticket.priority || 'medium');
-            $('#detail_status').val(ticket.status || 'open');
-            $('#detail_created').text(formatDate(ticket.createdAt));
-            $('#detail_resolution').val(ticket.resolution || '');
-            $('#detail_notes').val(ticket.internalNotes || '');
             
-            // Phân quyền hiển thị nút và chỉnh sửa
-            if (userRole === 'head_technician' || userRole === 'admin') {
-                $('#btnSaveTicket').show();
-                $('#detail_category, #detail_priority, #detail_status, #detail_resolution, #detail_notes').prop('readonly', false);
-            } else {
-                $('#btnSaveTicket').hide();
-                $('#detail_category, #detail_priority, #detail_status, #detail_resolution, #detail_notes').prop('readonly', true);
-            }
+            // Hiển thị text cho các trường category, priority, status
+            var categoryLabels = {
+                'technical': 'Kỹ thuật',
+                'billing': 'Thanh toán',
+                'general': 'Chung',
+                'complaint': 'Khiếu nại'
+            };
+            var priorityLabels = {
+                'urgent': 'Khẩn cấp',
+                'high': 'Cao',
+                'medium': 'Trung bình',
+                'low': 'Thấp'
+            };
+            var statusLabels = {
+                'open': 'Chờ xử lý',
+                'in_progress': 'Đang xử lý',
+                'resolved': 'Đã giải quyết',
+                'closed': 'Đã đóng'
+            };
+            
+            $('#detail_category').text(categoryLabels[ticket.category] || ticket.category || 'N/A');
+            $('#detail_priority').text(priorityLabels[ticket.priority] || ticket.priority || 'N/A');
+            $('#detail_status').text(statusLabels[ticket.status] || ticket.status || 'N/A');
+            $('#detail_created').text(formatDate(ticket.createdAt));
             
             $('#ticketDetailModal').modal('show');
         }
         
-        function saveTicketChanges() {
-            var id = $('#detail_ticket_id').val();
-            var data = {
-                action: 'update',
-                id: id,
-                category: $('#detail_category').val(),
-                priority: $('#detail_priority').val(),
-                status: $('#detail_status').val(),
-                resolution: $('#detail_resolution').val(),
-                internalNotes: $('#detail_notes').val()
-            };
-            
-            console.log('Sending update request:', data);
-            $.ajax({
-                url: ctx + '/api/tech-support',
-                type: 'POST',
-                data: $.param(data),
-                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success) {
-                        alert('✓ Cập nhật thành công!');
-                        $('#ticketDetailModal').modal('hide');
-                        loadTickets();
-                    } else {
-                        alert('✗ Lỗi: ' + (response.message || 'Không thể cập nhật'));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error:', error);
-                    alert('✗ Lỗi kết nối máy chủ');
-                }
-            });
-        }
-        
         function showCreateWorkOrderModal(id) {
             var ticket = allTickets.find(function(t) { return t.id == id; });
-            if(!ticket) return;
+            if(!ticket) {
+                console.error('Không tìm thấy ticket với ID:', id);
+                return;
+            }
+            
+            // Debug: Log thông tin ticket
+            console.log('Ticket object:', ticket);
+            console.log('ticket.customerId:', ticket.customerId);
+            console.log('ticket.customerId type:', typeof ticket.customerId);
             
             // Điền thông tin từ ticket
             $('#work_order_ticket_id').val(ticket.id);
-            $('#work_order_customer_id').val(ticket.customerId || '');
+            // Xử lý customerId: chỉ set nếu có giá trị hợp lệ (không phải null, undefined, hoặc 0)
+            // Lưu ý: 0 có thể là giá trị hợp lệ trong một số hệ thống, nhưng ở đây ta coi 0 là không hợp lệ
+            var customerIdValue = (ticket.customerId != null && ticket.customerId !== undefined && ticket.customerId !== 0) 
+                ? ticket.customerId : '';
+            $('#work_order_customer_id').val(customerIdValue);
+            console.log('Đã set customerId vào input:', customerIdValue);
+            console.log('Giá trị customerId từ input sau khi set:', $('#work_order_customer_id').val());
+            
             $('#work_order_ticket_number').text(ticket.ticketNumber || '#' + ticket.id);
             $('#work_order_customer_name').text(ticket.customerName || 'N/A');
             
-            // Điền thông tin work order
+            // Điền thông tin work order (readonly fields)
             $('#work_order_title').val(ticket.subject || '');
             $('#work_order_description').val(ticket.description || '');
-            $('#work_order_priority').val(ticket.priority || 'medium');
-            $('#work_order_status').val('pending');
+            
+            // Set độ ưu tiên
+            var priority = ticket.priority || 'medium';
+            var priorityLabels = {
+                'urgent': 'Khẩn cấp',
+                'high': 'Cao',
+                'medium': 'Trung bình',
+                'low': 'Thấp'
+            };
+            $('#work_order_priority').val(priority);
+            $('#work_order_priority_display').val(priorityLabels[priority] || priority);
+            
+            // Set trạng thái mặc định là "in_progress"
+            $('#work_order_status').val('in_progress');
+            $('#work_order_status_display').val('Đang xử lý');
+            
             $('#work_order_estimated_hours').val('');
             $('#work_order_scheduled_date').val('');
-            
-            // Load danh sách nhân viên kỹ thuật
-            loadTechnicalStaff();
-            
-            // Load danh sách hợp đồng của khách hàng
-            if(ticket.customerId) {
-                loadCustomerContracts(ticket.customerId);
-            }
             
             $('#createWorkOrderModal').modal('show');
         }
         
-        function loadTechnicalStaff() {
-            $.ajax({
-                url: ctx + '/api/users?role=technical_staff',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    var select = $('#work_order_assigned_to');
-                    select.empty();
-                    select.append('<option value="">-- Chưa phân công --</option>');
-                    
-                    if(response.success && response.data) {
-                        response.data.forEach(function(user) {
-                            select.append('<option value="' + user.id + '">' + user.fullName + ' (' + user.username + ')</option>');
-                        });
-                    }
-                },
-                error: function() {
-                    console.error('Không thể tải danh sách nhân viên kỹ thuật');
-                }
-            });
-        }
-        
-        function loadCustomerContracts(customerId) {
-            $.ajax({
-                url: ctx + '/api/contracts?customerId=' + customerId,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    var select = $('#work_order_contract_id');
-                    select.empty();
-                    select.append('<option value="">-- Không có hợp đồng --</option>');
-                    
-                    if(response.success && response.data) {
-                        response.data.forEach(function(contract) {
-                            select.append('<option value="' + contract.id + '">' + 
-                                contract.contractNumber + ' - ' + contract.title + 
-                                '</option>');
-                        });
-                    }
-                },
-                error: function() {
-                    console.error('Không thể tải danh sách hợp đồng');
-                }
-            });
-        }
-        
         function confirmCreateWorkOrder() {
-            // Validate required fields
+            // Validate required fields (từ ticket, không cần user nhập)
             var title = $('#work_order_title').val().trim();
             var description = $('#work_order_description').val().trim();
             
             if(!title) {
-                alert('Vui lòng nhập tiêu đề đơn hàng!');
-                $('#work_order_title').focus();
+                alert('Lỗi: Không có tiêu đề từ ticket!');
                 return;
             }
             
             if(!description) {
-                alert('Vui lòng nhập mô tả công việc!');
-                $('#work_order_description').focus();
+                alert('Lỗi: Không có mô tả từ ticket!');
                 return;
             }
             
             var ticketId = $('#work_order_ticket_id').val();
             var customerId = $('#work_order_customer_id').val();
+            
+            // Debug: Kiểm tra customerId
+            var ticket = allTickets.find(function(t) { return t.id == ticketId; });
+            
+            // Nếu customerId rỗng, thử lấy lại từ ticket object
+            // Kiểm tra: rỗng, null, undefined, hoặc chuỗi 'null'/'undefined'
+            if (!customerId || customerId === '' || customerId === 'null' || customerId === 'undefined' || customerId === '0') {
+                if (ticket) {
+                    // Thử lấy customerId từ ticket - kiểm tra cả null và 0
+                    // ticket.customerId có thể là null, undefined, 0, hoặc số hợp lệ
+                    if (ticket.customerId != null && ticket.customerId !== undefined && ticket.customerId !== 0) {
+                        customerId = ticket.customerId;
+                        $('#work_order_customer_id').val(customerId);
+                        console.log('Đã lấy lại customerId từ ticket:', customerId);
+                    } else {
+                        // Ticket không có customerId hợp lệ (null, undefined, hoặc 0)
+                        console.error('Ticket không có customerId hợp lệ trong object');
+                        console.log('Ticket ID:', ticketId);
+                        console.log('Ticket object:', ticket);
+                        console.log('ticket.customerId value:', ticket.customerId);
+                        console.log('ticket.customerId type:', typeof ticket.customerId);
+                        alert('Lỗi: Ticket này không có thông tin khách hàng trong hệ thống.\n\n' +
+                              'Nguyên nhân: customer_id trong database có thể là NULL hoặc 0.\n\n' +
+                              'Giải pháp:\n' +
+                              '1. Kiểm tra database: SELECT customer_id FROM support_requests WHERE id = ' + ticketId + ';\n' +
+                              '2. Nếu customer_id là NULL, cần cập nhật:\n' +
+                              '   UPDATE support_requests SET customer_id = [ID_KHÁCH_HÀNG] WHERE id = ' + ticketId + ';\n\n' +
+                              'Vui lòng liên hệ quản trị viên để cập nhật thông tin khách hàng cho ticket.\n\n' +
+                              'Ticket ID: ' + ticketId);
+                        return;
+                    }
+                } else {
+                    alert('Lỗi: Không tìm thấy ticket với ID: ' + ticketId);
+                    return;
+                }
+            }
+            
+            // Validate: customerId bắt buộc phải có
+            if (!customerId || customerId === '' || customerId === 'null' || customerId === 'undefined') {
+                alert('Lỗi: Không tìm thấy thông tin khách hàng. Không thể tạo work order.\n\nVui lòng kiểm tra lại ticket hoặc liên hệ quản trị viên.');
+                return;
+            }
             
             var data = {
                 action: 'create',
@@ -978,10 +906,8 @@
                 customerId: customerId,
                 title: title,
                 description: description,
-                contractId: $('#work_order_contract_id').val() || null,
-                priority: $('#work_order_priority').val(),
-                status: $('#work_order_status').val(),
-                assignedTo: $('#work_order_assigned_to').val() || null,
+                priority: $('#work_order_priority').val() || 'medium',
+                status: $('#work_order_status').val() || 'in_progress',
                 estimatedHours: $('#work_order_estimated_hours').val() || null,
                 scheduledDate: $('#work_order_scheduled_date').val() || null
             };

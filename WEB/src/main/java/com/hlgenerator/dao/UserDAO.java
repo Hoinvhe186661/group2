@@ -517,7 +517,8 @@ public class UserDAO extends DBConnect {
         if (!checkConnection()) {
             return users;
         }
-        String sql = "SELECT * FROM users WHERE role = ? ORDER BY created_at DESC";
+        // Chỉ lấy user có role đúng và đang active
+        String sql = "SELECT * FROM users WHERE role = ? AND is_active = TRUE ORDER BY created_at DESC";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, role);
@@ -537,6 +538,10 @@ public class UserDAO extends DBConnect {
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
                     );
+                    int cid = rs.getInt("customer_id");
+                    if (!rs.wasNull()) {
+                        user.setCustomerId(cid);
+                    }
                     users.add(user);
                 }
             }

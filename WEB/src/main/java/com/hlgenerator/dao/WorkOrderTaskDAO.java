@@ -1,0 +1,357 @@
+package com.hlgenerator.dao;
+
+import com.hlgenerator.model.WorkOrderTask;
+import com.hlgenerator.model.WorkOrderTaskAssignment;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class WorkOrderTaskDAO extends DBConnect {
+    private static final Logger logger = Logger.getLogger(WorkOrderTaskDAO.class.getName());
+
+    public WorkOrderTaskDAO() {
+        super();
+        if (connection == null) {
+            logger.severe("WorkOrderTaskDAO: Database connection failed during initialization");
+        }
+    }
+
+    // Check database connection
+    private boolean checkConnection() {
+        try {
+            if (connection == null || connection.isClosed()) {
+                logger.severe("Database connection is not available");
+                return false;
+            }
+            return true;
+        } catch (SQLException e) {
+            logger.severe("Error checking database connection: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Create a new task for a work order
+     */
+    public int createTask(WorkOrderTask task) {
+        if (!checkConnection()) {
+            return -1;
+        }
+
+        String sql = "INSERT INTO tasks (work_order_id, task_number, task_description, status, priority, " +
+                     "estimated_hours, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, task.getWorkOrderId());
+            ps.setString(2, generateTaskNumber(task.getWorkOrderId()));
+            ps.setString(3, task.getTaskDescription());
+            ps.setString(4, task.getStatus() != null ? task.getStatus() : "pending");
+            ps.setString(5, task.getPriority() != null ? task.getPriority() : "medium");
+            
+            if (task.getEstimatedHours() != null) {
+                ps.setBigDecimal(6, task.getEstimatedHours());
+            } else {
+                ps.setNull(6, Types.DECIMAL);
+            }
+            
+            ps.setString(7, task.getNotes());
+
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error creating task", e);
+        }
+        return -1;
+    }
+
+    /**
+     * Generate task number for a work order
+     */
+    private String generateTaskNumber(int workOrderId) {
+        String sql = "SELECT COUNT(*) + 1 as next_num FROM tasks WHERE work_order_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return "T-" + String.format("%03d", rs.getInt("next_num"));
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error generating task number", e);
+        }
+        return "T-001";
+    }
+
+    /**
+     * Get all tasks for a work order with assigned user info
+     */
+    public List<WorkOrderTask> getTasksByWorkOrderId(int workOrderId) {
+        List<WorkOrderTask> tasks = new ArrayList<>();
+        if (!checkConnection()) {
+            return tasks;
+        }
+
+        String sql = "SELECT t.*, u.full_name AS assigned_to_name " +
+                     "FROM tasks t " +
+                     "LEFT JOIN task_assignments ta ON t.id = ta.task_id AND ta.role = 'assignee' " +
+                     "LEFT JOIN users u ON ta.user_id = u.id " +
+                     "WHERE t.work_order_id = ? " +
+                     "ORDER BY t.created_at ASC";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tasks.add(mapResultSetToTask(rs));
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting tasks for work order: " + workOrderId, e);
+        }
+        return tasks;
+    }
+
+    /**
+     * Get a task by ID
+     */
+    public WorkOrderTask getTaskById(int taskId) {
+        if (!checkConnection()) {
+            return null;
+        }
+
+        String sql = "SELECT t.*, u.full_name AS assigned_to_name " +
+                     "FROM tasks t " +
+                     "LEFT JOIN task_assignments ta ON t.id = ta.task_id AND ta.role = 'assignee' " +
+                     "LEFT JOIN users u ON ta.user_id = u.id " +
+                     "WHERE t.id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToTask(rs);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting task by ID: " + taskId, e);
+        }
+        return null;
+    }
+
+    /**
+     * Update task
+     */
+    public boolean updateTask(WorkOrderTask task) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        String sql = "UPDATE tasks SET task_description = ?, status = ?, priority = ?, " +
+                     "estimated_hours = ?, actual_hours = ?, start_date = ?, completion_date = ?, " +
+                     "notes = ? WHERE id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, task.getTaskDescription());
+            ps.setString(2, task.getStatus());
+            ps.setString(3, task.getPriority());
+            
+            if (task.getEstimatedHours() != null) {
+                ps.setBigDecimal(4, task.getEstimatedHours());
+            } else {
+                ps.setNull(4, Types.DECIMAL);
+            }
+            
+            if (task.getActualHours() != null) {
+                ps.setBigDecimal(5, task.getActualHours());
+            } else {
+                ps.setNull(5, Types.DECIMAL);
+            }
+            
+            if (task.getStartDate() != null) {
+                ps.setTimestamp(6, task.getStartDate());
+            } else {
+                ps.setNull(6, Types.TIMESTAMP);
+            }
+            
+            if (task.getCompletionDate() != null) {
+                ps.setTimestamp(7, task.getCompletionDate());
+            } else {
+                ps.setNull(7, Types.TIMESTAMP);
+            }
+            
+            ps.setString(8, task.getNotes());
+            ps.setInt(9, task.getId());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error updating task: " + task.getId(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Delete task
+     */
+    public boolean deleteTask(int taskId) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        String sql = "DELETE FROM tasks WHERE id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error deleting task: " + taskId, e);
+            return false;
+        }
+    }
+
+    /**
+     * Assign task to user
+     */
+    public boolean assignTaskToUser(int taskId, int userId, String role) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        logger.info("Assigning task " + taskId + " to user " + userId + " with role " + role);
+
+        String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
+                     "VALUES (?, ?, ?) " +
+                     "ON DUPLICATE KEY UPDATE role = VALUES(role)";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            ps.setInt(2, userId);
+            ps.setString(3, role);
+            
+            int result = ps.executeUpdate();
+            logger.info("Assignment result: " + result + " row(s) affected");
+            return result > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error assigning task to user", e);
+            return false;
+        }
+    }
+
+    /**
+     * Remove task assignment
+     */
+    public boolean removeTaskAssignment(int taskId, int userId) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        String sql = "DELETE FROM task_assignments WHERE task_id = ? AND user_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error removing task assignment", e);
+            return false;
+        }
+    }
+
+    /**
+     * Get all assignments for a task
+     */
+    public List<WorkOrderTaskAssignment> getTaskAssignments(int taskId) {
+        List<WorkOrderTaskAssignment> assignments = new ArrayList<>();
+        if (!checkConnection()) {
+            return assignments;
+        }
+
+        String sql = "SELECT ta.*, u.full_name, u.email " +
+                     "FROM task_assignments ta " +
+                     "JOIN users u ON ta.user_id = u.id " +
+                     "WHERE ta.task_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    WorkOrderTaskAssignment assignment = new WorkOrderTaskAssignment();
+                    assignment.setId(rs.getInt("id"));
+                    assignment.setTaskId(rs.getInt("task_id"));
+                    assignment.setUserId(rs.getInt("user_id"));
+                    assignment.setRole(rs.getString("role"));
+                    assignment.setAssignedAt(rs.getTimestamp("assigned_at"));
+                    assignments.add(assignment);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting task assignments", e);
+        }
+        return assignments;
+    }
+
+    /**
+     * Map ResultSet to WorkOrderTask object
+     */
+    private WorkOrderTask mapResultSetToTask(ResultSet rs) throws SQLException {
+        WorkOrderTask task = new WorkOrderTask();
+        task.setId(rs.getInt("id"));
+        task.setWorkOrderId(rs.getInt("work_order_id"));
+        task.setTaskNumber(rs.getString("task_number"));
+        task.setTaskDescription(rs.getString("task_description"));
+        task.setStatus(rs.getString("status"));
+        task.setPriority(rs.getString("priority"));
+        task.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
+        task.setActualHours(rs.getBigDecimal("actual_hours"));
+        task.setStartDate(rs.getTimestamp("start_date"));
+        task.setCompletionDate(rs.getTimestamp("completion_date"));
+        task.setNotes(rs.getString("notes"));
+        task.setCreatedAt(rs.getTimestamp("created_at"));
+        task.setUpdatedAt(rs.getTimestamp("updated_at"));
+        
+        // Map assigned_to_name if present
+        try {
+            String assignedToName = rs.getString("assigned_to_name");
+            if (assignedToName != null && !assignedToName.isEmpty()) {
+                task.setAssignedToName(assignedToName);
+            }
+        } catch (SQLException e) {
+            // Column might not be present in all queries
+        }
+        
+        return task;
+    }
+
+    /**
+     * Get count of tasks by work order and status
+     */
+    public int getTaskCountByStatus(int workOrderId, String status) {
+        if (!checkConnection()) {
+            return 0;
+        }
+
+        String sql = "SELECT COUNT(*) as count FROM tasks WHERE work_order_id = ? AND status = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            ps.setString(2, status);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting task count", e);
+        }
+        return 0;
+    }
+}
+

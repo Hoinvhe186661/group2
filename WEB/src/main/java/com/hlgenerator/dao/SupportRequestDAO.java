@@ -118,7 +118,7 @@ public class SupportRequestDAO extends DBConnect {
 
     public List<Map<String, Object>> getAllSupportRequests() {
         System.out.println("Getting all support requests...");
-        String sql = "SELECT sr.id, sr.ticket_number, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
+        String sql = "SELECT sr.id, sr.ticket_number, sr.customer_id, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
                      "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
                      "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
                      "u.full_name as assigned_to_name, " +
@@ -134,6 +134,29 @@ public class SupportRequestDAO extends DBConnect {
                 Map<String, Object> row = new HashMap<>();
                 row.put("id", rs.getInt("id"));
                 row.put("ticketNumber", rs.getString("ticket_number"));
+                // Lấy customer_id, kiểm tra NULL đúng cách
+                // Lưu ý quan trọng: 
+                // - Nếu dùng getInt() trực tiếp trên NULL, JDBC trả về 0 (KHÔNG phải null)
+                // - Phải dùng getObject() để kiểm tra null, HOẶC dùng wasNull() sau getInt()
+                // Cách 1: Dùng getObject() - đơn giản và rõ ràng
+                Object customerIdObj = rs.getObject("customer_id");
+                if (customerIdObj != null) {
+                    // Convert sang Integer
+                    if (customerIdObj instanceof Number) {
+                        int customerId = ((Number) customerIdObj).intValue();
+                        row.put("customerId", customerId);
+                    } else {
+                        try {
+                            int customerId = Integer.parseInt(customerIdObj.toString());
+                            row.put("customerId", customerId);
+                        } catch (NumberFormatException e) {
+                            row.put("customerId", null);
+                        }
+                    }
+                } else {
+                    // customer_id là NULL trong database
+                    row.put("customerId", null);
+                }
                 row.put("subject", rs.getString("subject"));
                 row.put("description", rs.getString("description"));
                 row.put("category", rs.getString("category"));
@@ -380,7 +403,28 @@ public class SupportRequestDAO extends DBConnect {
                 Map<String, Object> ticket = new HashMap<>();
                 ticket.put("id", rs.getInt("id"));
                 ticket.put("ticketNumber", rs.getString("ticket_number"));
-                ticket.put("customerId", rs.getInt("customer_id"));
+                // Lấy customer_id, kiểm tra NULL đúng cách
+                // Lưu ý quan trọng: 
+                // - Nếu dùng getInt() trực tiếp trên NULL, JDBC trả về 0 (KHÔNG phải null)
+                // - Phải dùng getObject() để kiểm tra null
+                Object customerIdObj = rs.getObject("customer_id");
+                if (customerIdObj != null) {
+                    // Convert sang Integer
+                    if (customerIdObj instanceof Number) {
+                        int customerId = ((Number) customerIdObj).intValue();
+                        ticket.put("customerId", customerId);
+                    } else {
+                        try {
+                            int customerId = Integer.parseInt(customerIdObj.toString());
+                            ticket.put("customerId", customerId);
+                        } catch (NumberFormatException e) {
+                            ticket.put("customerId", null);
+                        }
+                    }
+                } else {
+                    // customer_id là NULL trong database
+                    ticket.put("customerId", null);
+                }
                 ticket.put("subject", rs.getString("subject"));
                 ticket.put("description", rs.getString("description"));
                 ticket.put("category", rs.getString("category"));
