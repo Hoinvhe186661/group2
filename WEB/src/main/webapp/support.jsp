@@ -573,16 +573,17 @@
     } catch (e) {}
     const tbody = document.getElementById('supportRows');
     const pagerContainer = document.querySelector('.pagination.custom-pagination');
-    let allItems = [];
-    let filteredItems = [];
+    let allItems = []; // Cache để xử lý cancel ở frontend
     let currentPage = 1;
     const pageSize = 9;
+    let totalRecords = 0;
+    let totalPages = 1;
     let cancelledItems = new Set(); // Lưu trữ các ID đã hủy trên frontend
     let searchTerm = ''; // Lưu từ khóa tìm kiếm
     let filterStatus = ''; // Lọc theo trạng thái
     let filterCategory = ''; // Lọc theo loại yêu cầu
-    let sortDirectionId = true; // true = tăng dần, false = giảm dần
-    let sortDirectionDate = true; // true = tăng dần, false = giảm dần
+    let sortField = ''; // Field để sắp xếp
+    let sortDirection = 'desc'; // 'asc' hoặc 'desc'
     function formatDate(it){
       if (it.createdDate && typeof it.createdDate === 'string' && it.createdDate.includes('-')) {
         var parts = it.createdDate.split('-');
@@ -620,26 +621,14 @@
       return classMap[status] || 'bg-warning';
     }
     
-    function filterItems() {
-      const term = searchTerm.trim().toLowerCase();
-      filteredItems = allItems.filter(function(item){
-        // text match
-        const textOk = !term || (
-          (item.subject && item.subject.toLowerCase().includes(term)) ||
-          (item.description && item.description.toLowerCase().includes(term)) ||
-          (item.category && item.category.toLowerCase().includes(term)) ||
-          (item.ticketNumber && item.ticketNumber.toLowerCase().includes(term))
-        );
-        // status match (use final status considering cancelled set)
-        const st = (cancelledItems.has(String(item.id)) ? 'cancelled' : (item.status || 'pending'));
-        const statusOk = !filterStatus || (filterStatus === 'waiting' ? (st === 'open' || st === 'pending') : st === filterStatus);
-        // category match
-        const categoryOk = !filterCategory || (item.category||'').toLowerCase() === filterCategory;
-        return textOk && statusOk && categoryOk;
-      });
-    }
+    // Hàm filterItems đã được chuyển sang backend, không cần nữa
     
     function rows(items){
+      console.log('rows() called with', items ? items.length : 0, 'items');
+      if (!tbody) {
+        console.error('tbody element not found!');
+        return;
+      }
       tbody.innerHTML = '';
       if(!items || !items.length){
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><i class="fas fa-info-circle"></i> Bạn chưa có yêu cầu hỗ trợ nào. <a href="#" data-bs-toggle="modal" data-bs-target="#supportModal" class="text-primary">Tạo yêu cầu mới</a></td></tr>';
@@ -655,61 +644,57 @@
         // Hiển thị nút hủy cho pending, open, cancelled, closed
         const canCancel = finalStatus === 'pending' || finalStatus === 'open' || finalStatus === 'cancelled' || finalStatus === 'closed';
         const cancelButton = canCancel ? '<a href="#" class="cancel-link text-danger" data-id="'+ (it.id||'') +'">Hủy</a>' : '';
-        // Tính số thứ tự theo thời gian tạo (mới nhất = 1)
+        // Tính số thứ tự theo trang hiện tại
         const sequenceNumber = (currentPage - 1) * pageSize + idx + 1;
         var displaySubject = (it.subject||'');
         tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ displaySubject +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + '</td>';
         tbody.appendChild(tr);
       });
+      console.log('rows() completed, added', items.length, 'rows to tbody');
     }
 
-    function renderPagination(totalItems){
-      if(!pagerContainer) return;
-      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    function renderPagination(){
+      if(!pagerContainer) {
+        console.warn('pagerContainer not found!');
+        return;
+      }
+      console.log('renderPagination() - currentPage:', currentPage, 'totalPages:', totalPages);
       let html = '';
       html += '<li class="page-item'+(currentPage===1?' disabled':'')+'"><a class="page-link" href="#" data-page="prev">Trước</a></li>';
       // show only current page number
       html += '<li class="page-item active"><a class="page-link" href="#" data-page="'+currentPage+'">'+currentPage+'</a></li>';
-      html += '<li class="page-item'+(currentPage===totalPages?' disabled':'')+'"><a class="page-link" href="#" data-page="next">Tiếp</a></li>';
+      html += '<li class="page-item'+(currentPage>=totalPages?' disabled':'')+'"><a class="page-link" href="#" data-page="next">Tiếp</a></li>';
       pagerContainer.innerHTML = html;
+      console.log('Pagination HTML:', html);
     }
 
     function renderPage(page){
-      const total = filteredItems.length;
-      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      // Validate page
+      console.log('renderPage called with:', page, 'currentPage:', currentPage, 'totalPages:', totalPages);
       if(page === 'prev') page = Math.max(1, currentPage - 1);
       if(page === 'next') page = Math.min(totalPages, currentPage + 1);
       page = Math.min(Math.max(1, parseInt(page||1,10)), totalPages);
+      console.log('Setting currentPage to:', page);
       currentPage = page;
-      const start = (page - 1) * pageSize;
-      const end = start + pageSize;
-      const pageItems = filteredItems.slice(start, end);
-      rows(pageItems);
-      renderPagination(total);
-    }
-    
-    // Hàm sắp xếp theo ID
-    function sortById(ascending) {
-      filteredItems.sort((a, b) => {
-        const idA = parseInt(a.id) || 0;
-        const idB = parseInt(b.id) || 0;
-        return ascending ? idA - idB : idB - idA;
-      });
-      renderPage(1);
-    }
-    
-    // Hàm sắp xếp theo ngày tạo
-    function sortByDate(ascending) {
-      filteredItems.sort((a, b) => {
-        const dateA = new Date(a.createdDate || a.createdAt || 0);
-        const dateB = new Date(b.createdDate || b.createdAt || 0);
-        return ascending ? dateA - dateB : dateB - dateA;
-      });
-      renderPage(1);
+      // Load data từ backend với page mới
+      load();
     }
     function load(){
       console.log('Loading support requests...');
-      fetch(ctx + '/api/support-stats?action=list', {headers:{'Accept':'application/json'}})
+      console.log('Current filters - searchTerm:', searchTerm, 'filterStatus:', filterStatus, 'filterCategory:', filterCategory);
+      console.log('Pagination - currentPage:', currentPage, 'pageSize:', pageSize, 'sortField:', sortField, 'sortDirection:', sortDirection);
+      
+      // Xây dựng URL với các tham số - sử dụng endpoint mới với logic backend
+      let url = ctx + '/api/support-customer?action=list&page=' + currentPage + '&pageSize=' + pageSize;
+      if (searchTerm) url += '&search=' + encodeURIComponent(searchTerm);
+      if (filterStatus) url += '&filterStatus=' + encodeURIComponent(filterStatus);
+      if (filterCategory) url += '&filterCategory=' + encodeURIComponent(filterCategory);
+      if (sortField) url += '&sortField=' + encodeURIComponent(sortField);
+      if (sortDirection) url += '&sortDirection=' + encodeURIComponent(sortDirection);
+      
+      console.log('Request URL:', url);
+      
+      fetch(url, {headers:{'Accept':'application/json'}})
         .then(r => {
           console.log('Load response status:', r.status);
           if (!r.ok) {
@@ -718,14 +703,40 @@
           return r.json();
         })
         .then(j => { 
-          console.log('Load response data:', j);
+          console.log('Load response data (full):', JSON.stringify(j, null, 2));
+          console.log('Response details - totalRecords:', j.totalRecords, 'totalPages:', j.totalPages, 'currentPage:', j.currentPage, 'pageSize:', j.pageSize);
+          console.log('Response has data?', Array.isArray(j.data), 'data length:', j.data ? j.data.length : 0);
           if (j && j.success) {
-            allItems = Array.isArray(j.data)? j.data : []; 
-            filterItems();
-            renderPage(1);
+            allItems = Array.isArray(j.data)? j.data : [];
+            
+            // Lấy thông tin phân trang từ response
+            if (j.totalRecords !== undefined && j.totalRecords !== null) {
+              totalRecords = parseInt(j.totalRecords);
+            }
+            if (j.totalPages !== undefined && j.totalPages !== null) {
+              totalPages = Math.max(1, parseInt(j.totalPages));
+            } else if (totalRecords > 0) {
+              // Tính toán nếu backend không trả về
+              totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+            }
+            if (j.currentPage !== undefined && j.currentPage !== null) {
+              currentPage = Math.max(1, parseInt(j.currentPage));
+            }
+            
+            console.log('Updating UI - allItems:', allItems.length, 'totalRecords:', totalRecords, 'totalPages:', totalPages, 'currentPage:', currentPage);
+            
+            // Đảm bảo render cả table và pagination
+            if (tbody) {
+              rows(allItems);
+            } else {
+              console.error('tbody is null!');
+            }
+            renderPagination();
           } else {
             console.error('Load server error:', j);
-            tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> ' + (j && j.message ? j.message : 'Lỗi tải dữ liệu') + '</td></tr>';
+            if (tbody) {
+              tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> ' + (j && j.message ? j.message : 'Lỗi tải dữ liệu') + '</td></tr>';
+            }
           }
         })
         .catch(error => {
@@ -736,16 +747,36 @@
     load();
 
     // Thêm event listener cho sắp xếp
-    document.querySelector('th:nth-child(1)').addEventListener('click', function() {
-      sortDirectionId = !sortDirectionId;
-      sortById(sortDirectionId);
-      document.getElementById('sortIdArrow').textContent = sortDirectionId ? ' ↑' : ' ↓';
+    document.querySelector('th:nth-child(1)').addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Sort by ID clicked, current sortField:', sortField, 'sortDirection:', sortDirection);
+      if (sortField === 'id') {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortField = 'id';
+        sortDirection = 'asc';
+      }
+      const arrowEl = document.getElementById('sortIdArrow');
+      if (arrowEl) arrowEl.textContent = sortDirection === 'asc' ? ' ↑' : ' ↓';
+      currentPage = 1; // Reset về trang đầu khi sắp xếp
+      console.log('Loading with sortField:', sortField, 'sortDirection:', sortDirection);
+      load();
     });
     
-    document.querySelector('th:nth-child(4)').addEventListener('click', function() {
-      sortDirectionDate = !sortDirectionDate;
-      sortByDate(sortDirectionDate);
-      document.getElementById('sortDateArrow').textContent = sortDirectionDate ? ' ↑' : ' ↓';
+    document.querySelector('th:nth-child(4)').addEventListener('click', function(e) {
+      e.preventDefault();
+      console.log('Sort by Date clicked, current sortField:', sortField, 'sortDirection:', sortDirection);
+      if (sortField === 'date' || sortField === 'created_at') {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortField = 'date';
+        sortDirection = 'desc';
+      }
+      const arrowEl = document.getElementById('sortDateArrow');
+      if (arrowEl) arrowEl.textContent = sortDirection === 'asc' ? ' ↑' : ' ↓';
+      currentPage = 1; // Reset về trang đầu khi sắp xếp
+      console.log('Loading with sortField:', sortField, 'sortDirection:', sortDirection);
+      load();
     });
 
     // Thêm chức năng tìm kiếm và lọc
@@ -760,8 +791,9 @@
       searchTerm = searchInput ? searchInput.value.trim() : '';
       filterStatus = statusSelect ? statusSelect.value : '';
       filterCategory = categorySelect ? categorySelect.value : '';
-      filterItems();
-      renderPage(1);
+      currentPage = 1; // Reset về trang đầu khi lọc
+      console.log('Applying filters - searchTerm:', searchTerm, 'filterStatus:', filterStatus, 'filterCategory:', filterCategory);
+      load();
     }
     
     // Hàm xóa bộ lọc
@@ -772,8 +804,9 @@
       searchTerm = '';
       filterStatus = '';
       filterCategory = '';
-      filterItems();
-      renderPage(1);
+      currentPage = 1; // Reset về trang đầu khi xóa lọc
+      console.log('Clearing filters');
+      load();
     }
     
     // Event listeners
@@ -800,8 +833,11 @@
         if(!a) return;
         e.preventDefault();
         const p = a.getAttribute('data-page');
+        console.log('Pagination clicked, page:', p);
         renderPage(p === 'prev' || p === 'next' ? p : parseInt(p,10));
       });
+    } else {
+      console.warn('pagerContainer not found for event listener!');
     }
 
     // Handle submit
@@ -856,7 +892,7 @@
       data.append('category', document.getElementById('category').value || 'general');
       data.append('priority', 'medium'); // Set priority mặc định
       // backend tự xác định người dùng theo session; không gửi priority/customer/email
-      fetch(ctx + '/api/support-stats', {
+      fetch(ctx + '/api/support-customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
         body: data.toString()
@@ -895,10 +931,11 @@
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modal.hide();
             
-            // Hiển thị thông báo thành công bằng modal
-            showSuccessModal('Tạo yêu cầu thành công!', j.message || 'Yêu cầu hỗ trợ đã được tạo thành công!');
+              // Hiển thị thông báo thành công bằng modal
+              showSuccessModal('Tạo yêu cầu thành công!', j.message || 'Yêu cầu hỗ trợ đã được tạo thành công!');
             
-            // Tải lại dữ liệu
+            // Tải lại dữ liệu - reset về trang đầu
+            currentPage = 1;
             load();
           } else {
             console.error('Server error:', j);
@@ -1125,7 +1162,7 @@
           data.append('category', catInp.value || 'general');
           data.append('priority', 'medium');
           data.append('delete_old_id', ticketId); // thêm ID để xóa bản cũ
-          fetch(ctx + '/api/support-stats', {
+          fetch(ctx + '/api/support-customer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: data.toString()
@@ -1143,8 +1180,8 @@
               // Hiển thị thông báo thành công bằng modal
               showSuccessModal('Cập nhật thành công!', 'Yêu cầu hỗ trợ đã được cập nhật thành công!');
               
+              // Tải lại dữ liệu
               load();
-              renderPage(1);
             } else {
               console.error('Update server error:', j);
               alert(j && j.message ? j.message : 'Không thể cập nhật');
@@ -1183,7 +1220,7 @@
           data.append('id', id);
           
           console.log('DEBUG: Sending cancel request with:', data.toString());
-          fetch(ctx + '/api/support-stats', {
+          fetch(ctx + '/api/support-customer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: data.toString()
@@ -1200,11 +1237,12 @@
                 // Hiển thị thông báo thành công bằng modal
                 showSuccessModal('Hủy yêu cầu thành công!', 'Đã hủy yêu cầu thành công!');
                 
+                // Tải lại dữ liệu
                 load(); // Reload danh sách từ server
               } else {
                 // Nếu server từ chối, revert lại trạng thái
                 cancelledItems.delete(String(id));
-                renderPage(currentPage);
+                load(); // Reload để cập nhật UI
                 showSuccessModal('Lỗi', j && j.message ? j.message : 'Không thể hủy yêu cầu');
               }
             })
@@ -1212,7 +1250,7 @@
               console.error('Cancel request failed:', error);
               // Nếu có lỗi kết nối, revert lại trạng thái
               cancelledItems.delete(String(id));
-              renderPage(currentPage);
+              load(); // Reload để cập nhật UI
               showSuccessModal('Lỗi', 'Lỗi kết nối máy chủ: ' + error.message);
             });
         });
