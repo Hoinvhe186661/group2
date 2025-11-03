@@ -106,6 +106,26 @@
                 flex: 1;
             }
         }
+        /* Reason cell: wrap long words and limit visual size */
+        .reason-cell {
+            max-width: 320px;
+            word-break: break-word;
+            overflow: hidden;
+        }
+        .reason-ellipsis {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: normal;
+        }
+        /* Reject modal textarea counter */
+        .char-counter {
+            font-size: 12px;
+            color: #6c757d;
+            float: right;
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -204,7 +224,7 @@
                                                     </div>
                                                     <div class="filter-group">
                                                         <label for="q">Tìm kiếm</label>
-                                                        <input type="text" id="q" class="form-control" placeholder="Mã nhiệm vụ (vd: T-002)">
+                                                        <input type="text" id="q" class="form-control" placeholder="Mã nhiệm vụ, Mô tả nhiệm vụ">
                                                     </div>
                                                 </div>
                                                 <div class="filter-row">
@@ -368,6 +388,34 @@
         </div>
     </div>
 
+    <!-- Modal: Từ chối nhiệm vụ -->
+    <div class="modal fade" id="rejectTaskModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #dd4b39; color: white;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity: 0.8;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title"><i class="fa fa-times"></i> Từ chối nhiệm vụ</h4>
+                </div>
+                <form id="rejectTaskForm">
+                    <input type="hidden" id="rejectTaskId" />
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Lý do từ chối <span class="text-danger">*</span></label>
+                            <span class="char-counter"><span id="rejectCount">0</span>/300</span>
+                            <textarea id="rejectReason" class="form-control" rows="4" maxlength="300" placeholder="Nhập lý do từ chối (tối đa 300 ký tự)" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Hủy</button>
+                        <button type="submit" class="btn btn-danger"><i class="fa fa-check"></i> Xác nhận từ chối</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Xem báo cáo chi tiết -->
     <div class="modal fade" id="viewReportModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
@@ -431,13 +479,17 @@
         function toggleFilters() {
             var content = document.getElementById('filterContent');
             var icon = document.getElementById('filterToggleIcon');
+            var expanded;
             if (content.classList.contains('show')) {
                 content.classList.remove('show');
                 icon.classList.remove('rotated');
+                expanded = false;
             } else {
                 content.classList.add('show');
                 icon.classList.add('rotated');
+                expanded = true;
             }
+            saveMyTaskFilterState(expanded);
         }
 
         function badgeForStatus(s){
@@ -494,7 +546,7 @@
                     var actions = [];
                     if(it.taskStatus === 'pending'){
                         actions.push('<button class="btn btn-xs btn-primary" onclick="ack(' + it.taskId + ')"><i class="fa fa-check"></i> Nhận</button>');
-                        actions.push('<button class="btn btn-xs btn-danger" onclick="rejectTask(' + it.taskId + ')"><i class="fa fa-times"></i> Từ chối</button>');
+                        actions.push('<button class="btn btn-xs btn-danger" onclick="openRejectModal(' + it.taskId + ')"><i class="fa fa-times"></i> Từ chối</button>');
                     }
                     if(it.taskStatus === 'in_progress'){
                         actions.push('<button class="btn btn-xs btn-success" onclick="openCompleteModal(' + it.taskId + ', \'' + (it.taskNumber||'').replace(/'/g, "\\'") + '\', \'' + (it.taskDescription||'').replace(/'/g, "\\'") + '\')"><i class="fa fa-flag-checkered"></i> Hoàn thành</button>');
@@ -511,7 +563,7 @@
                         '<td>' + (it.taskPriority||'') + '</td>' +
                         '<td>' + (fmt(it.startDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
-                        '<td>' + (it.rejectionReason ? '<span class="text-danger">' + it.rejectionReason + '</span>' : '<span class="text-muted">-</span>') + '</td>' +
+                        '<td class="reason-cell">' + (it.rejectionReason ? (function(txt){ var esc = String(txt).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); return '<span class="text-danger reason-ellipsis" title="' + esc + '">' + esc + '</span>'; })(it.rejectionReason) : '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + actions.join(' ') + '</td>';
                     tbody.appendChild(tr);
                 });
@@ -524,6 +576,8 @@
             document.getElementById('scheduledFrom').value = '';
             document.getElementById('scheduledTo').value = '';
             document.getElementById('q').value = '';
+            document.getElementById('pageSize').value = '10';
+            localStorage.removeItem('myTaskFilterValues');
             currentPage = 1;
             loadTasks();
         }
@@ -720,21 +774,136 @@
             });
         }
 
-        function rejectTask(id){
-            var reason = prompt('Lý do từ chối (bắt buộc):', '');
-            if(reason === null) return; // User cancelled
-            if(reason.trim() === ''){
-                alert('Vui lòng nhập lý do từ chối');
+        // Reject modal logic
+        function openRejectModal(id){
+            $('#rejectTaskId').val(id);
+            $('#rejectReason').val('');
+            $('#rejectCount').text('0');
+            $('#rejectTaskModal').modal('show');
+            setTimeout(function(){ $('#rejectReason').focus(); }, 200);
+        }
+        $('#rejectReason').on('input', function(){
+            $('#rejectCount').text(this.value.length);
+        });
+        $('#rejectTaskForm').on('submit', function(e){
+            e.preventDefault();
+            var id = $('#rejectTaskId').val();
+            var reason = ($('#rejectReason').val()||'').trim();
+            if(reason.length < 3){
+                alert('Lý do quá ngắn. Vui lòng nhập tối thiểu 3 ký tự.');
                 return;
             }
-            $.post('api/tasks', { action:'reject', id: id, rejectionReason: reason.trim() }, function(res){
-                try{ res = JSON.parse(res); }catch(e){}
+            var btn = $(this).find('button[type="submit"]');
+            btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
+            $.post('api/tasks', { action:'reject', id: id, rejectionReason: reason }, function(res){
+                try{ if(typeof res === 'string') res = JSON.parse(res); }catch(e){}
                 alert(res.message||'');
-                if(res.success) loadTasks();
+                if(res.success){
+                    $('#rejectTaskModal').modal('hide');
+                    loadTasks();
+                }
+            }).fail(function(){
+                alert('Lỗi kết nối!');
+            }).always(function(){
+                btn.prop('disabled', false).html('<i class="fa fa-check"></i> Xác nhận từ chối');
+            });
+        });
+
+        // ===== LƯU & KHÔI PHỤC TRẠNG THÁI BỘ LỌC + GIÁ TRỊ FILTER =====
+        function saveMyTaskFilterState(isExpanded) {
+            localStorage.setItem('myTaskFilterExpanded', isExpanded ? '1' : '0');
+        }
+        function loadMyTaskFilterState() {
+            return localStorage.getItem('myTaskFilterExpanded') === '1';
+        }
+        function saveMyTaskFilterValues() {
+            var filterVals = {
+                status: document.getElementById('statusFilter').value,
+                priority: document.getElementById('priorityFilter').value,
+                q: document.getElementById('q').value,
+                scheduledFrom: document.getElementById('scheduledFrom').value,
+                scheduledTo: document.getElementById('scheduledTo').value,
+                pageSize: document.getElementById('pageSize').value
+            };
+            localStorage.setItem('myTaskFilterValues', JSON.stringify(filterVals));
+        }
+        function loadMyTaskFilterValues() {
+            var vals = localStorage.getItem('myTaskFilterValues');
+            if(vals) {
+                try {
+                    vals = JSON.parse(vals);
+                    if(vals.status !== undefined) document.getElementById('statusFilter').value = vals.status;
+                    if(vals.priority !== undefined) document.getElementById('priorityFilter').value = vals.priority;
+                    if(vals.q !== undefined) document.getElementById('q').value = vals.q;
+                    if(vals.scheduledFrom !== undefined) document.getElementById('scheduledFrom').value = vals.scheduledFrom;
+                    if(vals.scheduledTo !== undefined) document.getElementById('scheduledTo').value = vals.scheduledTo;
+                    if(vals.pageSize !== undefined) document.getElementById('pageSize').value = vals.pageSize;
+                } catch(e) {}
+            }
+        }
+        // --- Sửa toggleFilters để lưu trạng thái ---
+        function toggleFilters() {
+            var content = document.getElementById('filterContent');
+            var icon = document.getElementById('filterToggleIcon');
+            var expanded;
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                icon.classList.remove('rotated');
+                expanded = false;
+            } else {
+                content.classList.add('show');
+                icon.classList.add('rotated');
+                expanded = true;
+            }
+            saveMyTaskFilterState(expanded);
+        }
+        // --- Gán lại trạng thái expand/collapse + value khi DOM ready ---
+        document.addEventListener('DOMContentLoaded', function() {
+            var content = document.getElementById('filterContent');
+            var icon = document.getElementById('filterToggleIcon');
+            if (loadMyTaskFilterState()) {
+                content.classList.add('show');
+                icon.classList.add('rotated');
+            } else {
+                content.classList.remove('show');
+                icon.classList.remove('rotated');
+            }
+            loadMyTaskFilterValues();
+            // Tải danh sách ngay khi mở trang
+            loadTasks();
+        });
+        // --- Mỗi lần bấm Lọc, chuyển input/select hoặc Xóa lọc thì lưu giá trị ---
+        // Lưu giá trị filter trước khi loadTasks
+        function myTasksFilterBeforeLoad() {
+            saveMyTaskFilterValues();
+        }
+        // Thay đổi event onsubmit filter form
+        var filterForm = document.querySelector('.filter-content form');
+        if(filterForm) {
+            filterForm.addEventListener('submit', function(){
+                myTasksFilterBeforeLoad();
             });
         }
-
-        document.addEventListener('DOMContentLoaded', loadTasks);
+        // Các trường khi change cũng lưu lại giá trị
+        ['statusFilter','priorityFilter','q','scheduledFrom','scheduledTo','pageSize'].forEach(function(id){
+            var el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('change', saveMyTaskFilterValues);
+                el.addEventListener('input', saveMyTaskFilterValues);
+            }
+        });
+        // --- Sửa luôn hàm resetFilters để xóa input+localStorage về mặc định ---
+        function resetFilters(){
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('priorityFilter').value = '';
+            document.getElementById('scheduledFrom').value = '';
+            document.getElementById('scheduledTo').value = '';
+            document.getElementById('q').value = '';
+            document.getElementById('pageSize').value = '10';
+            localStorage.removeItem('myTaskFilterValues');
+            currentPage = 1;
+            loadTasks();
+        }
     </script>
 </body>
 </html>

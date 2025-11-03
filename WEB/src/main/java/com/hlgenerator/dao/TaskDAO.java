@@ -88,7 +88,7 @@ public class TaskDAO extends DBConnect {
 			sql.append("AND wo.scheduled_date <= ? ");
 		}
 		if (keyword != null && !keyword.isEmpty()) {
-			sql.append("AND LOWER(t.task_number) LIKE LOWER(?) ");
+			sql.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?)) ");
 		}
 		sql.append("ORDER BY t.updated_at DESC, t.created_at DESC");
 
@@ -109,6 +109,7 @@ public class TaskDAO extends DBConnect {
 		}
 		if (keyword != null && !keyword.isEmpty()) {
 			String like = "%" + keyword + "%";
+			ps.setString(idx++, like);
 			ps.setString(idx++, like);
 		}
 		try (ResultSet rs = ps.executeQuery()) {
@@ -153,7 +154,7 @@ public class TaskDAO extends DBConnect {
 		if (scheduledFrom != null) sql.append("AND wo.scheduled_date >= ? ");
 		if (scheduledTo != null) sql.append("AND wo.scheduled_date <= ? ");
 		if (keyword != null && !keyword.isEmpty()) {
-			sql.append("AND LOWER(t.task_number) LIKE LOWER(?) ");
+			sql.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?)) ");
 		}
 		try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
 			int idx = 1;
@@ -164,6 +165,7 @@ public class TaskDAO extends DBConnect {
 		if (scheduledTo != null) ps.setDate(idx++, scheduledTo);
 		if (keyword != null && !keyword.isEmpty()) {
 			String like = "%" + keyword + "%";
+			ps.setString(idx++, like);
 			ps.setString(idx++, like);
 		}
 		try (ResultSet rs = ps.executeQuery()) {
@@ -200,7 +202,7 @@ public class TaskDAO extends DBConnect {
 		if (scheduledFrom != null) sql.append("AND wo.scheduled_date >= ? ");
 		if (scheduledTo != null) sql.append("AND wo.scheduled_date <= ? ");
 		if (keyword != null && !keyword.isEmpty()) {
-			sql.append("AND LOWER(t.task_number) LIKE LOWER(?) ");
+			sql.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?)) ");
 		}
 		sql.append("ORDER BY t.updated_at DESC, t.created_at DESC ");
 		sql.append("LIMIT ? OFFSET ?");
@@ -214,6 +216,7 @@ public class TaskDAO extends DBConnect {
 		if (scheduledTo != null) ps.setDate(idx++, scheduledTo);
 		if (keyword != null && !keyword.isEmpty()) {
 			String like = "%" + keyword + "%";
+			ps.setString(idx++, like);
 			ps.setString(idx++, like);
 		}
 		ps.setInt(idx++, limit);
