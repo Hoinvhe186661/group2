@@ -164,6 +164,15 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        if ("generate_number".equalsIgnoreCase(action)) {
+            // Sinh số hợp đồng mới
+            String generated = contractDAO.generateNextContractNumber();
+            org.json.JSONObject result = new org.json.JSONObject();
+            result.put("contractNumber", generated);
+            out.print(successJson(result));
+            return;
+        }
+
         // Lấy customerId từ session để lọc hợp đồng
         Integer customerId = null;
         try {
@@ -202,12 +211,21 @@ public class ContractServlet extends HttpServlet {
             if ("add".equalsIgnoreCase(action)) {
                 Contract c = parseContractFromRequest(request, false);
                 
-                // Validation cơ bản
+                // Nếu frontend không gửi hoặc để trống, tự sinh số hợp đồng
                 if (c.getContractNumber() == null || c.getContractNumber().trim().isEmpty()) {
-                    out.print(errorJson("Số hợp đồng không được để trống"));
-                    return;
+                    c.setContractNumber(contractDAO.generateNextContractNumber());
                 }
                 
+                // Validate độ dài tiêu đề và điều khoản
+                if (c.getTitle() != null && c.getTitle().length() > 150) {
+                    out.print(errorJson("Tiêu đề vượt quá 150 ký tự"));
+                    return;
+                }
+                if (c.getTerms() != null && c.getTerms().length() > 2000) {
+                    out.print(errorJson("Điều khoản vượt quá 2000 ký tự"));
+                    return;
+                }
+
                 if (c.getCustomerId() <= 0) {
                     out.print(errorJson("Vui lòng chọn khách hàng"));
                     return;
@@ -252,6 +270,16 @@ public class ContractServlet extends HttpServlet {
                 // Validation cơ bản
                 if (c.getContractNumber() == null || c.getContractNumber().trim().isEmpty()) {
                     out.print(errorJson("Số hợp đồng không được để trống"));
+                    return;
+                }
+
+                // Validate độ dài tiêu đề và điều khoản
+                if (c.getTitle() != null && c.getTitle().length() > 150) {
+                    out.print(errorJson("Tiêu đề vượt quá 150 ký tự"));
+                    return;
+                }
+                if (c.getTerms() != null && c.getTerms().length() > 2000) {
+                    out.print(errorJson("Điều khoản vượt quá 2000 ký tự"));
                     return;
                 }
                 
@@ -386,6 +414,9 @@ public class ContractServlet extends HttpServlet {
         o.put("id", c.getId());
         o.put("contractNumber", c.getContractNumber());
         o.put("customerId", c.getCustomerId());
+        // Bổ sung tên và điện thoại khách hàng để hiển thị ở trang chi tiết
+        o.put("customerName", c.getCustomerName());
+        o.put("customerPhone", c.getCustomerPhone());
         o.put("contractType", c.getContractType());
         o.put("title", c.getTitle());
         o.put("startDate", c.getStartDate());

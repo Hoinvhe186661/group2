@@ -73,6 +73,9 @@
             border-color: #bee5eb;
             color: #0c5460;
         }
+        /* Đảm bảo dropdown khách hàng hiển thị đúng trong modal (fix chồng lấn/z-index) */
+        #contractModal .form-group { overflow: visible; }
+        #contractModal select#customerId { position: relative; z-index: 2051; background-color: #ffffff; color: #333333; }
         
         /* Styles for filter section */
         .filter-section {
@@ -82,6 +85,11 @@
             padding: 15px;
             margin-bottom: 15px;
         }
+
+        /* Thùng rác: chống tràn chữ, dùng dấu … cho cột dài */
+        #deletedContractsModal .table { table-layout: fixed; width: 100%; }
+        #deletedContractsModal th, #deletedContractsModal td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #deletedContractsModal .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
         .filter-header {
             display: flex;
             justify-content: space-between;
@@ -277,44 +285,52 @@
                                                 <div class="filter-group">
                                                     <label for="statusFilter">Trạng thái</label>
                                                     <select class="form-control" id="statusFilter" name="status">
-                                                        <option value="">Tất cả</option>
-                                                        <option value="draft">Bản nháp</option>
-                                                        <option value="active">Hiệu lực</option>
-                                                        <option value="completed">Hoàn thành</option>
-                                                        <option value="terminated">Chấm dứt</option>
-                                                        <option value="expired">Hết hạn</option>
-                                                        <option value="deleted">Đã xóa</option>
+                                                        <option value="" <%= request.getParameter("status") == null || "".equals(request.getParameter("status")) ? "selected" : "" %>>Tất cả</option>
+                                                        <option value="draft" <%= "draft".equals(request.getParameter("status")) ? "selected" : "" %>>Bản nháp</option>
+                                                        <option value="active" <%= "active".equals(request.getParameter("status")) ? "selected" : "" %>>Hiệu lực</option>
+                                                        <option value="completed" <%= "completed".equals(request.getParameter("status")) ? "selected" : "" %>>Hoàn thành</option>
+                                                        <option value="terminated" <%= "terminated".equals(request.getParameter("status")) ? "selected" : "" %>>Chấm dứt</option>
+                                                        <option value="expired" <%= "expired".equals(request.getParameter("status")) ? "selected" : "" %>>Hết hạn</option>
+                                                        <option value="deleted" <%= "deleted".equals(request.getParameter("status")) ? "selected" : "" %>>Đã xóa</option>
                                                     </select>
                                                 </div>
                                                 <div class="filter-group">
-                                                    <label for="typeFilter">Loại hợp đồng</label>
-                                                    <input type="text" class="form-control" id="typeFilter" name="contractType" placeholder="VD: Service">
-                                                </div>
-                                                <div class="filter-group">
                                                     <label for="search">Tìm kiếm</label>
-                                                    <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH">
+                                                    <input type="text" class="form-control" id="search" name="q" placeholder="ID, số HĐ, tên KH" value="<%= request.getParameter("q") != null ? request.getParameter("q") : "" %>">
                                                 </div>
                                             </div>
                                             <div class="filter-row">
                                                 <div class="filter-group">
                                                     <label for="startFrom">Bắt đầu từ</label>
-                                                    <input type="date" class="form-control" id="startFrom" name="startFrom">
+                                                    <input type="date" class="form-control" id="startFrom" name="startFrom" value="<%= request.getParameter("startFrom") != null ? request.getParameter("startFrom") : "" %>">
                                                 </div>
                                                 <div class="filter-group">
                                                     <label for="startTo">Đến</label>
-                                                    <input type="date" class="form-control" id="startTo" name="startTo">
+                                                    <input type="date" class="form-control" id="startTo" name="startTo" value="<%= request.getParameter("startTo") != null ? request.getParameter("startTo") : "" %>">
                                                 </div>
                                                 <div class="filter-group">
                                                     <label for="endFrom">Kết thúc từ</label>
-                                                    <input type="date" class="form-control" id="endFrom" name="endFrom">
+                                                    <input type="date" class="form-control" id="endFrom" name="endFrom" value="<%= request.getParameter("endFrom") != null ? request.getParameter("endFrom") : "" %>">
                                                 </div>
                                                 <div class="filter-group">
                                                     <label for="endTo">Đến</label>
-                                                    <input type="date" class="form-control" id="endTo" name="endTo">
+                                                    <input type="date" class="form-control" id="endTo" name="endTo" value="<%= request.getParameter("endTo") != null ? request.getParameter("endTo") : "" %>">
                                                 </div>
                                             </div>
                                             <div class="filter-row">
-                                                <input type="hidden" name="size" value="<%= request.getParameter("size") != null ? request.getParameter("size") : "10" %>">
+                                                <div class="filter-group small">
+                                                    <label for="pageSize">Hiển thị</label>
+                                                    <select class="form-control" id="pageSize" name="size" onchange="this.form.submit()">
+                                                        <%
+                                                            int _sz = 10;
+                                                            try { String sp = request.getParameter("size"); if (sp != null) _sz = Integer.parseInt(sp); } catch (Exception ignored) {}
+                                                        %>
+                                                        <option value="10" <%= _sz == 10 ? "selected" : "" %>>10</option>
+                                                        <option value="25" <%= _sz == 25 ? "selected" : "" %>>25</option>
+                                                        <option value="50" <%= _sz == 50 ? "selected" : "" %>>50</option>
+                                                        <option value="100" <%= _sz == 100 ? "selected" : "" %>>100</option>
+                                                    </select>
+                                                </div>
                                                 <div class="filter-actions">
                                                     <button type="submit" class="btn btn-primary">
                                                         <i class="fa fa-filter"></i> Lọc
@@ -356,7 +372,7 @@
                                             if (currentPage < 1) currentPage = 1;
                                             if (pageSize < 1) pageSize = 10;
                                             String status = request.getParameter("status");
-                                            String contractType = request.getParameter("contractType");
+                                            String contractType = null; // Luôn là 'Bán hàng', không cần filter
                                             String search = request.getParameter("q");
                                             java.sql.Date startFrom = null, startTo = null, endFrom = null, endTo = null;
                                             try { String v = request.getParameter("startFrom"); if (v != null && !v.isEmpty()) startFrom = java.sql.Date.valueOf(v); } catch (Exception ignored) {}
@@ -398,6 +414,65 @@
                                         <% } %>
                                     </tbody>
                                 </table>
+
+                                <div class="row" style="margin-top: 10px;">
+                                    <div class="col-md-6">
+                                        <div id="contractsPaginationInfo" class="text-muted" style="line-height: 34px;">
+                                            <%
+                                                int _startIdx = (currentPage - 1) * pageSize + 1;
+                                                int _endIdx = Math.min(currentPage * pageSize, total);
+                                                if (total == 0) { _startIdx = 0; _endIdx = 0; }
+                                            %>
+                                            Hiển thị <%= _startIdx %> - <%= _endIdx %> của <%= total %> hợp đồng
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav aria-label="Phân trang hợp đồng" class="pull-right">
+                                            <ul class="pagination pagination-sm" style="margin: 0;">
+                                                <%
+                                                    // Xây base query giữ nguyên filter
+                                                    java.util.List<String> _p = new java.util.ArrayList<String>();
+                                                    try { String v = request.getParameter("status"); if (v != null && !v.isEmpty()) _p.add("status=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("q"); if (v != null && !v.isEmpty()) _p.add("q=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("startFrom"); if (v != null && !v.isEmpty()) _p.add("startFrom=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("startTo"); if (v != null && !v.isEmpty()) _p.add("startTo=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("endFrom"); if (v != null && !v.isEmpty()) _p.add("endFrom=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("endTo"); if (v != null && !v.isEmpty()) _p.add("endTo=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("sortBy"); if (v != null && !v.isEmpty()) _p.add("sortBy=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    try { String v = request.getParameter("sortDir"); if (v != null && !v.isEmpty()) _p.add("sortDir=" + java.net.URLEncoder.encode(v, "UTF-8")); } catch (Exception ignored) {}
+                                                    _p.add("size=" + pageSize);
+                                                    String _base = "contracts.jsp" + (_p.isEmpty() ? "" : ("?" + String.join("&", _p)));
+                                                    // Nút prev
+                                                    int _prev = Math.max(1, currentPage - 1);
+                                                %>
+                                                <li class="<%= currentPage == 1 ? "disabled" : "" %>"><a href="<%= _base + "&page=" + _prev %>">&laquo;</a></li>
+                                                <%
+                                                    int _s = Math.max(1, currentPage - 2);
+                                                    int _e = Math.min(totalPages, currentPage + 2);
+                                                    if (_s > 1) {
+                                                %>
+                                                <li><a href="<%= _base + "&page=1" %>">1</a></li>
+                                                <%= (_s > 2) ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <%
+                                                    }
+                                                    for (int i = _s; i <= _e; i++) {
+                                                %>
+                                                <li class="<%= i == currentPage ? "active" : "" %>"><a href="<%= _base + "&page=" + i %>"><%= i %></a></li>
+                                                <%
+                                                    }
+                                                    if (_e < totalPages) {
+                                                %>
+                                                <%= (_e < totalPages - 1) ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <li><a href="<%= _base + "&page=" + totalPages %>"><%= totalPages %></a></li>
+                                                <%
+                                                    }
+                                                    int _next = Math.min(totalPages, currentPage + 1);
+                                                %>
+                                                <li class="<%= currentPage == totalPages ? "disabled" : "" %>"><a href="<%= _base + "&page=" + _next %>">&raquo;</a></li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
                                 
                             </div>
                         </div>
@@ -433,9 +508,9 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="contractNumber">Số hợp đồng <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="contractNumber" required>
+                                    <input type="text" class="form-control" id="contractNumber" required readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                                     <div class="help-block text-danger" id="contractNumberError" style="display: none;"></div>
-                                    <small class="text-muted">Số hợp đồng phải duy nhất và không được trống</small>
+                                    <small class="text-muted">Số hợp đồng sẽ được hệ thống sinh tự động</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="customerId">Khách hàng <span class="text-danger">*</span></label>
@@ -446,15 +521,17 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="contractType">Loại hợp đồng</label>
-                                    <input type="text" class="form-control" id="contractType" placeholder="VD: Service, Maintenance, Supply">
+                                    <input type="text" class="form-control" id="contractType" value="Bán hàng" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                                 </div>
                                 <div class="form-group">
                                     <label for="title">Tiêu đề</label>
-                                    <input type="text" class="form-control" id="title" placeholder="Nhập tiêu đề hợp đồng">
+                                    <input type="text" class="form-control" id="title" placeholder="Nhập tiêu đề hợp đồng" maxlength="150">
+                                    <small class="text-muted"><span id="titleCount">0</span>/150</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="terms">Điều khoản</label>
-                                    <textarea class="form-control" id="terms" rows="4" placeholder="Nhập các điều khoản của hợp đồng"></textarea>
+                                    <textarea class="form-control" id="terms" rows="6" placeholder="Nhập các điều khoản của hợp đồng (xuống dòng để tách ý)" maxlength="2000" style="resize: vertical; line-height: 1.5;"></textarea>
+                                    <small class="text-muted">Gõ Enter để xuống dòng • <span id="termsCount">0</span>/2000</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -464,9 +541,8 @@
                                     <div class="help-block text-danger" id="startDateError" style="display: none;"></div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="endDate">Ngày kết thúc</label>
-                                    <input type="date" class="form-control" id="endDate">
-                                    <div class="help-block text-danger" id="endDateError" style="display: none;"></div>
+                                    <label>Thời hạn</label>
+                                    <input type="text" class="form-control" value="Vô thời hạn" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
                                 </div>
                                 <div class="form-group">
                                     <label for="signedDate">Ngày ký</label>
@@ -516,15 +592,15 @@
                             <table class="table table-striped table-hover" id="contractProductsTable">
                                 <thead class="thead-dark" style="position: sticky; top: 0; z-index: 10;">
                                     <tr>
-                                        <th width="8%">STT</th>
-                                        <th width="12%">Product ID</th>
-                                        <th width="20%">Mô tả</th>
-                                        <th width="10%">Số lượng</th>
-                                        <th width="12%">Đơn giá</th>
-                                        <th width="12%">Thành tiền</th>
-                                        <th width="8%">Bảo hành</th>
-                                        <th width="10%">Ghi chú</th>
-                                        <th width="8%">Thao tác</th>
+                                        <th width="8%" class="text-center">STT</th>
+                                        <th width="12%" class="text-center">Product ID</th>
+                                        <th width="20%" class="text-center">Mô tả</th>
+                                        <th width="10%" class="text-center">Số lượng</th>
+                                        <th width="12%" class="text-center">Đơn giá</th>
+                                        <th width="12%" class="text-center">Thành tiền</th>
+                                        <th width="8%" class="text-center">Bảo hành</th>
+                                        <th width="10%" class="text-center">Ghi chú</th>
+                                        <th width="8%" class="text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="contractProductsTableBody">
@@ -637,7 +713,7 @@
 
     <!-- Modal xem chi tiết -->
     <div class="modal fade" id="contractDetailModal" tabindex="-1" role="dialog" aria-labelledby="contractDetailModalLabel">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg" role="document" style="width: 95%; max-width: 1200px;">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -645,7 +721,7 @@
                     </button>
                     <h4 class="modal-title" id="contractDetailModalLabel">Chi tiết hợp đồng</h4>
                 </div>
-                <div class="modal-body" id="contractDetail"></div>
+                <div class="modal-body" id="contractDetail" style="max-height: 70vh; overflow: auto; word-break: break-word; overflow-wrap: anywhere;"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
                 </div>
@@ -813,18 +889,41 @@
 
         var contractProducts = []; // Mảng lưu sản phẩm tạm thời
         
-        // Toggle filter visibility
+        // --- ĐOẠN MỚI: Lưu và khôi phục trạng thái bộ lọc ---
+        function saveFilterState(isExpanded) {
+            localStorage.setItem('contractsFilterExpanded', isExpanded ? '1' : '0');
+        }
+        function loadFilterState() {
+            return localStorage.getItem('contractsFilterExpanded') === '1';
+        }
+        // Gọi hàm này luôn khi chuyển trạng thái filter (trong toggleFilters)
         function toggleFilters() {
             var content = document.getElementById('filterContent');
             var icon = document.getElementById('filterToggleIcon');
+            var expanded;
             if (content.classList.contains('show')) {
                 content.classList.remove('show');
                 icon.classList.remove('rotated');
+                expanded = false;
             } else {
                 content.classList.add('show');
                 icon.classList.add('rotated');
+                expanded = true;
             }
+            saveFilterState(expanded);
         }
+        // Khi trang load lại: giữ trạng thái cũ
+        document.addEventListener('DOMContentLoaded', function() {
+            var content = document.getElementById('filterContent');
+            var icon = document.getElementById('filterToggleIcon');
+            if (loadFilterState()) {
+                content.classList.add('show');
+                icon.classList.add('rotated');
+            } else {
+                content.classList.remove('show');
+                icon.classList.remove('rotated');
+            }
+        });
 
         $(document).ready(function() {
             // Kiểm tra và hủy DataTable cũ nếu đã tồn tại
@@ -913,34 +1012,51 @@
             $.get('api/contracts', { action: 'get', id: id }, function(resp) {
                 if (resp.success) {
                     var c = resp.data;
+                    // Chuyển xuống dòng trong điều khoản để hiển thị đẹp
+                    var rawTerms = (c.terms || '-');
+                    var safeTerms = $('<div/>').text(rawTerms).html().replace(/\n/g, '<br>');
                     var html = '' +
-                        '<p><strong>ID:</strong> ' + c.id + '</p>' +
-                        '<p><strong>Số hợp đồng:</strong> ' + c.contractNumber + '</p>' +
-                        '<p><strong>Khách hàng:</strong> ' + (c.customerName || c.customerId) + '</p>' +
-                        '<p><strong>Số điện thoại:</strong> ' + (c.customerPhone || '-') + '</p>' +
-                        '<p><strong>Loại:</strong> ' + (c.contractType || '-') + '</p>' +
-                        '<p><strong>Tiêu đề:</strong> ' + (c.title || '-') + '</p>' +
-                        '<p><strong>Ngày bắt đầu:</strong> ' + (c.startDate || '-') + '</p>' +
-                        '<p><strong>Ngày kết thúc:</strong> ' + (c.endDate || '-') + '</p>' +
-                        '<p><strong>Giá trị:</strong> ' + (c.contractValue || '-') + '</p>' +
-                        '<p><strong>Trạng thái:</strong> ' + (c.status || '-') + '</p>' +
-                        '<p><strong>Ngày ký:</strong> ' + (c.signedDate || '-') + '</p>' +
-                        '<p><strong>Điều khoản:</strong><br>' + (c.terms || '-') + '</p>' +
-                        '<hr>' +
+                        '<div class="row" style="margin-bottom: 10px;">' +
+                        '  <div class="col-sm-6">' +
+                        '    <p><strong>ID:</strong> ' + c.id + '</p>' +
+                        '    <p><strong>Số hợp đồng:</strong> ' + c.contractNumber + '</p>' +
+                        '    <p><strong>Khách hàng:</strong> ' + (c.customerName || c.customerId) + '</p>' +
+                        '    <p><strong>Số điện thoại:</strong> ' + (c.customerPhone || '-') + '</p>' +
+                        '  </div>' +
+                        '  <div class="col-sm-6">' +
+                        '    <p><strong>Loại:</strong> ' + (c.contractType || '-') + '</p>' +
+                        '    <p><strong>Ngày bắt đầu:</strong> ' + (c.startDate || '-') + '</p>' +
+                        '    <p><strong>Ngày kết thúc:</strong> ' + (c.endDate || '-') + '</p>' +
+                        '    <p><strong>Ngày ký:</strong> ' + (c.signedDate || '-') + '</p>' +
+                        '  </div>' +
+                        '</div>' +
+                        '<div class="well" style="padding: 10px;">' +
+                        '  <p style="margin-bottom: 6px;"><strong>Tiêu đề:</strong></p>' +
+                        '  <div style="white-space: normal;">' + (c.title || '-') + '</div>' +
+                        '</div>' +
+                        '<div class="well" style="padding: 10px;">' +
+                        '  <p style="margin-bottom: 6px;"><strong>Điều khoản:</strong></p>' +
+                        '  <div style="white-space: normal;">' + safeTerms + '</div>' +
+                        '</div>' +
+                        '<div class="well" style="padding: 10px;">' +
+                        '  <p style="margin-bottom: 6px;"><strong>Giá trị:</strong></p>' +
+                        '  <div>' + (c.contractValue || '-') + '</div>' +
+                        '  <p style="margin-top:10px;"><strong>Trạng thái:</strong> ' + (c.status || '-') + '</p>' +
+                        '</div>' +
                         '<h5><i class="fa fa-list"></i> Sản phẩm gắn với hợp đồng</h5>' +
                         '<div class="table-responsive">' +
-                        '  <table class="table table-striped table-hover">' +
+                        '  <table class="table table-striped table-hover" style="table-layout: fixed; width: 100%;">' +
                         '    <thead>' +
-                        '      <tr>' +
-                        '        <th width="10%">STT</th>' +
-                        '        <th width="15%">Product ID</th>' +
-                        '        <th width="30%">Mô tả</th>' +
-                        '        <th width="15%">Số lượng</th>' +
-                        '        <th width="15%">Đơn giá</th>' +
-                        '        <th width="15%">Thành tiền</th>' +
+                        '      <tr class="text-center">' +
+                        '        <th style="width:10%" class="text-center">STT</th>' +
+                        '        <th style="width:15%" class="text-center">Product ID</th>' +
+                        '        <th style="width:30%" class="text-center">Mô tả</th>' +
+                        '        <th style="width:15%" class="text-center">Số lượng</th>' +
+                        '        <th style="width:15%" class="text-center">Đơn giá</th>' +
+                        '        <th style="width:15%" class="text-center">Thành tiền</th>' +
                         '      </tr>' +
                         '    </thead>' +
-                        '    <tbody id="contractDetailProductsBody">' +
+                        '    <tbody id="contractDetailProductsBody" style="word-break: break-word; overflow-wrap: anywhere;">' +
                         '      <tr><td colspan="6" class="text-center text-muted"><i class="fa fa-spinner fa-spin"></i> Đang tải sản phẩm...</td></tr>' +
                         '    </tbody>' +
                         '  </table>' +
@@ -962,13 +1078,13 @@
                                 var qty = p.quantity ? parseFloat(p.quantity).toLocaleString() : '0';
                                 var price = p.unitPrice ? parseFloat(p.unitPrice).toLocaleString() + ' VNĐ' : '0 VNĐ';
                                 var line = (p.quantity && p.unitPrice) ? (parseFloat(p.quantity) * parseFloat(p.unitPrice)) : 0;
-                                rows += '<tr>' +
+                                rows += '<tr class="text-center">' +
                                     '<td class="text-center">' + (idx++) + '</td>' +
                                     '<td class="text-center">' + p.productId + '</td>' +
-                                    '<td>' + (p.description || '<span class="text-muted">-</span>') + '</td>' +
-                                    '<td class="text-right">' + qty + '</td>' +
-                                    '<td class="text-right">' + price + '</td>' +
-                                    '<td class="text-right"><strong>' + line.toLocaleString() + ' VNĐ</strong></td>' +
+                                    '<td class="text-center">' + (p.description || '<span class="text-muted">-</span>') + '</td>' +
+                                    '<td class="text-center">' + qty + '</td>' +
+                                    '<td class="text-center">' + price + '</td>' +
+                                    '<td class="text-center"><strong>' + line.toLocaleString() + ' VNĐ</strong></td>' +
                                 '</tr>';
                             });
                             tbody.html(rows);
@@ -1001,7 +1117,7 @@
                     $('#contractId').val(c.id);
                     $('#contractNumber').val(c.contractNumber);
                     $('#customerId').val(c.customerId);
-                    $('#contractType').val(c.contractType || '');
+                    $('#contractType').val('Bán hàng'); // Luôn là 'Bán hàng'
                     $('#title').val(c.title || '');
                     $('#startDate').val(formatDateInput(c.startDate));
                     $('#endDate').val(formatDateInput(c.endDate));
@@ -1054,15 +1170,15 @@
                     (parseFloat(product.quantity) * parseFloat(product.unitPrice)) : 0;
                 totalValue += lineTotal;
                 
-                rows += '<tr>' +
+                rows += '<tr class="text-center">' +
                     '<td class="text-center">' + (index + 1) + '</td>' +
                     '<td class="text-center">' + product.productId + '</td>' +
-                    '<td>' + (product.description || '<span class="text-muted">-</span>') + '</td>' +
-                    '<td class="text-right">' + (product.quantity ? parseFloat(product.quantity).toLocaleString() : '0') + '</td>' +
-                    '<td class="text-right">' + (product.unitPrice ? parseFloat(product.unitPrice).toLocaleString() + ' VNĐ' : '0 VNĐ') + '</td>' +
-                    '<td class="text-right"><strong>' + lineTotal.toLocaleString() + ' VNĐ</strong></td>' +
+                    '<td class="text-center">' + (product.description || '<span class="text-muted">-</span>') + '</td>' +
+                    '<td class="text-center">' + (product.quantity ? parseFloat(product.quantity).toLocaleString() : '0') + '</td>' +
+                    '<td class="text-center">' + (product.unitPrice ? parseFloat(product.unitPrice).toLocaleString() + ' VNĐ' : '0 VNĐ') + '</td>' +
+                    '<td class="text-center"><strong>' + lineTotal.toLocaleString() + ' VNĐ</strong></td>' +
                     '<td class="text-center">' + (product.warrantyMonths ? product.warrantyMonths + ' tháng' : '<span class="text-muted">-</span>') + '</td>' +
-                    '<td>' + (product.notes || '<span class="text-muted">-</span>') + '</td>' +
+                    '<td class="text-center">' + (product.notes || '<span class="text-muted">-</span>') + '</td>' +
                     '<td class="text-center">' +
                         '<button class="btn btn-warning btn-xs" onclick="editProductFromContract(' + index + ')" title="Sửa">' +
                         '<i class="fa fa-edit"></i></button> ' +
@@ -1200,7 +1316,7 @@
                 id: $('#contractId').val(),
                 contractNumber: $('#contractNumber').val(),
                 customerId: $('#customerId').val(),
-                contractType: $('#contractType').val(),
+                contractType: 'Bán hàng', // Luôn là 'Bán hàng'
                 title: $('#title').val(),
                 startDate: $('#startDate').val(),
                 endDate: $('#endDate').val(),
@@ -1408,13 +1524,17 @@
                             
                             // Format thời gian xóa theo múi giờ Việt Nam
                             var formattedDeletedAt = formatVietnamTime(deletedAt);
+                            // Escape và tạo tooltip cho tiêu đề dài
+                            var rawTitle = contract.title || '-';
+                            var safeTitle = $('<div/>').text(rawTitle).html();
+                            var titleCell = '<div class="truncate" title="' + safeTitle + '">' + safeTitle + '</div>';
                             
                             rows += '<tr>' +
                                 '<td>' + contract.id + '</td>' +
                                 '<td>' + contract.customerId + '</td>' +
                                 '<td>' + contract.contractNumber + '</td>' +
                                 '<td>' + (contract.customerName || '-') + '</td>' +
-                                '<td>' + (contract.title || '-') + '</td>' +
+                                '<td>' + titleCell + '</td>' +
                                 '<td>' + deletedByName + '</td>' +
                                 '<td>' + formattedDeletedAt + '</td>' +
                                 '<td>' +
@@ -1623,6 +1743,7 @@
         // Reset form when modal is closed
         $('#contractModal').on('hidden.bs.modal', function() {
             document.getElementById('contractForm').reset();
+            $('#contractType').val('Bán hàng'); // Luôn set lại là 'Bán hàng'
             currentEditingId = null;
             contractProducts = []; // Reset danh sách sản phẩm
             isEditingMode = false; // Reset về chế độ thêm mới
@@ -1636,6 +1757,19 @@
         $('#contractModal').on('show.bs.modal', function() {
             hideAddProductForm();
             isEditingMode = false; // Reset về chế độ thêm mới
+            if (!currentEditingId) {
+                // Nếu là thêm mới (không phải edit), set contractType = 'Bán hàng'
+                $('#contractType').val('Bán hàng');
+                // Tải lại danh sách khách hàng để đảm bảo có dữ liệu
+                loadCustomers();
+                // Sinh số hợp đồng tự động khi mở modal thêm mới
+                $.get('api/contracts', { action: 'generate_number' }, function(resp) {
+                    if (resp && resp.success && resp.data && resp.data.contractNumber) {
+                        $('#contractNumber').val(resp.data.contractNumber);
+                        $('#contractNumberError').hide();
+                    }
+                }, 'json');
+            }
             loadProducts(); // Load danh sách sản phẩm khi mở modal
             clearValidationErrors(); // Clear validation errors
         });
@@ -1649,6 +1783,33 @@
                 // Kiểm tra trùng lặp số hợp đồng
                 checkContractNumberExists(value);
             }
+        });
+        
+        // Đếm ký tự tiêu đề/điều khoản và cập nhật realtime
+        var TITLE_MAX = 150;
+        var TERMS_MAX = 2000;
+        function updateCounters() {
+            var t = $('#title').val() || '';
+            var tm = $('#terms').val() || '';
+            if ($('#titleCount').length) { $('#titleCount').text(t.length); }
+            if ($('#termsCount').length) { $('#termsCount').text(tm.length); }
+        }
+        $(document).on('input', '#title, #terms', function() {
+            // maxlength đã chặn vượt ngưỡng ở HTML, chỉ cần cập nhật counter
+            updateCounters();
+        });
+        // Tự động co giãn chiều cao textarea điều khoản theo nội dung
+        function autosizeTerms() {
+            var ta = document.getElementById('terms');
+            if (!ta) return;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 400) + 'px'; // giới hạn tối đa ~400px
+        }
+        $(document).on('input', '#terms', autosizeTerms);
+        $('#contractModal').on('shown.bs.modal', function() { autosizeTerms(); });
+        // Cập nhật counter khi mở modal (sau khi DOM trong modal sẵn sàng)
+        $('#contractModal').on('shown.bs.modal', function() {
+            updateCounters();
         });
         
         function checkContractNumberExists(contractNumber) {

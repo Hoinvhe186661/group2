@@ -549,6 +549,71 @@ public class ContractDAO extends DBConnect {
         
         return c;
     }
+
+    /**
+     * Sinh số hợp đồng tự động theo định dạng: HD-YYYYMMDD-XXXX
+     * - YYYYMMDD: ngày hiện tại theo múi giờ DB
+     * - XXXX: số thứ tự tăng dần trong ngày, bắt đầu từ 0001
+     * Bảo đảm không trùng với bản ghi (kể cả trong thùng rác).
+     */
+    public String generateNextContractNumber() {
+        if (!checkConnection()) return null;
+        // Lấy ngày theo định dạng yyyymmdd từ DB để đồng bộ múi giờ với DB
+        String currentYmd = null;
+        try (PreparedStatement ps = connection.prepareStatement("SELECT DATE_FORMAT(CURRENT_DATE, '%Y%m%d')")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    currentYmd = rs.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.WARNING, "Error fetching current date from DB, fallback to JVM time", e);
+        }
+        if (currentYmd == null) {
+            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+            currentYmd = java.time.LocalDate.now().format(fmt);
+        }
+
+        String prefix = "HD-" + currentYmd + "-"; // e.g. HD-20251103-
+        String like = prefix + "%";
+
+        int nextSeq = 1;
+        String lastNumber = null;
+        // Lấy số hợp đồng lớn nhất theo prefix (kể cả deleted) rồi tăng +1
+        String sql = "SELECT contract_number FROM contracts WHERE contract_number LIKE ? ORDER BY contract_number DESC LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, like);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    lastNumber = rs.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error fetching last contract number by prefix", e);
+        }
+
+        if (lastNumber != null && lastNumber.startsWith(prefix)) {
+            String tail = lastNumber.substring(prefix.length());
+            try {
+                nextSeq = Integer.parseInt(tail) + 1;
+            } catch (NumberFormatException ignore) {
+                nextSeq = 1;
+            }
+        }
+
+        // Thử tối đa 10 lần để tránh xung đột song song hiếm gặp
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String candidate = prefix + String.format("%04d", nextSeq);
+            if (!isContractNumberExistsIncludingDeleted(candidate)) {
+                return candidate;
+            }
+            nextSeq++;
+        }
+
+        // Cuối cùng nếu vẫn trùng, tạo chuỗi ngẫu nhiên an toàn hơn
+        String fallback = prefix + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return fallback;
+    }
 }
 
 
