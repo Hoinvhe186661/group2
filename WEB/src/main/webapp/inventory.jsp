@@ -265,11 +265,6 @@
                             <i class="fa fa-archive"></i> <span>Quản lý kho</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/email-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
-                        </a>
-                    </li>
                 </ul>
             </section>
             <!-- /.sidebar -->
@@ -287,9 +282,7 @@
                                     <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#stockInModal">
                                         <i class="fa fa-arrow-down"></i> Nhập kho
                                     </button>
-                                    <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#stockOutModal">
-                                        <i class="fa fa-arrow-up"></i> Xuất kho
-                                    </button>
+                                    
                                     <a class="btn btn-info btn-sm" href="<%=request.getContextPath()%>/stock_history.jsp">
                                         <i class="fa fa-history"></i> Lịch sử
                                     </a>
@@ -436,6 +429,27 @@
         </aside><!-- /.right-side -->
     </div><!-- ./wrapper -->
 
+    <!-- Modal xem sản phẩm -->
+    <div class="modal fade" id="invViewProductModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Chi tiết sản phẩm</h4>
+                </div>
+                <div class="modal-body" id="invViewProductContent">
+                    <div class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</div>
+                </div>
+                <div class="modal-footer">
+                    <a class="btn btn-default" id="invViewHistoryBtn" href="#" target="_blank" style="display:none;">
+                        <i class="fa fa-history"></i> Xem lịch sử
+                    </a>
+                    <button class="btn btn-primary" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Nhập kho -->
     <div class="modal fade" id="stockInModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
@@ -510,75 +524,6 @@
         </div>
     </div>
 
-    <!-- Modal Xuất kho -->
-    <div class="modal fade" id="stockOutModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h4 class="modal-title"><i class="fa fa-arrow-up"></i> Phiếu Xuất Kho</h4>
-                </div>
-                <div class="modal-body">
-                    <form id="stockOutForm">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Lý do xuất kho <span class="text-danger">*</span></label>
-                                    <select name="reference_type" class="form-control" required>
-                                        <option value="sales">Bán hàng</option>
-                                        <option value="installation">Lắp đặt</option>
-                                        <option value="warranty">Bảo hành</option>
-                                        <option value="damaged">Hư hỏng</option>
-                                        <option value="other">Khác</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Số tham chiếu</label>
-                                    <input type="text" name="reference_id" class="form-control" 
-                                           placeholder="Số đơn hàng, hợp đồng...">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Danh sách sản phẩm xuất <span class="text-danger">*</span></label>
-                            <button type="button" class="btn btn-sm btn-warning" onclick="addProductRowStockOut()">
-                                <i class="fa fa-plus"></i> Thêm sản phẩm
-                            </button>
-                            <table class="table table-bordered" style="margin-top: 10px;">
-                                <thead>
-                                    <tr>
-                                        <th width="30%">Sản phẩm</th>
-                                        <th width="15%">Số lượng</th>
-                                        <th width="15%">Tồn hiện tại</th>
-                                        <th width="30%">Vị trí kho</th>
-                                        <th width="10%" class="text-center">Xóa</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productRowsStockOut">
-                                    <!-- Rows will be added by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Ghi chú</label>
-                            <textarea name="notes" class="form-control" rows="3" 
-                                      placeholder="Ghi chú về phiếu xuất..."></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-default" data-dismiss="modal">Hủy</button>
-                    <button class="btn btn-warning" onclick="submitStockOut()">
-                        <i class="fa fa-save"></i> Xuất kho
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     
 
@@ -609,7 +554,6 @@
         
         /**
          * Hàm load dữ liệu tồn kho
-         * Tác giả: Sơn Lê
          */
         function loadInventoryData() {
             $.ajax({
@@ -649,7 +593,6 @@
         
         /**
          * Cập nhật dropdown danh mục trong bộ lọc (chỉ 3 danh mục cố định)
-         * Tác giả: Sơn Lê
          * @param {Array} categories - Danh sách danh mục từ server (không sử dụng, chỉ để giữ tương thích)
          */
         function updateCategoryFilter(categories) {
@@ -735,9 +678,9 @@
                     '<td>' + (item.unitPrice != null ? formatCurrencyVN(item.unitPrice) + ' VNĐ' : '--') + '</td>' +
                     '<td><span class="label ' + (statusClass === 'stock-out' ? 'label-danger' : (statusClass === 'stock-low' ? 'label-warning' : 'label-success')) + '">' + statusText + '</span></td>' +
                     '<td>' +
-                        '<a class="btn btn-info btn-xs" href="' + buildHistoryUrl(item.productId || item.id) + '" title="Xem lịch sử">' +
+                        '<button class="btn btn-info btn-xs" onclick="invViewProduct(' + (item.productId || item.id) + ')" title="Xem chi tiết">' +
                             '<i class="fa fa-eye"></i> Xem' +
-                        '</a>' +
+                        '</button>' +
                     '</td>' +
                 '</tr>';
                 tbody.append(row);
@@ -804,6 +747,56 @@
 
         function buildHistoryUrl(productId){
             return '<%=request.getContextPath()%>/stock_history.jsp?productId=' + encodeURIComponent(productId);
+        }
+
+        // Xem chi tiết sản phẩm (modal)
+        function invViewProduct(productId) {
+            if (!productId) { alert('ID sản phẩm không hợp lệ'); return; }
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { action: 'getInventoryDetail', productId: productId },
+                dataType: 'json',
+                success: function(res){
+                    if (!res.success) { alert('Không thể tải thông tin sản phẩm'); return; }
+                    var d = res.data || {};
+                    var statusBadge = d.status === 'active' ? '<span class="label label-success">Đang bán</span>' : '<span class="label label-warning">Ngừng bán</span>';
+                    var html = ''+
+                        '<div class="row">'+
+                          '<div class="col-sm-6">'+
+                            '<h4 style="margin-top:0">'+escapeHtml(d.productName||'')+'</h4>'+statusBadge+
+                            '<p><strong>Mã:</strong> '+escapeHtml(d.productCode||'')+'</p>'+
+                            '<p><strong>Danh mục:</strong> '+escapeHtml(d.category||'')+'</p>'+
+                            '<p><strong>Đơn vị:</strong> '+escapeHtml(d.unit||'')+'</p>'+
+                            '<p><strong>Giá bán:</strong> '+(d.unitPrice!=null?formatCurrencyVN(d.unitPrice):'--')+' VNĐ</p>'+
+                            '<p><strong>Giá nhập gần nhất:</strong> '+(d.unitCost!=null?formatCurrencyVN(d.unitCost):'--')+' VNĐ</p>'+
+                            '<p><strong>Số lượng tồn:</strong> '+(d.totalStock!=null?d.totalStock:'--')+'</p>'+
+                            '<p><strong>Số lượng đã bán:</strong> '+(d.quantitySold!=null?d.quantitySold:'--')+'</p>'+
+                          '</div>'+
+                          '<div class="col-sm-6">'+
+                            (d.imageUrl?('<img src="'+d.imageUrl+'" style="max-width:100%;border:1px solid #eee;border-radius:6px">'):'')+
+                          '</div>'+
+                        '</div>'+
+                        '<hr/>'+
+                        '<p><strong>Mô tả:</strong><br>' + (escapeHtml(d.description||'Không có')) + '</p>'+
+                        '<p><strong>Thông số kỹ thuật:</strong><br>' + (escapeHtml(d.specifications||'Không có')) + '</p>'+
+                        '<h4>Vị trí kho</h4>'+
+                        renderWarehouseTable(d.warehouses||[]);
+                    $('#invViewProductContent').html(html);
+                    $('#invViewProductModal').modal('show');
+                },
+                error: function(){ alert('Lỗi kết nối máy chủ'); }
+            });
+        }
+
+        function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+        function renderWarehouseTable(rows){
+            if (!rows || rows.length === 0) return '<div class="muted">Không có dữ liệu vị trí kho</div>';
+            var html = '<table class="table table-bordered"><thead><tr><th>Kho</th><th>Tồn</th></tr></thead><tbody>';
+            rows.forEach(function(r){ html += '<tr><td>'+escapeHtml(r.warehouse||'')+'</td><td>'+ (r.stock!=null?r.stock:'--') +'</td></tr>'; });
+            html += '</tbody></table>';
+            return html;
         }
         
         // Load sản phẩm cho dropdown
@@ -1099,7 +1092,6 @@
         
         /**
          * Lọc tồn kho với AJAX từ backend
-         * Tác giả: Sơn Lê
          */
         function filterInventory() {
             currentPage = 1; // Reset về trang đầu khi lọc
@@ -1108,7 +1100,6 @@
         
         /**
          * Reset bộ lọc về trạng thái ban đầu
-         * Tác giả: Sơn Lê
          */
         function resetFilters() {
             $('#filterCategory').val('');

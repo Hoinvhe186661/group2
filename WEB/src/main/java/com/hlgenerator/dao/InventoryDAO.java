@@ -155,6 +155,66 @@ public class InventoryDAO {
         }
         return null;
     }
+
+    /**
+     * Tổng tồn tất cả kho của một sản phẩm
+     */
+    public Integer getTotalStock(int productId) {
+        if (connection == null) { lastError = "Không thể kết nối đến cơ sở dữ liệu"; return 0; }
+        String sql = "SELECT COALESCE(SUM(current_stock),0) FROM inventory WHERE product_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt(1); }
+        } catch (SQLException e) { e.printStackTrace(); lastError = "Lỗi khi lấy tổng tồn: " + e.getMessage(); }
+        return 0;
+    }
+
+    /**
+     * Tồn theo từng vị trí kho của sản phẩm
+     */
+    public List<Map<String, Object>> getWarehouseStocks(int productId) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        if (connection == null) return list;
+        String sql = "SELECT warehouse_location, current_stock FROM inventory WHERE product_id = ? ORDER BY warehouse_location";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("warehouse", rs.getString("warehouse_location"));
+                    m.put("stock", rs.getInt("current_stock"));
+                    list.add(m);
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    /**
+     * Số lượng đã bán (tổng xuất kho)
+     */
+    public Integer getQuantitySold(int productId) {
+        if (connection == null) { lastError = "Không thể kết nối đến cơ sở dữ liệu"; return 0; }
+        String sql = "SELECT COALESCE(SUM(quantity),0) FROM stock_history WHERE product_id = ? AND movement_type = 'out'";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt(1); }
+        } catch (SQLException e) { e.printStackTrace(); lastError = "Lỗi khi lấy số lượng đã bán: " + e.getMessage(); }
+        return 0;
+    }
+
+    /**
+     * Lấy product_id từ inventory.id (fallback khi client gửi nhầm inventory id)
+     */
+    public Integer getProductIdByInventoryId(int inventoryId) {
+        if (connection == null) { lastError = "Không thể kết nối đến cơ sở dữ liệu"; return null; }
+        String sql = "SELECT product_id FROM inventory WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, inventoryId);
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt(1); }
+        } catch (SQLException e) { e.printStackTrace(); lastError = "Lỗi khi lấy product_id: " + e.getMessage(); }
+        return null;
+    }
     
     /**
      * Đếm tổng số tồn kho theo bộ lọc (cho phân trang)
@@ -447,6 +507,84 @@ public class InventoryDAO {
         }
         
         return historyList;
+    }
+
+    /**
+     * Lấy lịch sử có lọc và phân trang từ backend
+     */
+    public List<StockHistory> getFilteredStockHistory(Integer productId, String movementType,
+                                                      String warehouse, String search,
+                                                      int page, int pageSize) {
+        List<StockHistory> historyList = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return historyList;
+        }
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT sh.*, p.product_code, p.product_name, u.full_name as created_by_name ");
+        sql.append("FROM stock_history sh ");
+        sql.append("INNER JOIN products p ON sh.product_id = p.id ");
+        sql.append("LEFT JOIN users u ON sh.created_by = u.id WHERE 1=1 ");
+
+        List<Object> params = new ArrayList<>();
+        if (productId != null) { sql.append("AND sh.product_id = ? "); params.add(productId); }
+        if (movementType != null && !movementType.trim().isEmpty()) { sql.append("AND sh.movement_type = ? "); params.add(movementType.trim()); }
+        if (warehouse != null && !warehouse.trim().isEmpty()) { sql.append("AND sh.warehouse_location = ? "); params.add(warehouse.trim()); }
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ? OR COALESCE(sh.notes,'') LIKE ?) ");
+            String like = "%" + search.trim() + "%";
+            params.add(like); params.add(like); params.add(like);
+        }
+
+        sql.append("ORDER BY sh.created_at DESC LIMIT ? OFFSET ?");
+
+        int offset = (page - 1) * pageSize;
+        params.add(pageSize);
+        params.add(offset);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) { ps.setObject(i + 1, params.get(i)); }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) { historyList.add(createStockHistoryFromResultSet(rs)); }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi lấy lịch sử: " + e.getMessage();
+        }
+        return historyList;
+    }
+
+    /**
+     * Đếm tổng số lịch sử theo bộ lọc (phục vụ phân trang)
+     */
+    public int getFilteredStockHistoryCount(Integer productId, String movementType,
+                                            String warehouse, String search) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) FROM stock_history sh INNER JOIN products p ON sh.product_id = p.id WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+        if (productId != null) { sql.append("AND sh.product_id = ? "); params.add(productId); }
+        if (movementType != null && !movementType.trim().isEmpty()) { sql.append("AND sh.movement_type = ? "); params.add(movementType.trim()); }
+        if (warehouse != null && !warehouse.trim().isEmpty()) { sql.append("AND sh.warehouse_location = ? "); params.add(warehouse.trim()); }
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ? OR COALESCE(sh.notes,'') LIKE ?) ");
+            String like = "%" + search.trim() + "%";
+            params.add(like); params.add(like); params.add(like);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) { ps.setObject(i + 1, params.get(i)); }
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) { return rs.getInt(1); } }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi đếm lịch sử: " + e.getMessage();
+        }
+        return 0;
     }
     
     /**

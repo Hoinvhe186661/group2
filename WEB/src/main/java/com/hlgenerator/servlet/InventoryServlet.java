@@ -42,10 +42,74 @@ public class InventoryServlet extends HttpServlet {
             getProductsForDropdown(request, response);
         } else if ("getHistory".equals(action)) {
             getStockHistory(request, response);
+        } else if ("getInventoryDetail".equals(action)) {
+            getInventoryDetail(request, response);
         } else if ("getStats".equals(action)) {
             getStatistics(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
+        }
+    }
+
+    /**
+     * Lấy chi tiết tồn kho + thông tin sản phẩm cho modal xem nhanh
+     */
+    private void getInventoryDetail(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        try {
+            String idParam = request.getParameter("productId");
+            if (idParam == null || idParam.trim().isEmpty()) {
+                response.getWriter().write("{\"success\":false,\"message\":\"Thiếu productId\"}");
+                return;
+            }
+            int productId = Integer.parseInt(idParam);
+
+            Product p = productDAO.getProductById(productId);
+            if (p == null) {
+                // Fallback: tham số có thể là inventory.id → chuyển sang product_id
+                Integer resolvedProductId = inventoryDAO.getProductIdByInventoryId(productId);
+                if (resolvedProductId != null) {
+                    productId = resolvedProductId;
+                    p = productDAO.getProductById(productId);
+                }
+                if (p == null) {
+                    response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy sản phẩm\"}");
+                    return;
+                }
+            }
+
+            Double lastUnitCost = inventoryDAO.getLastUnitCost(productId);
+            int totalStock = inventoryDAO.getTotalStock(productId);
+            int quantitySold = inventoryDAO.getQuantitySold(productId);
+            java.util.List<java.util.Map<String, Object>> ws = inventoryDAO.getWarehouseStocks(productId);
+
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":{");
+            json.append("\"productId\":").append(productId).append(",");
+            json.append("\"productCode\":\"").append(escapeJson(p.getProductCode())).append("\",");
+            json.append("\"productName\":\"").append(escapeJson(p.getProductName())).append("\",");
+            json.append("\"category\":\"").append(escapeJson(p.getCategory())).append("\",");
+            json.append("\"unit\":\"").append(escapeJson(p.getUnit())).append("\",");
+            json.append("\"unitPrice\":").append(p.getUnitPrice()).append(",");
+            json.append("\"unitCost\":").append(lastUnitCost == null ? "null" : lastUnitCost).append(",");
+            json.append("\"totalStock\":").append(totalStock).append(",");
+            json.append("\"quantitySold\":").append(quantitySold).append(",");
+            json.append("\"description\":\"").append(escapeJson(p.getDescription() == null? "" : p.getDescription())).append("\",");
+            json.append("\"specifications\":\"").append(escapeJson(p.getSpecifications() == null? "" : p.getSpecifications())).append("\",");
+            json.append("\"imageUrl\":\"").append(escapeJson(p.getImageUrl() == null? "" : p.getImageUrl())).append("\",");
+            json.append("\"status\":\"").append(escapeJson(p.getStatus() == null? "" : p.getStatus())).append("\",");
+            json.append("\"warehouses\":[");
+            for (int i = 0; i < ws.size(); i++) {
+                if (i>0) json.append(",");
+                java.util.Map<String,Object> m = ws.get(i);
+                json.append("{\"warehouse\":\"").append(escapeJson((String)m.get("warehouse"))).append("\",");
+                json.append("\"stock\":").append((Integer)m.get("stock")).append("}");
+            }
+            json.append("]}}");
+            response.getWriter().write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + escapeJson(e.getMessage()) + "\"}");
         }
     }
 
@@ -197,17 +261,22 @@ public class InventoryServlet extends HttpServlet {
                     productId = Integer.parseInt(productIdParam);
                 }
             }
-            
-            int limit = 50;
-            if (request.getParameter("limit") != null) {
-                limit = Integer.parseInt(request.getParameter("limit"));
-            }
-            
-            List<StockHistory> historyList = inventoryDAO.getStockHistory(productId, limit);
-            
+            // Filters
+            String movementType = request.getParameter("type");
+            String warehouse = request.getParameter("warehouse");
+            String search = request.getParameter("q");
+
+            // Pagination
+            int page = 1; int pageSize = 10;
+            if (request.getParameter("page") != null) { try { page = Integer.parseInt(request.getParameter("page")); } catch (Exception ignore) {} }
+            if (request.getParameter("pageSize") != null) { try { pageSize = Integer.parseInt(request.getParameter("pageSize")); } catch (Exception ignore) {} }
+
+            List<StockHistory> historyList = inventoryDAO.getFilteredStockHistory(productId, movementType, warehouse, search, page, pageSize);
+            int totalCount = inventoryDAO.getFilteredStockHistoryCount(productId, movementType, warehouse, search);
+
             StringBuilder json = new StringBuilder();
             json.append("{\"success\":true,\"data\":[");
-            
+
             for (int i = 0; i < historyList.size(); i++) {
                 if (i > 0) json.append(",");
                 StockHistory h = historyList.get(i);
@@ -237,8 +306,11 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"createdByName\":\"").append(escapeJson(h.getCreatedByName())).append("\"");
                 json.append("}");
             }
-            
-            json.append("]}");
+            json.append("],\"totalCount\":").append(totalCount);
+            json.append(",\"currentPage\":").append(page);
+            json.append(",\"pageSize\":").append(pageSize);
+            json.append(",\"totalPages\":").append((int)Math.ceil((double) totalCount / pageSize));
+            json.append("}");
             response.getWriter().write(json.toString());
             
         } catch (Exception e) {
