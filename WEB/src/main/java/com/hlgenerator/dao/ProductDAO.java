@@ -77,7 +77,12 @@ public class ProductDAO {
             ps.setString(3, product.getCategory());
             ps.setString(4, product.getDescription());
             ps.setString(5, product.getUnit());
-            ps.setDouble(6, product.getUnitPrice());
+            // Cho phép để trống giá bán ban đầu: nếu <= 0 thì set NULL
+            if (product.getUnitPrice() > 0) {
+                ps.setDouble(6, product.getUnitPrice());
+            } else {
+                ps.setNull(6, java.sql.Types.DECIMAL);
+            }
             ps.setInt(7, product.getSupplierId());
             ps.setString(8, product.getSpecifications());
             ps.setString(9, product.getImageUrl());
@@ -227,6 +232,28 @@ public class ProductDAO {
             lastError = "Lỗi khi lấy danh sách sản phẩm đã lọc: " + e.getMessage();
         }
         return products;
+    }
+
+    /**
+     * Cập nhật unit_price nếu đang NULL hoặc 0
+     */
+    public boolean updateUnitPriceIfEmpty(int productId, double newPrice) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+
+        String sql = "UPDATE products SET unit_price = ? WHERE id = ? AND (unit_price IS NULL OR unit_price = 0)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, newPrice);
+            ps.setInt(2, productId);
+            int updated = ps.executeUpdate();
+            return updated > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi cập nhật giá bán mặc định: " + e.getMessage();
+            return false;
+        }
     }
 
     /**

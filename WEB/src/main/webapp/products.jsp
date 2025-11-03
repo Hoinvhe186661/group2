@@ -537,9 +537,9 @@
                             <input type="text" class="form-control" id="edit_unit" name="unit">
                         </div>
                         <div class="form-group">
-                     <label for="edit_unit_price">Giá bán (VNĐ)</label>
-                            <input type="number" class="form-control" id="edit_unit_price" name="unit_price" min="1" max="500,000,0000" step="1000">
-                            <small class="form-text text-muted">Nhập giá từ 1 đến 500,000,000 VNĐ</small>
+                    <label for="edit_unit_price">Giá bán (VNĐ)</label>
+                            <input type="number" class="form-control" id="edit_unit_price" name="unit_price" step="1000" placeholder="Giá được cập nhật từ nhập kho" readonly disabled>
+                            <small class="form-text text-muted">Giá bán không thể thay đổi.</small>
                         </div>
                         <div class="form-group">
                             <label for="edit_supplier_id">Nhà cung cấp</label>
@@ -622,7 +622,12 @@
                         </div>
                         <div class="form-group">
                             <label for="category">Danh mục <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="category" name="category" required>
+                            <select class="form-control" id="category" name="category" required>
+                                <option value="">-- Chọn danh mục --</option>
+                                <option value="Máy phát điện">Máy phát điện</option>
+                                <option value="Máy bơm nước">Máy bơm nước</option>
+                                <option value="Máy tiện">Máy tiện</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="description">Mô tả</label>
@@ -636,9 +641,9 @@
                             <input type="text" class="form-control" id="unit" name="unit" value="pcs" required>
                         </div>
                         <div class="form-group">
-                            <label for="unit_price">Giá bán (VNĐ) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="unit_price" name="unit_price" min="1" max="500000000" step="1000" required>
-                            <small class="form-text text-muted">Nhập giá từ 1 đến 500,000,000 VNĐ</small>
+                            <label for="unit_price">Giá bán (VNĐ)</label>
+                            <input type="number" class="form-control" id="unit_price" name="unit_price" step="1000" placeholder="Để trống, hệ thống tự đặt sau nhập kho">
+                            <small class="form-text text-muted">Có thể để trống. Nếu nhập, giá phải > 0.</small>
                         </div>
                         <div class="form-group">
                             <label for="supplier_id">Nhà cung cấp <span class="text-danger">*</span></label>
@@ -1049,7 +1054,8 @@
                 return;
             }
             
-            if (!unitPrice || unitPrice <= 0) {
+            // Cho phép để trống; nếu nhập phải > 0
+            if (unitPrice && unitPrice <= 0) {
                 alert('Giá bán phải lớn hơn 0!');
                 $('#edit_unit_price').focus();
                 return;
@@ -1171,7 +1177,8 @@
                 return;
             }
             
-            if (!unitPrice || unitPrice <= 0) {
+            // Cho phép để trống; nếu nhập phải > 0
+            if (unitPrice && unitPrice <= 0) {
                 alert('Giá bán phải lớn hơn 0!');
                 $('#unit_price').focus();
                 return;
@@ -1635,24 +1642,29 @@
             updatePaginationButtons(totalPages);
         }
         
-        // Hàm cập nhật dropdown danh mục
+        /**
+         * Cập nhật dropdown danh mục (chỉ hiển thị 3 danh mục cố định)
+         * Tác giả: Sơn Lê
+         * @param {Array} suppliers - Danh sách nhà cung cấp (không sử dụng)
+         * @param {Array} categories - Danh sách danh mục từ server (không sử dụng, chỉ để giữ tương thích)
+         */
         function updateFilterDropdowns(suppliers, categories) {
-            // Cập nhật dropdown danh mục
+            // Chỉ hiển thị 3 danh mục cố định
             var categorySelect = document.getElementById('filterCategory');
             var currentCategoryValue = categorySelect.value;
-            categorySelect.innerHTML = '<option value="">Tất cả danh mục</option>';
+            categorySelect.innerHTML = '<option value="">Tất cả danh mục</option>' +
+                                       '<option value="Máy phát điện">Máy phát điện</option>' +
+                                       '<option value="Máy bơm nước">Máy bơm nước</option>' +
+                                       '<option value="Máy tiện">Máy tiện</option>';
             
-            if (categories) {
-                categories.forEach(function(category) {
-                    var option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
-                    categorySelect.appendChild(option);
-                });
+            // Khôi phục giá trị đã chọn nếu hợp lệ
+            if (currentCategoryValue && 
+                (currentCategoryValue === "Máy phát điện" || 
+                 currentCategoryValue === "Máy bơm nước" || 
+                 currentCategoryValue === "Máy tiện" || 
+                 currentCategoryValue === "")) {
+                categorySelect.value = currentCategoryValue;
             }
-            
-            // Khôi phục giá trị đã chọn
-            categorySelect.value = currentCategoryValue;
         }
         
         // Hàm hiển thị loading

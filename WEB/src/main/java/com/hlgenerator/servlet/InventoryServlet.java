@@ -13,7 +13,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -97,6 +96,9 @@ public class InventoryServlet extends HttpServlet {
             int totalCount = inventoryDAO.getFilteredInventoryCount(
                 category, warehouse, stockStatus, search);
             
+            // Chỉ sử dụng 3 danh mục cố định
+            List<String> categories = getFixedCategories();
+            
             // Build JSON response
             StringBuilder json = new StringBuilder();
             json.append("{\"success\":true,\"data\":[");
@@ -112,7 +114,13 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"category\":\"").append(escapeJson(inv.getCategory())).append("\",");
                 json.append("\"warehouse\":\"").append(escapeJson(inv.getWarehouseLocation())).append("\",");
                 json.append("\"currentStock\":").append(inv.getCurrentStock()).append(",");
-                json.append("\"minStock\":").append(inv.getMinStock()).append(",");
+                // Thêm giá: đơn giá nhập gần nhất và giá bán hiện tại
+                Double lastUnitCost = inventoryDAO.getLastUnitCost(inv.getProductId());
+                json.append("\"unitCost\":").append(lastUnitCost == null ? "null" : lastUnitCost).append(",");
+                json.append("\"unitPrice\":").append(inv.getUnitPrice());
+                
+                // Giữ lại các trường min/max để không phá vỡ client cũ (không còn hiển thị)
+                json.append(",\"minStock\":").append(inv.getMinStock()).append(",");
                 json.append("\"maxStock\":").append(inv.getMaxStock());
                 json.append("}");
             }
@@ -121,6 +129,15 @@ public class InventoryServlet extends HttpServlet {
             json.append(",\"currentPage\":").append(page);
             json.append(",\"pageSize\":").append(pageSize);
             json.append(",\"totalPages\":").append((int) Math.ceil((double) totalCount / pageSize));
+            
+            // Thêm danh sách categories vào response (chỉ 3 danh mục cố định)
+            json.append(",\"categories\":[");
+            for (int i = 0; i < categories.size(); i++) {
+                if (i > 0) json.append(",");
+                json.append("\"").append(escapeJson(categories.get(i))).append("\"");
+            }
+            json.append("]");
+            
             json.append("}");
             
             response.getWriter().write(json.toString());
@@ -150,7 +167,9 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"id\":").append(p.getId()).append(",");
                 json.append("\"productCode\":\"").append(escapeJson(p.getProductCode())).append("\",");
                 json.append("\"productName\":\"").append(escapeJson(p.getProductName())).append("\",");
-                json.append("\"unit\":\"").append(escapeJson(p.getUnit())).append("\"");
+                json.append("\"unit\":\"").append(escapeJson(p.getUnit())).append("\",");
+                json.append("\"supplierId\":").append(p.getSupplierId()).append(",");
+                json.append("\"supplierName\":\"").append(escapeJson(p.getSupplierName())).append("\"");
                 json.append("}");
             }
             
@@ -171,8 +190,12 @@ public class InventoryServlet extends HttpServlet {
             throws IOException {
         try {
             Integer productId = null;
-            if (request.getParameter("productId") != null) {
-                productId = Integer.parseInt(request.getParameter("productId"));
+            String productIdParam = request.getParameter("productId");
+            if (productIdParam != null) {
+                productIdParam = productIdParam.trim();
+                if (!productIdParam.isEmpty() && productIdParam.matches("\\d+")) {
+                    productId = Integer.parseInt(productIdParam);
+                }
             }
             
             int limit = 50;
@@ -190,11 +213,26 @@ public class InventoryServlet extends HttpServlet {
                 StockHistory h = historyList.get(i);
                 json.append("{");
                 json.append("\"id\":").append(h.getId()).append(",");
+                json.append("\"productId\":").append(h.getProductId()).append(",");
                 json.append("\"productCode\":\"").append(escapeJson(h.getProductCode())).append("\",");
                 json.append("\"productName\":\"").append(escapeJson(h.getProductName())).append("\",");
                 json.append("\"movementType\":\"").append(escapeJson(h.getMovementType())).append("\",");
                 json.append("\"quantity\":").append(h.getQuantity()).append(",");
                 json.append("\"referenceType\":\"").append(escapeJson(h.getReferenceType())).append("\",");
+                // Thêm thông tin kho và giá
+                json.append("\"warehouseLocation\":\"").append(escapeJson(h.getWarehouseLocation())).append("\",");
+                if (h.getUnitCost() != null) {
+                    json.append("\"unitCost\":").append(h.getUnitCost()).append(",");
+                } else {
+                    json.append("\"unitCost\":null,");
+                }
+                // Giá bán hiện tại
+                double unitPrice = 0;
+                try {
+                    Product p = productDAO.getProductById(h.getProductId());
+                    if (p != null) unitPrice = p.getUnitPrice();
+                } catch (Exception ignore) {}
+                json.append("\"unitPrice\":").append(unitPrice).append(",");
                 json.append("\"createdAt\":\"").append(h.getCreatedAt()).append("\",");
                 json.append("\"createdByName\":\"").append(escapeJson(h.getCreatedByName())).append("\"");
                 json.append("}");
@@ -342,6 +380,17 @@ public class InventoryServlet extends HttpServlet {
                 history.setCreatedBy(userId);
                 
                 inventoryDAO.addStockHistory(history);
+
+                // Nếu sản phẩm chưa có giá bán, tự đặt = unitCost * 1.10 (lợi nhuận 10%)
+                if (unitCost > 0) {
+                    double suggestedSellingPrice = Math.round(unitCost * 1.10 * 100.0) / 100.0; // làm tròn 2 số lẻ
+                    try {
+                        productDAO.updateUnitPriceIfEmpty(productId, suggestedSellingPrice);
+                    } catch (Exception ex) {
+                        // Không chặn quy trình nhập kho nếu cập nhật giá thất bại
+                        System.err.println("Warn: updateUnitPriceIfEmpty failed for product " + productId + ": " + ex.getMessage());
+                    }
+                }
             }
             
             if (allSuccess) {
@@ -469,7 +518,21 @@ public class InventoryServlet extends HttpServlet {
     }
     
     /**
+     * Lấy danh sách 3 danh mục cố định
+     * Tác giả: Sơn Lê
+     * @return Danh sách 3 danh mục: Máy phát điện, Máy bơm nước, Máy tiện
+     */
+    private List<String> getFixedCategories() {
+        List<String> categories = new java.util.ArrayList<>();
+        categories.add("Máy phát điện");
+        categories.add("Máy bơm nước");
+        categories.add("Máy tiện");
+        return categories;
+    }
+    
+    /**
      * Escape JSON string
+     * Tác giả: Sơn Lê
      */
     private String escapeJson(String str) {
         if (str == null) return "";

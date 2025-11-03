@@ -128,6 +128,33 @@ public class InventoryDAO {
         
         return inventoryList;
     }
+
+    /**
+     * Lấy đơn giá nhập gần nhất (unit_cost) của sản phẩm từ lịch sử nhập kho
+     * Tác giả: Sơn Lê
+     */
+    public Double getLastUnitCost(int productId) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return null;
+        }
+        String sql = "SELECT unit_cost FROM stock_history WHERE product_id = ? AND movement_type = 'in' " +
+                     "AND unit_cost IS NOT NULL ORDER BY created_at DESC LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    double v = rs.getDouble(1);
+                    if (rs.wasNull()) return null;
+                    return v;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi lấy giá nhập gần nhất: " + e.getMessage();
+        }
+        return null;
+    }
     
     /**
      * Đếm tổng số tồn kho theo bộ lọc (cho phân trang)

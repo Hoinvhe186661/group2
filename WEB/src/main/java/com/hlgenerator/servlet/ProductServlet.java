@@ -78,8 +78,8 @@ public class ProductServlet extends HttpServlet {
             // Lấy thống kê sản phẩm
             Map<String, Integer> statistics = productDAO.getAllStatistics();
             
-            // Lấy danh sách danh mục
-            List<String> categories = productDAO.getAllCategories();
+            // Chỉ sử dụng 3 danh mục cố định
+            List<String> categories = getFixedCategories();
             
             // Set attributes cho JSP
             request.setAttribute("products", products);
@@ -108,8 +108,8 @@ public class ProductServlet extends HttpServlet {
             com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
             List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
             
-            // Lấy danh sách danh mục
-            List<String> categories = productDAO.getAllCategories();
+            // Chỉ sử dụng 3 danh mục cố định
+            List<String> categories = getFixedCategories();
             
             request.setAttribute("suppliers", suppliers);
             request.setAttribute("categories", categories);
@@ -144,8 +144,8 @@ public class ProductServlet extends HttpServlet {
             com.hlgenerator.dao.SupplierDAO supplierDAO = new com.hlgenerator.dao.SupplierDAO();
             List<com.hlgenerator.model.Supplier> suppliers = supplierDAO.getAllSuppliers();
             
-            // Lấy danh sách danh mục
-            List<String> categories = productDAO.getAllCategories();
+            // Chỉ sử dụng 3 danh mục cố định
+            List<String> categories = getFixedCategories();
             
             request.setAttribute("product", product);
             request.setAttribute("suppliers", suppliers);
@@ -446,7 +446,7 @@ public class ProductServlet extends HttpServlet {
                 return;
             }
             
-            // Không cho phép thay đổi mã sản phẩm và danh mục
+            // Không cho phép thay đổi mã sản phẩm, danh mục và giá bán (giá cập nhật theo nhập kho)
             if (product.getProductCode() != null && !product.getProductCode().equals(existingProduct.getProductCode())) {
                 out.write("{\"success\": false, \"message\": \"Không được phép thay đổi mã sản phẩm.\"}");
                 return;
@@ -460,6 +460,8 @@ public class ProductServlet extends HttpServlet {
             // Khôi phục mã sản phẩm và danh mục từ sản phẩm hiện tại để đảm bảo không bị thay đổi
             product.setProductCode(existingProduct.getProductCode());
             product.setCategory(existingProduct.getCategory());
+            // Khóa giá bán: luôn dùng giá hiện tại trong DB
+            product.setUnitPrice(existingProduct.getUnitPrice());
             
             boolean success = productDAO.updateProduct(product);
             
@@ -767,14 +769,12 @@ public class ProductServlet extends HttpServlet {
             errors.append("Đơn vị tính không được để trống. ");
         }
         
-        // Validate unit price
-        if (isEmpty(unitPriceStr)) {
-            errors.append("Giá sản phẩm không được để trống. ");
-        } else {
+        // Validate unit price (cho phép để trống; nếu nhập phải hợp lệ > 0)
+        if (!isEmpty(unitPriceStr)) {
             try {
                 double price = Double.parseDouble(unitPriceStr.trim());
                 if (price <= 0) {
-                    errors.append("Giá sản phẩm phải lớn hơn 0. ");
+                    errors.append("Giá sản phẩm phải lớn hơn 0 khi nhập. ");
                 } else if (price > 9999999999.99) {
                     errors.append("Giá sản phẩm không được vượt quá 9999,999,999.99 VNĐ. ");
                 }
@@ -857,7 +857,11 @@ public class ProductServlet extends HttpServlet {
         String category = request.getParameter("category").trim();
         String unit = request.getParameter("unit").trim();
         String description = getParameterOrDefault(request, "description", "");
-        double unitPrice = Double.parseDouble(request.getParameter("unit_price").trim());
+        double unitPrice = 0;
+        String unitPriceStr2 = request.getParameter("unit_price");
+        if (!isEmpty(unitPriceStr2)) {
+            try { unitPrice = Double.parseDouble(unitPriceStr2.trim()); } catch (NumberFormatException ignore) { unitPrice = 0; }
+        }
         int supplierId = Integer.parseInt(request.getParameter("supplier_id").trim());
         String specifications = getParameterOrDefault(request, "specifications", "");
         int warrantyMonths = getIntParameterOrDefault(request, "warranty_months", 12);
@@ -920,13 +924,12 @@ public class ProductServlet extends HttpServlet {
         if (isEmpty(unit)) {
             errors.append("Đơn vị không được để trống. ");
         }
-        if (isEmpty(unitPriceStr)) {
-            errors.append("Giá sản phẩm không được để trống. ");
-        } else {
+        // Validate unit price (cho phép để trống; nếu nhập phải hợp lệ > 0)
+        if (!isEmpty(unitPriceStr)) {
             try {
                 double unitPrice = Double.parseDouble(unitPriceStr.trim());
                 if (unitPrice <= 0) {
-                    errors.append("Giá sản phẩm phải lớn hơn 0. ");
+                    errors.append("Giá sản phẩm phải lớn hơn 0 khi nhập. ");
                 } else if (unitPrice > 9999999999.99) {
                     errors.append("Giá sản phẩm không được vượt quá 99,999,999.99 VNĐ. ");
                 }
@@ -972,7 +975,11 @@ public class ProductServlet extends HttpServlet {
         String category = request.getParameter("category").trim();
         String unit = request.getParameter("unit").trim();
         String description = getParameterOrDefault(request, "description", "");
-        double unitPrice = Double.parseDouble(request.getParameter("unit_price").trim());
+        double unitPrice = 0;
+        String unitPriceStr3 = request.getParameter("unit_price");
+        if (!isEmpty(unitPriceStr3)) {
+            try { unitPrice = Double.parseDouble(unitPriceStr3.trim()); } catch (NumberFormatException ignore) { unitPrice = 0; }
+        }
         int supplierId = Integer.parseInt(request.getParameter("supplier_id").trim());
         String specifications = getParameterOrDefault(request, "specifications", "");
         int warrantyMonths = getIntParameterOrDefault(request, "warranty_months", 12);
@@ -1055,7 +1062,8 @@ public class ProductServlet extends HttpServlet {
             
             // Lấy danh sách nhà cung cấp và danh mục cho dropdown
             List<Supplier> suppliers = supplierDAO.getAllSuppliers();
-            List<String> categories = productDAO.getAllCategories();
+            // Chỉ sử dụng 3 danh mục cố định
+            List<String> categories = getFixedCategories();
             
             // Tạo response JSON
             JsonObject jsonResponse = new JsonObject();
@@ -1136,6 +1144,19 @@ public class ProductServlet extends HttpServlet {
         public String getErrorMessage() {
             return errorMessage;
         }
+    }
+    
+    /**
+     * Lấy danh sách 3 danh mục cố định
+     * Tác giả: Sơn Lê
+     * @return Danh sách 3 danh mục: Máy phát điện, Máy bơm nước, Máy tiện
+     */
+    private List<String> getFixedCategories() {
+        List<String> categories = new java.util.ArrayList<>();
+        categories.add("Máy phát điện");
+        categories.add("Máy bơm nước");
+        categories.add("Máy tiện");
+        return categories;
     }
     
     
