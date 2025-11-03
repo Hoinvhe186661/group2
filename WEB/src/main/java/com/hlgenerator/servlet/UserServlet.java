@@ -107,24 +107,34 @@ public class UserServlet extends HttpServlet {
             switch (action != null ? action : "add") {
                 case "add":
                     handleAddUser(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Tạo người dùng mới: " + request.getParameter("username"), "success");
                     break;
                 case "update":
                     handleUpdateUser(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Cập nhật người dùng #" + request.getParameter("id"), "info");
                     break;
                 case "delete":
                     handleDeleteUser(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Xóa (mềm) người dùng #" + request.getParameter("id"), "warning");
                     break;
                 case "activate":
                     handleActivateUser(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Kích hoạt người dùng #" + request.getParameter("id"), "success");
                     break;
                 case "changePassword":
                     handleChangePassword(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Đổi mật khẩu người dùng #" + request.getParameter("id"), "info");
                     break;
                 case "deactivate":
                     handleDeactivateUser(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Tạm khóa người dùng #" + request.getParameter("id"), "warning");
                     break;
                 case "hardDelete":
                     handleHardDeleteUser(request, out);
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "XÓA VĨNH VIỄN người dùng #" + request.getParameter("id"), "danger");
+                    break;
+                case "deleteByRole":
+                    handleDeleteUsersByRole(request, out);
                     break;
                 default:
                     sendErrorResponse(response, "Hành động không hợp lệ", 400);
@@ -214,6 +224,7 @@ public class UserServlet extends HttpServlet {
             stats.put("technicalStaffCount", userDAO.getUserCountByRole("technical_staff"));
             stats.put("customerSupportCount", userDAO.getUserCountByRole("customer_support"));
             stats.put("storekeeperCount", userDAO.getUserCountByRole("storekeeper"));
+            stats.put("headTechnicianCount", userDAO.getUserCountByRole("head_technician"));
             stats.put("customerCount", userDAO.getUserCountByRole("customer"));
             
             JSONObject result = new JSONObject();
@@ -586,6 +597,32 @@ public class UserServlet extends HttpServlet {
             sendErrorResponse(out, "Mã người dùng không hợp lệ", 400);
         } catch (Exception e) {
             sendErrorResponse(out, "Lỗi khi xóa vĩnh viễn người dùng: " + e.getMessage(), 500);
+        }
+    }
+
+    private void handleDeleteUsersByRole(HttpServletRequest request, PrintWriter out) {
+        try {
+            String role = request.getParameter("role");
+            String mode = request.getParameter("mode"); // "hard" hoặc "soft" (mặc định soft)
+            if (role == null || role.trim().isEmpty()) {
+                sendErrorResponse(out, "Vai trò là bắt buộc", 400);
+                return;
+            }
+            boolean isHard = "hard".equalsIgnoreCase(String.valueOf(mode));
+
+            int affected = isHard 
+                ? userDAO.hardDeleteUsersByRole(role.trim())
+                : userDAO.softDeleteUsersByRole(role.trim());
+
+            JSONObject result = new JSONObject();
+            result.put("success", true);
+            result.put("deleted", affected);
+            result.put("mode", isHard ? "hard" : "soft");
+            result.put("role", role.trim());
+            out.print(result.toString());
+
+        } catch (Exception e) {
+            sendErrorResponse(out, "Lỗi khi xóa người dùng theo vai trò: " + e.getMessage(), 500);
         }
     }
 

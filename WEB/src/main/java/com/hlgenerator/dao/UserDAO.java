@@ -6,6 +6,10 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.time.YearMonth;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -376,6 +380,36 @@ public class UserDAO extends DBConnect {
         }
     }
 
+    // Soft delete all users by role (set is_active = false)
+    public int softDeleteUsersByRole(String role) {
+        if (!checkConnection()) {
+            return 0;
+        }
+        String sql = "UPDATE users SET is_active=false, updated_at=CURRENT_TIMESTAMP WHERE role=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, role);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error soft deleting users by role: " + role, e);
+            return 0;
+        }
+    }
+
+    // Hard delete all users by role
+    public int hardDeleteUsersByRole(String role) {
+        if (!checkConnection()) {
+            return 0;
+        }
+        String sql = "DELETE FROM users WHERE role=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, role);
+            return ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error hard deleting users by role: " + role, e);
+            return 0;
+        }
+    }
+
     // Check if username exists
     public boolean isUsernameExists(String username) {
         if (!checkConnection()) {
@@ -610,6 +644,43 @@ public class UserDAO extends DBConnect {
         }
         
         return 0;
+    }
+
+    // Get monthly counts for customers for the last N months (including current month)
+    public LinkedHashMap<String, Integer> getCustomerCountsLastNMonths(int months) {
+        LinkedHashMap<String, Integer> result = new LinkedHashMap<>();
+        if (!checkConnection()) {
+            return result;
+        }
+
+        // Prepare month keys in order with 0 defaults
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM");
+        YearMonth current = YearMonth.from(LocalDate.now());
+        for (int i = months - 1; i >= 0; i--) {
+            YearMonth ym = current.minusMonths(i);
+            result.put(ym.format(fmt), 0);
+        }
+
+        String sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS cnt "
+                   + "FROM users WHERE role = 'customer' "
+                   + "AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH) "
+                   + "GROUP BY ym ORDER BY ym";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, months);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String ym = rs.getString("ym");
+                    int cnt = rs.getInt("cnt");
+                    if (result.containsKey(ym)) {
+                        result.put(ym, cnt);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting monthly customer counts", e);
+        }
+
+        return result;
     }
     
     // Change password

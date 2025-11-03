@@ -287,6 +287,7 @@
                                             <a href="users" class="btn btn-default btn-sm">
                                                 <i class="fa fa-times"></i> Xóa lọc
                                             </a>
+                                            
                                         </div>
                                     </div>
                                 </form>
@@ -385,7 +386,7 @@
                                     <label for="email">Email: <small class="text-muted"></small></label>
                                     <input type="email" class="form-control" id="email" placeholder="" required>
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group" id="passwordGroup">
                                     <label for="password">Mật khẩu:</label>
                                     <input type="password" class="form-control" id="password" required>
                                 </div>
@@ -580,6 +581,12 @@
                     unlockCustomerFields();
                 }
             });
+
+            // Khởi tạo trạng thái checkbox Ẩn vai trò theo localStorage
+            syncHideRoleToggle();
+            $('#hideRoleDashboardToggle').on('change', function(){
+                toggleHideCurrentFilterRole(this.checked);
+            });
         });
 
         var customersLoaded = false;
@@ -652,6 +659,56 @@
             if (usersTable) {
                 usersTable.draw();
             }
+        }
+
+        // Lấy danh sách vai trò bị ẩn từ localStorage
+        function getHiddenRoles() {
+            try {
+                var raw = localStorage.getItem('hiddenRoles');
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) { return []; }
+        }
+
+        // Lưu danh sách vai trò bị ẩn vào localStorage
+        function setHiddenRoles(list) {
+            try { localStorage.setItem('hiddenRoles', JSON.stringify(list || [])); } catch (e) {}
+        }
+
+        // Đồng bộ trạng thái checkbox với vai trò đang lọc
+        function syncHideRoleToggle() {
+            var role = $('#filterRole').val();
+            var hidden = getHiddenRoles();
+            var isHidden = role && hidden.indexOf(role) >= 0;
+            $('#hideRoleDashboardToggle').prop('checked', !!isHidden);
+        }
+
+        // Bật/tắt ẩn vai trò hiện tại
+        function toggleHideCurrentFilterRole(checked) {
+            var role = $('#filterRole').val();
+            if (!role) {
+                showAlert('Vui lòng chọn vai trò để ẩn/hiện trên dashboard', 'info');
+                $('#hideRoleDashboardToggle').prop('checked', false);
+                return;
+            }
+            var hidden = getHiddenRoles();
+            var idx = hidden.indexOf(role);
+            if (checked && idx < 0) hidden.push(role);
+            if (!checked && idx >= 0) hidden.splice(idx, 1);
+            setHiddenRoles(hidden);
+            logAction((checked ? 'Ẩn' : 'Hiện') + ' vai trò trên dashboard: ' + role, 'info');
+            // Ẩn ngay các hàng thuộc vai trò đó trong bảng (client-side)
+            hideRowsByRole(role, checked);
+        }
+
+        function hideRowsByRole(role, shouldHide) {
+            // Tìm cột Vai trò và so khớp label text
+            $('#usersTable tbody tr').each(function(){
+                var $row = $(this);
+                var roleCellHtml = $row.find('td').eq(5).html() || '';
+                if (roleCellHtml.toLowerCase().indexOf(role.toLowerCase()) >= 0) {
+                    if (shouldHide) $row.hide(); else $row.show();
+                }
+            });
         }
 
         // Chuyển vai trò sang label HTML với màu sắc
@@ -752,6 +809,7 @@
             $('#role').val(user.role);
             $('#permissions').val(user.permissions || '[]');
             $('#isActive').prop('checked', user.isActive);
+            $('#passwordGroup').hide();
             
             // Xử lý khi vai trò là khách hàng
             if (user.role === 'customer') {
@@ -803,6 +861,7 @@
                 success: function(response) {
                     if (response.success) {
                         showAlert('Đã đổi mật khẩu thành công', 'success');
+                        logAction('Đổi mật khẩu cho người dùng #' + currentPasswordUserId, 'success');
                         $('#changePasswordModal').modal('hide');
                         document.getElementById('changePasswordForm').reset();
                         currentPasswordUserId = null;
@@ -831,6 +890,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã tạm khóa người dùng thành công', 'success');
+                        logAction('Tạm khóa người dùng #' + id, 'warning');
                             location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi tạm khóa người dùng: ' + response.message, 'danger');
@@ -864,6 +924,7 @@
                         success: function(response) {
                             if (response.success) {
                                 showAlert('Đã xóa vĩnh viễn người dùng thành công', 'success');
+                        logAction('Xóa vĩnh viễn người dùng #' + id, 'danger');
                                 location.reload(); // Reload trang để cập nhật dữ liệu
                             } else {
                                 showAlert('Lỗi khi xóa vĩnh viễn người dùng: ' + response.message, 'danger');
@@ -894,6 +955,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã tạm khóa người dùng thành công', 'success');
+                        logAction('Tạm khóa người dùng #' + id, 'warning');
                             location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi tạm khóa người dùng: ' + response.message, 'danger');
@@ -921,6 +983,7 @@
                     success: function(response) {
                         if (response.success) {
                             showAlert('Đã kích hoạt người dùng thành công', 'success');
+                        logAction('Kích hoạt người dùng #' + id, 'success');
                             location.reload(); // Reload trang để cập nhật dữ liệu
                         } else {
                             showAlert('Lỗi khi kích hoạt người dùng: ' + response.message, 'danger');
@@ -1020,8 +1083,10 @@
                     if (response.success) {
                         if (!currentEditingUser) {
                             showAlert('Tạo người dùng thành công! Tài khoản đã được kích hoạt và có thể đăng nhập ngay lập tức.', 'success');
+                            logAction('Tạo người dùng mới: ' + username, 'success');
                         } else {
                             showAlert(response.message, 'success');
+                            logAction('Cập nhật người dùng #' + currentEditingUser.id + ': ' + username, 'info');
                         }
                         $('#addUserModal').modal('hide');
                         document.getElementById('addUserForm').reset();
@@ -1071,6 +1136,22 @@
             }, 5000);
         }
 
+        // Ghi log thao tác vào localStorage để hiển thị ở dashboard
+        function logAction(message, type) {
+            try {
+                var raw = localStorage.getItem('recentActions');
+                var list = raw ? JSON.parse(raw) : [];
+                list.push({ message: message, type: type || 'info', time: Date.now() });
+                // Giới hạn 50 bản ghi gần nhất
+                if (list.length > 50) {
+                    list = list.slice(list.length - 50);
+                }
+                localStorage.setItem('recentActions', JSON.stringify(list));
+            } catch (e) {
+                console.warn('Không thể ghi recentActions:', e);
+            }
+        }
+
         // Reset form khi đóng modal
         $('#addUserModal').on('hidden.bs.modal', function() {
             document.getElementById('addUserForm').reset();
@@ -1080,6 +1161,18 @@
             $('#customerSelectGroup').hide();
             $('#customerId').val('');
             unlockCustomerFields();
+            $('#passwordGroup').show();
+        });
+
+        // Hiển thị/ẩn nhóm mật khẩu khi mở modal theo trạng thái thêm mới/chỉnh sửa
+        $('#addUserModal').on('show.bs.modal', function() {
+            if (!currentEditingUser) {
+                $('#passwordGroup').show();
+                $('#password').prop('required', true).val('');
+            } else {
+                $('#passwordGroup').hide();
+                $('#password').prop('required', false).val('');
+            }
         });
 
         // Reset password form when modal is closed
@@ -1087,6 +1180,8 @@
             document.getElementById('changePasswordForm').reset();
             currentPasswordUserId = null;
         });
+
+        
 
     </script>
 </body>

@@ -12,6 +12,7 @@ com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\service\EmailService$1.class
 com\hlgenerator\servlet\CustomerManagementServlet$CustomerHelper.class
 com\hlgenerator\servlet\LogoutServlet.class
+com\hlgenerator\util\ActionLogUtil.class
 com\hlgenerator\model\Inventory.class
 com\hlgenerator\dao\DBConnect.class
 com\hlgenerator\model\Contract.class
@@ -50,6 +51,7 @@ com\hlgenerator\dao\WorkOrderTaskDAO.class
 com\hlgenerator\model\EmailNotification.class
 com\hlgenerator\model\Customer.class
 com\hlgenerator\service\EmailService.class
+com\hlgenerator\servlet\AdminDashboardServlet.class
 com\hlgenerator\model\TaskAssignment.class
 com\hlgenerator\dao\ProductDAO.class
 com\hlgenerator\dao\TaskDAO.class

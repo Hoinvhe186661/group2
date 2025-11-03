@@ -8,6 +8,11 @@
         response.sendRedirect(request.getContextPath() + "/admin/login.jsp");
         return;
     }
+    // Nếu truy cập trực tiếp admin.jsp (không qua servlet) thì chuyển hướng về /admin để nạp dữ liệu
+    if (request.getAttribute("customerCount") == null) {
+        response.sendRedirect(request.getContextPath() + "/admin");
+        return;
+    }
 %>
 <!DOCTYPE html>
 <html>
@@ -44,6 +49,66 @@
         .st-purple { background-color: #9c27b0 !important; }
         .st-cyan { background-color: #00bcd4 !important; }
         .st-pink { background-color: #e91e63 !important; }
+
+        /* Smooth animations (CSS-only) aligned with template */
+        .fade-in { opacity: 0; animation: fadeInUp 500ms ease-out forwards; }
+        .fade-in.delay-1 { animation-delay: 80ms; }
+        .fade-in.delay-2 { animation-delay: 160ms; }
+        .fade-in.delay-3 { animation-delay: 240ms; }
+        .fade-in.delay-4 { animation-delay: 320ms; }
+        .slide-up { transform: translateY(8px); opacity: 0; animation: slideUp 450ms ease-out forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+        @keyframes slideUp { to { transform: translateY(0); opacity: 1; } }
+
+        /* Animate SVG bars on load */
+        svg .chart-bar { transform-origin: bottom center; animation: growBar 700ms ease-out forwards; transform: scaleY(0.2); }
+        svg .chart-bar:nth-child(odd) { animation-delay: 80ms; }
+        @keyframes growBar { to { transform: scaleY(1); } }
+
+        /* Panel subtle shadow/hover consistent with theme */
+        .panel { transition: box-shadow 200ms ease; }
+        .panel:hover { box-shadow: 0 6px 14px rgba(0,0,0,0.08); }
+        .sm-st { transition: transform 180ms ease, box-shadow 180ms ease; }
+        .sm-st:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+
+        /* Gọn gàng nội dung, không thừa khoảng trắng */
+        .right-side .content { padding: 12px 16px; }
+        .panel { margin-bottom: 12px; }
+        .panel-heading { padding: 10px 12px; }
+        .panel-body { padding: 12px; }
+        .sm-st { margin-bottom: 8px; }
+        .list-group { margin-bottom: 8px; }
+        #noti-box { max-height: 360px; overflow-y: auto; }
+        .footer-main { margin-top: 8px; padding: 8px 12px; }
+        /* Tránh tràn ngang và làm svg/canvas co giãn hợp lý */
+        .right-side { overflow-x: hidden; }
+        .panel-body svg, .panel-body canvas { max-width: 100%; height: auto; display: block; }
+
+        /* Căn sidebar sát lề trái, nội dung dịch phải giống template */
+        .left-side { float: left; width: 220px; max-width: 220px; margin-left: 0; padding-left: 0; }
+        .left-side .sidebar { padding-left: 0; width: 100%; }
+        .left-side .sidebar .sidebar-menu { margin-left: 0; }
+        .left-side .sidebar, .left-side .sidebar * { box-sizing: border-box; }
+        .left-side img { max-width: 100%; height: auto; }
+        .right-side { margin-left: 220px; }
+
+        /* Sidebar cố định theo template, tránh lệch layout */
+        /* Khôi phục layout giống trang Quản lý người dùng (users.jsp) */
+        body { padding-top: 0; overflow: visible; }
+        .header { position: static; height: auto; background: inherit; overscroll-behavior: auto; pointer-events: auto; }
+        .header .logo { height: auto; line-height: normal; }
+        .navbar { min-height: auto; }
+        .navbar .navbar-btn.sidebar-toggle { margin-top: 0; }
+        .wrapper { margin-top: 0; }
+        .left-side { position: static; top: auto; bottom: auto; width: auto; overflow: visible; height: auto; }
+        .left-side .sidebar { height: auto; overflow: visible; padding-bottom: 0; }
+        .right-side { position: static; top: auto; left: auto; right: auto; bottom: auto; margin-left: 0; min-height: auto; overflow: visible; }
+
+        /* Enable dropdown on hover/focus without JS */
+        .navbar .dropdown-menu { display: none; }
+        .navbar .dropdown:hover > .dropdown-menu,
+        .navbar .dropdown:focus-within > .dropdown-menu { display: block; }
+        .navbar .dropdown-menu { animation: fadeInUp 160ms ease-out; }
     </style>
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -56,7 +121,7 @@
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
     <header class="header">
-        <a href="admin.jsp" class="logo">
+                        <a href="admin" class="logo">
             Bảng điều khiển 
         </a>
         <!-- Header Navbar: style can be found in header.less -->
@@ -167,7 +232,7 @@
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
                     <li class="active">
-                        <a href="admin.jsp">
+                        <a href="admin">
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
@@ -206,38 +271,12 @@
             <!-- Main content -->
             <section class="content">
                 <div class="row" style="margin-bottom:5px;">
-                    <div class="col-md-3">
-                        <div class="sm-st clearfix">
-                            <span class="sm-st-icon st-red"><i class="fa fa-shopping-cart"></i></span>
-                            <div class="sm-st-info">
-                                <span>150</span>
-                                Tổng sản phẩm
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="sm-st clearfix">
-                            <span class="sm-st-icon st-violet"><i class="fa fa-file-text-o"></i></span>
-                            <div class="sm-st-info">
-                                <span>45</span>
-                                Đơn hàng mới
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="sm-st clearfix">
-                            <span class="sm-st-icon st-blue"><i class="fa fa-dollar"></i></span>
-                            <div class="sm-st-info">
-                                <span>25,000,000</span>
-                                Doanh thu
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    
+                    <div class="col-md-3 fade-in">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-green"><i class="fa fa-users"></i></span>
                             <div class="sm-st-info">
-                                <span>320</span>
+                                <span id="customerCount"><%= request.getAttribute("customerCount") != null ? request.getAttribute("customerCount") : 0 %></span>
                                 Khách hàng
                             </div>
                         </div>
@@ -245,39 +284,51 @@
                 </div>
                 
                 <div class="row" style="margin-bottom:5px;">
-                    <div class="col-md-3">
+                    <div class="col-md-3 fade-in delay-1">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-orange"><i class="fa fa-user-secret"></i></span>
                             <div class="sm-st-info">
-                                <span id="totalUsers">0</span>
+                                <span id="totalUsers"><%= request.getAttribute("totalUsers") != null ? request.getAttribute("totalUsers") : 0 %></span>
                                 Người dùng hệ thống
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 fade-in delay-2">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-purple"><i class="fa fa-wrench"></i></span>
                             <div class="sm-st-info">
-                                <span id="technicalStaff">0</span>
+                                <span id="technicalStaff"><%= request.getAttribute("technicalStaffCount") != null ? request.getAttribute("technicalStaffCount") : 0 %></span>
                                 Nhân viên kỹ thuật
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 fade-in delay-3">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-cyan"><i class="fa fa-headphones"></i></span>
                             <div class="sm-st-info">
-                                <span id="supportStaff">0</span>
+                                <span id="supportStaff"><%= request.getAttribute("customerSupportCount") != null ? request.getAttribute("customerSupportCount") : 0 %></span>
                                 Hỗ trợ khách hàng
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 fade-in delay-4">
                         <div class="sm-st clearfix">
                             <span class="sm-st-icon st-pink"><i class="fa fa-warehouse"></i></span>
                             <div class="sm-st-info">
-                                <span id="storekeepers">0</span>
+                                <span id="storekeepers"><%= request.getAttribute("storekeeperCount") != null ? request.getAttribute("storekeeperCount") : 0 %></span>
                                 Thủ kho
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" style="margin-bottom:5px;">
+                    <div class="col-md-3">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-green"><i class="fa fa-user-tie"></i></span>
+                            <div class="sm-st-info">
+                                <span id="headTechnician"><%= request.getAttribute("headTechnicianCount") != null ? request.getAttribute("headTechnicianCount") : 0 %></span>
+                                Trưởng phòng kỹ thuật
                             </div>
                         </div>
                     </div>
@@ -287,129 +338,104 @@
                 <div class="row">
                     <div class="col-md-8">
                         <!--earning graph start-->
-                        <section class="panel">
+                        <section class="panel slide-up">
                             <header class="panel-heading">
-                                Biểu đồ doanh thu
+                                Tổng quan khách hàng
                             </header>
                             <div class="panel-body">
-                                <canvas id="linechart" width="600" height="330"></canvas>
+                                <h3 style="margin:0 0 10px;">Tổng khách hàng: 
+                                    <strong><%= request.getAttribute("customerCount") != null ? request.getAttribute("customerCount") : 0 %></strong>
+                                </h3>
+                                <div>
+                                    <%= request.getAttribute("customerChartSvg") != null ? request.getAttribute("customerChartSvg") : "" %>
+                                </div>
+                                <p class="text-muted" style="margin-top:8px;">Dữ liệu cập nhật trực tiếp từ cơ sở dữ liệu.</p>
                             </div>
                         </section>
                         <!--earning graph end-->
                     </div>
                     <div class="col-lg-4">
                         <!--notifications start-->
-                        <section class="panel">
+                        <section class="panel slide-up">
                             <header class="panel-heading">
                                 Thông báo
                             </header>
                             <div class="panel-body" id="noti-box">
-                                <div class="alert alert-block alert-danger">
-                                    <button data-dismiss="alert" class="close close-sm" type="button">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                    <strong>Cảnh báo!</strong> Có đơn hàng cần xử lý gấp.
-                                </div>
-                                <div class="alert alert-success">
-                                    <button data-dismiss="alert" class="close close-sm" type="button">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                    <strong>Thành công!</strong> Đã cập nhật sản phẩm mới.
-                                </div>
-                                <div class="alert alert-info">
-                                    <button data-dismiss="alert" class="close close-sm" type="button">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                    <strong>Thông tin!</strong> Có khách hàng mới đăng ký.
-                                </div>
-                                <div class="alert alert-warning">
-                                    <button data-dismiss="alert" class="close close-sm" type="button">
-                                        <i class="fa fa-times"></i>
-                                    </button>
-                                    <strong>Chú ý!</strong> Kiểm tra tồn kho sản phẩm.
-                                </div>
+                                <%
+                                    @SuppressWarnings("unchecked")
+                                    java.util.List<java.util.Map<String, Object>> recentActions = (java.util.List<java.util.Map<String, Object>>) request.getAttribute("recentActions");
+                                    if (recentActions != null && !recentActions.isEmpty()) {
+                                        // Sắp xếp giảm dần theo thời gian
+                                        recentActions.sort(new java.util.Comparator<java.util.Map<String, Object>>() {
+                                            public int compare(java.util.Map<String, Object> a, java.util.Map<String, Object> b) {
+                                                long ta = a.get("time") != null ? ((Number)a.get("time")).longValue() : 0L;
+                                                long tb = b.get("time") != null ? ((Number)b.get("time")).longValue() : 0L;
+                                                return Long.compare(tb, ta);
+                                            }
+                                        });
+                                        int limit = Math.min(20, recentActions.size());
+                                        for (int i = 0; i < limit; i++) {
+                                            java.util.Map<String, Object> act = recentActions.get(i);
+                                            String type = String.valueOf(act.getOrDefault("type", "info"));
+                                            String message = String.valueOf(act.getOrDefault("message", ""));
+                                            long t = act.get("time") != null ? ((Number)act.get("time")).longValue() : 0L;
+                                            String timeText = t > 0 ? new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new java.util.Date(t)) : "";
+                                %>
+                                    <div class="alert alert-<%= type %> fade-in">
+                                        <button data-dismiss="alert" class="close close-sm" type="button"><i class="fa fa-times"></i></button>
+                                        <i class="fa <%= ("success".equals(type)?"fa-check":("warning".equals(type)?"fa-exclamation-triangle":("danger".equals(type)?"fa-times-circle":"fa-info-circle"))) %>"></i>
+                                        <%= message %>
+                                        <%= timeText.isEmpty()?"":" <small class=\"text-muted pull-right\"><i class=\"fa fa-clock-o\"></i> " + timeText + "</small>" %>
+                                    </div>
+                                <%
+                                        }
+                                    } else {
+                                %>
+                                    <div class="alert alert-info">Chưa có hoạt động nào gần đây.</div>
+                                <%
+                                    }
+                                %>
                             </div>
                         </section>
                     </div>
                 </div>
-                
+
+                <!-- Thống kê người dùng hệ thống -->
                 <div class="row">
-                    <div class="col-md-8">
+                    
+                    <div class="col-md-6">
                         <section class="panel">
                             <header class="panel-heading">
-                                Đơn hàng gần đây
-                            </header>
-                            <div class="panel-body table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Khách hàng</th>
-                                            <th>Sản phẩm</th>
-                                            <th>Ngày đặt</th>
-                                            <th>Trạng thái</th>
-                                            <th>Tổng tiền</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>1</td>
-                                            <td>Nguyễn Văn A</td>
-                                            <td>Sản phẩm 1</td>
-                                            <td>21/09/2025</td>
-                                            <td><span class="label label-warning">Đang xử lý</span></td>
-                                            <td>500,000 VNĐ</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>Trần Thị B</td>
-                                            <td>Sản phẩm 2</td>
-                                            <td>20/09/2025</td>
-                                            <td><span class="label label-success">Hoàn thành</span></td>
-                                            <td>750,000 VNĐ</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td>Lê Văn C</td>
-                                            <td>Sản phẩm 3</td>
-                                            <td>19/09/2025</td>
-                                            <td><span class="label label-info">Đang giao</span></td>
-                                            <td>1,200,000 VNĐ</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </section>
-                    </div>
-                    <div class="col-md-4">
-                        <section class="panel">
-                            <header class="panel-heading">
-                                Sản phẩm bán chạy
+                                Danh sách người dùng mới nhất
                             </header>
                             <div class="panel-body">
-                                <ul class="list-group">
-                                    <li class="list-group-item">
-                                        <span class="badge">15</span>
-                                        Sản phẩm 1
-                                    </li>
-                                    <li class="list-group-item">
-                                        <span class="badge">12</span>
-                                        Sản phẩm 2
-                                    </li>
-                                    <li class="list-group-item">
-                                        <span class="badge">8</span>
-                                        Sản phẩm 3
-                                    </li>
-                                    <li class="list-group-item">
-                                        <span class="badge">6</span>
-                                        Sản phẩm 4
-                                    </li>
+                                <ul class="list-group" id="recentUsersList">
+                                    <%
+                                        @SuppressWarnings("unchecked")
+                                        java.util.List<com.hlgenerator.model.User> recentUsers = (java.util.List<com.hlgenerator.model.User>) request.getAttribute("recentUsers");
+                                        if (recentUsers != null) {
+                                            for (com.hlgenerator.model.User u : recentUsers) {
+                                    %>
+                                        <li class="list-group-item">
+                                            <i class="fa fa-user"></i>
+                                            <strong><%= (u.getFullName() != null && !u.getFullName().isEmpty()) ? u.getFullName() : u.getUsername() %></strong>
+                                            <span class="label label-default" style="margin-left:6px;"><%= u.getRole() %></span>
+                                        </li>
+                                    <%
+                                            }
+                                        } else {
+                                    %>
+                                        <li class="list-group-item text-muted">Không có dữ liệu.</li>
+                                    <%
+                                        }
+                                    %>
                                 </ul>
                             </div>
                         </section>
                     </div>
                 </div>
-            </section><!-- /.content -->
+                
+                
             <div class="footer-main">
                 Copyright &copy Bảng điều khiển quản trị, 2025
             </div>
@@ -417,89 +443,6 @@
     </div><!-- ./wrapper -->
 
     <!-- jQuery 2.0.2 -->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
-    <script src="js/jquery.min.js" type="text/javascript"></script>
-    <!-- jQuery UI 1.10.3 -->
-    <script src="js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
-    <!-- Bootstrap -->
-    <script src="js/bootstrap.min.js" type="text/javascript"></script>
-    <!-- daterangepicker -->
-    <script src="js/plugins/daterangepicker/daterangepicker.js" type="text/javascript"></script>
-    <script src="js/plugins/chart.js" type="text/javascript"></script>
-    <!-- iCheck -->
-    <script src="js/plugins/iCheck/icheck.min.js" type="text/javascript"></script>
-    <!-- Director App -->
-    <script src="js/Director/app.js" type="text/javascript"></script>
-    <!-- Director dashboard demo (This is only for demo purposes) -->
-    <script src="js/Director/dashboard.js" type="text/javascript"></script>
-
-    <script>
-        $('#noti-box').slimScroll({
-            height: '400px',
-            size: '5px',
-            BorderRadius: '5px'
-        });
-        
-        // Load user statistics
-        $(document).ready(function() {
-            loadUserStats();
-        });
-        
-        function loadUserStats() {
-            $.ajax({
-                url: 'api/users?action=getStats',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        var stats = response.data;
-                        $('#totalUsers').text(stats.totalUsers || 0);
-                        $('#technicalStaff').text(stats.technicalStaffCount || 0);
-                        $('#supportStaff').text(stats.customerSupportCount || 0);
-                        $('#storekeepers').text(stats.storekeeperCount || 0);
-                    }
-                },
-                error: function() {
-                    console.log('Không thể tải thống kê người dùng');
-                }
-            });
-        }
-    </script>
-    
-    <script type="text/javascript">
-        $(function() {
-            "use strict";
-            //BAR CHART
-            var data = {
-                labels: ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7"],
-                datasets: [
-                    {
-                        label: "Doanh thu",
-                        fillColor: "rgba(220,220,220,0.2)",
-                        strokeColor: "rgba(220,220,220,1)",
-                        pointColor: "rgba(220,220,220,1)",
-                        pointStrokeColor: "#fff",
-                        pointHighlightFill: "#fff",
-                        pointHighlightStroke: "rgba(220,220,220,1)",
-                        data: [65, 59, 80, 81, 56, 55, 40]
-                    },
-                    {
-                        label: "Lợi nhuận",
-                        fillColor: "rgba(151,187,205,0.2)",
-                        strokeColor: "rgba(151,187,205,1)",
-                        pointColor: "rgba(151,187,205,1)",
-                        pointStrokeColor: "#fff",
-                        pointHighlightFill: "#fff",
-                        pointHighlightStroke: "rgba(151,187,205,1)",
-                        data: [28, 48, 40, 19, 86, 27, 90]
-                    }
-                ]
-            };
-            new Chart(document.getElementById("linechart").getContext("2d")).Line(data,{
-                responsive : true,
-                maintainAspectRatio: false,
-            });
-        });
-    </script>
+    <!-- Không dùng JavaScript cho trang này theo yêu cầu -->
 </body>
 </html> 
