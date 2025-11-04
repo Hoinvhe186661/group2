@@ -167,6 +167,21 @@
             font-size: 12px;
             margin-right: 3px;
         }
+        
+        /* Image Gallery */
+        .attachment-thumbnail {
+            transition: transform 0.2s;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .attachment-thumbnail:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .attachment-thumbnail img {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -271,34 +286,6 @@
 
             <!-- Main content -->
             <section class="content">
-                <!-- Statistics Cards -->
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="totalWorkOrders">0</h3>
-                            <p>Tổng đơn hàng</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="pendingWorkOrders">0</h3>
-                            <p>Chờ xử lý</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="inProgressWorkOrders">0</h3>
-                            <p>Đang thực hiện</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="completedWorkOrders">0</h3>
-                            <p>Hoàn thành</p>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Filters -->
                 <div class="row">
                     <div class="col-xs-12">
@@ -309,36 +296,6 @@
                             <div class="box-body">
                                 <form class="form-inline" id="filterForm">
                                     <div class="form-group">
-                                        <label>Trạng thái: </label>
-                                        <select class="form-control input-sm" id="filterStatus" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="pending">Chờ xử lý</option>
-                                            <option value="in_progress">Đang thực hiện</option>
-                                            <option value="completed">Hoàn thành</option>
-                                            <option value="cancelled">Đã hủy</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Độ ưu tiên: </label>
-                                        <select class="form-control input-sm" id="filterPriority" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="urgent">Khẩn cấp</option>
-                                            <option value="high">Cao</option>
-                                            <option value="medium">Trung bình</option>
-                                            <option value="low">Thấp</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Phân công: </label>
-                                        <select class="form-control input-sm" id="filterAssignedTo" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="unassigned">Chưa phân công</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
                                         <label>Tìm kiếm: </label>
                                         <input type="text" class="form-control input-sm" id="filterSearch" placeholder="Mã đơn, tiêu đề..." style="width: 200px;">
                                     </div>
@@ -374,9 +331,6 @@
                                             <th style="width: 100px;">Mã đơn hàng</th>
                                             <th>Khách hàng</th>
                                             <th>Tiêu đề</th>
-                                            <th style="width: 100px;">Độ ưu tiên</th>
-                                            <th style="width: 100px;">Trạng thái</th>
-                                            <th style="width: 120px;">Phân công</th>
                                             <th style="width: 80px;">Giờ ước tính</th>
                                             <th style="width: 100px;">Ngày tạo</th>
                                             <th style="width: 150px;">Thao tác</th>
@@ -384,7 +338,7 @@
                                     </thead>
                                     <tbody id="workOrdersTableBody">
                                         <tr>
-                                            <td colspan="9" class="text-center">Đang tải dữ liệu...</td>
+                                            <td colspan="6" class="text-center">Đang tải dữ liệu...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -750,7 +704,6 @@
                         allWorkOrders = response.data || [];
                         filteredWorkOrders = allWorkOrders;
                         console.log('Loaded ' + allWorkOrders.length + ' work orders');
-                        updateStatistics();
                         // Load assigned users for all work orders (will call renderTable when done)
                         loadAllAssignedUsers();
                     } else {
@@ -841,59 +794,17 @@
             });
         }
         
-        function updateStatistics() {
-            var total = allWorkOrders.length;
-            var pending = allWorkOrders.filter(w => w.status === 'pending').length;
-            var inProgress = allWorkOrders.filter(w => w.status === 'in_progress').length;
-            var completed = allWorkOrders.filter(w => w.status === 'completed').length;
-            
-            $('#totalWorkOrders').text(total);
-            $('#pendingWorkOrders').text(pending);
-            $('#inProgressWorkOrders').text(inProgress);
-            $('#completedWorkOrders').text(completed);
-        }
-        
         function applyFilters() {
-            var status = $('#filterStatus').val();
-            var priority = $('#filterPriority').val();
-            var assignedTo = $('#filterAssignedTo').val();
             var search = $('#filterSearch').val().toLowerCase();
             
             filteredWorkOrders = allWorkOrders.filter(function(workOrder) {
-                var matchStatus = !status || workOrder.status === status;
-                var matchPriority = !priority || workOrder.priority === priority;
-                
-                // Filter theo assigned users từ tasks
-                var assignedUsersList = workOrderAssignedUsers[workOrder.id] || [];
-                var matchAssigned = true;
-                if(assignedTo) {
-                    if(assignedTo === 'unassigned') {
-                        // Chưa phân công - không có ai trong danh sách assigned users
-                        matchAssigned = assignedUsersList.length === 0;
-                    } else {
-                        // Kiểm tra xem có nhân viên nào trong danh sách assigned users không
-                        // assignedTo là user ID, cần kiểm tra trong danh sách assigned users
-                        matchAssigned = false;
-                        // Tìm trong danh sách technical staff để so sánh
-                        var staff = technicalStaff.find(function(s) { return s.id == assignedTo; });
-                        if(staff && assignedUsersList.length > 0) {
-                            matchAssigned = assignedUsersList.some(function(userName) {
-                                return userName === staff.fullName;
-                            });
-                        }
-                    }
-                }
-                
                 var matchSearch = !search || 
                     (workOrder.workOrderNumber && workOrder.workOrderNumber.toLowerCase().includes(search)) ||
                     (workOrder.title && workOrder.title.toLowerCase().includes(search)) ||
                     (workOrder.description && workOrder.description.toLowerCase().includes(search)) ||
-                    (workOrder.customerName && workOrder.customerName.toLowerCase().includes(search)) ||
-                    (assignedUsersList.length > 0 && assignedUsersList.some(function(userName) {
-                        return userName.toLowerCase().includes(search);
-                    }));
+                    (workOrder.customerName && workOrder.customerName.toLowerCase().includes(search));
                 
-                return matchStatus && matchPriority && matchAssigned && matchSearch;
+                return matchSearch;
             });
             
             renderTable();
@@ -904,32 +815,17 @@
             tbody.empty();
             
             if(!filteredWorkOrders || filteredWorkOrders.length === 0) {
-                tbody.append('<tr><td colspan="9" class="text-center">Không có dữ liệu</td></tr>');
+                tbody.append('<tr><td colspan="6" class="text-center">Không có dữ liệu</td></tr>');
                 return;
             }
             
             filteredWorkOrders.forEach(function(workOrder) {
-                // Get assigned users from tasks - tổng hợp tất cả nhân viên đã được phân công từ các task
-                var assignedUsersList = workOrderAssignedUsers[workOrder.id] || [];
-                var assignedDisplay = '';
-                if(assignedUsersList.length > 0) {
-                    // Hiển thị danh sách nhân viên với badge
-                    assignedDisplay = assignedUsersList.map(function(userName) {
-                        return '<span class="label label-success" style="margin-right: 3px; display: inline-block;">' + userName + '</span>';
-                    }).join('');
-                } else {
-                    assignedDisplay = '<span class="text-muted">Chưa phân công</span>';
-                }
-                
                 var customerName = workOrder.customerName || 'N/A';
                 var estimatedHours = workOrder.estimatedHours ? workOrder.estimatedHours + 'h' : '-';
                 var row = '<tr>' +
                     '<td><strong>' + (workOrder.workOrderNumber || '#' + workOrder.id) + '</strong></td>' +
                     '<td>' + customerName + '</td>' +
                     '<td>' + (workOrder.title || '') + '</td>' +
-                    '<td>' + getPriorityBadge(workOrder.priority) + '</td>' +
-                    '<td>' + getStatusBadge(workOrder.status) + '</td>' +
-                    '<td>' + assignedDisplay + '</td>' +
                     '<td class="text-center">' + estimatedHours + '</td>' +
                     '<td>' + formatDate(workOrder.createdAt) + '</td>' +
                     '<td class="work-order-actions">' +
@@ -1091,7 +987,7 @@
         }
         
         function showError(msg) {
-            $('#workOrdersTableBody').html('<tr><td colspan="9" class="text-center text-danger">' + msg + '</td></tr>');
+            $('#workOrdersTableBody').html('<tr><td colspan="6" class="text-center text-danger">' + msg + '</td></tr>');
         }
         
         // Functions for task management
@@ -1356,7 +1252,12 @@
                 dataType: 'json',
                 success: function(response) {
                     if(response && response.success) {
-                        alert('Phân công công việc thành công!');
+                        var message = response.message || 'Phân công công việc thành công!';
+                        if(response.newTaskId) {
+                            // Task mới đã được tạo (cho task in_progress)
+                            message = 'Đã tạo công việc mới với trạng thái "Chờ xử lý" và phân công cho nhân viên!';
+                        }
+                        alert(message);
                         // Reload tasks before closing modal
                         var workOrderId = $('#assign_work_order_id').val();
                         loadTasks(workOrderId);
@@ -1430,17 +1331,9 @@
                 html += '<div class="panel-heading">';
                 html += '<h4 class="panel-title">';
                 html += '<strong>' + (task.taskNumber || 'Task #' + (index + 1)) + '</strong> - ' + (task.taskDescription || '');
-                html += ' <span class="pull-right">' + getStatusBadge(task.status) + '</span>';
                 html += '</h4>';
                 html += '</div>';
                 html += '<div class="panel-body">';
-                
-                // Nhân viên được phân công
-                if(task.assignedToName) {
-                    html += '<p><strong>Nhân viên thực hiện:</strong> <span class="label label-success">' + task.assignedToName + '</span></p>';
-                } else {
-                    html += '<p><strong>Nhân viên thực hiện:</strong> <span class="text-muted">Chưa phân công</span></p>';
-                }
                 
                 // Thời gian
                 html += '<div class="row">';
@@ -1502,20 +1395,53 @@
                     html += '</div>';
                 }
                 
-                // File đính kèm
+                // File đính kèm (Ảnh)
                 if(task.attachments && task.attachments.trim() !== '') {
                     try {
                         var attachments = JSON.parse(task.attachments);
                         if(Array.isArray(attachments) && attachments.length > 0) {
                             html += '<div style="margin-top: 15px;">';
-                            html += '<strong>File đính kèm:</strong><ul>';
+                            html += '<strong>Ảnh đính kèm:</strong>';
+                            html += '<div class="row" style="margin-top: 10px;">';
                             attachments.forEach(function(attachment) {
-                                html += '<li>' + (attachment.name || attachment) + '</li>';
+                                var filePath = typeof attachment === 'string' ? attachment : (attachment.path || attachment.name || attachment);
+                                var fileName = typeof attachment === 'string' ? filePath.split('/').pop() : (attachment.name || filePath.split('/').pop());
+                                
+                                // Kiểm tra nếu là file ảnh
+                                var imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+                                var ext = fileName.toLowerCase().split('.').pop();
+                                
+                                if(imageExtensions.indexOf(ext) !== -1) {
+                                    // Hiển thị ảnh có thể click để xem to
+                                    var fullPath = ctx + '/' + filePath;
+                                    html += '<div class="col-xs-6 col-sm-4 col-md-3" style="margin-bottom: 15px;">';
+                                    html += '<div class="attachment-thumbnail">';
+                                    html += '<a href="' + fullPath + '" target="_blank" title="Click để xem ảnh lớn" style="text-decoration: none; display: block;">';
+                                    html += '<img src="' + fullPath + '" alt="' + fileName + '" style="width: 100%; height: 150px; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=\'' + ctx + '/img/no-image.png\'; this.style.height=\'150px\'; this.style.width=\'100%\'; this.style.objectFit=\'cover\';">';
+                                    html += '<div style="padding: 8px; font-size: 11px; text-align: center; color: #333; background-color: #f9f9f9;">' + fileName + '</div>';
+                                    html += '</a>';
+                                    html += '</div>';
+                                    html += '</div>';
+                                } else {
+                                    // Hiển thị file không phải ảnh
+                                    html += '<div class="col-xs-12" style="margin-bottom: 5px;">';
+                                    html += '<a href="' + ctx + '/' + filePath + '" target="_blank" class="btn btn-sm btn-default">';
+                                    html += '<i class="fa fa-file"></i> ' + fileName;
+                                    html += '</a>';
+                                    html += '</div>';
+                                }
                             });
-                            html += '</ul></div>';
+                            html += '</div></div>';
                         }
                     } catch(e) {
-                        // Invalid JSON, ignore
+                        console.error('Error parsing attachments:', e);
+                        // Invalid JSON, try to display as plain text
+                        if(task.attachments && task.attachments.trim() !== '') {
+                            html += '<div style="margin-top: 15px;">';
+                            html += '<strong>File đính kèm:</strong>';
+                            html += '<p class="text-muted">' + task.attachments + '</p>';
+                            html += '</div>';
+                        }
                     }
                 }
                 

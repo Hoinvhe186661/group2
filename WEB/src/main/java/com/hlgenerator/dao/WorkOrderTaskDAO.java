@@ -220,11 +220,12 @@ public class WorkOrderTaskDAO extends DBConnect {
 
     /**
      * Assign task to user
-     * If task status is 'rejected', update status to 'pending' when reassigning
+     * - If task status is 'rejected', update status to 'pending' when reassigning
+     * - If task status is 'in_progress', create a new task with status 'pending' for the new user
      */
-    public boolean assignTaskToUser(int taskId, int userId, String role) {
+    public int assignTaskToUser(int taskId, int userId, String role) {
         if (!checkConnection()) {
-            return false;
+            return -1;
         }
 
         logger.info("Assigning task " + taskId + " to user " + userId + " with role " + role);
@@ -234,13 +235,50 @@ public class WorkOrderTaskDAO extends DBConnect {
             WorkOrderTask task = getTaskById(taskId);
             if (task == null) {
                 logger.warning("Task not found: " + taskId);
-                return false;
+                return -1;
             }
             
             // Start transaction
             connection.setAutoCommit(false);
             
-            // Insert or update assignment
+            // If task status is 'in_progress', create a new task instead of reassigning
+            if ("in_progress".equals(task.getStatus())) {
+                // Create new task based on the current task
+                WorkOrderTask newTask = new WorkOrderTask();
+                newTask.setWorkOrderId(task.getWorkOrderId());
+                newTask.setTaskDescription(task.getTaskDescription());
+                newTask.setPriority(task.getPriority());
+                newTask.setStatus("pending"); // New task starts with pending status
+                newTask.setEstimatedHours(task.getEstimatedHours());
+                
+                // Create the new task
+                int newTaskId = createTask(newTask);
+                if (newTaskId <= 0) {
+                    connection.rollback();
+                    connection.setAutoCommit(true);
+                    logger.warning("Failed to create new task for in_progress task");
+                    return -1;
+                }
+                
+                // Assign the new task to the new user
+                String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
+                             "VALUES (?, ?, ?)";
+                try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                    ps.setInt(1, newTaskId);
+                    ps.setInt(2, userId);
+                    ps.setString(3, role);
+                    ps.executeUpdate();
+                }
+                
+                // Commit transaction
+                connection.commit();
+                connection.setAutoCommit(true);
+                
+                logger.info("Created new task " + newTaskId + " for in_progress task " + taskId + " and assigned to user " + userId);
+                return newTaskId; // Return the new task ID
+            }
+            
+            // For other statuses, update assignment normally
             String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
                          "VALUES (?, ?, ?) " +
                          "ON DUPLICATE KEY UPDATE role = VALUES(role)";
@@ -267,7 +305,7 @@ public class WorkOrderTaskDAO extends DBConnect {
             connection.setAutoCommit(true);
             
             logger.info("Assignment completed successfully");
-            return true;
+            return taskId; // Return the original task ID
             
         } catch (SQLException e) {
             try {
@@ -277,7 +315,7 @@ public class WorkOrderTaskDAO extends DBConnect {
                 logger.log(Level.SEVERE, "Error rolling back transaction", rollbackEx);
             }
             logger.log(Level.SEVERE, "Error assigning task to user", e);
-            return false;
+            return -1;
         }
     }
 

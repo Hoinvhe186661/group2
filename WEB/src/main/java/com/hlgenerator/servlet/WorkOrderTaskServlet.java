@@ -367,14 +367,22 @@ public class WorkOrderTaskServlet extends HttpServlet {
                 return;
             }
             
-            boolean success = taskDAO.assignTaskToUser(taskId, userId, role != null ? role : "assignee");
+            int assignedTaskId = taskDAO.assignTaskToUser(taskId, userId, role != null ? role : "assignee");
             
             JsonObject result = new JsonObject();
-            result.addProperty("success", success);
-            if (success) {
-                result.addProperty("message", "Task assigned successfully");
+            if (assignedTaskId > 0) {
+                result.addProperty("success", true);
+                if (assignedTaskId != taskId) {
+                    // A new task was created (for in_progress tasks)
+                    result.addProperty("message", "Đã tạo công việc mới và phân công cho nhân viên");
+                    result.addProperty("newTaskId", assignedTaskId);
+                } else {
+                    // Original task was assigned
+                    result.addProperty("message", "Phân công công việc thành công");
+                }
             } else {
-                result.addProperty("message", "Failed to assign task");
+                result.addProperty("success", false);
+                result.addProperty("message", "Không thể phân công công việc");
             }
             sendJson(response, result);
             
