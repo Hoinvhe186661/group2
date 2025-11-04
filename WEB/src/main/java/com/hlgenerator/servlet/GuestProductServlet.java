@@ -56,13 +56,39 @@ public class GuestProductServlet extends HttpServlet {
     private void showProductsPage(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
         try {
-            // Lấy danh sách sản phẩm active cho guest (chỉ hiển thị sản phẩm active)
-            List<Product> allProducts = productDAO.getFilteredProducts(
-                null, null, "active", null, 1, 10000
+            // Lấy các tham số từ request
+            String sortBy = request.getParameter("sortBy"); // "all", "price_asc", "price_desc"
+            String pageStr = request.getParameter("page");
+            String searchTerm = request.getParameter("searchTerm"); // Thêm search term
+            
+            // Thiết lập phân trang
+            int page = 1;
+            int pageSize = 9; // 9 sản phẩm mỗi trang (3 cột x 3 hàng)
+            
+            if (pageStr != null && !pageStr.isEmpty()) {
+                try {
+                    page = Integer.parseInt(pageStr);
+                    if (page < 1) page = 1;
+                } catch (NumberFormatException e) {
+                    page = 1;
+                }
+            }
+            
+            // Xử lý search term - nếu null hoặc empty thì set null
+            String finalSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) 
+                ? searchTerm.trim() : null;
+            
+            // Lấy tổng số sản phẩm active (có search nếu có)
+            int totalProducts = productDAO.getFilteredProductsCount(null, null, "active", finalSearchTerm);
+            int totalPages = (int) Math.ceil((double) totalProducts / pageSize);
+            
+            // Lấy danh sách sản phẩm active cho guest với phân trang, sort và search
+            List<Product> products = productDAO.getFilteredProducts(
+                null, null, "active", finalSearchTerm, page, pageSize, sortBy
             );
             
             // Đảm bảo tất cả sản phẩm có image_url và description hợp lệ
-            for (Product p : allProducts) {
+            for (Product p : products) {
                 if (p.getImageUrl() == null || p.getImageUrl().trim().isEmpty() || "null".equals(p.getImageUrl())) {
                     p.setImageUrl("images/sanpham1.jpg"); // Ảnh mặc định
                 }
@@ -82,8 +108,13 @@ public class GuestProductServlet extends HttpServlet {
             }
             
             // Set attributes cho JSP
-            request.setAttribute("products", allProducts);
+            request.setAttribute("products", products);
             request.setAttribute("suppliers", activeSuppliers);
+            request.setAttribute("totalProducts", totalProducts);
+            request.setAttribute("currentPage", page);
+            request.setAttribute("totalPages", totalPages);
+            request.setAttribute("currentSort", sortBy != null ? sortBy : "all");
+            request.setAttribute("searchTerm", finalSearchTerm); // Thêm search term vào attribute
             
             // Forward to JSP
             request.getRequestDispatcher("/guest_products.jsp").forward(request, response);
@@ -112,6 +143,7 @@ public class GuestProductServlet extends HttpServlet {
             String priceMin = request.getParameter("priceMin");
             String priceMax = request.getParameter("priceMax");
             String sortBy = request.getParameter("sortBy"); // "all", "price_asc", "price_desc"
+            String searchTerm = request.getParameter("searchTerm"); // Thêm search term
             String pageStr = request.getParameter("page");
             String pageSizeStr = request.getParameter("pageSize");
             
@@ -135,22 +167,11 @@ public class GuestProductServlet extends HttpServlet {
                 }
             }
             
-            // Lấy danh sách sản phẩm đã lọc (chỉ lấy sản phẩm active)
-            // Lấy tất cả để lọc giá và sắp xếp ở đây
+            // Xử lý supplier filter
             String supplierIdFilter = null;
+            List<Integer> supplierIdList = null;
             if (supplierIds != null && supplierIds.length > 0) {
-                // Nếu có nhiều supplier, lấy tất cả sản phẩm rồi filter sau
-                // Hoặc có thể dùng supplier đầu tiên nếu chỉ hỗ trợ 1 supplier trong DAO
-                supplierIdFilter = supplierIds[0]; // Tạm thời lấy supplier đầu tiên
-            }
-            
-            List<Product> products = productDAO.getFilteredProducts(
-                supplierIdFilter, null, "active", null, 1, 10000 // Tăng limit để lấy tất cả sản phẩm
-            );
-            
-            // Nếu có nhiều supplier được chọn, lọc thêm
-            if (supplierIds != null && supplierIds.length > 1) {
-                List<Integer> supplierIdList = new ArrayList<>();
+                supplierIdList = new ArrayList<>();
                 for (String id : supplierIds) {
                     try {
                         supplierIdList.add(Integer.parseInt(id));
@@ -158,10 +179,214 @@ public class GuestProductServlet extends HttpServlet {
                         // Bỏ qua ID không hợp lệ
                     }
                 }
-                if (!supplierIdList.isEmpty()) {
-                    products.removeIf(p -> !supplierIdList.contains(p.getSupplierId()));
+                // Nếu chỉ có 1 supplier, có thể dùng để filter ở SQL level
+                if (supplierIdList.size() == 1) {
+                    supplierIdFilter = String.valueOf(supplierIdList.get(0));
                 }
             }
+            
+            // Xử lý search term
+            String finalSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) 
+                ? searchTerm.trim() : null;
+            
+            // Xử lý price range filter
+            Double minPrice = null;
+            Double maxPrice = null;
+            if (priceMin != null && !priceMin.trim().isEmpty()) {
+                try {
+                    minPrice = Double.parseDouble(priceMin);
+                    System.out.println("Price filter - minPrice: " + minPrice);
+                } catch (NumberFormatException e) {
+                    // Bỏ qua nếu giá không hợp lệ
+                    System.out.println("Invalid minPrice: " + priceMin);
+                }
+            }
+            if (priceMax != null && !priceMax.trim().isEmpty()) {
+                try {
+                    maxPrice = Double.parseDouble(priceMax);
+                    System.out.println("Price filter - maxPrice: " + maxPrice);
+                } catch (NumberFormatException e) {
+                    // Bỏ qua nếu giá không hợp lệ
+                    System.out.println("Invalid maxPrice: " + priceMax);
+                }
+            }
+            
+            // Tạo final variables để dùng trong lambda
+            final List<Integer> finalSupplierIdList = supplierIdList;
+            final Double finalMinPrice = minPrice;
+            final Double finalMaxPrice = maxPrice;
+            final String finalSearchTermForFilter = finalSearchTerm;
+            
+            // Nếu có filter phức tạp (nhiều suppliers hoặc price range), cần lấy tất cả rồi filter ở Java
+            // Nếu không, có thể dùng DAO với phân trang trực tiếp
+            boolean needJavaFilter = (finalSupplierIdList != null && finalSupplierIdList.size() > 1) || 
+                                    (finalMinPrice != null || finalMaxPrice != null);
+            
+            List<Product> products;
+            int totalProducts;
+            
+            if (needJavaFilter) {
+                // Lấy tất cả sản phẩm active (có thể filter 1 supplier và search ở SQL nếu có)
+                // Nếu có searchTerm, dùng phương thức tìm kiếm chính xác
+                if (finalSearchTermForFilter != null && !finalSearchTermForFilter.trim().isEmpty()) {
+                    products = productDAO.getFilteredProductsWithExactSearch(
+                        supplierIdFilter, null, "active", finalSearchTermForFilter, 1, 10000, null // Chưa sort, sẽ sort sau
+                    );
+                } else {
+                    products = productDAO.getFilteredProducts(
+                        supplierIdFilter, null, "active", null, 1, 10000, null // Chưa sort, sẽ sort sau
+                    );
+                }
+                
+                // Filter nhiều suppliers nếu cần
+                if (finalSupplierIdList != null && finalSupplierIdList.size() > 1) {
+                    products.removeIf(p -> !finalSupplierIdList.contains(p.getSupplierId()));
+                }
+                
+                // Filter theo giá: lớn hơn min (> min) và nhỏ hơn hoặc bằng max (<= max)
+                if (finalMinPrice != null) {
+                    System.out.println("Filtering products: removing prices <= " + finalMinPrice);
+                    int beforeCount = products.size();
+                    products.removeIf(p -> {
+                        boolean shouldRemove = p.getUnitPrice() <= finalMinPrice;
+                        if (shouldRemove) {
+                            System.out.println("Removing product: " + p.getProductName() + " with price: " + p.getUnitPrice());
+                        }
+                        return shouldRemove;
+                    });
+                    System.out.println("Filtered: " + beforeCount + " -> " + products.size() + " products");
+                }
+                if (finalMaxPrice != null) {
+                    System.out.println("Filtering products: removing prices > " + finalMaxPrice);
+                    int beforeCount = products.size();
+                    products.removeIf(p -> {
+                        boolean shouldRemove = p.getUnitPrice() > finalMaxPrice;
+                        if (shouldRemove) {
+                            System.out.println("Removing product: " + p.getProductName() + " with price: " + p.getUnitPrice());
+                        }
+                        return shouldRemove;
+                    });
+                    System.out.println("Filtered: " + beforeCount + " -> " + products.size() + " products");
+                }
+                
+                // Sắp xếp ở Java level
+                if ("price_asc".equals(sortBy)) {
+                    products.sort((p1, p2) -> Double.compare(p1.getUnitPrice(), p2.getUnitPrice()));
+                } else if ("price_desc".equals(sortBy)) {
+                    products.sort((p1, p2) -> Double.compare(p2.getUnitPrice(), p1.getUnitPrice()));
+                }
+                // "all" hoặc null: giữ nguyên thứ tự
+                
+                totalProducts = products.size();
+                
+                // Phân trang ở Java level
+                int startIndex = (page - 1) * pageSize;
+                int endIndex = Math.min(startIndex + pageSize, totalProducts);
+                List<Product> pagedProducts = new ArrayList<>();
+                for (int i = startIndex; i < endIndex; i++) {
+                    pagedProducts.add(products.get(i));
+                }
+                products = pagedProducts;
+            } else {
+                // Không có filter phức tạp, có thể dùng DAO với phân trang và sort trực tiếp
+                // Nếu có searchTerm, dùng phương thức tìm kiếm chính xác
+                if (finalSearchTermForFilter != null && !finalSearchTermForFilter.trim().isEmpty()) {
+                    // Lấy tổng số trước (để tính pagination) với tìm kiếm chính xác
+                    totalProducts = productDAO.getFilteredProductsCountWithExactSearch(supplierIdFilter, null, "active", finalSearchTermForFilter);
+                    
+                    // Lấy products với phân trang, sort và search chính xác từ DAO
+                    products = productDAO.getFilteredProductsWithExactSearch(
+                        supplierIdFilter, null, "active", finalSearchTermForFilter, page, pageSize, sortBy
+                    );
+                    
+                    // Nếu có price filter, cần filter lại và đếm lại
+                    if (finalMinPrice != null || finalMaxPrice != null) {
+                        List<Product> allProducts = productDAO.getFilteredProductsWithExactSearch(
+                            supplierIdFilter, null, "active", finalSearchTermForFilter, 1, 10000, sortBy
+                        );
+                        if (finalMinPrice != null) {
+                            System.out.println("Filtering products (exact search): removing prices <= " + finalMinPrice);
+                            int beforeCount = allProducts.size();
+                            allProducts.removeIf(p -> {
+                                boolean shouldRemove = p.getUnitPrice() <= finalMinPrice;
+                                if (shouldRemove) {
+                                    System.out.println("Removing product: " + p.getProductName() + " with price: " + p.getUnitPrice());
+                                }
+                                return shouldRemove;
+                            });
+                            System.out.println("Filtered: " + beforeCount + " -> " + allProducts.size() + " products");
+                        }
+                        if (finalMaxPrice != null) {
+                            System.out.println("Filtering products (exact search): removing prices > " + finalMaxPrice);
+                            int beforeCount = allProducts.size();
+                            allProducts.removeIf(p -> {
+                                boolean shouldRemove = p.getUnitPrice() > finalMaxPrice;
+                                if (shouldRemove) {
+                                    System.out.println("Removing product: " + p.getProductName() + " with price: " + p.getUnitPrice());
+                                }
+                                return shouldRemove;
+                            });
+                            System.out.println("Filtered: " + beforeCount + " -> " + allProducts.size() + " products");
+                        }
+                        totalProducts = allProducts.size();
+                        int startIndex = (page - 1) * pageSize;
+                        int endIndex = Math.min(startIndex + pageSize, totalProducts);
+                        products = new ArrayList<>();
+                        for (int i = startIndex; i < endIndex; i++) {
+                            products.add(allProducts.get(i));
+                        }
+                    }
+                } else {
+                    // Không có searchTerm, dùng phương thức thông thường
+                    // Lấy tổng số trước (để tính pagination)
+                    totalProducts = productDAO.getFilteredProductsCount(supplierIdFilter, null, "active", null);
+                    
+                    // Lấy products với phân trang và sort từ DAO
+                    products = productDAO.getFilteredProducts(
+                        supplierIdFilter, null, "active", null, page, pageSize, sortBy
+                    );
+                    
+                    // Nếu có price filter, cần filter lại và đếm lại
+                    if (finalMinPrice != null || finalMaxPrice != null) {
+                        List<Product> allProducts = productDAO.getFilteredProducts(
+                            supplierIdFilter, null, "active", null, 1, 10000, sortBy
+                        );
+                    if (finalMinPrice != null) {
+                        System.out.println("Filtering products (no search): removing prices <= " + finalMinPrice);
+                        int beforeCount = allProducts.size();
+                        allProducts.removeIf(p -> {
+                            boolean shouldRemove = p.getUnitPrice() <= finalMinPrice;
+                            if (shouldRemove) {
+                                System.out.println("Removing product: " + p.getProductName() + " with price: " + p.getUnitPrice());
+                            }
+                            return shouldRemove;
+                        });
+                        System.out.println("Filtered: " + beforeCount + " -> " + allProducts.size() + " products");
+                    }
+                    if (finalMaxPrice != null) {
+                        System.out.println("Filtering products (no search): removing prices > " + finalMaxPrice);
+                        int beforeCount = allProducts.size();
+                        allProducts.removeIf(p -> {
+                            boolean shouldRemove = p.getUnitPrice() > finalMaxPrice;
+                            if (shouldRemove) {
+                                System.out.println("Removing product: " + p.getProductName() + " with price: " + p.getUnitPrice());
+                            }
+                            return shouldRemove;
+                        });
+                        System.out.println("Filtered: " + beforeCount + " -> " + allProducts.size() + " products");
+                    }
+                    totalProducts = allProducts.size();
+                        int startIndex = (page - 1) * pageSize;
+                        int endIndex = Math.min(startIndex + pageSize, totalProducts);
+                        products = new ArrayList<>();
+                        for (int i = startIndex; i < endIndex; i++) {
+                            products.add(allProducts.get(i));
+                        }
+                    }
+                }
+            }
+            
+            int totalPages = (int) Math.ceil((double) totalProducts / pageSize);
             
             // Đảm bảo tất cả sản phẩm có image_url và description hợp lệ
             for (Product p : products) {
@@ -172,45 +397,6 @@ public class GuestProductServlet extends HttpServlet {
                     String supplierName = p.getSupplierName() != null ? p.getSupplierName() : "nhà cung cấp uy tín";
                     p.setDescription("Sản phẩm chất lượng cao từ " + supplierName);
                 }
-            }
-            
-            // Lọc theo giá nếu có
-            if (priceMin != null && !priceMin.trim().isEmpty()) {
-                try {
-                    double minPrice = Double.parseDouble(priceMin);
-                    products.removeIf(p -> p.getUnitPrice() < minPrice);
-                } catch (NumberFormatException e) {
-                    // Bỏ qua nếu giá không hợp lệ
-                }
-            }
-            
-            if (priceMax != null && !priceMax.trim().isEmpty()) {
-                try {
-                    double maxPrice = Double.parseDouble(priceMax);
-                    products.removeIf(p -> p.getUnitPrice() > maxPrice);
-                } catch (NumberFormatException e) {
-                    // Bỏ qua nếu giá không hợp lệ
-                }
-            }
-            
-            // Sắp xếp
-            if ("price_asc".equals(sortBy)) {
-                products.sort((p1, p2) -> Double.compare(p1.getUnitPrice(), p2.getUnitPrice()));
-            } else if ("price_desc".equals(sortBy)) {
-                products.sort((p1, p2) -> Double.compare(p2.getUnitPrice(), p1.getUnitPrice()));
-            }
-            // "all" hoặc null: giữ nguyên thứ tự
-            
-            // Tính toán phân trang
-            int totalProducts = products.size();
-            int totalPages = (int) Math.ceil((double) totalProducts / pageSize);
-            
-            // Lấy sản phẩm cho trang hiện tại
-            int startIndex = (page - 1) * pageSize;
-            int endIndex = Math.min(startIndex + pageSize, totalProducts);
-            List<Product> pagedProducts = new ArrayList<>();
-            for (int i = startIndex; i < endIndex; i++) {
-                pagedProducts.add(products.get(i));
             }
             
             // Lấy danh sách nhà cung cấp active
@@ -230,7 +416,7 @@ public class GuestProductServlet extends HttpServlet {
             jsonResponse.addProperty("currentPage", page);
             jsonResponse.addProperty("pageSize", pageSize);
             jsonResponse.addProperty("totalPages", totalPages);
-            jsonResponse.add("products", gson.toJsonTree(pagedProducts));
+            jsonResponse.add("products", gson.toJsonTree(products));
             jsonResponse.add("suppliers", gson.toJsonTree(activeSuppliers));
             
             // Gửi response

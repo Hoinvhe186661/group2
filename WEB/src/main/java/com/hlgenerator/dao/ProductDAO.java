@@ -156,6 +156,15 @@ public class ProductDAO {
      */
     public List<Product> getFilteredProducts(String supplierId, String category, String status, 
                                            String searchTerm, int page, int pageSize) {
+        return getFilteredProducts(supplierId, category, status, searchTerm, page, pageSize, null);
+    }
+
+    /**
+     *Lấy danh sách sản phẩm đã lọc với phân trang và sắp xếp
+     * @param sortBy "price_asc", "price_desc", hoặc null (mặc định: created_at DESC)
+     */
+    public List<Product> getFilteredProducts(String supplierId, String category, String status, 
+                                           String searchTerm, int page, int pageSize, String sortBy) {
         List<Product> products = new ArrayList<>();
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
@@ -185,20 +194,23 @@ public class ProductDAO {
         }
 
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ? OR p.description LIKE ? " +
-                      "OR p.category LIKE ? OR s.company_name LIKE ? OR CAST(p.unit_price AS CHAR) LIKE ? " +
-                      "OR CASE WHEN p.status = 'active' THEN 'Đang bán' WHEN p.status = 'discontinued' THEN 'Ngừng bán' ELSE p.status END LIKE ?)");
-            String likeTerm = "%" + searchTerm.trim() + "%";
-            params.add(likeTerm); // product_code
+            // Chỉ tìm trong product_name và product_code để kết quả chính xác hơn
+            // Tìm kiếm không phân biệt hoa thường
+            sql.append(" AND (LOWER(p.product_name) LIKE ? OR LOWER(p.product_code) LIKE ?)");
+            String likeTerm = "%" + searchTerm.trim().toLowerCase() + "%";
             params.add(likeTerm); // product_name
-            params.add(likeTerm); // description
-            params.add(likeTerm); // category
-            params.add(likeTerm); // supplier_name
-            params.add(likeTerm); // unit_price
-            params.add(likeTerm); // status (tiếng Việt)
+            params.add(likeTerm); // product_code
         }
 
-        sql.append(" ORDER BY p.created_at DESC");
+        // Sắp xếp
+        if ("price_asc".equals(sortBy)) {
+            sql.append(" ORDER BY p.unit_price ASC, p.created_at DESC");
+        } else if ("price_desc".equals(sortBy)) {
+            sql.append(" ORDER BY p.unit_price DESC, p.created_at DESC");
+        } else {
+            sql.append(" ORDER BY p.created_at DESC");
+        }
+        
         sql.append(" LIMIT ? OFFSET ?");
         params.add(pageSize);
         params.add((page - 1) * pageSize);
@@ -257,6 +269,150 @@ public class ProductDAO {
     }
 
     /**
+     * Lấy danh sách sản phẩm đã lọc với tìm kiếm chính xác hơn (tìm theo nhiều từ)
+     * Mỗi từ trong search term phải xuất hiện trong product_name hoặc product_code
+     */
+    public List<Product> getFilteredProductsWithExactSearch(String supplierId, String category, String status, 
+                                                           String searchTerm, int page, int pageSize, String sortBy) {
+        List<Product> products = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return products;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT p.*, s.company_name as supplier_name " +
+                                             "FROM products p " +
+                                             "LEFT JOIN suppliers s ON p.supplier_id = s.id " +
+                                             "WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        // Thêm điều kiện lọc
+        if (supplierId != null && !supplierId.trim().isEmpty()) {
+            sql.append(" AND p.supplier_id = ?");
+            params.add(Integer.parseInt(supplierId));
+        }
+
+        if (category != null && !category.trim().isEmpty()) {
+            sql.append(" AND BINARY p.category = BINARY ?");
+            params.add(category.trim());
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND p.status = ?");
+            params.add(status.trim());
+        }
+
+        // Tìm kiếm chính xác: chỉ tìm trong product_name, không tách từ
+        // Tìm sản phẩm có tên chứa chuỗi search term
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            String searchLower = searchTerm.trim().toLowerCase();
+            // Chỉ tìm trong product_name, tìm exact string (không tách từ)
+            sql.append(" AND LOWER(p.product_name) LIKE ?");
+            String likeTerm = "%" + searchLower + "%";
+            params.add(likeTerm);
+        }
+
+        // Sắp xếp
+        if ("price_asc".equals(sortBy)) {
+            sql.append(" ORDER BY p.unit_price ASC, p.created_at DESC");
+        } else if ("price_desc".equals(sortBy)) {
+            sql.append(" ORDER BY p.unit_price DESC, p.created_at DESC");
+        } else {
+            sql.append(" ORDER BY p.created_at DESC");
+        }
+        
+        sql.append(" LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add((page - 1) * pageSize);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof String) {
+                    ps.setString(i + 1, (String) param);
+                } else {
+                    ps.setObject(i + 1, param);
+                }
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Product product = createProductFromResultSet(rs);
+                    products.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("SQL Error: " + e.getMessage());
+            e.printStackTrace();
+            lastError = "Lỗi khi lấy danh sách sản phẩm đã lọc: " + e.getMessage();
+        }
+        return products;
+    }
+
+    /**
+     * Đếm tổng số sản phẩm đã lọc với tìm kiếm chính xác hơn
+     */
+    public int getFilteredProductsCountWithExactSearch(String supplierId, String category, String status, String searchTerm) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM products p " +
+                                             "LEFT JOIN suppliers s ON p.supplier_id = s.id " +
+                                             "WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        // Thêm điều kiện lọc
+        if (supplierId != null && !supplierId.trim().isEmpty()) {
+            sql.append(" AND p.supplier_id = ?");
+            params.add(Integer.parseInt(supplierId));
+        }
+
+        if (category != null && !category.trim().isEmpty()) {
+            sql.append(" AND BINARY p.category = BINARY ?");
+            params.add(category.trim());
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND p.status = ?");
+            params.add(status.trim());
+        }
+
+        // Tìm kiếm chính xác: chỉ tìm trong product_name, không tách từ
+        // Tìm sản phẩm có tên chứa chuỗi search term
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            String searchLower = searchTerm.trim().toLowerCase();
+            // Chỉ tìm trong product_name, tìm exact string (không tách từ)
+            sql.append(" AND LOWER(p.product_name) LIKE ?");
+            String likeTerm = "%" + searchLower + "%";
+            params.add(likeTerm);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof String) {
+                    ps.setString(i + 1, (String) param);
+                } else {
+                    ps.setObject(i + 1, param);
+                }
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("SQL Count Error: " + e.getMessage());
+            e.printStackTrace();
+            lastError = "Lỗi khi đếm sản phẩm: " + e.getMessage();
+        }
+        return 0;
+    }
+
+    /**
      * Đếm tổng số sản phẩm đã lọc
      */
     public int getFilteredProductsCount(String supplierId, String category, String status, String searchTerm) {
@@ -287,17 +443,12 @@ public class ProductDAO {
         }
 
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            sql.append(" AND (p.product_code LIKE ? OR p.product_name LIKE ? OR p.description LIKE ? " +
-                      "OR p.category LIKE ? OR s.company_name LIKE ? OR CAST(p.unit_price AS CHAR) LIKE ? " +
-                      "OR CASE WHEN p.status = 'active' THEN 'Đang bán' WHEN p.status = 'discontinued' THEN 'Ngừng bán' ELSE p.status END LIKE ?)");
-            String likeTerm = "%" + searchTerm.trim() + "%";
-            params.add(likeTerm); // product_code
+            // Chỉ tìm trong product_name và product_code để kết quả chính xác hơn
+            // Tìm kiếm không phân biệt hoa thường
+            sql.append(" AND (LOWER(p.product_name) LIKE ? OR LOWER(p.product_code) LIKE ?)");
+            String likeTerm = "%" + searchTerm.trim().toLowerCase() + "%";
             params.add(likeTerm); // product_name
-            params.add(likeTerm); // description
-            params.add(likeTerm); // category
-            params.add(likeTerm); // supplier_name
-            params.add(likeTerm); // unit_price
-            params.add(likeTerm); // status (tiếng Việt)
+            params.add(likeTerm); // product_code
         }
 
         // Debug log
