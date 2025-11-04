@@ -57,6 +57,8 @@ public class WorkOrderTaskServlet extends HttpServlet {
             handleListTasks(request, response);
         } else if ("assignments".equals(action)) {
             handleListAssignments(request, response);
+        } else if ("activeTaskCount".equals(action)) {
+            handleGetActiveTaskCount(request, response);
         } else {
             sendError(response, "Invalid action");
         }
@@ -91,6 +93,8 @@ public class WorkOrderTaskServlet extends HttpServlet {
             throws IOException {
         
         String workOrderIdParam = request.getParameter("workOrderId");
+        String priority = request.getParameter("priority");
+        String status = request.getParameter("status");
         
         try {
             if (workOrderIdParam == null || workOrderIdParam.isEmpty()) {
@@ -99,7 +103,9 @@ public class WorkOrderTaskServlet extends HttpServlet {
             }
             
             int workOrderId = Integer.parseInt(workOrderIdParam);
-            List<WorkOrderTask> tasks = taskDAO.getTasksByWorkOrderId(workOrderId);
+            
+            // Get filtered tasks by priority and status
+            List<WorkOrderTask> tasks = taskDAO.getTasksByWorkOrderId(workOrderId, priority, status);
             
             JsonObject result = new JsonObject();
             result.addProperty("success", true);
@@ -143,6 +149,34 @@ public class WorkOrderTaskServlet extends HttpServlet {
         }
     }
 
+    private void handleGetActiveTaskCount(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        
+        String userIdParam = request.getParameter("userId");
+        
+        try {
+            if (userIdParam == null || userIdParam.isEmpty()) {
+                sendError(response, "User ID is required");
+                return;
+            }
+            
+            int userId = Integer.parseInt(userIdParam);
+            int activeTaskCount = taskDAO.getActiveTaskCountForUser(userId);
+            
+            JsonObject result = new JsonObject();
+            result.addProperty("success", true);
+            result.addProperty("count", activeTaskCount);
+            
+            sendJson(response, result);
+            
+        } catch (NumberFormatException e) {
+            sendError(response, "Invalid user ID");
+        } catch (Exception e) {
+            logger.severe("Error getting active task count: " + e.getMessage());
+            sendError(response, "Error getting active task count: " + e.getMessage());
+        }
+    }
+
     private void handleCreateTask(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         
@@ -169,9 +203,32 @@ public class WorkOrderTaskServlet extends HttpServlet {
                 return;
             }
             
+            String trimmedDescription = taskDescription.trim();
+            if (trimmedDescription.length() > 150) {
+                sendError(response, "Mô tả công việc không được vượt quá 150 ký tự. Hiện tại: " + trimmedDescription.length() + " ký tự");
+                return;
+            }
+            
+            int workOrderId = Integer.parseInt(workOrderIdParam);
+            
+            // Check for duplicate active task (pending or in_progress) with same description
+            if (taskDAO.hasDuplicateActiveTask(workOrderId, trimmedDescription)) {
+                String duplicateStatus = taskDAO.getDuplicateTaskStatus(workOrderId, trimmedDescription);
+                String errorMessage;
+                if ("pending".equals(duplicateStatus)) {
+                    errorMessage = "Công việc này đã tồn tại và đang chờ xác nhận. Vui lòng kiểm tra lại danh sách công việc.";
+                } else if ("in_progress".equals(duplicateStatus)) {
+                    errorMessage = "Công việc này đã tồn tại và đang được thực hiện. Vui lòng kiểm tra lại danh sách công việc.";
+                } else {
+                    errorMessage = "Công việc này đã tồn tại. Vui lòng kiểm tra lại danh sách công việc.";
+                }
+                sendError(response, errorMessage);
+                return;
+            }
+            
             WorkOrderTask task = new WorkOrderTask();
-            task.setWorkOrderId(Integer.parseInt(workOrderIdParam));
-            task.setTaskDescription(taskDescription.trim());
+            task.setWorkOrderId(workOrderId);
+            task.setTaskDescription(trimmedDescription);
             task.setPriority(priority != null ? priority : "medium");
             task.setStatus("pending");
             
@@ -234,7 +291,12 @@ public class WorkOrderTaskServlet extends HttpServlet {
             
             String taskDescription = request.getParameter("taskDescription");
             if (taskDescription != null && !taskDescription.trim().isEmpty()) {
-                task.setTaskDescription(taskDescription.trim());
+                String trimmedDescription = taskDescription.trim();
+                if (trimmedDescription.length() > 150) {
+                    sendError(response, "Mô tả công việc không được vượt quá 150 ký tự. Hiện tại: " + trimmedDescription.length() + " ký tự");
+                    return;
+                }
+                task.setTaskDescription(trimmedDescription);
             }
             
             String status = request.getParameter("status");
@@ -367,22 +429,59 @@ public class WorkOrderTaskServlet extends HttpServlet {
                 return;
             }
             
+            // Kiểm tra nếu task đang thực hiện (in_progress)
+            if ("in_progress".equals(task.getStatus())) {
+                // Kiểm tra xem task đã được phân công cho ai chưa
+                List<WorkOrderTaskAssignment> assignments = taskDAO.getTaskAssignments(taskId);
+                boolean isAssignedToDifferentUser = false;
+                if (assignments != null && !assignments.isEmpty()) {
+                    for (WorkOrderTaskAssignment assignment : assignments) {
+                        if ("assignee".equals(assignment.getRole()) && assignment.getUserId() != userId) {
+                            isAssignedToDifferentUser = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (isAssignedToDifferentUser) {
+                    JsonObject result = new JsonObject();
+                    result.addProperty("success", false);
+                    result.addProperty("message", "Công việc đang được thực hiện không thể phân công cho người khác");
+                    sendJson(response, result);
+                    return;
+                }
+            }
+            
             int assignedTaskId = taskDAO.assignTaskToUser(taskId, userId, role != null ? role : "assignee");
             
             JsonObject result = new JsonObject();
             if (assignedTaskId > 0) {
                 result.addProperty("success", true);
                 if (assignedTaskId != taskId) {
-                    // A new task was created (for in_progress tasks)
-                    result.addProperty("message", "Đã tạo công việc mới và phân công cho nhân viên");
+                    // A new task was created (task already had assignment)
+                    result.addProperty("message", "Đã tạo công việc mới với trạng thái 'Chờ xử lý' và phân công cho nhân viên. Nhân viên cần xác nhận để bắt đầu thực hiện.");
                     result.addProperty("newTaskId", assignedTaskId);
                 } else {
-                    // Original task was assigned
-                    result.addProperty("message", "Phân công công việc thành công");
+                    // Original task was assigned (first time assignment)
+                    result.addProperty("message", "Phân công công việc thành công. Nhân viên cần xác nhận để bắt đầu thực hiện.");
                 }
             } else {
                 result.addProperty("success", false);
-                result.addProperty("message", "Không thể phân công công việc");
+                // Check for duplicate task with same description and user
+                String duplicateStatus = taskDAO.getDuplicateTaskStatusWithUser(task.getWorkOrderId(), task.getTaskDescription(), userId);
+                if (duplicateStatus != null) {
+                    if ("pending".equals(duplicateStatus)) {
+                        result.addProperty("message", "Công việc này với cùng mô tả và cùng nhân viên đã tồn tại và đang chờ xác nhận. Vui lòng kiểm tra lại danh sách công việc.");
+                    } else if ("in_progress".equals(duplicateStatus)) {
+                        result.addProperty("message", "Công việc này với cùng mô tả và cùng nhân viên đã tồn tại và đang được thực hiện. Vui lòng kiểm tra lại danh sách công việc.");
+                    } else {
+                        result.addProperty("message", "Công việc này với cùng mô tả và cùng nhân viên đã tồn tại. Vui lòng kiểm tra lại danh sách công việc.");
+                    }
+                } else if ("in_progress".equals(task.getStatus())) {
+                    result.addProperty("message", "Công việc đang được thực hiện không thể phân công cho người khác");
+                } else {
+                    result.addProperty("message", "Không thể phân công công việc");
+                }
             }
             sendJson(response, result);
             

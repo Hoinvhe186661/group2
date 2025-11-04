@@ -182,6 +182,180 @@
         .attachment-thumbnail img {
             cursor: pointer;
         }
+        
+        /* Text Overflow Handling */
+        .text-truncate {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+        }
+        
+        /* Table cell text wrapping */
+        #workOrdersTable td:nth-child(2),
+        #workOrdersTable td:nth-child(3) {
+            max-width: 200px;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+        
+        /* Tasks table - Description column */
+        #tasksTable td:nth-child(2) {
+            max-width: 300px;
+            min-width: 150px;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+        
+        /* Tasks table - Rejection reason column */
+        #tasksTable td:nth-child(6) {
+            max-width: 200px;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+        
+        /* Readonly textarea */
+        textarea[readonly] {
+            word-wrap: break-word;
+            word-break: break-word;
+            resize: vertical;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Customer name and title in table */
+        .work-order-title,
+        .work-order-customer {
+            max-width: 200px;
+            display: inline-block;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+        
+        /* Task description text */
+        .task-description-text {
+            display: inline-block;
+            max-width: 100%;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            overflow-wrap: break-word;
+        }
+        
+        /* Modal description textarea - Improved */
+        #detail_description {
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            resize: vertical;
+        }
+        
+        /* Modal assigned to textarea */
+        #detail_assigned_to {
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+        
+        /* Task description in assign modal */
+        #assign_task_description {
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+            max-height: 100px;
+            overflow-y: auto;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        /* Table cells - ensure no overflow */
+        #workOrdersTable td,
+        #tasksTable td {
+            overflow: hidden;
+            word-wrap: break-word;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        /* Ensure table responsiveness */
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        /* Modal body - prevent overflow */
+        .modal-body {
+            overflow-x: hidden;
+            word-wrap: break-word;
+        }
+        
+        /* Task description counter */
+        #taskDescriptionCounter {
+            font-weight: bold;
+        }
+        
+        #taskDescriptionCounter.text-danger {
+            color: #d9534f !important;
+        }
+        
+        #taskDescriptionCounter.text-warning {
+            color: #f0ad4e !important;
+        }
+        
+        #taskDescriptionError {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        
+        /* User task count info */
+        #userTaskCountInfo {
+            padding: 8px;
+            background-color: #f9f9f9;
+            border-left: 3px solid #5bc0de;
+            border-radius: 3px;
+        }
+        
+        #userTaskCountInfo.text-info {
+            border-left-color: #5bc0de;
+            background-color: #e7f3ff;
+        }
+        
+        #userTaskCountInfo.text-success {
+            border-left-color: #5cb85c;
+            background-color: #e8f5e9;
+        }
+        
+        #userTaskCountInfo.text-warning {
+            border-left-color: #f0ad4e;
+            background-color: #fff9e6;
+        }
+        
+        #userTaskCountInfo.text-danger {
+            border-left-color: #d9534f;
+            background-color: #ffe6e6;
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -485,8 +659,12 @@
                         <div class="box-body">
                             <form id="addTaskForm">
                                 <div class="form-group">
-                                    <label>Mô tả công việc:</label>
-                                    <textarea class="form-control" id="taskDescription" rows="3" placeholder="Nhập mô tả công việc..." required></textarea>
+                                    <label>Mô tả công việc: <span class="text-danger">*</span> <small class="text-muted">(Tối đa 150 ký tự)</small></label>
+                                    <textarea class="form-control" id="taskDescription" rows="3" placeholder="Nhập mô tả công việc..." required maxlength="150"></textarea>
+                                    <small class="help-block">
+                                        <span id="taskDescriptionCounter">0</span>/150 ký tự
+                                    </small>
+                                    <div id="taskDescriptionError" class="text-danger" style="display: none;"></div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
@@ -518,8 +696,52 @@
                     <div class="box box-primary">
                         <div class="box-header">
                             <h3 class="box-title">Danh sách công việc</h3>
+                            <div class="box-tools pull-right">
+                                <button type="button" class="btn btn-sm btn-default" id="btnResetTaskFilter" title="Đặt lại bộ lọc">
+                                    <i class="fa fa-refresh"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="box-body">
+                            <!-- Bộ lọc -->
+                            <div class="row" style="margin-bottom: 15px;">
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label>Lọc theo độ ưu tiên:</label>
+                                        <select class="form-control input-sm" id="filterTaskPriority">
+                                            <option value="">Tất cả</option>
+                                            <option value="urgent">Khẩn cấp</option>
+                                            <option value="high">Cao</option>
+                                            <option value="medium">Trung bình</option>
+                                            <option value="low">Thấp</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label>Lọc theo trạng thái:</label>
+                                        <select class="form-control input-sm" id="filterTaskStatus">
+                                            <option value="">Tất cả</option>
+                                            <option value="pending">Chờ xử lý</option>
+                                            <option value="in_progress">Đang thực hiện</option>
+                                            <option value="completed">Hoàn thành</option>
+                                            <option value="rejected">Đã từ chối</option>
+                                            <option value="cancelled">Đã hủy</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <div>
+                                            <button type="button" class="btn btn-primary btn-sm btn-block" id="btnApplyTaskFilter">
+                                                <i class="fa fa-filter"></i> Lọc
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <table class="table table-bordered table-hover" id="tasksTable">
                                 <thead>
                                     <tr>
@@ -567,6 +789,9 @@
                         <select class="form-control" id="assign_user_id">
                             <option value="">Chọn nhân viên...</option>
                         </select>
+                        <div id="userTaskCountInfo" class="help-block" style="margin-top: 8px; display: none;">
+                            <i class="fa fa-info-circle"></i> <span id="userTaskCountText"></span>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -657,7 +882,78 @@
                     reloadAssignedUsersForWorkOrder(workOrderId);
                 }
             });
+            
+            // Load task count when user is selected
+            $(document).on('change', '#assign_user_id', function() {
+                var userId = $(this).val();
+                if(userId && userId !== '') {
+                    loadUserActiveTaskCount(userId);
+                } else {
+                    $('#userTaskCountInfo').hide();
+                }
+            });
+            
+            // Hide task count info when modal is closed
+            $('#assignTaskUserModal').on('hidden.bs.modal', function() {
+                $('#userTaskCountInfo').hide();
+                $('#assign_user_id').val('');
+            });
+            
+            // Apply task filter when button is clicked
+            $(document).on('click', '#btnApplyTaskFilter', function() {
+                var workOrderId = $('#assign_work_order_id').val();
+                if(workOrderId) {
+                    loadTasks(workOrderId);
+                }
+            });
+            
+            // Also allow Enter key to trigger filter
+            $(document).on('keypress', '#filterTaskPriority, #filterTaskStatus', function(e) {
+                if(e.which == 13) {
+                    $('#btnApplyTaskFilter').click();
+                }
+            });
+            
+            // Reset task filter
+            $(document).on('click', '#btnResetTaskFilter', function() {
+                $('#filterTaskPriority').val('');
+                $('#filterTaskStatus').val('');
+                var workOrderId = $('#assign_work_order_id').val();
+                if(workOrderId) {
+                    loadTasks(workOrderId);
+                }
+            });
         });
+        
+        function loadUserActiveTaskCount(userId) {
+            $.ajax({
+                url: ctx + '/api/work-order-tasks?action=activeTaskCount&userId=' + userId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if(response && response.success) {
+                        var count = response.count || 0;
+                        var userName = $('#assign_user_id option:selected').text();
+                        
+                        if(count > 0) {
+                            var countText = 'Nhân viên <strong>' + userName + '</strong> đang thực hiện <strong>' + count + '</strong> công việc';
+                            $('#userTaskCountText').html(countText);
+                            $('#userTaskCountInfo').removeClass('text-danger text-warning text-success').addClass('text-info').show();
+                        } else {
+                            var countText = 'Nhân viên <strong>' + userName + '</strong> chưa có công việc nào đang thực hiện';
+                            $('#userTaskCountText').html(countText);
+                            $('#userTaskCountInfo').removeClass('text-danger text-warning text-info').addClass('text-success').show();
+                        }
+                    } else {
+                        $('#userTaskCountInfo').hide();
+                    }
+                },
+                error: function() {
+                    console.log('Không thể tải số lượng công việc của nhân viên');
+                    $('#userTaskCountInfo').hide();
+                }
+            });
+        }
         
         function loadTechnicalStaff() {
             $.ajax({
@@ -821,11 +1117,17 @@
             
             filteredWorkOrders.forEach(function(workOrder) {
                 var customerName = workOrder.customerName || 'N/A';
+                var title = workOrder.title || '';
                 var estimatedHours = workOrder.estimatedHours ? workOrder.estimatedHours + 'h' : '-';
+                
+                // Escape HTML for tooltip
+                var escapedCustomerName = customerName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                var escapedTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                
                 var row = '<tr>' +
                     '<td><strong>' + (workOrder.workOrderNumber || '#' + workOrder.id) + '</strong></td>' +
-                    '<td>' + customerName + '</td>' +
-                    '<td>' + (workOrder.title || '') + '</td>' +
+                    '<td><span class="work-order-customer" title="' + escapedCustomerName + '" data-toggle="tooltip">' + customerName + '</span></td>' +
+                    '<td><span class="work-order-title" title="' + escapedTitle + '" data-toggle="tooltip">' + title + '</span></td>' +
                     '<td class="text-center">' + estimatedHours + '</td>' +
                     '<td>' + formatDate(workOrder.createdAt) + '</td>' +
                     '<td class="work-order-actions">' +
@@ -842,6 +1144,9 @@
                 '</tr>';
                 tbody.append(row);
             });
+            
+            // Initialize tooltips for work orders table
+            $('[data-toggle="tooltip"]').tooltip();
             
             // Bind view button
             $('.btn-view').click(function() {
@@ -993,13 +1298,27 @@
         // Functions for task management
         function openAssignTaskModal(workOrderId) {
             $('#assign_work_order_id').val(workOrderId);
+            // Reset filters when opening modal
+            $('#filterTaskPriority').val('');
+            $('#filterTaskStatus').val('');
             $('#assignTaskModal').modal('show');
             loadTasks(workOrderId);
         }
         
         function loadTasks(workOrderId) {
+            var priority = $('#filterTaskPriority').val() || '';
+            var status = $('#filterTaskStatus').val() || '';
+            
+            var url = ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId;
+            if(priority) {
+                url += '&priority=' + encodeURIComponent(priority);
+            }
+            if(status) {
+                url += '&status=' + encodeURIComponent(status);
+            }
+            
             $.ajax({
-                url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
+                url: url,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -1069,9 +1388,24 @@
                 
                 var statusCell = getStatusBadge(task.status);
                 
+                // Xử lý mô tả công việc với tooltip
+                var taskDescription = task.taskDescription || '';
+                var escapedTaskDesc = taskDescription
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+                
+                // Nếu mô tả dài hơn 100 ký tự, hiển thị rút gọn với tooltip
+                var taskDescDisplay = taskDescription;
+                if(taskDescription.length > 100) {
+                    taskDescDisplay = taskDescription.substring(0, 100) + '...';
+                }
+                
                 var row = '<tr>' +
                     '<td><strong>' + (task.taskNumber || 'N/A') + '</strong></td>' +
-                    '<td>' + (task.taskDescription || '') + '</td>' +
+                    '<td><span class="task-description-text" title="' + escapedTaskDesc + '" data-toggle="tooltip">' + taskDescDisplay + '</span></td>' +
                     '<td>' + getPriorityBadge(task.priority) + '</td>' +
                     '<td>' + statusCell + '</td>' +
                     '<td>' + assignedBadge + '</td>' +
@@ -1154,6 +1488,9 @@
                             select.append('<option value="' + staff.id + '">' + staff.fullName + '</option>');
                         });
                         
+                        // Hide task count info when modal opens
+                        $('#userTaskCountInfo').hide();
+                        
                         $('#assignTaskUserModal').modal('show');
                     } else {
                         alert('Không thể tải thông tin công việc');
@@ -1192,19 +1529,55 @@
             });
         }
         
+        // Character counter for task description
+        $(document).on('input', '#taskDescription', function() {
+            var length = $(this).val().length;
+            var maxLength = 150;
+            $('#taskDescriptionCounter').text(length);
+            
+            // Update counter color based on length
+            if(length >= maxLength) {
+                $('#taskDescriptionCounter').removeClass('text-warning').addClass('text-danger');
+                $('#taskDescriptionError').text('Đã đạt giới hạn tối đa 150 ký tự').show();
+            } else if(length > maxLength * 0.9) {
+                $('#taskDescriptionCounter').removeClass('text-danger').addClass('text-warning');
+                $('#taskDescriptionError').hide();
+            } else {
+                $('#taskDescriptionCounter').removeClass('text-danger text-warning');
+                $('#taskDescriptionError').hide();
+            }
+        });
+        
+        // Initialize counter on page load or modal open
+        $(document).on('shown.bs.modal', '#assignTaskModal', function() {
+            var length = $('#taskDescription').val().length;
+            $('#taskDescriptionCounter').text(length);
+        });
+        
         // Form submit handler for adding new task
         $(document).on('submit', '#addTaskForm', function(e) {
             e.preventDefault();
             
             var workOrderId = $('#assign_work_order_id').val();
-            var description = $('#taskDescription').val();
+            var description = $('#taskDescription').val().trim();
             var priority = $('#taskPriority').val();
             var estimatedHours = $('#taskEstimatedHours').val();
             
-            if(!description || description.trim() === '') {
-                alert('Vui lòng nhập mô tả công việc');
+            // Validate description
+            if(!description || description === '') {
+                $('#taskDescriptionError').text('Vui lòng nhập mô tả công việc').show();
+                $('#taskDescription').focus();
                 return;
             }
+            
+            if(description.length > 150) {
+                $('#taskDescriptionError').text('Mô tả công việc không được vượt quá 150 ký tự. Hiện tại: ' + description.length + ' ký tự').show();
+                $('#taskDescription').focus();
+                return;
+            }
+            
+            // Hide error message
+            $('#taskDescriptionError').hide();
 
             $.ajax({
                 url: ctx + '/api/work-order-tasks?action=create',
@@ -1220,9 +1593,17 @@
                     if(response && response.success) {
                         alert('Thêm công việc thành công!');
                         $('#addTaskForm')[0].reset();
+                        $('#taskDescriptionCounter').text('0');
+                        $('#taskDescriptionError').hide();
                         loadTasks(workOrderId);
                     } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể thêm công việc'));
+                        var errorMsg = response.message || 'Không thể thêm công việc';
+                        if(errorMsg.includes('150') || errorMsg.includes('đang chờ xác nhận') || errorMsg.includes('đã tồn tại')) {
+                            $('#taskDescriptionError').text(errorMsg).show();
+                            $('#taskDescription').focus();
+                        } else {
+                            alert('Lỗi: ' + errorMsg);
+                        }
                     }
                 },
                 error: function() {

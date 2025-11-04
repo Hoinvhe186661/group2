@@ -96,20 +96,47 @@ public class WorkOrderTaskDAO extends DBConnect {
      * Get all tasks for a work order with assigned user info
      */
     public List<WorkOrderTask> getTasksByWorkOrderId(int workOrderId) {
+        return getTasksByWorkOrderId(workOrderId, null, null);
+    }
+    
+    /**
+     * Get all tasks for a work order with assigned user info, filtered by priority and status
+     */
+    public List<WorkOrderTask> getTasksByWorkOrderId(int workOrderId, String priority, String status) {
         List<WorkOrderTask> tasks = new ArrayList<>();
         if (!checkConnection()) {
             return tasks;
         }
 
-        String sql = "SELECT t.*, u.full_name AS assigned_to_name " +
-                     "FROM tasks t " +
-                     "LEFT JOIN task_assignments ta ON t.id = ta.task_id AND ta.role = 'assignee' " +
-                     "LEFT JOIN users u ON ta.user_id = u.id " +
-                     "WHERE t.work_order_id = ? " +
-                     "ORDER BY t.created_at ASC";
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT t.*, u.full_name AS assigned_to_name ");
+        sql.append("FROM tasks t ");
+        sql.append("LEFT JOIN task_assignments ta ON t.id = ta.task_id AND ta.role = 'assignee' ");
+        sql.append("LEFT JOIN users u ON ta.user_id = u.id ");
+        sql.append("WHERE t.work_order_id = ? ");
+        
+        if (priority != null && !priority.isEmpty()) {
+            sql.append("AND t.priority = ? ");
+        }
+        
+        if (status != null && !status.isEmpty()) {
+            sql.append("AND t.status = ? ");
+        }
+        
+        sql.append("ORDER BY t.created_at ASC");
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, workOrderId);
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int paramIndex = 1;
+            ps.setInt(paramIndex++, workOrderId);
+            
+            if (priority != null && !priority.isEmpty()) {
+                ps.setString(paramIndex++, priority);
+            }
+            
+            if (status != null && !status.isEmpty()) {
+                ps.setString(paramIndex++, status);
+            }
+            
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     tasks.add(mapResultSetToTask(rs));
@@ -219,9 +246,33 @@ public class WorkOrderTaskDAO extends DBConnect {
     }
 
     /**
+     * Check if task has an assignment with role 'assignee'
+     * Returns the user_id if assigned, -1 if not assigned
+     */
+    private int getAssignedUserId(int taskId) {
+        if (!checkConnection()) {
+            return -1;
+        }
+        
+        String sql = "SELECT user_id FROM task_assignments WHERE task_id = ? AND role = 'assignee' LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("user_id");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.WARNING, "Error checking task assignment", e);
+        }
+        return -1;
+    }
+
+    /**
      * Assign task to user
-     * - If task status is 'rejected', update status to 'pending' when reassigning
-     * - If task status is 'in_progress', create a new task with status 'pending' for the new user
+     * - If task already has an assignment (pending or in_progress), create a new task with status 'pending' for the new user
+     * - If task status is 'rejected' and no assignment, update status to 'pending' when assigning
+     * - Task mới luôn có status 'pending', chỉ chuyển sang 'in_progress' khi nhân viên acknowledge
      */
     public int assignTaskToUser(int taskId, int userId, String role) {
         if (!checkConnection()) {
@@ -231,24 +282,57 @@ public class WorkOrderTaskDAO extends DBConnect {
         logger.info("Assigning task " + taskId + " to user " + userId + " with role " + role);
 
         try {
-            // First, get current task status
+            // First, get current task
             WorkOrderTask task = getTaskById(taskId);
             if (task == null) {
                 logger.warning("Task not found: " + taskId);
                 return -1;
             }
             
+            // Check if task is completed - cannot reassign
+            if ("completed".equals(task.getStatus())) {
+                logger.warning("Cannot assign completed task " + taskId);
+                return -1;
+            }
+            
+            // Check if task is in_progress - cannot reassign to different user
+            if ("in_progress".equals(task.getStatus())) {
+                // Check if assigning to the same user (allow) or different user (deny)
+                int existingAssignedUserId = getAssignedUserId(taskId);
+                if (existingAssignedUserId > 0 && existingAssignedUserId != userId) {
+                    // Task is in progress and assigned to different user - cannot reassign
+                    logger.warning("Cannot reassign task " + taskId + " that is in progress to different user");
+                    return -1;
+                }
+                // If assigning to same user or task has no assignment, allow but don't create new task
+                // Just update assignment if needed (though this shouldn't happen normally)
+            }
+            
             // Start transaction
             connection.setAutoCommit(false);
             
-            // If task status is 'in_progress', create a new task instead of reassigning
-            if ("in_progress".equals(task.getStatus())) {
+            // Check if task already has an assignment with role 'assignee'
+            int existingAssignedUserId = getAssignedUserId(taskId);
+            boolean hasExistingAssignment = (existingAssignedUserId > 0);
+            boolean isAssigningToDifferentUser = hasExistingAssignment && (existingAssignedUserId != userId);
+            
+            // If task already has assignment and we're assigning to a different user, create new task
+            // But NOT if task is in_progress (already checked above)
+            if (isAssigningToDifferentUser && !"in_progress".equals(task.getStatus())) {
+                // Check if there's already a task with same description and user in pending/in_progress
+                if (hasDuplicateActiveTaskWithUser(task.getWorkOrderId(), task.getTaskDescription(), userId)) {
+                    connection.rollback();
+                    connection.setAutoCommit(true);
+                    logger.warning("Cannot create new task: duplicate task with same description and user already exists");
+                    return -1; // Will be handled by servlet to show appropriate error
+                }
+                
                 // Create new task based on the current task
                 WorkOrderTask newTask = new WorkOrderTask();
                 newTask.setWorkOrderId(task.getWorkOrderId());
                 newTask.setTaskDescription(task.getTaskDescription());
                 newTask.setPriority(task.getPriority());
-                newTask.setStatus("pending"); // New task starts with pending status
+                newTask.setStatus("pending"); // New task always starts with pending status
                 newTask.setEstimatedHours(task.getEstimatedHours());
                 
                 // Create the new task
@@ -256,7 +340,7 @@ public class WorkOrderTaskDAO extends DBConnect {
                 if (newTaskId <= 0) {
                     connection.rollback();
                     connection.setAutoCommit(true);
-                    logger.warning("Failed to create new task for in_progress task");
+                    logger.warning("Failed to create new task for reassignment");
                     return -1;
                 }
                 
@@ -274,11 +358,22 @@ public class WorkOrderTaskDAO extends DBConnect {
                 connection.commit();
                 connection.setAutoCommit(true);
                 
-                logger.info("Created new task " + newTaskId + " for in_progress task " + taskId + " and assigned to user " + userId);
+                logger.info("Created new task " + newTaskId + " for task " + taskId + " and assigned to user " + userId);
                 return newTaskId; // Return the new task ID
             }
             
-            // For other statuses, update assignment normally
+            // If assigning to same user or task doesn't have assignment yet, check for duplicate
+            if (!hasExistingAssignment || existingAssignedUserId == userId) {
+                // Check if there's already a task with same description and user in pending/in_progress
+                if (hasDuplicateActiveTaskWithUser(task.getWorkOrderId(), task.getTaskDescription(), userId)) {
+                    connection.rollback();
+                    connection.setAutoCommit(true);
+                    logger.warning("Cannot assign task: duplicate task with same description and user already exists");
+                    return -1; // Will be handled by servlet to show appropriate error
+                }
+            }
+            
+            // If task doesn't have assignment yet, or assigning to same user, proceed with normal assignment
             String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
                          "VALUES (?, ?, ?) " +
                          "ON DUPLICATE KEY UPDATE role = VALUES(role)";
@@ -290,7 +385,7 @@ public class WorkOrderTaskDAO extends DBConnect {
                 ps.executeUpdate();
             }
             
-            // If task status is 'rejected', update to 'pending' when reassigning
+            // If task status is 'rejected', update to 'pending' when assigning
             if ("rejected".equals(task.getStatus())) {
                 String updateSql = "UPDATE tasks SET status = 'pending', updated_at = NOW() WHERE id = ?";
                 try (PreparedStatement ps = connection.prepareStatement(updateSql)) {
@@ -304,7 +399,7 @@ public class WorkOrderTaskDAO extends DBConnect {
             connection.commit();
             connection.setAutoCommit(true);
             
-            logger.info("Assignment completed successfully");
+            logger.info("Assignment completed successfully for task " + taskId);
             return taskId; // Return the original task ID
             
         } catch (SQLException e) {
@@ -457,6 +552,159 @@ public class WorkOrderTaskDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error getting task count", e);
         }
         return 0;
+    }
+
+    /**
+     * Get count of tasks that are currently in progress (status = 'in_progress') assigned to a user
+     * Only counts tasks that have been acknowledged and are being worked on, not pending assignments
+     */
+    public int getActiveTaskCountForUser(int userId) {
+        if (!checkConnection()) {
+            return 0;
+        }
+
+        String sql = "SELECT COUNT(*) as count " +
+                     "FROM task_assignments ta " +
+                     "JOIN tasks t ON ta.task_id = t.id " +
+                     "WHERE ta.user_id = ? AND ta.role = 'assignee' " +
+                     "AND t.status = 'in_progress'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting active task count for user", e);
+        }
+        return 0;
+    }
+
+    /**
+     * Check if a task with the same description already exists in the work order with pending or in_progress status
+     * Returns true if duplicate task exists (pending or in_progress), false otherwise
+     */
+    public boolean hasDuplicateActiveTask(int workOrderId, String taskDescription) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) as count " +
+                     "FROM tasks " +
+                     "WHERE work_order_id = ? " +
+                     "AND LOWER(TRIM(task_description)) = LOWER(TRIM(?)) " +
+                     "AND status IN ('pending', 'in_progress')";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            ps.setString(2, taskDescription);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking duplicate active task", e);
+        }
+        return false;
+    }
+    
+    /**
+     * Check if a task with the same description and assigned user already exists in the work order 
+     * with pending or in_progress status
+     * Returns true if duplicate task exists (pending or in_progress) with same description and user, false otherwise
+     */
+    public boolean hasDuplicateActiveTaskWithUser(int workOrderId, String taskDescription, int userId) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) as count " +
+                     "FROM tasks t " +
+                     "JOIN task_assignments ta ON t.id = ta.task_id AND ta.role = 'assignee' " +
+                     "WHERE t.work_order_id = ? " +
+                     "AND LOWER(TRIM(t.task_description)) = LOWER(TRIM(?)) " +
+                     "AND ta.user_id = ? " +
+                     "AND t.status IN ('pending', 'in_progress')";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            ps.setString(2, taskDescription);
+            ps.setInt(3, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking duplicate active task with user", e);
+        }
+        return false;
+    }
+    
+    /**
+     * Get the status of duplicate task if exists (for better error message)
+     * Returns status string if duplicate exists, null otherwise
+     */
+    public String getDuplicateTaskStatus(int workOrderId, String taskDescription) {
+        if (!checkConnection()) {
+            return null;
+        }
+
+        String sql = "SELECT status " +
+                     "FROM tasks " +
+                     "WHERE work_order_id = ? " +
+                     "AND LOWER(TRIM(task_description)) = LOWER(TRIM(?)) " +
+                     "AND status IN ('pending', 'in_progress') " +
+                     "LIMIT 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            ps.setString(2, taskDescription);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("status");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting duplicate task status", e);
+        }
+        return null;
+    }
+    
+    /**
+     * Get the status of duplicate task with same user if exists (for better error message)
+     * Returns status string if duplicate exists, null otherwise
+     */
+    public String getDuplicateTaskStatusWithUser(int workOrderId, String taskDescription, int userId) {
+        if (!checkConnection()) {
+            return null;
+        }
+
+        String sql = "SELECT t.status " +
+                     "FROM tasks t " +
+                     "JOIN task_assignments ta ON t.id = ta.task_id AND ta.role = 'assignee' " +
+                     "WHERE t.work_order_id = ? " +
+                     "AND LOWER(TRIM(t.task_description)) = LOWER(TRIM(?)) " +
+                     "AND ta.user_id = ? " +
+                     "AND t.status IN ('pending', 'in_progress') " +
+                     "LIMIT 1";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            ps.setString(2, taskDescription);
+            ps.setInt(3, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("status");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting duplicate task status with user", e);
+        }
+        return null;
     }
 }
 
