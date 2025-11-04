@@ -3,6 +3,7 @@ package com.hlgenerator.dao;
 import com.hlgenerator.model.WorkOrderTask;
 import com.hlgenerator.model.WorkOrderTaskAssignment;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -219,6 +220,7 @@ public class WorkOrderTaskDAO extends DBConnect {
 
     /**
      * Assign task to user
+     * If task status is 'rejected', update status to 'pending' when reassigning
      */
     public boolean assignTaskToUser(int taskId, int userId, String role) {
         if (!checkConnection()) {
@@ -227,19 +229,53 @@ public class WorkOrderTaskDAO extends DBConnect {
 
         logger.info("Assigning task " + taskId + " to user " + userId + " with role " + role);
 
-        String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
-                     "VALUES (?, ?, ?) " +
-                     "ON DUPLICATE KEY UPDATE role = VALUES(role)";
-
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, taskId);
-            ps.setInt(2, userId);
-            ps.setString(3, role);
+        try {
+            // First, get current task status
+            WorkOrderTask task = getTaskById(taskId);
+            if (task == null) {
+                logger.warning("Task not found: " + taskId);
+                return false;
+            }
             
-            int result = ps.executeUpdate();
-            logger.info("Assignment result: " + result + " row(s) affected");
-            return result > 0;
+            // Start transaction
+            connection.setAutoCommit(false);
+            
+            // Insert or update assignment
+            String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
+                         "VALUES (?, ?, ?) " +
+                         "ON DUPLICATE KEY UPDATE role = VALUES(role)";
+
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, taskId);
+                ps.setInt(2, userId);
+                ps.setString(3, role);
+                ps.executeUpdate();
+            }
+            
+            // If task status is 'rejected', update to 'pending' when reassigning
+            if ("rejected".equals(task.getStatus())) {
+                String updateSql = "UPDATE tasks SET status = 'pending', updated_at = NOW() WHERE id = ?";
+                try (PreparedStatement ps = connection.prepareStatement(updateSql)) {
+                    ps.setInt(1, taskId);
+                    int updateResult = ps.executeUpdate();
+                    logger.info("Updated task " + taskId + " status from 'rejected' to 'pending': " + updateResult + " row(s) affected");
+                }
+            }
+            
+            // Commit transaction
+            connection.commit();
+            connection.setAutoCommit(true);
+            
+            logger.info("Assignment completed successfully");
+            return true;
+            
         } catch (SQLException e) {
+            try {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            } catch (SQLException rollbackEx) {
+                logger.log(Level.SEVERE, "Error rolling back transaction", rollbackEx);
+            }
             logger.log(Level.SEVERE, "Error assigning task to user", e);
             return false;
         }
@@ -314,6 +350,37 @@ public class WorkOrderTaskDAO extends DBConnect {
         task.setStartDate(rs.getTimestamp("start_date"));
         task.setCompletionDate(rs.getTimestamp("completion_date"));
         task.setNotes(rs.getString("notes"));
+        
+        // Map report fields if present
+        try {
+            task.setWorkDescription(rs.getString("work_description"));
+        } catch (SQLException e) {
+            // Column might not be present
+        }
+        try {
+            task.setIssuesFound(rs.getString("issues_found"));
+        } catch (SQLException e) {
+            // Column might not be present
+        }
+        try {
+            BigDecimal completionPercentage = rs.getBigDecimal("completion_percentage");
+            if (completionPercentage != null) {
+                task.setCompletionPercentage(completionPercentage);
+            }
+        } catch (SQLException e) {
+            // Column might not be present
+        }
+        try {
+            task.setAttachments(rs.getString("attachments"));
+        } catch (SQLException e) {
+            // Column might not be present
+        }
+        try {
+            task.setRejectionReason(rs.getString("rejection_reason"));
+        } catch (SQLException e) {
+            // Column might not be present
+        }
+        
         task.setCreatedAt(rs.getTimestamp("created_at"));
         task.setUpdatedAt(rs.getTimestamp("updated_at"));
         

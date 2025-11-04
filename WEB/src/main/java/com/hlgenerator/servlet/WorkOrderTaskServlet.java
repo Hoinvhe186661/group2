@@ -352,6 +352,21 @@ public class WorkOrderTaskServlet extends HttpServlet {
             int taskId = Integer.parseInt(taskIdParam);
             int userId = Integer.parseInt(userIdParam);
             
+            // Kiểm tra xem task có đã hoàn thành không
+            WorkOrderTask task = taskDAO.getTaskById(taskId);
+            if (task == null) {
+                sendError(response, "Task not found");
+                return;
+            }
+            
+            if ("completed".equals(task.getStatus())) {
+                JsonObject result = new JsonObject();
+                result.addProperty("success", false);
+                result.addProperty("message", "Công việc đã hoàn thành không thể giao cho người khác");
+                sendJson(response, result);
+                return;
+            }
+            
             boolean success = taskDAO.assignTaskToUser(taskId, userId, role != null ? role : "assignee");
             
             JsonObject result = new JsonObject();

@@ -8,7 +8,9 @@ com\hlgenerator\servlet\TaskServlet.class
 com\hlgenerator\servlet\UserManagementServlet.class
 com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\dao\UserDAO.class
+com\hlgenerator\servlet\SupportCustomerServlet.class
 com\hlgenerator\servlet\CustomerServlet.class
+com\hlgenerator\servlet\GuestProductServlet.class
 com\hlgenerator\service\EmailService$1.class
 com\hlgenerator\servlet\CustomerManagementServlet$CustomerHelper.class
 com\hlgenerator\servlet\LogoutServlet.class

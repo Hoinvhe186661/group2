@@ -16,6 +16,11 @@ public class WorkOrderTask {
     private Timestamp completionDate;
     private String notes;
     private String assignedToName; // For display purposes when joining with users table
+    private String workDescription; // Mô tả công việc đã thực hiện
+    private String issuesFound; // Vấn đề phát sinh
+    private BigDecimal completionPercentage; // Phần trăm hoàn thành
+    private String attachments; // File đính kèm (JSON)
+    private String rejectionReason; // Lý do từ chối/hủy
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -140,6 +145,46 @@ public class WorkOrderTask {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getWorkDescription() {
+        return workDescription;
+    }
+
+    public void setWorkDescription(String workDescription) {
+        this.workDescription = workDescription;
+    }
+
+    public String getIssuesFound() {
+        return issuesFound;
+    }
+
+    public void setIssuesFound(String issuesFound) {
+        this.issuesFound = issuesFound;
+    }
+
+    public BigDecimal getCompletionPercentage() {
+        return completionPercentage;
+    }
+
+    public void setCompletionPercentage(BigDecimal completionPercentage) {
+        this.completionPercentage = completionPercentage;
+    }
+
+    public String getAttachments() {
+        return attachments;
+    }
+
+    public void setAttachments(String attachments) {
+        this.attachments = attachments;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }
 
