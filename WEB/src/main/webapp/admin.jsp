@@ -179,7 +179,7 @@
                     <li class="dropdown user user-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <i class="fa fa-user"></i>
-                            <span><%= username %> <i class="caret"></i></span>
+                            <span><%= (String) session.getAttribute("username") %> <i class="caret"></i></span>
                         </a>
                         <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
@@ -215,7 +215,7 @@
                         <img src="img/26115.jpg" class="img-circle" alt="User Image" />
                     </div>
                     <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
+                        <p>Xin chào, <%= (String) session.getAttribute("username") %></p>
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
@@ -270,19 +270,7 @@
         <aside class="right-side">
             <!-- Main content -->
             <section class="content">
-                <div class="row" style="margin-bottom:5px;">
-                    
-                    <div class="col-md-3 fade-in">
-                        <div class="sm-st clearfix">
-                            <span class="sm-st-icon st-green"><i class="fa fa-users"></i></span>
-                            <div class="sm-st-info">
-                                <span id="customerCount"><%= request.getAttribute("customerCount") != null ? request.getAttribute("customerCount") : 0 %></span>
-                                Khách hàng
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
+                <!-- Hàng đầu: 4 phần tử dài nhất -->
                 <div class="row" style="margin-bottom:5px;">
                     <div class="col-md-3 fade-in delay-1">
                         <div class="sm-st clearfix">
@@ -313,22 +301,32 @@
                     </div>
                     <div class="col-md-3 fade-in delay-4">
                         <div class="sm-st clearfix">
-                            <span class="sm-st-icon st-pink"><i class="fa fa-warehouse"></i></span>
-                            <div class="sm-st-info">
-                                <span id="storekeepers"><%= request.getAttribute("storekeeperCount") != null ? request.getAttribute("storekeeperCount") : 0 %></span>
-                                Thủ kho
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row" style="margin-bottom:5px;">
-                    <div class="col-md-3">
-                        <div class="sm-st clearfix">
                             <span class="sm-st-icon st-green"><i class="fa fa-user-tie"></i></span>
                             <div class="sm-st-info">
                                 <span id="headTechnician"><%= request.getAttribute("headTechnicianCount") != null ? request.getAttribute("headTechnicianCount") : 0 %></span>
                                 Trưởng phòng kỹ thuật
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hàng thứ hai: các phần tử còn lại -->
+                <div class="row" style="margin-bottom:5px;">
+                    <div class="col-md-3 fade-in">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-green"><i class="fa fa-users"></i></span>
+                            <div class="sm-st-info">
+                                <span id="customerCount"><%= request.getAttribute("customerCount") != null ? request.getAttribute("customerCount") : 0 %></span>
+                                Khách hàng
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 fade-in">
+                        <div class="sm-st clearfix">
+                            <span class="sm-st-icon st-pink"><i class="fa fa-warehouse"></i></span>
+                            <div class="sm-st-info">
+                                <span id="storekeepers"><%= request.getAttribute("storekeeperCount") != null ? request.getAttribute("storekeeperCount") : 0 %></span>
+                                Thủ kho
                             </div>
                         </div>
                     </div>

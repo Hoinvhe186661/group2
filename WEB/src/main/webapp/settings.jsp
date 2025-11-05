@@ -1,4 +1,21 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%
+    // Kiểm tra đăng nhập
+    String username = (String) session.getAttribute("username");
+    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
+    
+    if (username == null || isLoggedIn == null || !isLoggedIn) {
+        response.sendRedirect(request.getContextPath() + "/login.jsp");
+        return;
+    }
+    
+    // Kiểm tra quyền truy cập - chỉ admin mới được vào
+    if (!"admin".equals(userRole)) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
+        return;
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,7 +37,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="admin.jsp" class="logo">
-            Bảng điều khiển quản trị
+            Bảng điều khiển 
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -78,6 +95,7 @@
                     </div>
                 </div>
                 <!-- sidebar menu: : style can be found in sidebar.less -->
+                 
                 <ul class="sidebar-menu">
                     <li>
                         <a href="admin.jsp">
@@ -138,24 +156,11 @@
                                     </li>
                                     <li role="presentation">
                                         <a href="#email" aria-controls="email" role="tab" data-toggle="tab">
-                                            <i class="fa fa-envelope"></i> Cài đặt email
+                                            <i class="fa fa-envelope"></i> Liên Hệ 
                                         </a>
                                     </li>
-                                    <li role="presentation">
-                                        <a href="#payment" aria-controls="payment" role="tab" data-toggle="tab">
-                                            <i class="fa fa-credit-card"></i> Thanh toán
-                                        </a>
-                                    </li>
-                                    <li role="presentation">
-                                        <a href="#security" aria-controls="security" role="tab" data-toggle="tab">
-                                            <i class="fa fa-shield"></i> Bảo mật
-                                        </a>
-                                    </li>
-                                    <li role="presentation">
-                                        <a href="#backup" aria-controls="backup" role="tab" data-toggle="tab">
-                                            <i class="fa fa-database"></i> Sao lưu
-                                        </a>
-                                    </li>
+                                    
+                                    
                                 </ul>
 
                                 <!-- Tab content -->
@@ -173,274 +178,51 @@
                                                         <label for="siteDescription">Mô tả website:</label>
                                                         <textarea class="form-control" id="siteDescription" rows="3">Cửa hàng trực tuyến chuyên bán các sản phẩm chất lượng cao</textarea>
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label for="siteEmail">Email liên hệ:</label>
-                                                        <input type="email" class="form-control" id="siteEmail" value="contact@example.com">
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="sitePhone">Số điện thoại:</label>
-                                                        <input type="tel" class="form-control" id="sitePhone" value="0123456789">
-                                                    </div>
+                                                    
                                                 </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="siteAddress">Địa chỉ:</label>
-                                                        <textarea class="form-control" id="siteAddress" rows="3">123 Đường ABC, Quận 1, TP.HCM</textarea>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="currency">Đơn vị tiền tệ:</label>
-                                                        <select class="form-control" id="currency">
-                                                            <option value="VND" selected>Việt Nam Đồng (VNĐ)</option>
-                                                            <option value="USD">US Dollar ($)</option>
-                                                            <option value="EUR">Euro (€)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="timezone">Múi giờ:</label>
-                                                        <select class="form-control" id="timezone">
-                                                            <option value="Asia/Ho_Chi_Minh" selected>Asia/Ho_Chi_Minh</option>
-                                                            <option value="UTC">UTC</option>
-                                                            <option value="America/New_York">America/New_York</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="language">Ngôn ngữ:</label>
-                                                        <select class="form-control" id="language">
-                                                            <option value="vi" selected>Tiếng Việt</option>
-                                                            <option value="en">English</option>
-                                                            <option value="zh">中文</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
+                                                
                                             </div>
                                             <div class="form-group">
-                                                <button type="button" class="btn btn-primary" onclick="saveGeneralSettings()">
+                                                <button type="button" class="btn btn-primary" id="saveGeneralBtn" onclick="saveGeneralSettings(this)">
                                                     <i class="fa fa-save"></i> Lưu cài đặt chung
                                                 </button>
                                             </div>
                                         </form>
                                     </div>
 
-                                    <!-- Cài đặt email -->
+                                    <!-- Cài đặt Liên hệ  -->
                                     <div role="tabpanel" class="tab-pane" id="email">
                                         <form id="emailSettingsForm">
                                             <div class="row">
                                                 <div class="col-md-6">
                                                     <div class="form-group">
-                                                        <label for="smtpHost">SMTP Host:</label>
-                                                        <input type="text" class="form-control" id="smtpHost" value="smtp.gmail.com">
+                                                        <label for="siteEmail">Email liên hệ:</label>
+                                                        <input type="email" class="form-control" id="siteEmail" value="contact@example.com" required pattern="^[a-zA-Z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$" title="Chỉ chấp nhận email miền gmail.com hoặc fpt.edu.vn">
                                                     </div>
                                                     <div class="form-group">
-                                                        <label for="smtpPort">SMTP Port:</label>
-                                                        <input type="number" class="form-control" id="smtpPort" value="587">
+                                                        <label for="sitePhone">Số điện thoại:</label>
+                                                        <input type="tel" class="form-control" id="sitePhone" value="0123456789" required pattern="^[0-9]{10,11}$" title="Chỉ cho phép số, 10 hoặc 11 chữ số">
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label for="smtpUsername">Tên đăng nhập:</label>
-                                                        <input type="text" class="form-control" id="smtpUsername" value="your-email@gmail.com">
-                                                    </div>
+                                                   
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="form-group">
-                                                        <label for="smtpPassword">Mật khẩu:</label>
-                                                        <input type="password" class="form-control" id="smtpPassword" value="">
+                                                        <label for="siteAddress">Địa chỉ:</label>
+                                                        <textarea class="form-control" id="siteAddress" rows="3" required>123 Đường ABC, Quận 1, TP.HCM</textarea>
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label for="smtpEncryption">Mã hóa:</label>
-                                                        <select class="form-control" id="smtpEncryption">
-                                                            <option value="tls" selected>TLS</option>
-                                                            <option value="ssl">SSL</option>
-                                                            <option value="none">Không</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label>
-                                                            <input type="checkbox" id="emailNotifications"> Gửi thông báo email
-                                                        </label>
-                                                    </div>
+                                                    
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <button type="button" class="btn btn-primary" onclick="saveEmailSettings()">
-                                                    <i class="fa fa-save"></i> Lưu cài đặt email
+                                                <button type="button" class="btn btn-primary" onclick="saveContactSettings(this)">
+                                                    <i class="fa fa-save"></i> Lưu cài đặt Liên Hệ 
                                                 </button>
-                                                <button type="button" class="btn btn-info" onclick="testEmail()">
-                                                    <i class="fa fa-send"></i> Test email
-                                                </button>
+                                            
                                             </div>
                                         </form>
                                     </div>
 
-                                    <!-- Cài đặt thanh toán -->
-                                    <div role="tabpanel" class="tab-pane" id="payment">
-                                        <form id="paymentSettingsForm">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <h5>Thanh toán trực tuyến</h5>
-                                                    <div class="form-group">
-                                                        <label>
-                                                            <input type="checkbox" id="enableOnlinePayment" checked> Kích hoạt thanh toán trực tuyến
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="paymentGateway">Cổng thanh toán:</label>
-                                                        <select class="form-control" id="paymentGateway">
-                                                            <option value="vnpay" selected>VNPay</option>
-                                                            <option value="momo">MoMo</option>
-                                                            <option value="zalopay">ZaloPay</option>
-                                                            <option value="paypal">PayPal</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="merchantId">Merchant ID:</label>
-                                                        <input type="text" class="form-control" id="merchantId" value="">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h5>Thanh toán khi nhận hàng (COD)</h5>
-                                                    <div class="form-group">
-                                                        <label>
-                                                            <input type="checkbox" id="enableCOD" checked> Kích hoạt COD
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="codFee">Phí COD:</label>
-                                                        <input type="number" class="form-control" id="codFee" value="30000">
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="minOrderAmount">Đơn hàng tối thiểu:</label>
-                                                        <input type="number" class="form-control" id="minOrderAmount" value="100000">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <button type="button" class="btn btn-primary" onclick="savePaymentSettings()">
-                                                    <i class="fa fa-save"></i> Lưu cài đặt thanh toán
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-
-                                    <!-- Cài đặt bảo mật -->
-                                    <div role="tabpanel" class="tab-pane" id="security">
-                                        <form id="securitySettingsForm">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <h5>Bảo mật đăng nhập</h5>
-                                                    <div class="form-group">
-                                                        <label for="sessionTimeout">Thời gian hết phiên (phút):</label>
-                                                        <input type="number" class="form-control" id="sessionTimeout" value="30">
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="maxLoginAttempts">Số lần đăng nhập sai tối đa:</label>
-                                                        <input type="number" class="form-control" id="maxLoginAttempts" value="5">
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label>
-                                                            <input type="checkbox" id="requireStrongPassword" checked> Yêu cầu mật khẩu mạnh
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <h5>Bảo mật dữ liệu</h5>
-                                                    <div class="form-group">
-                                                        <label>
-                                                            <input type="checkbox" id="enableSSL" checked> Kích hoạt SSL
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label>
-                                                            <input type="checkbox" id="enableBackup" checked> Tự động sao lưu
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-group">
-                                                        <label for="backupFrequency">Tần suất sao lưu:</label>
-                                                        <select class="form-control" id="backupFrequency">
-                                                            <option value="daily" selected>Hàng ngày</option>
-                                                            <option value="weekly">Hàng tuần</option>
-                                                            <option value="monthly">Hàng tháng</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="form-group">
-                                                <button type="button" class="btn btn-primary" onclick="saveSecuritySettings()">
-                                                    <i class="fa fa-save"></i> Lưu cài đặt bảo mật
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-
-                                    <!-- Sao lưu -->
-                                    <div role="tabpanel" class="tab-pane" id="backup">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <h5>Sao lưu dữ liệu</h5>
-                                                <div class="form-group">
-                                                    <button type="button" class="btn btn-success" onclick="createBackup()">
-                                                        <i class="fa fa-download"></i> Tạo sao lưu ngay
-                                                    </button>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label for="backupPath">Đường dẫn sao lưu:</label>
-                                                    <input type="text" class="form-control" id="backupPath" value="/backups/" readonly>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <h5>Khôi phục dữ liệu</h5>
-                                                <div class="form-group">
-                                                    <label for="backupFile">Chọn file sao lưu:</label>
-                                                    <input type="file" class="form-control" id="backupFile" accept=".sql,.zip">
-                                                </div>
-                                                <div class="form-group">
-                                                    <button type="button" class="btn btn-warning" onclick="restoreBackup()">
-                                                        <i class="fa fa-upload"></i> Khôi phục dữ liệu
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <hr>
-                                        <h5>Lịch sử sao lưu</h5>
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Ngày tạo</th>
-                                                        <th>Kích thước</th>
-                                                        <th>Trạng thái</th>
-                                                        <th>Thao tác</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>21/09/2025 10:30</td>
-                                                        <td>15.2 MB</td>
-                                                        <td><span class="label label-success">Thành công</span></td>
-                                                        <td>
-                                                            <button class="btn btn-info btn-xs" onclick="downloadBackup('backup_20250921_1030.sql')">
-                                                                <i class="fa fa-download"></i> Tải về
-                                                            </button>
-                                                            <button class="btn btn-danger btn-xs" onclick="deleteBackup('backup_20250921_1030.sql')">
-                                                                <i class="fa fa-trash"></i> Xóa
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>20/09/2025 10:30</td>
-                                                        <td>14.8 MB</td>
-                                                        <td><span class="label label-success">Thành công</span></td>
-                                                        <td>
-                                                            <button class="btn btn-info btn-xs" onclick="downloadBackup('backup_20250920_1030.sql')">
-                                                                <i class="fa fa-download"></i> Tải về
-                                                            </button>
-                                                            <button class="btn btn-danger btn-xs" onclick="deleteBackup('backup_20250920_1030.sql')">
-                                                                <i class="fa fa-trash"></i> Xóa
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                                   
                                 </div>
                             </div>
                         </div>
@@ -461,61 +243,207 @@
     <script src="js/Director/app.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        function saveGeneralSettings() {
-            alert('Đã lưu cài đặt chung');
-            // Thêm logic lưu cài đặt chung ở đây
+        // Load settings từ database khi trang được mở
+        window.onload = function() {
+            loadSettings();
+        };
+
+        function loadSettings() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'settings?action=getAll', true);
+            xhr.withCredentials = true; // Đảm bảo gửi cookie/session
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.success && response.data) {
+                            var data = response.data;
+                            
+                            // Load cài đặt chung
+                            if (data.site_name) {
+                                document.getElementById('siteName').value = data.site_name;
+                            }
+                            if (data.site_description) {
+                                document.getElementById('siteDescription').value = data.site_description;
+                            }
+                            if (data.site_email) {
+                                document.getElementById('siteEmail').value = data.site_email;
+                            }
+                            if (data.site_phone) {
+                                document.getElementById('sitePhone').value = data.site_phone;
+                            }
+                            if (data.site_address) {
+                                document.getElementById('siteAddress').value = data.site_address;
+                            }
+                            
+                            // (Đã bỏ các trường SMTP không sử dụng)
+                        }
+                    } catch (e) {
+                        console.error('Lỗi khi load settings: ', e);
+                    }
+                }
+            };
+            xhr.send();
         }
 
-        function saveEmailSettings() {
-            alert('Đã lưu cài đặt email');
-            // Thêm logic lưu cài đặt email ở đây
-        }
+        function saveGeneralSettings(buttonElement) {
+            // Lấy dữ liệu từ form
+            var siteName = document.getElementById('siteName').value;
+            var siteDescription = document.getElementById('siteDescription').value;
+            var siteEmail = document.getElementById('siteEmail').value;
+            var sitePhone = document.getElementById('sitePhone').value;
+            var siteAddress = document.getElementById('siteAddress').value;
 
-        function testEmail() {
-            alert('Đang gửi email test...');
-            // Thêm logic test email ở đây
-        }
-
-        function savePaymentSettings() {
-            alert('Đã lưu cài đặt thanh toán');
-            // Thêm logic lưu cài đặt thanh toán ở đây
-        }
-
-        function saveSecuritySettings() {
-            alert('Đã lưu cài đặt bảo mật');
-            // Thêm logic lưu cài đặt bảo mật ở đây
-        }
-
-        function createBackup() {
-            if (confirm('Bạn có chắc chắn muốn tạo sao lưu dữ liệu?')) {
-                alert('Đang tạo sao lưu...');
-                // Thêm logic tạo sao lưu ở đây
+            // Nếu trường email tồn tại, kiểm tra domain hợp lệ (gmail.com | fpt.edu.vn)
+            if (siteEmail) {
+                var emailPattern = /^[a-zA-Z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/;
+                if (!emailPattern.test(siteEmail)) {
+                    alert('Email liên hệ chỉ được phép thuộc miền gmail.com hoặc fpt.edu.vn');
+                    try { document.getElementById('siteEmail').focus(); } catch (e) {}
+                    return;
+                }
             }
+
+            // Lấy nút lưu để disable và hiển thị loading
+            var saveButton = buttonElement || document.getElementById('saveGeneralBtn');
+            var originalText = saveButton.innerHTML;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang lưu...';
+
+            // Tạo URLSearchParams thay vì FormData
+            var params = new URLSearchParams();
+            params.append('action', 'saveGeneral');
+            params.append('siteName', siteName);
+            params.append('siteDescription', siteDescription);
+            params.append('siteEmail', siteEmail);
+            params.append('sitePhone', sitePhone);
+            params.append('siteAddress', siteAddress);
+
+            // Gửi AJAX request
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'settings', true);
+            xhr.withCredentials = true; // Đảm bảo gửi cookie/session
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            console.log('Response from server:', response);
+                            if (response.success) {
+                                // Hiển thị thông báo thành công
+                                saveButton.innerHTML = '<i class="fa fa-check"></i> Đã lưu!';
+                                saveButton.classList.add('btn-success');
+                                
+                                // Đợi 1 giây rồi redirect về index.jsp
+                                setTimeout(function() {
+                                    window.location.href = 'index.jsp';
+                                }, 1000);
+                            } else {
+                                // Khôi phục nút và hiển thị lỗi
+                                saveButton.disabled = false;
+                                saveButton.innerHTML = originalText;
+                                
+                                // Xử lý lỗi "Không có quyền truy cập"
+                                var errorMessage = response.message || 'Không thể lưu cài đặt';
+                                if (errorMessage.includes('Không có quyền truy cập')) {
+                                    alert('Lỗi: ' + errorMessage + '\n\nVui lòng đăng nhập lại với tài khoản admin để tiếp tục.');
+                                    // Chuyển hướng đến trang login
+                                    setTimeout(function() {
+                                        window.location.href = 'login.jsp';
+                                    }, 2000);
+                                } else {
+                                    alert('Lỗi: ' + errorMessage);
+                                }
+                                console.error('Server error:', response);
+                            }
+                        } catch (e) {
+                            // Khôi phục nút và hiển thị lỗi
+                            saveButton.disabled = false;
+                            saveButton.innerHTML = originalText;
+                            alert('Lỗi khi xử lý phản hồi từ server: ' + e.message);
+                            console.error('Parse error:', e);
+                            console.error('Response text:', xhr.responseText);
+                        }
+                    } else {
+                        // Khôi phục nút và hiển thị lỗi
+                        saveButton.disabled = false;
+                        saveButton.innerHTML = originalText;
+                        alert('Lỗi kết nối đến server (Status: ' + xhr.status + ')');
+                        console.error('HTTP error:', xhr.status, xhr.statusText);
+                    }
+                }
+            };
+            xhr.send(params.toString());
         }
 
-        function restoreBackup() {
-            var file = document.getElementById('backupFile').files[0];
-            if (!file) {
-                alert('Vui lòng chọn file sao lưu');
+        function saveContactSettings(buttonElement) {
+            // Lấy dữ liệu liên hệ
+            var siteEmail = document.getElementById('siteEmail').value;
+            var sitePhone = document.getElementById('sitePhone').value;
+            var siteAddress = document.getElementById('siteAddress').value;
+
+            // HTML5 validation cho form liên hệ
+            var form = document.getElementById('emailSettingsForm');
+            if (form && !form.checkValidity()) {
+                form.reportValidity();
                 return;
             }
-            
-            if (confirm('Bạn có chắc chắn muốn khôi phục dữ liệu từ file này? Dữ liệu hiện tại sẽ bị ghi đè.')) {
-                alert('Đang khôi phục dữ liệu...');
-                // Thêm logic khôi phục dữ liệu ở đây
-            }
-        }
 
-        function downloadBackup(filename) {
-            alert('Đang tải file: ' + filename);
-            // Thêm logic tải file sao lưu ở đây
-        }
-
-        function deleteBackup(filename) {
-            if (confirm('Bạn có chắc chắn muốn xóa file sao lưu: ' + filename + '?')) {
-                alert('Đã xóa file: ' + filename);
-                // Thêm logic xóa file sao lưu ở đây
+            // Bảo vệ bổ sung ở JS: kiểm tra domain email
+            var emailPattern = /^[a-zA-Z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/;
+            if (!emailPattern.test(siteEmail)) {
+                alert('Email liên hệ chỉ được phép thuộc miền gmail.com hoặc fpt.edu.vn');
+                try { document.getElementById('siteEmail').focus(); } catch (e) {}
+                return;
             }
+
+            // Disable nút và hiển thị trạng thái
+            var saveButton = buttonElement;
+            var originalText = saveButton.innerHTML;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang lưu...';
+
+            // Gửi như cài đặt chung để lưu vào bảng settings (site_email/phone/address)
+            var params = new URLSearchParams();
+            params.append('action', 'saveGeneral');
+            params.append('siteEmail', siteEmail);
+            params.append('sitePhone', sitePhone);
+            params.append('siteAddress', siteAddress);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'settings', true);
+            xhr.withCredentials = true;
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                saveButton.innerHTML = '<i class="fa fa-check"></i> Đã lưu!';
+                                saveButton.classList.add('btn-success');
+                                setTimeout(function() {
+                                    window.location.href = 'index.jsp';
+                                }, 800);
+                            } else {
+                                saveButton.disabled = false;
+                                saveButton.innerHTML = originalText;
+                                alert('Lỗi: ' + (response.message || 'Không thể lưu cài đặt liên hệ'));
+                            }
+                        } catch (e) {
+                            saveButton.disabled = false;
+                            saveButton.innerHTML = originalText;
+                            alert('Lỗi khi xử lý phản hồi từ server: ' + e.message);
+                        }
+                    } else {
+                        saveButton.disabled = false;
+                        saveButton.innerHTML = originalText;
+                        alert('Lỗi kết nối đến server (Status: ' + xhr.status + ')');
+                    }
+                }
+            };
+            xhr.send(params.toString());
         }
     </script>
 </body>

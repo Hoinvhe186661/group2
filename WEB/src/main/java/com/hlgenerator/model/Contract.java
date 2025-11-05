@@ -23,24 +23,24 @@ public class Contract {
     private String customerName; // Tên khách hàng
     private String customerPhone; // Số điện thoại khách hàng
 
-    public Contract() {}
+    public Contract() {
+    }
 
     public Contract(
-        int id,
-        String contractNumber,
-        int customerId,
-        String contractType,
-        String title,
-        Date startDate,
-        Date endDate,
-        BigDecimal contractValue,
-        String status,
-        String terms,
-        Date signedDate,
-        Integer createdBy,
-        Timestamp createdAt,
-        Timestamp updatedAt
-    ) {
+            int id,
+            String contractNumber,
+            int customerId,
+            String contractType,
+            String title,
+            Date startDate,
+            Date endDate,
+            BigDecimal contractValue,
+            String status,
+            String terms,
+            Date signedDate,
+            Integer createdBy,
+            Timestamp createdAt,
+            Timestamp updatedAt) {
         this.id = id;
         this.contractNumber = contractNumber;
         this.customerId = customerId;
@@ -58,18 +58,17 @@ public class Contract {
     }
 
     public Contract(
-        String contractNumber,
-        int customerId,
-        String contractType,
-        String title,
-        Date startDate,
-        Date endDate,
-        BigDecimal contractValue,
-        String status,
-        String terms,
-        Date signedDate,
-        Integer createdBy
-    ) {
+            String contractNumber,
+            int customerId,
+            String contractType,
+            String title,
+            Date startDate,
+            Date endDate,
+            BigDecimal contractValue,
+            String status,
+            String terms,
+            Date signedDate,
+            Integer createdBy) {
         this.contractNumber = contractNumber;
         this.customerId = customerId;
         this.contractType = contractType;
@@ -83,56 +82,139 @@ public class Contract {
         this.createdBy = createdBy;
     }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public int getId() {
+        return id;
+    }
 
-    public String getContractNumber() { return contractNumber; }
-    public void setContractNumber(String contractNumber) { this.contractNumber = contractNumber; }
+    public void setId(int id) {
+        this.id = id;
+    }
 
-    public int getCustomerId() { return customerId; }
-    public void setCustomerId(int customerId) { this.customerId = customerId; }
+    public String getContractNumber() {
+        return contractNumber;
+    }
 
-    public String getContractType() { return contractType; }
-    public void setContractType(String contractType) { this.contractType = contractType; }
+    public void setContractNumber(String contractNumber) {
+        this.contractNumber = contractNumber;
+    }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public int getCustomerId() {
+        return customerId;
+    }
 
-    public Date getStartDate() { return startDate; }
-    public void setStartDate(Date startDate) { this.startDate = startDate; }
+    public void setCustomerId(int customerId) {
+        this.customerId = customerId;
+    }
 
-    public Date getEndDate() { return endDate; }
-    public void setEndDate(Date endDate) { this.endDate = endDate; }
+    public String getContractType() {
+        return contractType;
+    }
 
-    public BigDecimal getContractValue() { return contractValue; }
-    public void setContractValue(BigDecimal contractValue) { this.contractValue = contractValue; }
+    public void setContractType(String contractType) {
+        this.contractType = contractType;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getTitle() {
+        return title;
+    }
 
-    public String getTerms() { return terms; }
-    public void setTerms(String terms) { this.terms = terms; }
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-    public Date getSignedDate() { return signedDate; }
-    public void setSignedDate(Date signedDate) { this.signedDate = signedDate; }
+    public Date getStartDate() {
+        return startDate;
+    }
 
-    public Integer getCreatedBy() { return createdBy; }
-    public void setCreatedBy(Integer createdBy) { this.createdBy = createdBy; }
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
 
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public Date getEndDate() {
+        return endDate;
+    }
 
-    public Timestamp getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
+    }
 
-    public String getDeletedByName() { return deletedByName; }
-    public void setDeletedByName(String deletedByName) { this.deletedByName = deletedByName; }
+    public BigDecimal getContractValue() {
+        return contractValue;
+    }
 
-    public String getCustomerName() { return customerName; }
-    public void setCustomerName(String customerName) { this.customerName = customerName; }
+    public void setContractValue(BigDecimal contractValue) {
+        this.contractValue = contractValue;
+    }
 
-    public String getCustomerPhone() { return customerPhone; }
-    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getTerms() {
+        return terms;
+    }
+
+    public void setTerms(String terms) {
+        this.terms = terms;
+    }
+
+    public Date getSignedDate() {
+        return signedDate;
+    }
+
+    public void setSignedDate(Date signedDate) {
+        this.signedDate = signedDate;
+    }
+
+    public Integer getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Integer createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getDeletedByName() {
+        return deletedByName;
+    }
+
+    public void setDeletedByName(String deletedByName) {
+        this.deletedByName = deletedByName;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone;
+    }
 }
-
-

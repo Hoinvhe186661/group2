@@ -26,7 +26,7 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-4 mb-4">
-                <h5>HOÀ LẠC ELECTRIC</h5>
+                <h5><%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC" %></h5>
                 <p>Chuyên gia giải pháp máy phát điện công nghiệp với hơn 20 năm kinh nghiệm. Cam kết mang đến sản phẩm chất lượng cao và dịch vụ chuyên nghiệp.</p>
                 <div class="social-icons">
                     <a href="#"><i class="fab fa-facebook-f"></i></a>
@@ -55,14 +55,14 @@
             </div>
             <div class="col-lg-4 mb-4">
                 <h5>Liên hệ</h5>
-                <p><i class="fas fa-map-marker-alt me-2"></i> Đại Thanh, Hà Nội</p>
-                <p><i class="fas fa-phone me-2"></i> 0989.888.999</p>
-                <p><i class="fas fa-envelope me-2"></i> Mayphatdienhoalac@gmail.com</p>
+                <p><i class="fas fa-map-marker-alt me-2"></i> <%= pageContext.getAttribute("siteAddress") != null ? pageContext.getAttribute("siteAddress") : "Đại Thanh, Hà Nội" %></p>
+                <p><i class="fas fa-phone me-2"></i> <%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989 888 999" %></p>
+                <p><i class="fas fa-envelope me-2"></i> <%= pageContext.getAttribute("siteEmail") != null ? pageContext.getAttribute("siteEmail") : "contact@example.com" %></p>
                 <p><i class="fas fa-clock me-2"></i> Thứ 2 - Thứ 6: 08:00 - 17:00</p>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2024 HOÀ LẠC ELECTRIC. Tất cả quyền được bảo lưu.</p>
+            <p>&copy; 2024 <%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC" %>. Tất cả quyền được bảo lưu.</p>
         </div>
     </div>
 </footer>
@@ -72,8 +72,8 @@
     <a class="facebook" href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook">
         <i class="fab fa-facebook-f"></i>
     </a>
-    <a class="zalo" href="https://zalo.me/0989888999" target="_blank" rel="noopener" aria-label="Zalo"><span>Z</span></a>
-    <a class="phone" href="tel:0989888999" aria-label="Gọi hotline">
+    <a class="zalo" href="https://zalo.me/<%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989888999" %>" target="_blank" rel="noopener" aria-label="Zalo"><span>Z</span></a>
+    <a class="phone" href="tel:<%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989888999" %>" aria-label="Gọi hotline">
         <i class="fas fa-phone"></i>
     </a>
     </div>

@@ -20,6 +20,9 @@ public class AdminDashboardServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html; charset=UTF-8");
         HttpSession session = request.getSession(false);
         String username = session != null ? (String) session.getAttribute("username") : null;
         Boolean isLoggedIn = session != null ? (Boolean) session.getAttribute("isLoggedIn") : null;
@@ -49,7 +52,8 @@ public class AdminDashboardServlet extends HttpServlet {
 
         // Danh sách 10 người dùng mới nhất
         List<User> allUsers = userDAO.getAllUsers();
-        List<User> recentUsers = allUsers.stream()
+        List<User> recentUsers = (allUsers == null ? java.util.Collections.<User>emptyList() : allUsers)
+                .stream()
                 .sorted(Comparator.comparing(User::getId).reversed())
                 .limit(10)
                 .collect(Collectors.toList());
@@ -113,7 +117,12 @@ public class AdminDashboardServlet extends HttpServlet {
               .append(count).append("</text>");
             // month label (MM/yy)
             String ym = e.getKey(); // yyyy-MM
-            String label = ym.substring(5) + "/" + ym.substring(2, 4);
+            String label;
+            if (ym != null && ym.length() >= 7 && ym.charAt(4) == '-') {
+                label = ym.substring(5) + "/" + ym.substring(2, 4);
+            } else {
+                label = ym != null ? ym : "";
+            }
             sb.append("<text x=\"").append(x + widthPerBar / 2).append("\" y=\"")
               .append(chartHeight + 15).append("\" text-anchor=\"middle\" font-size=\"11\" fill=\"#666\">")
               .append(label).append("</text>");

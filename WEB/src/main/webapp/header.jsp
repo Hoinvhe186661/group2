@@ -1,5 +1,31 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ page import="com.hlgenerator.dao.SettingsDAO" %>
+<%@ page import="java.util.Map" %>
+<%
+    // Chỉ load settings nếu chưa được load (tránh duplicate khi include từ index.jsp)
+    if (pageContext.getAttribute("siteName") == null) {
+        // Load settings từ database - sử dụng block scope để tránh xung đột biến
+        {
+            SettingsDAO headerSettingsDAO = new SettingsDAO();
+            Map<String, String> headerSettings = headerSettingsDAO.getAllSettings();
+            
+            // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định
+            String headerSiteName = headerSettings.get("site_name") != null ? headerSettings.get("site_name") : "HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR";
+            String headerSiteDescription = headerSettings.get("site_description") != null ? headerSettings.get("site_description") : "MÁY PHÁT ĐIỆN CÔNG NGHIỆP";
+            String headerSiteEmail = headerSettings.get("site_email") != null ? headerSettings.get("site_email") : "Mayphatdienhoalac@gmail.com";
+            String headerSitePhone = headerSettings.get("site_phone") != null ? headerSettings.get("site_phone") : "0989.888.999";
+            String headerSiteAddress = headerSettings.get("site_address") != null ? headerSettings.get("site_address") : "";
+            
+            // Lưu vào pageContext để dùng lại
+            pageContext.setAttribute("siteName", headerSiteName);
+            pageContext.setAttribute("siteDescription", headerSiteDescription);
+            pageContext.setAttribute("siteEmail", headerSiteEmail);
+            pageContext.setAttribute("sitePhone", headerSitePhone);
+            pageContext.setAttribute("siteAddress", headerSiteAddress);
+        }
+    }
+%>
 <%-- Shared Header: Top bar + Logo/Search + Menu --%>
 <style>
     .top-header { background: #dc3545; color: #ffffff; padding: 8px 0; font-size: 14px; }
@@ -51,9 +77,9 @@
 <div class="top-header" data-logged-in="${sessionScope.isLoggedIn eq true}">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-md-6"><span class="header-text">MÁY PHÁT ĐIỆN CÔNG NGHIỆP</span></div>
+            <div class="col-md-6"><span class="header-text"><%= pageContext.getAttribute("siteDescription") != null ? pageContext.getAttribute("siteDescription") : "MÁY PHÁT ĐIỆN CÔNG NGHIỆP" %></span></div>
             <div class="col-md-6 text-end">
-                <span class="contact-info"><i class="fas fa-envelope"></i> Mayphatdienhoalac@gmail.com</span>
+                <span class="contact-info"><i class="fas fa-envelope"></i> <%= pageContext.getAttribute("siteEmail") != null ? pageContext.getAttribute("siteEmail") : "Mayphatdienhoalac@gmail.com" %></span>
                 <span class="contact-info"><i class="fas fa-clock"></i> 08:00 - 17:00</span>
             </div>
         </div>
@@ -68,7 +94,7 @@
                     <img src="images/logo.png" alt="Logo Hoà Lạc" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <div style="display:none; width:100%; height:100%; background:#dc3545; border-radius:50%; align-items:center; justify-content:center; color:white; font-size:20px;">★</div>
                 </div>
-                <div class="logo-text"><strong>HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR</strong></div>
+                <div class="logo-text"><strong><%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR" %></strong></div>
             </div>
         </a>
         <div class="search-container" role="search">
@@ -76,14 +102,14 @@
             <i class="fas fa-search search-icon"></i>
         </div>
         <div class="contact-info-nav">
-            <div class="phone-number"><i class="fas fa-phone"></i> 0989.888.999</div>
+            <div class="phone-number"><i class="fas fa-phone"></i> <%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989.888.999" %></div>
             <div class="nav-icons">
                 <c:choose>
                     <c:when test="${sessionScope.isLoggedIn eq true}">
                         <%-- Icon quản lý cho staff/admin --%>
                         <c:choose>
                             <c:when test="${sessionScope.userRole eq 'admin'}">
-                                <a href="${pageContext.request.contextPath}/admin.jsp" class="management-icon-link" title="Trang quản trị">
+                                <a href="${pageContext.request.contextPath}/admin" class="management-icon-link" title="Trang quản trị">
                                     <i class="fas fa-user-cog"></i>
                                 </a>
                             </c:when>
@@ -135,11 +161,10 @@
             <li class="nav-item"><a class="nav-link" href="index.jsp" id="nav-home">TRANG CHỦ</a></li>
             <li class="nav-item"><a class="nav-link" href="about.jsp" id="nav-about">GIỚI THIỆU</a></li>
             <li class="nav-item"><a class="nav-link" href="guest-products">MÁY PHÁT ĐIỆN</a></li>
-            <li class="nav-item"><a class="nav-link" href="#services">DỊCH VỤ</a></li>
-            <li class="nav-item"><a class="nav-link" href="#projects">DỰ ÁN</a></li>
+          
             <li class="nav-item"><a class="nav-link" href="#guide">HƯỚNG DẪN</a></li>
-            <li class="nav-item"><a class="nav-link" href="#news">TIN TỨC</a></li>
-            <li class="nav-item"><a class="nav-link" href="#contact">LIÊN HỆ</a></li>
+           
+            <li class="nav-item"><a class="nav-link" href="contact.jsp" id="nav-contact">LIÊN HỆ</a></li>
             <c:if test="${sessionScope.isLoggedIn eq true}">
                 <li class="nav-item"><a class="nav-link" href="support.jsp" id="nav-support">HỖ TRỢ</a></li>
             </c:if>
@@ -162,6 +187,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (href === 'about.jsp' && currentPage === 'about.jsp') {
             link.classList.add('active');
         } else if (href === 'support.jsp' && currentPage === 'support.jsp') {
+            link.classList.add('active');
+        } else if ((href === 'contact' || href === 'contact.jsp') && (currentPage === 'contact' || currentPage === 'contact.jsp')) {
             link.classList.add('active');
         }
     });
