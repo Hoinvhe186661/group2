@@ -631,6 +631,9 @@
                     </form>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="btnCloseWorkOrder" style="display: none;">
+                        <i class="fa fa-check-circle"></i> Đóng đơn hàng
+                    </button>
                     <button type="button" class="btn btn-primary" id="btnSaveWorkOrder">
                         <i class="fa fa-save"></i> Lưu thay đổi
                     </button>
@@ -650,6 +653,16 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="assign_work_order_id">
+                    
+                    <!-- Alert thông báo khi work order đã hoàn thành -->
+                    <div id="workOrderClosedAlert" class="alert alert-warning alert-dismissible" style="display: none;">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                        <h4><i class="fa fa-exclamation-triangle"></i> Cảnh báo!</h4>
+                        <p id="workOrderClosedMessage">
+                            <strong>Đơn hàng này đã hoàn thành hoặc đã hủy.</strong><br>
+                            Không thể tạo thêm công việc mới cho đơn hàng đã đóng.
+                        </p>
+                    </div>
                     
                     <!-- Form thêm task mới -->
                     <div class="box box-success">
@@ -814,6 +827,47 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="report_work_order_id">
+                    
+                    <!-- Bộ lọc ngày -->
+                    <div class="box box-primary">
+                        <div class="box-header">
+                            <h3 class="box-title">Bộ lọc theo ngày</h3>
+                        </div>
+                        <div class="box-body">
+                            <form class="form-horizontal" id="reportFilterForm">
+                                <div class="row">
+                                    <div class="col-md-5">
+                                        <div class="form-group">
+                                            <label class="control-label">Ngày bắt đầu:</label>
+                                            <input type="date" class="form-control" id="report_filter_start_date">
+                                            <small class="help-block">Lọc theo ngày bắt đầu của nhiệm vụ</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="form-group">
+                                            <label class="control-label">Ngày hoàn thành:</label>
+                                            <input type="date" class="form-control" id="report_filter_completion_date">
+                                            <small class="help-block">Lọc theo ngày hoàn thành của nhiệm vụ</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="control-label">&nbsp;</label>
+                                            <div>
+                                                <button type="button" class="btn btn-primary btn-block" id="btnApplyReportFilter">
+                                                    <i class="fa fa-filter"></i> Lọc
+                                                </button>
+                                                <button type="button" class="btn btn-default btn-block" id="btnResetReportFilter" style="margin-top: 5px;">
+                                                    <i class="fa fa-refresh"></i> Đặt lại
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
                     <div id="reportContent">
                         <div class="text-center">
                             <i class="fa fa-spinner fa-spin fa-2x"></i>
@@ -867,6 +921,11 @@
                 saveWorkOrderChanges();
             });
             
+            // Close work order
+            $('#btnCloseWorkOrder').click(function() {
+                closeWorkOrder();
+            });
+            
             // Enter to search
             $('#filterSearch').keypress(function(e) {
                 if(e.which == 13) {
@@ -880,6 +939,31 @@
                 if(workOrderId) {
                     // Reload assigned users to update the display
                     reloadAssignedUsersForWorkOrder(workOrderId);
+                }
+            });
+            
+            // Apply report filter
+            $('#btnApplyReportFilter').click(function() {
+                var workOrderId = $('#report_work_order_id').val();
+                if(workOrderId) {
+                    loadReportData(workOrderId);
+                }
+            });
+            
+            // Reset report filter
+            $('#btnResetReportFilter').click(function() {
+                $('#report_filter_start_date').val('');
+                $('#report_filter_completion_date').val('');
+                var workOrderId = $('#report_work_order_id').val();
+                if(workOrderId) {
+                    loadReportData(workOrderId);
+                }
+            });
+            
+            // Allow Enter key to trigger filter
+            $('#report_filter_start_date, #report_filter_completion_date').keypress(function(e) {
+                if(e.which == 13) {
+                    $('#btnApplyReportFilter').click();
                 }
             });
             
@@ -1227,7 +1311,72 @@
             // Load danh sách người đã được phân công từ các task
             loadAssignedUsers(id);
             
+            // Check if work order can be closed and show/hide close button
+            checkCanCloseWorkOrder(id);
+            
             $('#workOrderDetailModal').modal('show');
+        }
+        
+        function checkCanCloseWorkOrder(workOrderId) {
+            // Check if work order is already closed/completed/cancelled
+            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled')) {
+                $('#btnCloseWorkOrder').hide();
+                return;
+            }
+            
+            // Check for active tasks
+            $.ajax({
+                url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if(response && response.success && response.data) {
+                        var hasActiveTasks = false;
+                        var activeTaskCount = 0;
+                        var activeTasks = [];
+                        
+                        response.data.forEach(function(task) {
+                            // Chỉ kiểm tra in_progress, không bao gồm pending
+                            if(task.status === 'in_progress') {
+                                hasActiveTasks = true;
+                                activeTaskCount++;
+                                activeTasks.push({
+                                    taskNumber: task.taskNumber || 'N/A',
+                                    description: task.taskDescription || '',
+                                    status: task.status
+                                });
+                            }
+                        });
+                        
+                        if(hasActiveTasks) {
+                            // Hide close button or show disabled state
+                            $('#btnCloseWorkOrder').show();
+                            $('#btnCloseWorkOrder').prop('disabled', true);
+                            $('#btnCloseWorkOrder').html('<i class="fa fa-ban"></i> Không thể đóng (' + activeTaskCount + ' nhiệm vụ đang thực hiện)');
+                            $('#btnCloseWorkOrder').attr('title', 'Vẫn còn ' + activeTaskCount + ' nhiệm vụ đang thực hiện (in_progress):\n' + 
+                                activeTasks.map(function(t) { return '- ' + t.taskNumber + ': ' + t.description.substring(0, 50); }).join('\n'));
+                        } else {
+                            // Show close button
+                            $('#btnCloseWorkOrder').show();
+                            $('#btnCloseWorkOrder').prop('disabled', false);
+                            $('#btnCloseWorkOrder').html('<i class="fa fa-check-circle"></i> Đóng đơn hàng');
+                            $('#btnCloseWorkOrder').removeAttr('title');
+                        }
+                    } else {
+                        // No tasks or error - allow to close
+                        $('#btnCloseWorkOrder').show();
+                        $('#btnCloseWorkOrder').prop('disabled', false);
+                        $('#btnCloseWorkOrder').html('<i class="fa fa-check-circle"></i> Đóng đơn hàng');
+                    }
+                },
+                error: function() {
+                    // On error, show button but allow user to try
+                    $('#btnCloseWorkOrder').show();
+                    $('#btnCloseWorkOrder').prop('disabled', false);
+                    $('#btnCloseWorkOrder').html('<i class="fa fa-check-circle"></i> Đóng đơn hàng');
+                }
+            });
         }
         
         function loadAssignedUsers(workOrderId) {
@@ -1291,6 +1440,105 @@
             });
         }
         
+        function closeWorkOrder() {
+            var id = $('#detail_work_order_id').val();
+            
+            // Confirm before closing
+            if(!confirm('Bạn có chắc chắn muốn đóng đơn hàng này?\n\n' +
+                       'Đơn hàng sẽ được đánh dấu là "Hoàn thành" và không thể chỉnh sửa thêm.')) {
+                return;
+            }
+            
+            // Check again for active tasks before closing
+            $.ajax({
+                url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + id,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if(response && response.success && response.data) {
+                        // Chỉ kiểm tra in_progress, không bao gồm pending
+                        var activeTasks = response.data.filter(function(task) {
+                            return task.status === 'in_progress';
+                        });
+                        
+                        if(activeTasks.length > 0) {
+                            var taskList = activeTasks.map(function(t) {
+                                return '- ' + (t.taskNumber || 'N/A') + ': ' + (t.taskDescription || '').substring(0, 50);
+                            }).join('\n');
+                            
+                            alert('Không thể đóng đơn hàng!\n\n' +
+                                  'Vẫn còn ' + activeTasks.length + ' nhiệm vụ đang thực hiện (in_progress):\n\n' +
+                                  taskList + '\n\n' +
+                                  'Vui lòng hoàn thành tất cả nhiệm vụ đang thực hiện trước khi đóng đơn hàng.');
+                            return;
+                        }
+                    }
+                    
+                    // If no active tasks, proceed to close
+                    $.ajax({
+                        url: ctx + '/api/work-orders',
+                        type: 'POST',
+                        data: {
+                            action: 'close',
+                            id: id
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if(response && response.success) {
+                                alert('✓ Đóng đơn hàng thành công!');
+                                // Update status in modal
+                                $('#detail_status').val('completed');
+                                // Hide close button
+                                $('#btnCloseWorkOrder').hide();
+                                // Reload work orders list
+                                loadWorkOrders();
+                            } else {
+                                var errorMsg = response.message || 'Không thể đóng đơn hàng';
+                                if(errorMsg.includes('nhiệm vụ đang thực hiện')) {
+                                    alert('✗ ' + errorMsg);
+                                    // Refresh the check button state
+                                    checkCanCloseWorkOrder(id);
+                                } else {
+                                    alert('✗ Lỗi: ' + errorMsg);
+                                }
+                            }
+                        },
+                        error: function() {
+                            alert('✗ Lỗi kết nối máy chủ');
+                        }
+                    });
+                },
+                error: function() {
+                    // If check fails, still try to close (backend will validate)
+                    $.ajax({
+                        url: ctx + '/api/work-orders',
+                        type: 'POST',
+                        data: {
+                            action: 'close',
+                            id: id
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if(response && response.success) {
+                                alert('✓ Đóng đơn hàng thành công!');
+                                // Update status in modal
+                                $('#detail_status').val('completed');
+                                // Hide close button
+                                $('#btnCloseWorkOrder').hide();
+                                // Reload work orders list
+                                loadWorkOrders();
+                            } else {
+                                alert('✗ Lỗi: ' + (response.message || 'Không thể đóng đơn hàng'));
+                            }
+                        },
+                        error: function() {
+                            alert('✗ Lỗi kết nối máy chủ');
+                        }
+                    });
+                }
+            });
+        }
+        
         function showError(msg) {
             $('#workOrdersTableBody').html('<tr><td colspan="6" class="text-center text-danger">' + msg + '</td></tr>');
         }
@@ -1301,6 +1549,43 @@
             // Reset filters when opening modal
             $('#filterTaskPriority').val('');
             $('#filterTaskStatus').val('');
+            
+            // Check work order status and disable form if completed/cancelled
+            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+            if (workOrder) {
+                var status = workOrder.status;
+                if (status === 'completed' || status === 'cancelled') {
+                    // Show alert and disable form
+                    var statusText = status === 'completed' ? 'hoàn thành' : 'hủy';
+                    var statusLabel = status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy';
+                    
+                    $('#workOrderClosedAlert').show();
+                    $('#workOrderClosedMessage').html(
+                        '<strong>Đơn hàng này đã ' + statusText + '.</strong><br>' +
+                        'Không thể tạo thêm công việc mới cho đơn hàng đã đóng.<br>' +
+                        '<small class="text-muted">Trạng thái: <span class="label label-warning">' + statusLabel + '</span></small>'
+                    );
+                    
+                    // Disable form and change box style
+                    $('#addTaskForm').find('input, textarea, select, button').prop('disabled', true);
+                    $('#addTaskForm').closest('.box').removeClass('box-success').addClass('box-warning');
+                    $('#addTaskForm').closest('.box').find('.box-title').html(
+                        '<i class="fa fa-lock"></i> Thêm công việc mới <span class="label label-warning">Đã khóa</span>'
+                    );
+                } else {
+                    // Hide alert and enable form
+                    $('#workOrderClosedAlert').hide();
+                    $('#addTaskForm').find('input, textarea, select, button').prop('disabled', false);
+                    $('#addTaskForm').closest('.box').removeClass('box-warning').addClass('box-success');
+                    $('#addTaskForm').closest('.box').find('.box-title').html('Thêm công việc mới');
+                }
+            } else {
+                // Work order not found, hide alert and enable form
+                $('#workOrderClosedAlert').hide();
+                $('#addTaskForm').find('input, textarea, select, button').prop('disabled', false);
+                $('#addTaskForm').closest('.box').removeClass('box-warning').addClass('box-success');
+            }
+            
             $('#assignTaskModal').modal('show');
             loadTasks(workOrderId);
         }
@@ -1403,6 +1688,20 @@
                     taskDescDisplay = taskDescription.substring(0, 100) + '...';
                 }
                 
+                // Nút xóa - chỉ hiển thị nếu task chưa hoàn thành
+                var deleteButton = '';
+                if(task.status === 'completed') {
+                    // Task đã hoàn thành - không cho phép xóa
+                    deleteButton = '<button class="btn btn-xs btn-default" disabled title="Không thể xóa nhiệm vụ đã hoàn thành" style="margin-left: 5px;">' +
+                        '<i class="fa fa-ban"></i> Không thể xóa' +
+                    '</button>';
+                } else {
+                    // Task chưa hoàn thành - cho phép xóa
+                    deleteButton = '<button class="btn btn-xs btn-danger btn-delete-task" data-task-id="' + task.id + '" data-task-status="' + (task.status || '') + '" style="margin-left: 5px;">' +
+                        '<i class="fa fa-trash"></i> Xóa' +
+                    '</button>';
+                }
+                
                 var row = '<tr>' +
                     '<td><strong>' + (task.taskNumber || 'N/A') + '</strong></td>' +
                     '<td><span class="task-description-text" title="' + escapedTaskDesc + '" data-toggle="tooltip">' + taskDescDisplay + '</span></td>' +
@@ -1412,9 +1711,7 @@
                     '<td>' + rejectionReasonCell + '</td>' +
                     '<td>' +
                         assignButton +
-                        '<button class="btn btn-xs btn-danger btn-delete-task" data-task-id="' + task.id + '" style="margin-left: 5px;">' +
-                            '<i class="fa fa-trash"></i> Xóa' +
-                        '</button>' +
+                        deleteButton +
                     '</td>' +
                 '</tr>';
                 tbody.append(row);
@@ -1438,6 +1735,14 @@
             // Bind delete button
             $('.btn-delete-task').click(function() {
                 var taskId = $(this).data('task-id');
+                var taskStatus = $(this).data('task-status');
+                
+                // Kiểm tra lại status trước khi xóa
+                if(taskStatus === 'completed') {
+                    alert('Không thể xóa nhiệm vụ đã hoàn thành!');
+                    return;
+                }
+                
                 deleteTask(taskId);
             });
             
@@ -1514,17 +1819,25 @@
                 dataType: 'json',
                 success: function(response) {
                     if(response && response.success) {
-                        alert('Xóa công việc thành công!');
+                        alert('✓ Xóa công việc thành công!');
                         var workOrderId = $('#assign_work_order_id').val();
                         loadTasks(workOrderId);
                         // Reload assigned users and update table
                         reloadAssignedUsersForWorkOrder(workOrderId);
                     } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể xóa công việc'));
+                        var errorMsg = response.message || 'Không thể xóa công việc';
+                        if(errorMsg.includes('đã hoàn thành')) {
+                            alert('✗ ' + errorMsg + '\n\nNhiệm vụ đã hoàn thành không thể xóa.');
+                            // Reload tasks to update UI
+                            var workOrderId = $('#assign_work_order_id').val();
+                            loadTasks(workOrderId);
+                        } else {
+                            alert('✗ Lỗi: ' + errorMsg);
+                        }
                     }
                 },
                 error: function() {
-                    alert('Lỗi kết nối máy chủ');
+                    alert('✗ Lỗi kết nối máy chủ');
                 }
             });
         }
@@ -1559,6 +1872,19 @@
             e.preventDefault();
             
             var workOrderId = $('#assign_work_order_id').val();
+            
+            // Check work order status before creating task
+            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+            if (workOrder) {
+                var status = workOrder.status;
+                if (status === 'completed' || status === 'cancelled') {
+                    alert('Không thể tạo công việc mới cho đơn hàng đã ' + 
+                        (status === 'completed' ? 'hoàn thành' : 'hủy') + '.\n\n' +
+                        'Vui lòng kiểm tra lại trạng thái đơn hàng.');
+                    return;
+                }
+            }
+            
             var description = $('#taskDescription').val().trim();
             var priority = $('#taskPriority').val();
             var estimatedHours = $('#taskEstimatedHours').val();
@@ -1601,6 +1927,27 @@
                         if(errorMsg.includes('150') || errorMsg.includes('đang chờ xác nhận') || errorMsg.includes('đã tồn tại')) {
                             $('#taskDescriptionError').text(errorMsg).show();
                             $('#taskDescription').focus();
+                        } else if(errorMsg.includes('đã đóng') || errorMsg.includes('đã hủy') || errorMsg.includes('Đã hoàn thành') || errorMsg.includes('Đã hủy')) {
+                            // Work order is closed - show alert and disable form
+                            alert('✗ ' + errorMsg);
+                            
+                            // Show alert box
+                            $('#workOrderClosedAlert').show();
+                            $('#workOrderClosedMessage').html(
+                                '<strong>Đơn hàng này đã hoàn thành hoặc đã hủy.</strong><br>' +
+                                errorMsg + '<br>' +
+                                '<small class="text-muted">Không thể tạo thêm công việc mới cho đơn hàng đã đóng.</small>'
+                            );
+                            
+                            // Disable form and change box style
+                            $('#addTaskForm').find('input, textarea, select, button').prop('disabled', true);
+                            $('#addTaskForm').closest('.box').removeClass('box-success').addClass('box-warning');
+                            $('#addTaskForm').closest('.box').find('.box-title').html(
+                                '<i class="fa fa-lock"></i> Thêm công việc mới <span class="label label-warning">Đã khóa</span>'
+                            );
+                            
+                            // Reload work orders to update status
+                            loadWorkOrders();
                         } else {
                             alert('Lỗi: ' + errorMsg);
                         }
@@ -1664,6 +2011,9 @@
         // Function to open report modal
         function openReportModal(workOrderId) {
             $('#report_work_order_id').val(workOrderId);
+            // Reset filters
+            $('#report_filter_start_date').val('');
+            $('#report_filter_completion_date').val('');
             $('#reportModal').modal('show');
             loadReportData(workOrderId);
         }
@@ -1683,7 +2033,9 @@
                 dataType: 'json',
                 success: function(response) {
                     if(response && response.success && response.data && response.data.length > 0) {
-                        renderReportContent(workOrder, response.data);
+                        // Apply date filters
+                        var filteredTasks = applyDateFilters(response.data);
+                        renderReportContent(workOrder, filteredTasks);
                     } else {
                         $('#reportContent').html('<div class="alert alert-info">Chưa có công việc nào được tạo cho đơn hàng này</div>');
                     }
@@ -1691,6 +2043,51 @@
                 error: function() {
                     $('#reportContent').html('<div class="alert alert-danger">Không thể tải dữ liệu báo cáo</div>');
                 }
+            });
+        }
+        
+        // Function to apply date filters
+        function applyDateFilters(tasks) {
+            var startDate = $('#report_filter_start_date').val();
+            var completionDate = $('#report_filter_completion_date').val();
+            
+            if(!startDate && !completionDate) {
+                return tasks; // No filters, return all tasks
+            }
+            
+            return tasks.filter(function(task) {
+                var matchStartDate = true;
+                var matchCompletionDate = true;
+                
+                // Filter by start date
+                if(startDate) {
+                    if(task.startDate) {
+                        var taskStartDate = new Date(task.startDate);
+                        var filterStartDate = new Date(startDate);
+                        // Set time to beginning of day for comparison
+                        taskStartDate.setHours(0, 0, 0, 0);
+                        filterStartDate.setHours(0, 0, 0, 0);
+                        matchStartDate = taskStartDate >= filterStartDate;
+                    } else {
+                        matchStartDate = false; // Task has no start date, doesn't match
+                    }
+                }
+                
+                // Filter by completion date
+                if(completionDate) {
+                    if(task.completionDate) {
+                        var taskCompletionDate = new Date(task.completionDate);
+                        var filterCompletionDate = new Date(completionDate);
+                        // Set time to beginning of day for comparison
+                        taskCompletionDate.setHours(0, 0, 0, 0);
+                        filterCompletionDate.setHours(0, 0, 0, 0);
+                        matchCompletionDate = taskCompletionDate <= filterCompletionDate;
+                    } else {
+                        matchCompletionDate = false; // Task has no completion date, doesn't match
+                    }
+                }
+                
+                return matchStartDate && matchCompletionDate;
             });
         }
         
@@ -1704,130 +2101,138 @@
             html += '</div></div>';
             
             html += '<div class="box box-info">';
-            html += '<div class="box-header"><h3 class="box-title">Báo cáo công việc</h3></div>';
+            html += '<div class="box-header"><h3 class="box-title">Báo cáo công việc';
+            if(tasks.length > 0) {
+                html += ' (' + tasks.length + ' nhiệm vụ)';
+            }
+            html += '</h3></div>';
             html += '<div class="box-body">';
             
-            tasks.forEach(function(task, index) {
-                html += '<div class="panel panel-default" style="margin-bottom: 15px;">';
-                html += '<div class="panel-heading">';
-                html += '<h4 class="panel-title">';
-                html += '<strong>' + (task.taskNumber || 'Task #' + (index + 1)) + '</strong> - ' + (task.taskDescription || '');
-                html += '</h4>';
-                html += '</div>';
-                html += '<div class="panel-body">';
-                
-                // Thời gian
-                html += '<div class="row">';
-                if(task.estimatedHours) {
-                    html += '<div class="col-md-6"><p><strong>Giờ ước tính:</strong> ' + task.estimatedHours + 'h</p></div>';
-                }
-                if(task.actualHours) {
-                    html += '<div class="col-md-6"><p><strong>Giờ thực tế:</strong> ' + task.actualHours + 'h</p></div>';
-                }
-                html += '</div>';
-                
-                // Ngày bắt đầu và hoàn thành
-                if(task.startDate) {
-                    html += '<p><strong>Ngày bắt đầu:</strong> ' + formatDateTime(task.startDate) + '</p>';
-                }
-                if(task.completionDate) {
-                    html += '<p><strong>Ngày hoàn thành:</strong> ' + formatDateTime(task.completionDate) + '</p>';
-                }
-                
-                // Phần trăm hoàn thành
-                if(task.completionPercentage !== null && task.completionPercentage !== undefined) {
-                    var percentage = parseFloat(task.completionPercentage);
-                    html += '<p><strong>Phần trăm hoàn thành:</strong> ';
-                    html += '<div class="progress" style="margin-top: 5px;">';
-                    html += '<div class="progress-bar progress-bar-success" role="progressbar" style="width: ' + percentage + '%">';
-                    html += percentage + '%';
-                    html += '</div></div></p>';
-                }
-                
-                // Mô tả công việc đã thực hiện
-                if(task.workDescription && task.workDescription.trim() !== '') {
-                    html += '<div style="margin-top: 15px;">';
-                    html += '<strong>Mô tả công việc đã thực hiện:</strong>';
-                    html += '<div class="well" style="margin-top: 5px; white-space: pre-wrap;">' + task.workDescription + '</div>';
+            if(tasks.length === 0) {
+                html += '<div class="alert alert-info">Không có nhiệm vụ nào khớp với bộ lọc ngày đã chọn.</div>';
+            } else {
+                tasks.forEach(function(task, index) {
+                    html += '<div class="panel panel-default" style="margin-bottom: 15px;">';
+                    html += '<div class="panel-heading">';
+                    html += '<h4 class="panel-title">';
+                    html += '<strong>' + (task.taskNumber || 'Task #' + (index + 1)) + '</strong> - ' + (task.taskDescription || '');
+                    html += '</h4>';
                     html += '</div>';
-                }
-                
-                // Vấn đề phát sinh
-                if(task.issuesFound && task.issuesFound.trim() !== '') {
-                    html += '<div style="margin-top: 15px;">';
-                    html += '<strong>Vấn đề phát sinh:</strong>';
-                    html += '<div class="well well-sm" style="margin-top: 5px; background-color: #fff3cd; white-space: pre-wrap;">' + task.issuesFound + '</div>';
+                    html += '<div class="panel-body">';
+                    
+                    // Thời gian
+                    html += '<div class="row">';
+                    if(task.estimatedHours) {
+                        html += '<div class="col-md-6"><p><strong>Giờ ước tính:</strong> ' + task.estimatedHours + 'h</p></div>';
+                    }
+                    if(task.actualHours) {
+                        html += '<div class="col-md-6"><p><strong>Giờ thực tế:</strong> ' + task.actualHours + 'h</p></div>';
+                    }
                     html += '</div>';
-                }
-                
-                // Lý do hủy/từ chối (nếu status là rejected hoặc cancelled)
-                if((task.status === 'rejected' || task.status === 'cancelled') && task.rejectionReason && task.rejectionReason.trim() !== '') {
-                    html += '<div style="margin-top: 15px;">';
-                    html += '<strong>Lý do hủy/từ chối:</strong>';
-                    html += '<div class="well well-sm" style="margin-top: 5px; background-color: #f8d7da; border-color: #f5c6cb; white-space: pre-wrap;">' + task.rejectionReason + '</div>';
-                    html += '</div>';
-                }
-                
-                // Ghi chú
-                if(task.notes && task.notes.trim() !== '') {
-                    html += '<div style="margin-top: 15px;">';
-                    html += '<strong>Ghi chú:</strong>';
-                    html += '<div class="well well-sm" style="margin-top: 5px; white-space: pre-wrap;">' + task.notes + '</div>';
-                    html += '</div>';
-                }
-                
-                // File đính kèm (Ảnh)
-                if(task.attachments && task.attachments.trim() !== '') {
-                    try {
-                        var attachments = JSON.parse(task.attachments);
-                        if(Array.isArray(attachments) && attachments.length > 0) {
-                            html += '<div style="margin-top: 15px;">';
-                            html += '<strong>Ảnh đính kèm:</strong>';
-                            html += '<div class="row" style="margin-top: 10px;">';
-                            attachments.forEach(function(attachment) {
-                                var filePath = typeof attachment === 'string' ? attachment : (attachment.path || attachment.name || attachment);
-                                var fileName = typeof attachment === 'string' ? filePath.split('/').pop() : (attachment.name || filePath.split('/').pop());
-                                
-                                // Kiểm tra nếu là file ảnh
-                                var imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
-                                var ext = fileName.toLowerCase().split('.').pop();
-                                
-                                if(imageExtensions.indexOf(ext) !== -1) {
-                                    // Hiển thị ảnh có thể click để xem to
-                                    var fullPath = ctx + '/' + filePath;
-                                    html += '<div class="col-xs-6 col-sm-4 col-md-3" style="margin-bottom: 15px;">';
-                                    html += '<div class="attachment-thumbnail">';
-                                    html += '<a href="' + fullPath + '" target="_blank" title="Click để xem ảnh lớn" style="text-decoration: none; display: block;">';
-                                    html += '<img src="' + fullPath + '" alt="' + fileName + '" style="width: 100%; height: 150px; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=\'' + ctx + '/img/no-image.png\'; this.style.height=\'150px\'; this.style.width=\'100%\'; this.style.objectFit=\'cover\';">';
-                                    html += '<div style="padding: 8px; font-size: 11px; text-align: center; color: #333; background-color: #f9f9f9;">' + fileName + '</div>';
-                                    html += '</a>';
-                                    html += '</div>';
-                                    html += '</div>';
-                                } else {
-                                    // Hiển thị file không phải ảnh
-                                    html += '<div class="col-xs-12" style="margin-bottom: 5px;">';
-                                    html += '<a href="' + ctx + '/' + filePath + '" target="_blank" class="btn btn-sm btn-default">';
-                                    html += '<i class="fa fa-file"></i> ' + fileName;
-                                    html += '</a>';
-                                    html += '</div>';
-                                }
-                            });
-                            html += '</div></div>';
-                        }
-                    } catch(e) {
-                        console.error('Error parsing attachments:', e);
-                        // Invalid JSON, try to display as plain text
-                        if(task.attachments && task.attachments.trim() !== '') {
-                            html += '<div style="margin-top: 15px;">';
-                            html += '<strong>File đính kèm:</strong>';
-                            html += '<p class="text-muted">' + task.attachments + '</p>';
-                            html += '</div>';
+                    
+                    // Ngày bắt đầu và hoàn thành
+                    if(task.startDate) {
+                        html += '<p><strong>Ngày bắt đầu:</strong> ' + formatDateTime(task.startDate) + '</p>';
+                    }
+                    if(task.completionDate) {
+                        html += '<p><strong>Ngày hoàn thành:</strong> ' + formatDateTime(task.completionDate) + '</p>';
+                    }
+                    
+                    // Phần trăm hoàn thành
+                    if(task.completionPercentage !== null && task.completionPercentage !== undefined) {
+                        var percentage = parseFloat(task.completionPercentage);
+                        html += '<p><strong>Phần trăm hoàn thành:</strong> ';
+                        html += '<div class="progress" style="margin-top: 5px;">';
+                        html += '<div class="progress-bar progress-bar-success" role="progressbar" style="width: ' + percentage + '%">';
+                        html += percentage + '%';
+                        html += '</div></div></p>';
+                    }
+                    
+                    // Mô tả công việc đã thực hiện
+                    if(task.workDescription && task.workDescription.trim() !== '') {
+                        html += '<div style="margin-top: 15px;">';
+                        html += '<strong>Mô tả công việc đã thực hiện:</strong>';
+                        html += '<div class="well" style="margin-top: 5px; white-space: pre-wrap;">' + task.workDescription + '</div>';
+                        html += '</div>';
+                    }
+                    
+                    // Vấn đề phát sinh
+                    if(task.issuesFound && task.issuesFound.trim() !== '') {
+                        html += '<div style="margin-top: 15px;">';
+                        html += '<strong>Vấn đề phát sinh:</strong>';
+                        html += '<div class="well well-sm" style="margin-top: 5px; background-color: #fff3cd; white-space: pre-wrap;">' + task.issuesFound + '</div>';
+                        html += '</div>';
+                    }
+                    
+                    // Lý do hủy/từ chối (nếu status là rejected hoặc cancelled)
+                    if((task.status === 'rejected' || task.status === 'cancelled') && task.rejectionReason && task.rejectionReason.trim() !== '') {
+                        html += '<div style="margin-top: 15px;">';
+                        html += '<strong>Lý do hủy/từ chối:</strong>';
+                        html += '<div class="well well-sm" style="margin-top: 5px; background-color: #f8d7da; border-color: #f5c6cb; white-space: pre-wrap;">' + task.rejectionReason + '</div>';
+                        html += '</div>';
+                    }
+                    
+                    // Ghi chú
+                    if(task.notes && task.notes.trim() !== '') {
+                        html += '<div style="margin-top: 15px;">';
+                        html += '<strong>Ghi chú:</strong>';
+                        html += '<div class="well well-sm" style="margin-top: 5px; white-space: pre-wrap;">' + task.notes + '</div>';
+                        html += '</div>';
+                    }
+                    
+                    // File đính kèm (Ảnh)
+                    if(task.attachments && task.attachments.trim() !== '') {
+                        try {
+                            var attachments = JSON.parse(task.attachments);
+                            if(Array.isArray(attachments) && attachments.length > 0) {
+                                html += '<div style="margin-top: 15px;">';
+                                html += '<strong>Ảnh đính kèm:</strong>';
+                                html += '<div class="row" style="margin-top: 10px;">';
+                                attachments.forEach(function(attachment) {
+                                    var filePath = typeof attachment === 'string' ? attachment : (attachment.path || attachment.name || attachment);
+                                    var fileName = typeof attachment === 'string' ? filePath.split('/').pop() : (attachment.name || filePath.split('/').pop());
+                                    
+                                    // Kiểm tra nếu là file ảnh
+                                    var imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+                                    var ext = fileName.toLowerCase().split('.').pop();
+                                    
+                                    if(imageExtensions.indexOf(ext) !== -1) {
+                                        // Hiển thị ảnh có thể click để xem to
+                                        var fullPath = ctx + '/' + filePath;
+                                        html += '<div class="col-xs-6 col-sm-4 col-md-3" style="margin-bottom: 15px;">';
+                                        html += '<div class="attachment-thumbnail">';
+                                        html += '<a href="' + fullPath + '" target="_blank" title="Click để xem ảnh lớn" style="text-decoration: none; display: block;">';
+                                        html += '<img src="' + fullPath + '" alt="' + fileName + '" style="width: 100%; height: 150px; object-fit: cover; display: block;" onerror="this.onerror=null; this.src=\'' + ctx + '/img/no-image.png\'; this.style.height=\'150px\'; this.style.width=\'100%\'; this.style.objectFit=\'cover\';">';
+                                        html += '<div style="padding: 8px; font-size: 11px; text-align: center; color: #333; background-color: #f9f9f9;">' + fileName + '</div>';
+                                        html += '</a>';
+                                        html += '</div>';
+                                        html += '</div>';
+                                    } else {
+                                        // Hiển thị file không phải ảnh
+                                        html += '<div class="col-xs-12" style="margin-bottom: 5px;">';
+                                        html += '<a href="' + ctx + '/' + filePath + '" target="_blank" class="btn btn-sm btn-default">';
+                                        html += '<i class="fa fa-file"></i> ' + fileName;
+                                        html += '</a>';
+                                        html += '</div>';
+                                    }
+                                });
+                                html += '</div></div>';
+                            }
+                        } catch(e) {
+                            console.error('Error parsing attachments:', e);
+                            // Invalid JSON, try to display as plain text
+                            if(task.attachments && task.attachments.trim() !== '') {
+                                html += '<div style="margin-top: 15px;">';
+                                html += '<strong>File đính kèm:</strong>';
+                                html += '<p class="text-muted">' + task.attachments + '</p>';
+                                html += '</div>';
+                            }
                         }
                     }
-                }
-                
-                html += '</div></div>';
-            });
+                    
+                    html += '</div></div>';
+                });
+            }
             
             html += '</div></div>';
             

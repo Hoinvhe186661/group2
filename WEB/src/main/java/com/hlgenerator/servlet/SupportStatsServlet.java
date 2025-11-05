@@ -113,12 +113,11 @@ public class SupportStatsServlet extends HttpServlet {
                 }
                 
             } else if ("getTechnicalStaff".equals(action)) {
-                // Lấy danh sách nhân viên kỹ thuật
+                // CHỈ lấy danh sách trưởng phòng kỹ thuật (head_technician)
                 com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
                 java.util.List<com.hlgenerator.model.User> headTechs = userDAO.getUsersByRole("head_technician");
-                java.util.List<com.hlgenerator.model.User> techStaffs = userDAO.getUsersByRole("technical_staff");
                 
-                // Combine lists
+                // CHỈ trả về trưởng phòng kỹ thuật
                 java.util.List<Map<String, Object>> allTechStaff = new java.util.ArrayList<>();
                 
                 for (com.hlgenerator.model.User user : headTechs) {
@@ -130,14 +129,7 @@ public class SupportStatsServlet extends HttpServlet {
                     allTechStaff.add(techUser);
                 }
                 
-                for (com.hlgenerator.model.User user : techStaffs) {
-                    Map<String, Object> techUser = new java.util.HashMap<>();
-                    techUser.put("id", user.getId());
-                    techUser.put("name", user.getFullName());
-                    techUser.put("role", "Kỹ thuật viên");
-                    techUser.put("email", user.getEmail());
-                    allTechStaff.add(techUser);
-                }
+                System.out.println("DEBUG: Found " + allTechStaff.size() + " head technicians for forwarding");
                 
                 jsonResponse.addProperty("success", true);
                 jsonResponse.add("data", gson.toJsonTree(allTechStaff));
@@ -398,7 +390,12 @@ public class SupportStatsServlet extends HttpServlet {
                         }
                         
                         String currentCategory = (String) ticket.get("category");
+                        String currentStatus = (String) ticket.get("status");
+                        Integer currentAssignedTo = (Integer) ticket.get("assignedTo");
+                        
                         System.out.println("DEBUG: Current category=" + currentCategory);
+                        System.out.println("DEBUG: Current status=" + currentStatus);
+                        System.out.println("DEBUG: Current assignedTo=" + currentAssignedTo);
                         
                         // CHỈ cho phép forward ticket technical
                         if (!"technical".equals(currentCategory)) {
@@ -409,28 +406,89 @@ public class SupportStatsServlet extends HttpServlet {
                             return;
                         }
                         
+                        // Kiểm tra: Chỉ cho phép forward ticket có status "open" (chưa được forward)
+                        // Nếu ticket đã là "in_progress" và đã được assign, nghĩa là đã được forward rồi
+                        if ("in_progress".equals(currentStatus) && currentAssignedTo != null && currentAssignedTo > 0) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Yêu cầu này đã được chuyển tiếp và đang xử lý rồi. Không thể chuyển tiếp lại!");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
+                        }
+                        
+                        // Kiểm tra: Nếu ticket đã resolved hoặc closed, không cho forward
+                        if ("resolved".equals(currentStatus) || "closed".equals(currentStatus)) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Yêu cầu này đã được giải quyết hoặc đóng. Không thể chuyển tiếp!");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
+                        }
+                        
                         // Set default values
                         if (forwardNote == null) forwardNote = "";
                         if (forwardPriority == null) forwardPriority = "medium";
                         
-                        // Parse assignedTo
+                        // Parse assignedTo - CHỈ nhận một ID
                         Integer assignedToId = null;
                         if (assignedToParam != null && !assignedToParam.trim().isEmpty()) {
                             try {
-                                assignedToId = Integer.parseInt(assignedToParam);
+                                // Đảm bảo chỉ là một số, không phải nhiều ID
+                                if (assignedToParam.contains(",")) {
+                                    jsonResponse.addProperty("success", false);
+                                    jsonResponse.addProperty("message", "Chỉ có thể chuyển tiếp đến một trưởng phòng tại một thời điểm!");
+                                    out.print(jsonResponse.toString());
+                                    out.flush();
+                                    return;
+                                }
+                                
+                                assignedToId = Integer.parseInt(assignedToParam.trim());
                                 System.out.println("DEBUG: Assigning to user ID: " + assignedToId);
+                                
+                                // Kiểm tra user có phải head_technician không
+                                com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
+                                com.hlgenerator.model.User assignedUser = userDAO.getUserById(assignedToId);
+                                if (assignedUser == null) {
+                                    jsonResponse.addProperty("success", false);
+                                    jsonResponse.addProperty("message", "Không tìm thấy người nhận!");
+                                    out.print(jsonResponse.toString());
+                                    out.flush();
+                                    return;
+                                }
+                                
+                                if (!"head_technician".equals(assignedUser.getRole())) {
+                                    jsonResponse.addProperty("success", false);
+                                    jsonResponse.addProperty("message", "Chỉ có thể chuyển tiếp đến trưởng phòng kỹ thuật!");
+                                    out.print(jsonResponse.toString());
+                                    out.flush();
+                                    return;
+                                }
+                                
                             } catch (NumberFormatException e) {
                                 System.out.println("WARNING: Invalid assignedTo value: " + assignedToParam);
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "ID người nhận không hợp lệ!");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
                             }
+                        } else {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Vui lòng chọn trưởng phòng kỹ thuật để chuyển tiếp!");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
                         }
                         
                         // Cập nhật ticket: đặt category='technical', status='in_progress', assign người nhận
+                        // CHỈ cập nhật ticket ID này
                         String newInternalNotes = "CHUYỂN TIẾP ĐẾN BỘ PHẬN KỸ THUẬT" + 
                                                 (forwardNote.isEmpty() ? "" : " - Ghi chú: " + forwardNote);
                         
-                        System.out.println("DEBUG: Updating ticket for forward - priority=" + forwardPriority + ", assignedTo=" + assignedToId);
+                        System.out.println("DEBUG: Forwarding ticket ID=" + id + " to head_technician ID=" + assignedToId + " with priority=" + forwardPriority);
                         
                         // Update: set category to 'technical', update priority, status, add notes, assign user
+                        // CHỈ cập nhật một ticket ID
                         boolean success = supportDAO.updateSupportRequest(id, "technical", forwardPriority, "in_progress", null, newInternalNotes, assignedToId);
                         
                         if (success) {

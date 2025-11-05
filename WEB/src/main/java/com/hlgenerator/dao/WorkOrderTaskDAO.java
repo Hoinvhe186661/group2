@@ -228,21 +228,77 @@ public class WorkOrderTaskDAO extends DBConnect {
 
     /**
      * Delete task
+     * Returns: 1 for success, 0 for failure, -1 if task is completed (cannot delete)
      */
-    public boolean deleteTask(int taskId) {
+    public int deleteTask(int taskId) {
         if (!checkConnection()) {
-            return false;
+            return 0;
+        }
+
+        // First check if task is completed
+        WorkOrderTask task = getTaskById(taskId);
+        if (task != null && "completed".equals(task.getStatus())) {
+            return -1; // Cannot delete completed task
         }
 
         String sql = "DELETE FROM tasks WHERE id = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, taskId);
-            return ps.executeUpdate() > 0;
+            int result = ps.executeUpdate();
+            return result > 0 ? 1 : 0;
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error deleting task: " + taskId, e);
+            return 0;
+        }
+    }
+    
+    /**
+     * Check if work order has any active tasks (status = 'in_progress')
+     * Returns true if there are active tasks, false otherwise
+     */
+    public boolean hasActiveTasks(int workOrderId) {
+        if (!checkConnection()) {
             return false;
         }
+
+        String sql = "SELECT COUNT(*) as count FROM tasks WHERE work_order_id = ? AND status = 'in_progress'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking active tasks for work order: " + workOrderId, e);
+        }
+        return false;
+    }
+    
+    /**
+     * Get count of active tasks (status = 'in_progress') for a work order
+     * Returns the count of tasks with status 'in_progress'
+     */
+    public int getActiveTaskCount(int workOrderId) {
+        if (!checkConnection()) {
+            return 0;
+        }
+
+        String sql = "SELECT COUNT(*) as count FROM tasks WHERE work_order_id = ? AND status = 'in_progress'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting active task count for work order: " + workOrderId, e);
+        }
+        return 0;
     }
 
     /**

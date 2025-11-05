@@ -85,6 +85,7 @@ public class SupportDetailServlet extends HttpServlet {
             data.put("customerAddress", ticket.get("customerAddress") != null ? ticket.get("customerAddress") : "");
             
             // Người xử lý
+            data.put("assignedTo", ticket.get("assignedTo") != null ? ticket.get("assignedTo") : "");
             data.put("assignedToName", ticket.get("assignedToName") != null ? ticket.get("assignedToName") : "");
             data.put("assignedToEmail", ticket.get("assignedToEmail") != null ? ticket.get("assignedToEmail") : "");
             

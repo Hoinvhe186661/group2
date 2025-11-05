@@ -3,8 +3,10 @@ package com.hlgenerator.servlet;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hlgenerator.dao.WorkOrderTaskDAO;
+import com.hlgenerator.dao.WorkOrderDAO;
 import com.hlgenerator.model.WorkOrderTask;
 import com.hlgenerator.model.WorkOrderTaskAssignment;
+import com.hlgenerator.model.WorkOrder;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -34,12 +36,14 @@ public class WorkOrderTaskServlet extends HttpServlet {
     private static final Logger logger = Logger.getLogger(WorkOrderTaskServlet.class.getName());
     
     private WorkOrderTaskDAO taskDAO;
+    private WorkOrderDAO workOrderDAO;
     private Gson gson;
 
     @Override
     public void init() throws ServletException {
         super.init();
         taskDAO = new WorkOrderTaskDAO();
+        workOrderDAO = new WorkOrderDAO();
         gson = new Gson();
         logger.info("WorkOrderTaskServlet initialized successfully");
     }
@@ -211,6 +215,20 @@ public class WorkOrderTaskServlet extends HttpServlet {
             
             int workOrderId = Integer.parseInt(workOrderIdParam);
             
+            // Check if work order is completed or cancelled - cannot create tasks for closed work orders
+            WorkOrder workOrder = workOrderDAO.getWorkOrderById(workOrderId);
+            if (workOrder == null) {
+                sendError(response, "Work order not found");
+                return;
+            }
+            
+            String workOrderStatus = workOrder.getStatus();
+            if ("completed".equals(workOrderStatus) || "cancelled".equals(workOrderStatus)) {
+                sendError(response, "Không thể tạo công việc mới cho đơn hàng đã đóng hoặc đã hủy. Trạng thái đơn hàng: " + 
+                    ("completed".equals(workOrderStatus) ? "Đã hoàn thành" : "Đã hủy"));
+                return;
+            }
+            
             // Check for duplicate active task (pending or in_progress) with same description
             if (taskDAO.hasDuplicateActiveTask(workOrderId, trimmedDescription)) {
                 String duplicateStatus = taskDAO.getDuplicateTaskStatus(workOrderId, trimmedDescription);
@@ -368,14 +386,21 @@ public class WorkOrderTaskServlet extends HttpServlet {
             }
             
             int id = Integer.parseInt(idParam);
-            boolean success = taskDAO.deleteTask(id);
+            int resultCode = taskDAO.deleteTask(id);
             
             JsonObject result = new JsonObject();
-            result.addProperty("success", success);
-            if (success) {
-                result.addProperty("message", "Task deleted successfully");
+            if (resultCode == -1) {
+                // Task is completed, cannot delete
+                result.addProperty("success", false);
+                result.addProperty("message", "Không thể xóa nhiệm vụ đã hoàn thành");
+            } else if (resultCode == 1) {
+                // Successfully deleted
+                result.addProperty("success", true);
+                result.addProperty("message", "Xóa công việc thành công");
             } else {
-                result.addProperty("message", "Failed to delete task");
+                // Failed to delete
+                result.addProperty("success", false);
+                result.addProperty("message", "Không thể xóa công việc");
             }
             sendJson(response, result);
             

@@ -627,6 +627,153 @@ public class SupportRequestDAO extends DBConnect {
         System.out.println("No ticket found with id: " + id);
         return null;
     }
+
+    /**
+     * Get support request ticket by subject and customer ID
+     * Used to find ticket associated with a work order
+     * @param subject The subject/title of the ticket
+     * @param customerId The customer ID
+     * @return Map with ticket data or null if not found
+     */
+    public Map<String, Object> getSupportRequestBySubjectAndCustomer(String subject, int customerId) {
+        System.out.println("Getting support request by subject: [" + subject + "], customerId: " + customerId);
+        
+        // Normalize subject for matching (trim and handle potential encoding issues)
+        String normalizedSubject = subject != null ? subject.trim() : "";
+        
+        // Try exact match first
+        String sql = "SELECT sr.id, sr.ticket_number, sr.customer_id, sr.subject, sr.description, sr.category, " +
+                     "sr.priority, sr.status, sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                     "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
+                     "c.address as customer_address, " +
+                     "u.full_name as assigned_to_name, u.email as assigned_to_email " +
+                     "FROM support_requests sr " +
+                     "LEFT JOIN customers c ON sr.customer_id = c.id " +
+                     "LEFT JOIN users u ON sr.assigned_to = u.id " +
+                     "WHERE TRIM(sr.subject) = ? AND sr.customer_id = ? " +
+                     "ORDER BY sr.created_at DESC LIMIT 1";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, normalizedSubject);
+            ps.setInt(2, customerId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Map<String, Object> ticket = new HashMap<>();
+                ticket.put("id", rs.getInt("id"));
+                ticket.put("ticketNumber", rs.getString("ticket_number"));
+                
+                Object customerIdObj = rs.getObject("customer_id");
+                if (customerIdObj != null) {
+                    if (customerIdObj instanceof Number) {
+                        int cId = ((Number) customerIdObj).intValue();
+                        ticket.put("customerId", cId);
+                    } else {
+                        try {
+                            int cId = Integer.parseInt(customerIdObj.toString());
+                            ticket.put("customerId", cId);
+                        } catch (NumberFormatException e) {
+                            ticket.put("customerId", null);
+                        }
+                    }
+                } else {
+                    ticket.put("customerId", null);
+                }
+                
+                ticket.put("subject", rs.getString("subject"));
+                ticket.put("description", rs.getString("description"));
+                ticket.put("category", rs.getString("category"));
+                ticket.put("priority", rs.getString("priority"));
+                ticket.put("status", rs.getString("status"));
+                ticket.put("assignedTo", rs.getObject("assigned_to"));
+                ticket.put("assignedToName", rs.getString("assigned_to_name"));
+                ticket.put("assignedToEmail", rs.getString("assigned_to_email"));
+                ticket.put("history", rs.getString("history"));
+                ticket.put("resolution", rs.getString("resolution"));
+                ticket.put("customerName", rs.getString("contact_person"));
+                ticket.put("customerContact", rs.getString("contact_person"));
+                ticket.put("customerEmail", rs.getString("customer_email"));
+                ticket.put("customerPhone", rs.getString("customer_phone"));
+                ticket.put("customerAddress", rs.getString("customer_address"));
+                ticket.put("createdAt", rs.getTimestamp("created_at"));
+                ticket.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                
+                System.out.println("Found ticket: " + ticket.get("ticketNumber"));
+                return ticket;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error in getSupportRequestBySubjectAndCustomer: " + e.getMessage());
+            e.printStackTrace();
+            lastError = e.getMessage();
+        }
+        
+        // If exact match not found, try to find any technical ticket for this customer that is not resolved
+        System.out.println("Exact match not found. Trying fallback: find technical ticket for customer " + customerId);
+        sql = "SELECT sr.id, sr.ticket_number, sr.customer_id, sr.subject, sr.description, sr.category, " +
+              "sr.priority, sr.status, sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+              "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
+              "c.address as customer_address, " +
+              "u.full_name as assigned_to_name, u.email as assigned_to_email " +
+              "FROM support_requests sr " +
+              "LEFT JOIN customers c ON sr.customer_id = c.id " +
+              "LEFT JOIN users u ON sr.assigned_to = u.id " +
+              "WHERE sr.customer_id = ? AND sr.category = 'technical' " +
+              "AND sr.status NOT IN ('resolved', 'closed') " +
+              "ORDER BY sr.created_at DESC LIMIT 1";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Map<String, Object> ticket = new HashMap<>();
+                ticket.put("id", rs.getInt("id"));
+                ticket.put("ticketNumber", rs.getString("ticket_number"));
+                
+                Object customerIdObj = rs.getObject("customer_id");
+                if (customerIdObj != null) {
+                    if (customerIdObj instanceof Number) {
+                        int cId = ((Number) customerIdObj).intValue();
+                        ticket.put("customerId", cId);
+                    } else {
+                        try {
+                            int cId = Integer.parseInt(customerIdObj.toString());
+                            ticket.put("customerId", cId);
+                        } catch (NumberFormatException e) {
+                            ticket.put("customerId", null);
+                        }
+                    }
+                } else {
+                    ticket.put("customerId", null);
+                }
+                
+                ticket.put("subject", rs.getString("subject"));
+                ticket.put("description", rs.getString("description"));
+                ticket.put("category", rs.getString("category"));
+                ticket.put("priority", rs.getString("priority"));
+                ticket.put("status", rs.getString("status"));
+                ticket.put("assignedTo", rs.getObject("assigned_to"));
+                ticket.put("assignedToName", rs.getString("assigned_to_name"));
+                ticket.put("assignedToEmail", rs.getString("assigned_to_email"));
+                ticket.put("history", rs.getString("history"));
+                ticket.put("resolution", rs.getString("resolution"));
+                ticket.put("customerName", rs.getString("contact_person"));
+                ticket.put("customerContact", rs.getString("contact_person"));
+                ticket.put("customerEmail", rs.getString("customer_email"));
+                ticket.put("customerPhone", rs.getString("customer_phone"));
+                ticket.put("customerAddress", rs.getString("customer_address"));
+                ticket.put("createdAt", rs.getTimestamp("created_at"));
+                ticket.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                
+                System.out.println("Found ticket (fallback): " + ticket.get("ticketNumber") + " (subject: " + ticket.get("subject") + ")");
+                return ticket;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error in fallback search: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        System.out.println("No ticket found with subject: [" + subject + "], customerId: " + customerId);
+        return null;
+    }
 }
 
 

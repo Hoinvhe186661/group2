@@ -73,22 +73,6 @@
         .form-horizontal .control-label {
             text-align: left;
         }
-        .stats-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .stats-card h3 {
-            margin: 0;
-            font-size: 2.5em;
-            font-weight: bold;
-        }
-        .stats-card p {
-            margin: 5px 0 0 0;
-            opacity: 0.9;
-        }
     </style>
 </head>
 <body class="skin-black">
@@ -199,93 +183,6 @@
                     <strong>Thông báo:</strong> Có yêu cầu hỗ trợ mới được chuyển tiếp từ bộ phận khác.
                 </div>
 
-                <!-- Statistics Cards -->
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="totalTickets">0</h3>
-                            <p>Tổng yêu cầu</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="openTickets">0</h3>
-                            <p>Chờ xử lý</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="inProgressTickets">0</h3>
-                            <p>Đang xử lý</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="stats-card">
-                            <h3 id="resolvedTickets">0</h3>
-                            <p>Đã giải quyết</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filters -->
-                <div class="row">
-                    <div class="col-xs-12">
-                        <div class="box">
-                            <div class="box-header">
-                                <h3 class="box-title">Bộ lọc</h3>
-                            </div>
-                            <div class="box-body">
-                                <form class="form-inline" id="filterForm">
-                                    <div class="form-group">
-                                        <label>Trạng thái: </label>
-                                        <select class="form-control input-sm" id="filterStatus" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="open">Chờ xử lý</option>
-                                            <option value="in_progress">Đang xử lý</option>
-                                            <option value="resolved">Đã giải quyết</option>
-                                            <option value="closed">Đã đóng</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Danh mục: </label>
-                                        <select class="form-control input-sm" id="filterCategory" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="technical">Kỹ thuật</option>
-                                            <option value="billing">Thanh toán</option>
-                                            <option value="general">Chung</option>
-                                            <option value="complaint">Khiếu nại</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Độ ưu tiên: </label>
-                                        <select class="form-control input-sm" id="filterPriority" style="width: 150px;">
-                                            <option value="">Tất cả</option>
-                                            <option value="urgent">Khẩn cấp</option>
-                                            <option value="high">Cao</option>
-                                            <option value="medium">Trung bình</option>
-                                            <option value="low">Thấp</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group" style="margin-left: 10px;">
-                                        <label>Tìm kiếm: </label>
-                                        <input type="text" class="form-control input-sm" id="filterSearch" placeholder="Mã ticket, khách hàng..." style="width: 200px;">
-                                    </div>
-                                    
-                                    <button type="button" class="btn btn-primary btn-sm" id="btnFilter" style="margin-left: 10px;">
-                                        <i class="fa fa-filter"></i> Lọc
-                                    </button>
-                                    <button type="button" class="btn btn-default btn-sm" id="btnReset">
-                                        <i class="fa fa-refresh"></i> Đặt lại
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Tickets Table -->
                 <div class="row">
                     <div class="col-xs-12">
@@ -293,9 +190,12 @@
                             <div class="box-header">
                                 <h3 class="box-title">Danh sách yêu cầu hỗ trợ kỹ thuật</h3>
                                 <div class="box-tools">
-                                    <button type="button" class="btn btn-success btn-sm" onclick="location.reload()">
+                                    <button type="button" class="btn btn-success btn-sm" id="btnManualRefresh" title="Tải lại danh sách">
                                         <i class="fa fa-refresh"></i> Tải lại
                                     </button>
+                                    <span class="label label-info" id="autoRefreshStatus" style="margin-left: 10px; font-size: 11px;" title="Tự động cập nhật mỗi 30 giây">
+                                        <i class="fa fa-clock-o"></i> Auto-refresh
+                                    </span>
                                 </div>
                             </div>
                             <div class="box-body table-responsive">
@@ -513,9 +413,40 @@
         var ctx = '<%= request.getContextPath() %>';
         var allTickets = [];
         var filteredTickets = [];
+        var autoRefreshInterval = null; // Store interval ID for auto-refresh
         
         $(document).ready(function() {
             loadTickets();
+            
+            // Sync ticket status for completed work orders on page load (one-time)
+            syncTicketStatusForCompletedWorkOrders();
+            
+            // Auto-refresh tickets every 30 seconds to keep status updated
+            autoRefreshInterval = setInterval(function() {
+                console.log('Auto-refreshing tickets...');
+                loadTickets(true); // Silent mode for auto-refresh
+            }, 30000); // 30 seconds
+            
+            // Stop auto-refresh when page is hidden (tab is not active)
+            $(document).on('visibilitychange', function() {
+                if (document.hidden) {
+                    if (autoRefreshInterval) {
+                        clearInterval(autoRefreshInterval);
+                        autoRefreshInterval = null;
+                        console.log('Auto-refresh paused (tab hidden)');
+                    }
+                } else {
+                    // Resume auto-refresh when tab becomes visible
+                    if (!autoRefreshInterval) {
+                        loadTickets(true); // Load immediately (silent mode)
+                        autoRefreshInterval = setInterval(function() {
+                            console.log('Auto-refreshing tickets...');
+                            loadTickets(true); // Silent mode for auto-refresh
+                        }, 30000);
+                        console.log('Auto-refresh resumed (tab visible)');
+                    }
+                }
+            });
             
             // Check if there's a forwarded ticket in localStorage
             var forwardedTicket = localStorage.getItem('forwardedTicket');
@@ -526,7 +457,6 @@
                     allTickets.push(ticket);
                     filteredTickets = allTickets;
                     renderTable();
-                    updateStatistics();
                     // Xóa thông tin đã xử lý
                     localStorage.removeItem('forwardedTicket');
                     // Auto-open the ticket detail modal after data is loaded
@@ -538,125 +468,118 @@
                 }
             }
             
-            // Filter button
-            $('#btnFilter').click(function() {
-                applyFilters();
-            });
-            
-            // Reset button
-            $('#btnReset').click(function() {
-                $('#filterForm')[0].reset();
-                filteredTickets = allTickets;
-                renderTable();
-            });
-            
             // Confirm create work order
             $('#btnConfirmCreateWorkOrder').click(function() {
                 confirmCreateWorkOrder();
             });
             
-            // Enter to search
-            $('#filterSearch').keypress(function(e) {
-                if(e.which == 13) {
-                    $('#btnFilter').click();
-                }
+            // Manual refresh button
+            $('#btnManualRefresh').click(function() {
+                var $btn = $(this);
+                $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang tải...');
+                loadTickets(false); // false = not silent, show notifications
+                setTimeout(function() {
+                    $btn.prop('disabled', false).html('<i class="fa fa-refresh"></i> Tải lại');
+                }, 1000);
             });
         });
         
-        function loadTickets() {
+        function loadTickets(silent) {
+            // silent: if true, don't show console logs (for auto-refresh)
             // Gọi API mới để lấy danh sách ticket technical
             $.ajax({
                 url: ctx + '/api/tech-support?action=list',
                 type: 'GET',
                 dataType: 'json',
+                cache: false, // Prevent caching
                 success: function(response) {
                     if (response.success) {
+                        // Store previous ticket count for comparison
+                        var previousCount = allTickets.length;
+                        var previousResolvedCount = allTickets.filter(function(t) { return t.status === 'resolved'; }).length;
+                        
                         // Tất cả ticket đã được lọc ở backend (chỉ technical)
-                        allTickets = response.data || [];
+                        var newTickets = response.data || [];
+                        var newResolvedCount = newTickets.filter(function(t) { return t.status === 'resolved'; }).length;
+                        
+                        // Check if any ticket status changed
+                        var statusChanged = false;
+                        if (allTickets.length > 0) {
+                            for (var i = 0; i < newTickets.length; i++) {
+                                var newTicket = newTickets[i];
+                                var oldTicket = allTickets.find(function(t) { return t.id == newTicket.id; });
+                                if (oldTicket && oldTicket.status !== newTicket.status) {
+                                    statusChanged = true;
+                                    if (!silent) {
+                                        console.log('Ticket #' + newTicket.id + ' status changed: ' + oldTicket.status + ' -> ' + newTicket.status);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        allTickets = newTickets;
                         filteredTickets = allTickets;
                         renderTable();
-                        updateStatistics();
-                        console.log('Đã tải ' + allTickets.length + ' ticket kỹ thuật');
+                        
+                        if (!silent) {
+                            console.log('Đã tải ' + allTickets.length + ' ticket kỹ thuật');
+                        }
+                        
+                        // Show notification if status changed or new resolved tickets
+                        if (statusChanged || newResolvedCount > previousResolvedCount) {
+                            if (!silent) {
+                                // Show a subtle notification that data was updated
+                                var notification = $('<div class="alert alert-info alert-dismissible" style="position: fixed; top: 60px; right: 20px; z-index: 9999; min-width: 300px; display: none;">' +
+                                    '<button type="button" class="close" data-dismiss="alert">&times;</button>' +
+                                    '<i class="fa fa-refresh"></i> <strong>Đã cập nhật:</strong> Trạng thái ticket đã thay đổi.' +
+                                    '</div>');
+                                $('body').append(notification);
+                                notification.fadeIn();
+                                setTimeout(function() {
+                                    notification.fadeOut(function() {
+                                        $(this).remove();
+                                    });
+                                }, 3000);
+                            }
+                        }
+                        
                         // Debug: Kiểm tra customerId trong tickets
-                        if (allTickets.length > 0) {
+                        if (allTickets.length > 0 && !silent) {
                             console.log('Sample ticket có customerId:', allTickets[0].customerId);
                             console.log('Sample ticket object:', allTickets[0]);
                         }
                         
-                        // Hiển thị thông báo nếu có ticket mới
-                        var newTickets = allTickets.filter(function(t) {
-                            return t.status === 'open' || t.status === 'in_progress';
-                        });
-                        
-                        if (newTickets.length > 0) {
-                            $('#forwardedAlert').show();
-                            $('#forwardedAlert').html('<i class="fa fa-info-circle"></i> <strong>Thông báo:</strong> Có ' + newTickets.length + ' yêu cầu hỗ trợ kỹ thuật cần xử lý.');
-                            setTimeout(function() {
-                                $('#forwardedAlert').fadeOut();
-                            }, 8000);
+                        // Hiển thị thông báo nếu có ticket mới (only for initial load or manual refresh)
+                        if (!silent) {
+                            var openTickets = allTickets.filter(function(t) {
+                                return t.status === 'open' || t.status === 'in_progress';
+                            });
+                            
+                            if (openTickets.length > 0) {
+                                $('#forwardedAlert').show();
+                                $('#forwardedAlert').html('<i class="fa fa-info-circle"></i> <strong>Thông báo:</strong> Có ' + openTickets.length + ' yêu cầu hỗ trợ kỹ thuật cần xử lý.');
+                                setTimeout(function() {
+                                    $('#forwardedAlert').fadeOut();
+                                }, 8000);
+                            }
                         }
                     } else {
-                        console.error('Lỗi tải danh sách ticket:', response.message);
-                        showError('Không thể tải danh sách yêu cầu hỗ trợ: ' + response.message);
+                        if (!silent) {
+                            console.error('Lỗi tải danh sách ticket:', response.message);
+                            showError('Không thể tải danh sách yêu cầu hỗ trợ: ' + response.message);
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Không thể tải danh sách ticket:', error);
-                    showError('Lỗi kết nối server');
-                }
-            });
-            
-            // Load statistics
-            $.ajax({
-                url: ctx + '/api/tech-support?action=stats',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success && response.data) {
-                        $('#totalTickets').text(response.data.total || 0);
-                        $('#openTickets').text(response.data.open || 0);
-                        $('#inProgressTickets').text(response.data.inProgress || 0);
-                        $('#resolvedTickets').text(response.data.resolved || 0);
+                    if (!silent) {
+                        console.error('Không thể tải danh sách ticket:', error);
+                        showError('Lỗi kết nối server');
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Không thể tải thống kê:', error);
                 }
             });
         }
         
-        function updateStatistics() {
-            var total = allTickets.length;
-            var open = allTickets.filter(t => t.status === 'open').length;
-            var inProgress = allTickets.filter(t => t.status === 'in_progress').length;
-            var resolved = allTickets.filter(t => t.status === 'resolved').length;
-            
-            $('#totalTickets').text(total);
-            $('#openTickets').text(open);
-            $('#inProgressTickets').text(inProgress);
-            $('#resolvedTickets').text(resolved);
-        }
-        
-        function applyFilters() {
-            var status = $('#filterStatus').val();
-            var category = $('#filterCategory').val();
-            var priority = $('#filterPriority').val();
-            var search = $('#filterSearch').val().toLowerCase();
-            
-            filteredTickets = allTickets.filter(function(ticket) {
-                var matchStatus = !status || ticket.status === status;
-                var matchCategory = !category || ticket.category === category;
-                var matchPriority = !priority || ticket.priority === priority;
-                var matchSearch = !search || 
-                    (ticket.ticketNumber && ticket.ticketNumber.toLowerCase().includes(search)) ||
-                    (ticket.subject && ticket.subject.toLowerCase().includes(search)) ||
-                    (ticket.description && ticket.description.toLowerCase().includes(search));
-                
-                return matchStatus && matchCategory && matchPriority && matchSearch;
-            });
-            
-            renderTable();
-        }
         
         function renderTable() {
             var tbody = $('#ticketsTableBody');
@@ -673,7 +596,14 @@
                  
                  // Chỉ hiển thị nút "Tạo WO" cho head_technician và admin
                  if (userRole === 'head_technician' || userRole === 'admin') {
-                     actionButtons += '<button class="btn btn-success btn-create-work-order" data-id="' + ticket.id + '"><i class="fa fa-plus"></i> Tạo WO</button>';
+                     // Check if ticket has work order (async check, will update button later)
+                     var hasWorkOrder = false;
+                     if (ticket.customerId && ticket.subject) {
+                         // Will check async and disable button if work order exists
+                         actionButtons += '<button class="btn btn-success btn-create-work-order" data-id="' + ticket.id + '" data-customer-id="' + (ticket.customerId || '') + '" data-subject="' + (ticket.subject || '').replace(/"/g, '&quot;') + '"><i class="fa fa-plus"></i> Tạo WO</button>';
+                     } else {
+                         actionButtons += '<button class="btn btn-success btn-create-work-order" data-id="' + ticket.id + '"><i class="fa fa-plus"></i> Tạo WO</button>';
+                     }
                  }
                  
                  var row = '<tr>' +
@@ -688,6 +618,40 @@
                  '</tr>';
                  tbody.append(row);
              });
+             
+             // Check work orders for tickets (async, after rendering)
+             setTimeout(function() {
+                 $('.btn-create-work-order').each(function() {
+                     var $btn = $(this);
+                     var ticketId = $btn.data('id');
+                     var customerId = $btn.data('customer-id');
+                     var subject = $btn.data('subject');
+                     
+                     if (customerId && subject) {
+                         $.ajax({
+                             url: ctx + '/api/work-orders?action=checkByTicket',
+                             type: 'GET',
+                             data: {
+                                 ticketId: ticketId,
+                                 title: subject,
+                                 customerId: customerId
+                             },
+                             dataType: 'json',
+                             success: function(response) {
+                                 if (response && response.success && response.exists) {
+                                     $btn.prop('disabled', true);
+                                     $btn.html('<i class="fa fa-check"></i> Đã có WO');
+                                     $btn.removeClass('btn-success').addClass('btn-default');
+                                     $btn.attr('title', 'Ticket này đã có work order: ' + (response.workOrderNumber || 'N/A'));
+                                 }
+                             },
+                             error: function() {
+                                 // Silently fail, allow button to work
+                             }
+                         });
+                     }
+                 });
+             }, 500);
             
             // Bind view button
             $('.btn-view').click(function() {
@@ -802,12 +766,47 @@
             console.log('ticket.customerId:', ticket.customerId);
             console.log('ticket.customerId type:', typeof ticket.customerId);
             
-            // Điền thông tin từ ticket
-            $('#work_order_ticket_id').val(ticket.id);
-            // Xử lý customerId: chỉ set nếu có giá trị hợp lệ (không phải null, undefined, hoặc 0)
-            // Lưu ý: 0 có thể là giá trị hợp lệ trong một số hệ thống, nhưng ở đây ta coi 0 là không hợp lệ
+            // Validate: Check if ticket already has a work order
             var customerIdValue = (ticket.customerId != null && ticket.customerId !== undefined && ticket.customerId !== 0) 
                 ? ticket.customerId : '';
+            
+            if (customerIdValue && ticket.subject) {
+                // Check if work order already exists
+                $.ajax({
+                    url: ctx + '/api/work-orders?action=checkByTicket',
+                    type: 'GET',
+                    data: {
+                        ticketId: ticket.id,
+                        title: ticket.subject,
+                        customerId: customerIdValue
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response && response.success && response.exists) {
+                            alert('Cảnh báo: Ticket này đã có work order!\n\n' +
+                                  'Mã work order: ' + (response.workOrderNumber || 'N/A') + '\n\n' +
+                                  'Mỗi ticket chỉ được tạo 1 work order. Vui lòng kiểm tra lại.');
+                            return;
+                        }
+                        
+                        // If no existing work order, proceed to open modal
+                        openCreateWorkOrderModal(ticket, customerIdValue);
+                    },
+                    error: function() {
+                        // If check fails, still allow to proceed (but backend will validate)
+                        console.warn('Không thể kiểm tra work order, sẽ kiểm tra ở backend');
+                        openCreateWorkOrderModal(ticket, customerIdValue);
+                    }
+                });
+            } else {
+                // If no customerId or subject, proceed directly (backend will validate)
+                openCreateWorkOrderModal(ticket, customerIdValue);
+            }
+        }
+        
+        function openCreateWorkOrderModal(ticket, customerIdValue) {
+            // Điền thông tin từ ticket
+            $('#work_order_ticket_id').val(ticket.id);
             $('#work_order_customer_id').val(customerIdValue);
             console.log('Đã set customerId vào input:', customerIdValue);
             console.log('Giá trị customerId từ input sau khi set:', $('#work_order_customer_id').val());
@@ -927,10 +926,19 @@
                         // Reset form
                         $('#createWorkOrderForm')[0].reset();
                         
-                        // Reload tickets
-                        loadTickets();
+                        // Reload tickets (not silent, show notifications if status changed)
+                        loadTickets(false);
                     } else {
-                        alert('✗ Lỗi: ' + (response.message || 'Không thể tạo đơn hàng'));
+                        var errorMsg = response.message || 'Không thể tạo đơn hàng';
+                        // Check if error is about existing work order
+                        if (errorMsg.includes('đã có work order') || errorMsg.includes('existingWorkOrderNumber')) {
+                            var existingWO = response.existingWorkOrderNumber || 'N/A';
+                            alert('✗ Lỗi: Ticket này đã có work order!\n\n' +
+                                  'Mã work order: ' + existingWO + '\n\n' +
+                                  'Mỗi ticket chỉ được tạo 1 work order. Vui lòng kiểm tra lại.');
+                        } else {
+                            alert('✗ Lỗi: ' + errorMsg);
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
@@ -942,6 +950,42 @@
         
         function showError(msg) {
             $('#ticketsTableBody').html('<tr><td colspan="8" class="text-center text-danger">' + msg + '</td></tr>');
+        }
+        
+        /**
+         * Sync ticket status for all completed work orders
+         * This fixes tickets that weren't updated when work order was closed
+         */
+        function syncTicketStatusForCompletedWorkOrders() {
+            $.ajax({
+                url: ctx + '/api/work-orders?action=syncTicketStatus',
+                type: 'GET',
+                dataType: 'json',
+                cache: false,
+                success: function(response) {
+                    if (response && response.success) {
+                        var syncedCount = response.syncedCount || 0;
+                        var alreadyResolved = response.alreadyResolvedCount || 0;
+                        var failedCount = response.failedCount || 0;
+                        
+                        if (syncedCount > 0) {
+                            console.log('✓ Đã đồng bộ ' + syncedCount + ' ticket(s) từ completed work orders');
+                            // Reload tickets to show updated status
+                            setTimeout(function() {
+                                loadTickets(false);
+                            }, 1000);
+                        } else {
+                            console.log('Không có ticket nào cần đồng bộ (đã resolved: ' + alreadyResolved + ', không tìm thấy: ' + failedCount + ')');
+                        }
+                    } else {
+                        console.warn('Lỗi khi đồng bộ ticket status: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.warn('Không thể đồng bộ ticket status: ' + error);
+                    // Don't show error to user, just log it
+                }
+            });
         }
     </script>
 </body>

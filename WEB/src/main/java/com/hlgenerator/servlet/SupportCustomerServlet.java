@@ -202,12 +202,11 @@ public class SupportCustomerServlet extends HttpServlet {
                 }
                 
             } else if ("getTechnicalStaff".equals(action)) {
-                // Lấy danh sách nhân viên kỹ thuật
+                // CHỈ lấy danh sách trưởng phòng kỹ thuật (head_technician)
                 com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
                 java.util.List<com.hlgenerator.model.User> headTechs = userDAO.getUsersByRole("head_technician");
-                java.util.List<com.hlgenerator.model.User> techStaffs = userDAO.getUsersByRole("technical_staff");
                 
-                // Combine lists
+                // CHỈ trả về trưởng phòng kỹ thuật
                 java.util.List<Map<String, Object>> allTechStaff = new java.util.ArrayList<>();
                 
                 for (com.hlgenerator.model.User user : headTechs) {
@@ -219,14 +218,7 @@ public class SupportCustomerServlet extends HttpServlet {
                     allTechStaff.add(techUser);
                 }
                 
-                for (com.hlgenerator.model.User user : techStaffs) {
-                    Map<String, Object> techUser = new java.util.HashMap<>();
-                    techUser.put("id", user.getId());
-                    techUser.put("name", user.getFullName());
-                    techUser.put("role", "Kỹ thuật viên");
-                    techUser.put("email", user.getEmail());
-                    allTechStaff.add(techUser);
-                }
+                System.out.println("DEBUG: Found " + allTechStaff.size() + " head technicians for forwarding");
                 
                 jsonResponse.addProperty("success", true);
                 jsonResponse.add("data", gson.toJsonTree(allTechStaff));

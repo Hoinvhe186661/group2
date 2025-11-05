@@ -205,6 +205,40 @@ public class WorkOrderDAO extends DBConnect {
     }
 
     /**
+     * Get work order by ticket info (title and customer ID)
+     * This is used to check if a ticket already has an associated work order
+     */
+    public WorkOrder getWorkOrderByTicketInfo(String title, int customerId) {
+        if (!checkConnection()) {
+            return null;
+        }
+
+        // Join with users and customers tables
+        // Match by title (case-insensitive, trimmed) and customer_id
+        String sql = "SELECT wo.*, u.full_name AS assigned_to_name, c.contact_person AS customer_name " +
+                     "FROM work_orders wo " +
+                     "LEFT JOIN users u ON wo.assigned_to = u.id " +
+                     "LEFT JOIN customers c ON wo.customer_id = c.id " +
+                     "WHERE TRIM(wo.title) = ? AND wo.customer_id = ? " +
+                     "LIMIT 1";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, title.trim());
+            ps.setInt(2, customerId);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToWorkOrder(rs);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting work order by ticket info (title: " + title + ", customerId: " + customerId + ")", e);
+        }
+        
+        return null;
+    }
+
+    /**
      * Get all work orders
      */
     public List<WorkOrder> getAllWorkOrders() {
