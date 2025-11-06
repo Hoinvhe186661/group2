@@ -487,8 +487,42 @@ public class SupportRequestDAO extends DBConnect {
                 }
             }
 
-            // Tỷ lệ hài lòng (giả lập - cần thêm bảng feedback)
-            stats.put("satisfactionRate", "92%");
+            // Tỷ lệ hài lòng - tính từ bảng feedback
+            try {
+                String feedbackSql = "SELECT COUNT(*) as totalFeedbacks FROM ticket_feedback";
+                try (PreparedStatement ps = connection.prepareStatement(feedbackSql)) {
+                    ResultSet rs = ps.executeQuery();
+                    if (rs.next()) {
+                        int totalFeedbacks = rs.getInt("totalFeedbacks");
+                        if (totalFeedbacks > 0) {
+                            // Tính satisfaction rate: rating >= 4 là hài lòng
+                            String satisfactionSql = "SELECT COUNT(*) * 100.0 / (SELECT COUNT(*) FROM ticket_feedback) as satisfactionRate " +
+                                                    "FROM ticket_feedback WHERE rating >= 4";
+                            try (PreparedStatement ps2 = connection.prepareStatement(satisfactionSql)) {
+                                ResultSet rs2 = ps2.executeQuery();
+                                if (rs2.next()) {
+                                    double satisfactionRate = rs2.getDouble("satisfactionRate");
+                                    if (!rs2.wasNull()) {
+                                        stats.put("satisfactionRate", String.format("%.1f%%", satisfactionRate));
+                                    } else {
+                                        stats.put("satisfactionRate", "0%");
+                                    }
+                                } else {
+                                    stats.put("satisfactionRate", "0%");
+                                }
+                            }
+                        } else {
+                            stats.put("satisfactionRate", "0%");
+                        }
+                    } else {
+                        stats.put("satisfactionRate", "0%");
+                    }
+                }
+            } catch (SQLException e) {
+                // Nếu bảng feedback chưa tồn tại, đặt giá trị mặc định
+                e.printStackTrace();
+                stats.put("satisfactionRate", "0%");
+            }
 
             // Phân loại theo danh mục
             String categorySql = "SELECT category, COUNT(*) FROM support_requests WHERE status IN ('open', 'in_progress') GROUP BY category";
@@ -773,6 +807,57 @@ public class SupportRequestDAO extends DBConnect {
         
         System.out.println("No ticket found with subject: [" + subject + "], customerId: " + customerId);
         return null;
+    }
+
+    /**
+     * Forward ticket to head technician (chuyển tiếp ticket cho trưởng phòng kỹ thuật)
+     * Updates assigned_to and status to 'in_progress'
+     * @param ticketId The ticket ID
+     * @param assignedToId The head technician user ID
+     * @param priority Optional priority update
+     * @return true if successful
+     */
+    public boolean forwardTicket(int ticketId, Integer assignedToId, String priority) {
+        try {
+            if (connection == null || connection.isClosed()) {
+                lastError = "DB connection is not available";
+                return false;
+            }
+        } catch (SQLException e) {
+            lastError = "DB connection check failed: " + e.getMessage();
+            return false;
+        }
+        
+        StringBuilder sql = new StringBuilder("UPDATE support_requests SET assigned_to = ?, status = 'in_progress'");
+        List<Object> params = new ArrayList<>();
+        params.add(assignedToId);
+        
+        if (priority != null && !priority.trim().isEmpty()) {
+            sql.append(", priority = ?");
+            params.add(priority);
+        }
+        
+        sql.append(" WHERE id = ?");
+        params.add(ticketId);
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                Object param = params.get(i);
+                if (param instanceof Integer) {
+                    ps.setInt(i + 1, (Integer) param);
+                } else {
+                    ps.setString(i + 1, (String) param);
+                }
+            }
+            
+            int result = ps.executeUpdate();
+            lastError = null;
+            return result > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = e.getMessage();
+            return false;
+        }
     }
 }
 

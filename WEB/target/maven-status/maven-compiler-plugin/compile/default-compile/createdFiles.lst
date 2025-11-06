@@ -31,9 +31,12 @@ com\hlgenerator\servlet\InventoryServlet.class
 com\hlgenerator\servlet\ProductServlet.class
 com\hlgenerator\dao\CustomerDAO.class
 com\hlgenerator\dao\EmailNotificationDAO.class
+com\hlgenerator\dao\FeedbackDAO.class
 com\hlgenerator\dao\WorkOrderDAO.class
+com\hlgenerator\model\Feedback.class
 com\hlgenerator\model\WorkOrderTask.class
 com\hlgenerator\servlet\WorkOrderServlet.class
+com\hlgenerator\servlet\FeedbackServlet.class
 com\hlgenerator\model\Supplier.class
 com\hlgenerator\model\Task.class
 com\hlgenerator\servlet\SupportDetailServlet.class

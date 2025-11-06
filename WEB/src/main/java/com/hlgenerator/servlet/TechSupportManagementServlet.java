@@ -67,6 +67,10 @@ public class TechSupportManagementServlet extends HttpServlet {
                 // Lấy danh sách tất cả ticket technical
                 List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();
                 
+                // Lấy userId của user đang đăng nhập
+                Integer currentUserId = (Integer) session.getAttribute("userId");
+                boolean isAdmin = "admin".equals(userRole);
+                
                 // Lọc chỉ lấy ticket technical
                 List<Map<String, Object>> technicalTickets = new ArrayList<>();
                 
@@ -82,6 +86,35 @@ public class TechSupportManagementServlet extends HttpServlet {
                     if (!"technical".equals(category)) {
                         continue;
                     }
+                    
+                    // Nếu không phải admin, chỉ hiển thị ticket được assign cho mình
+                    // (tức là ticket đã được forward cho trưởng phòng kỹ thuật này)
+                    if (!isAdmin) {
+                        Object assignedToObj = ticket.get("assignedTo");
+                        if (assignedToObj == null) {
+                            // Ticket chưa được assign, bỏ qua
+                            continue;
+                        }
+                        
+                        Integer assignedToId = null;
+                        if (assignedToObj instanceof Integer) {
+                            assignedToId = (Integer) assignedToObj;
+                        } else if (assignedToObj instanceof Number) {
+                            assignedToId = ((Number) assignedToObj).intValue();
+                        } else if (assignedToObj != null) {
+                            try {
+                                assignedToId = Integer.parseInt(assignedToObj.toString());
+                            } catch (NumberFormatException e) {
+                                // Ignore
+                            }
+                        }
+                        
+                        // Chỉ hiển thị ticket được assign cho user đang đăng nhập
+                        if (currentUserId == null || assignedToId == null || !assignedToId.equals(currentUserId)) {
+                            continue;
+                        }
+                    }
+                    // Nếu là admin, hiển thị tất cả ticket technical
                     
                     // Apply filters
                     if (filterStatus != null && !filterStatus.isEmpty()) {
@@ -105,7 +138,8 @@ public class TechSupportManagementServlet extends HttpServlet {
                     technicalTickets.add(ticket);
                 }
                 
-                System.out.println("Found " + technicalTickets.size() + " technical tickets");
+                System.out.println("Found " + technicalTickets.size() + " technical tickets" + 
+                    (isAdmin ? " (admin view - all tickets)" : " (assigned to user " + currentUserId + ")"));
                 
                 jsonResponse.addProperty("success", true);
                 jsonResponse.add("data", gson.toJsonTree(technicalTickets));
@@ -124,12 +158,50 @@ public class TechSupportManagementServlet extends HttpServlet {
                         if (ticket != null) {
                             // Chỉ trả về ticket technical
                             String category = (String) ticket.get("category");
-                            if ("technical".equals(category)) {
-                                jsonResponse.addProperty("success", true);
-                                jsonResponse.add("data", gson.toJsonTree(ticket));
-                            } else {
+                            if (!"technical".equals(category)) {
                                 jsonResponse.addProperty("success", false);
                                 jsonResponse.addProperty("message", "Ticket không phải loại technical");
+                            } else {
+                                // Kiểm tra quyền xem ticket
+                                Integer currentUserId = (Integer) session.getAttribute("userId");
+                                boolean isAdmin = "admin".equals(userRole);
+                                
+                                // Nếu không phải admin, kiểm tra ticket có được assign cho user này không
+                                if (!isAdmin) {
+                                    Object assignedToObj = ticket.get("assignedTo");
+                                    if (assignedToObj == null) {
+                                        // Ticket chưa được assign, không cho phép xem
+                                        jsonResponse.addProperty("success", false);
+                                        jsonResponse.addProperty("message", "Không có quyền xem ticket này. Ticket chưa được forward cho bạn.");
+                                    } else {
+                                        Integer assignedToId = null;
+                                        if (assignedToObj instanceof Integer) {
+                                            assignedToId = (Integer) assignedToObj;
+                                        } else if (assignedToObj instanceof Number) {
+                                            assignedToId = ((Number) assignedToObj).intValue();
+                                        } else if (assignedToObj != null) {
+                                            try {
+                                                assignedToId = Integer.parseInt(assignedToObj.toString());
+                                            } catch (NumberFormatException e) {
+                                                // Ignore
+                                            }
+                                        }
+                                        
+                                        // Chỉ cho phép xem nếu ticket được assign cho user này
+                                        if (currentUserId == null || assignedToId == null || !assignedToId.equals(currentUserId)) {
+                                            jsonResponse.addProperty("success", false);
+                                            jsonResponse.addProperty("message", "Không có quyền xem ticket này. Ticket này đã được forward cho người khác.");
+                                        } else {
+                                            // Có quyền xem
+                                            jsonResponse.addProperty("success", true);
+                                            jsonResponse.add("data", gson.toJsonTree(ticket));
+                                        }
+                                    }
+                                } else {
+                                    // Admin có thể xem tất cả ticket technical
+                                    jsonResponse.addProperty("success", true);
+                                    jsonResponse.add("data", gson.toJsonTree(ticket));
+                                }
                             }
                         } else {
                             jsonResponse.addProperty("success", false);
@@ -145,6 +217,10 @@ public class TechSupportManagementServlet extends HttpServlet {
                 // Thống kê ticket technical
                 List<Map<String, Object>> allTickets = supportDAO.getAllSupportRequests();
                 
+                // Lấy userId của user đang đăng nhập
+                Integer currentUserId = (Integer) session.getAttribute("userId");
+                boolean isAdmin = "admin".equals(userRole);
+                
                 int total = 0;
                 int open = 0;
                 int inProgress = 0;
@@ -152,17 +228,47 @@ public class TechSupportManagementServlet extends HttpServlet {
                 
                 for (Map<String, Object> ticket : allTickets) {
                     String category = (String) ticket.get("category");
-                    if ("technical".equals(category)) {
-                        total++;
-                        String status = (String) ticket.get("status");
-                        
-                        if ("open".equals(status)) {
-                            open++;
-                        } else if ("in_progress".equals(status)) {
-                            inProgress++;
-                        } else if ("resolved".equals(status)) {
-                            resolved++;
+                    if (!"technical".equals(category)) {
+                        continue;
+                    }
+                    
+                    // Nếu không phải admin, chỉ đếm ticket được assign cho user này
+                    if (!isAdmin) {
+                        Object assignedToObj = ticket.get("assignedTo");
+                        if (assignedToObj == null) {
+                            // Ticket chưa được assign, bỏ qua
+                            continue;
                         }
+                        
+                        Integer assignedToId = null;
+                        if (assignedToObj instanceof Integer) {
+                            assignedToId = (Integer) assignedToObj;
+                        } else if (assignedToObj instanceof Number) {
+                            assignedToId = ((Number) assignedToObj).intValue();
+                        } else if (assignedToObj != null) {
+                            try {
+                                assignedToId = Integer.parseInt(assignedToObj.toString());
+                            } catch (NumberFormatException e) {
+                                // Ignore
+                            }
+                        }
+                        
+                        // Chỉ đếm ticket được assign cho user đang đăng nhập
+                        if (currentUserId == null || assignedToId == null || !assignedToId.equals(currentUserId)) {
+                            continue;
+                        }
+                    }
+                    // Nếu là admin, đếm tất cả ticket technical
+                    
+                    total++;
+                    String status = (String) ticket.get("status");
+                    
+                    if ("open".equals(status)) {
+                        open++;
+                    } else if ("in_progress".equals(status)) {
+                        inProgress++;
+                    } else if ("resolved".equals(status)) {
+                        resolved++;
                     }
                 }
                 
@@ -242,8 +348,66 @@ public class TechSupportManagementServlet extends HttpServlet {
                 } else {
                     try {
                         int ticketId = Integer.parseInt(idParam);
-                        Integer assignedToId = null;
                         
+                        // Kiểm tra quyền: trưởng phòng kỹ thuật chỉ có thể update ticket được forward cho mình
+                        Integer currentUserId = (Integer) session.getAttribute("userId");
+                        boolean isAdmin = "admin".equals(userRole);
+                        
+                        if (!isAdmin) {
+                            // Lấy ticket để kiểm tra quyền
+                            Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                            if (ticket == null) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không tìm thấy ticket");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                            
+                            // Kiểm tra ticket có phải technical không
+                            String ticketCategory = (String) ticket.get("category");
+                            if (!"technical".equals(ticketCategory)) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Ticket không phải loại technical");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                            
+                            // Kiểm tra ticket có được assign cho user này không
+                            Object assignedToObj = ticket.get("assignedTo");
+                            if (assignedToObj == null) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không có quyền cập nhật. Ticket chưa được forward cho bạn.");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                            
+                            Integer currentAssignedToId = null;
+                            if (assignedToObj instanceof Integer) {
+                                currentAssignedToId = (Integer) assignedToObj;
+                            } else if (assignedToObj instanceof Number) {
+                                currentAssignedToId = ((Number) assignedToObj).intValue();
+                            } else if (assignedToObj != null) {
+                                try {
+                                    currentAssignedToId = Integer.parseInt(assignedToObj.toString());
+                                } catch (NumberFormatException e) {
+                                    // Ignore
+                                }
+                            }
+                            
+                            if (currentUserId == null || currentAssignedToId == null || !currentAssignedToId.equals(currentUserId)) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không có quyền cập nhật. Ticket này không được forward cho bạn.");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                        }
+                        
+                        // Cho phép update
+                        Integer assignedToId = null;
                         if (assignedTo != null && !assignedTo.isEmpty()) {
                             try {
                                 assignedToId = Integer.parseInt(assignedTo);
@@ -283,6 +447,64 @@ public class TechSupportManagementServlet extends HttpServlet {
                         int ticketId = Integer.parseInt(idParam);
                         int techId = Integer.parseInt(technicianId);
                         
+                        // Kiểm tra quyền: trưởng phòng kỹ thuật chỉ có thể assign ticket được forward cho mình
+                        Integer currentUserId = (Integer) session.getAttribute("userId");
+                        boolean isAdmin = "admin".equals(userRole);
+                        
+                        if (!isAdmin) {
+                            // Lấy ticket để kiểm tra quyền
+                            Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                            if (ticket == null) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không tìm thấy ticket");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                            
+                            // Kiểm tra ticket có phải technical không
+                            String ticketCategory = (String) ticket.get("category");
+                            if (!"technical".equals(ticketCategory)) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Ticket không phải loại technical");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                            
+                            // Kiểm tra ticket có được assign cho user này không
+                            Object assignedToObj = ticket.get("assignedTo");
+                            if (assignedToObj == null) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không có quyền phân công. Ticket chưa được forward cho bạn.");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                            
+                            Integer currentAssignedToId = null;
+                            if (assignedToObj instanceof Integer) {
+                                currentAssignedToId = (Integer) assignedToObj;
+                            } else if (assignedToObj instanceof Number) {
+                                currentAssignedToId = ((Number) assignedToObj).intValue();
+                            } else if (assignedToObj != null) {
+                                try {
+                                    currentAssignedToId = Integer.parseInt(assignedToObj.toString());
+                                } catch (NumberFormatException e) {
+                                    // Ignore
+                                }
+                            }
+                            
+                            if (currentUserId == null || currentAssignedToId == null || !currentAssignedToId.equals(currentUserId)) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không có quyền phân công. Ticket này không được forward cho bạn.");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                        }
+                        
+                        // Cho phép assign
                         // Update assigned_to và status
                         boolean success = supportDAO.updateSupportRequest(
                             ticketId, null, null, "in_progress", null, null, techId

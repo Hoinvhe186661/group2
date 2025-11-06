@@ -207,6 +207,11 @@
                         </a>
                     </li>
                     <li>
+                        <a href="feedback_management.jsp">
+                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="contracts.jsp">
                             <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
                         </a>

@@ -94,6 +94,11 @@
              display: none;
          }
          
+         /* Ẩn phần "records per page" của DataTables */
+         .dataTables_length {
+             display: none !important;
+         }
+         
     </style>
 </head>
 <body class="skin-black">
@@ -167,6 +172,11 @@
                     <li class="active">
                         <a href="support-management">
                             <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="feedback_management.jsp">
+                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
                         </a>
                     </li>
                     <li>
@@ -328,6 +338,9 @@
                                                         <button class="btn btn-warning btn-xs edit-ticket-btn" data-ticket-id="${ticket.id}" title="Chỉnh sửa">
                                                             <i class="fa fa-edit"></i> Sửa
                                                         </button>
+                                                        <button class="btn btn-success btn-xs forward-ticket-btn" data-ticket-id="${ticket.id}" title="Chuyển tiếp cho trưởng phòng kỹ thuật">
+                                                            <i class="fa fa-share"></i> Chuyển tiếp
+                                                        </button>
                                                     </td>
                                                 </tr>
                                                 </c:forEach>
@@ -418,6 +431,64 @@
         </div>
     </div>
 
+    <!-- Modal Chuyển tiếp Ticket -->
+    <div class="modal fade" id="forwardTicketModal" tabindex="-1" role="dialog" aria-labelledby="forwardTicketModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #5cb85c; color: white;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity: 0.8;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="forwardTicketModalLabel">
+                        <i class="fa fa-share"></i> Chuyển tiếp Ticket cho Trưởng phòng Kỹ thuật
+                    </h4>
+                </div>
+                <form id="forwardTicketForm">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Mã Ticket:</label>
+                            <input type="text" class="form-control" id="forward_ticketNumber" readonly>
+                            <input type="hidden" id="forward_ticketId">
+                        </div>
+                        <div class="form-group">
+                            <label>Tiêu đề:</label>
+                            <input type="text" class="form-control" id="forward_subject" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Trưởng phòng Kỹ thuật nhận: <span class="text-danger">*</span></label>
+                            <select class="form-control" id="forward_assignedTo" required>
+                                <option value="">-- Chọn trưởng phòng kỹ thuật --</option>
+                            </select>
+                            <small class="text-muted">Mỗi ticket sẽ được gửi riêng biệt cho từng trưởng phòng kỹ thuật</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Độ ưu tiên: <span class="text-danger">*</span></label>
+                            <select class="form-control" id="forward_priority" required>
+                                <option value="urgent">Khẩn cấp</option>
+                                <option value="high">Cao</option>
+                                <option value="medium" selected>Trung bình</option>
+                                <option value="low">Thấp</option>
+                            </select>
+                            <small class="text-muted">Bạn có thể thay đổi độ ưu tiên khi chuyển tiếp</small>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i> 
+                            <strong>Lưu ý:</strong> Sau khi chuyển tiếp thành công, trạng thái ticket sẽ tự động chuyển sang <strong>"Đang xử lý"</strong>.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">
+                            <i class="fa fa-times"></i> Hủy
+                        </button>
+                        <button type="submit" class="btn btn-success" id="btnForwardTicket">
+                            <i class="fa fa-share"></i> Chuyển tiếp
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 
     <!-- jQuery 2.0.2 -->
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
@@ -433,6 +504,13 @@
     <script src="js/Director/app.js" type="text/javascript"></script>
 
     <script>
+        // Lấy context path để dùng trong AJAX calls
+        var ctx = '<%=request.getContextPath()%>';
+        // Đảm bảo context path không có dấu slash thừa
+        if (ctx && ctx.endsWith('/')) {
+            ctx = ctx.substring(0, ctx.length - 1);
+        }
+        
         $(document).ready(function() {
             // Khởi tạo DataTable với dữ liệu đã có sẵn trong HTML
             $('#ticketsTable').DataTable({
@@ -440,8 +518,16 @@
                         "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
                 },
                 "pageLength": 10,
+                "lengthChange": false, // Ẩn dropdown "records per page"
                 "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần
                 "columnDefs": [
+                    { 
+                        "targets": 0, // Cột ID (cột đầu tiên)
+                        "render": function (data, type, row, meta) {
+                            // Hiển thị số thứ tự bắt đầu từ 1, tính cả pagination
+                            return meta.settings._iDisplayStart + meta.row + 1;
+                        }
+                    },
                     { "orderable": false, "targets": 8 } // Không sort cột Thao tác
                 ]
             });
@@ -458,10 +544,22 @@
                 loadTicketForEdit(ticketId);
             });
 
+            // Xử lý click nút Chuyển tiếp
+            $(document).on('click', '.forward-ticket-btn', function() {
+                var ticketId = $(this).data('ticket-id');
+                loadTicketForForward(ticketId);
+            });
+
             // Xử lý submit form sửa
             $('#editTicketForm').on('submit', function(e) {
                 e.preventDefault();
                 saveTicketChanges();
+            });
+
+            // Xử lý submit form chuyển tiếp
+            $('#forwardTicketForm').on('submit', function(e) {
+                e.preventDefault();
+                forwardTicket();
             });
         });
 
@@ -723,6 +821,17 @@
             html += '</div>'; // end row
             
             html += '<div class="form-group">';
+            html += '<label>Người nhận (Người xử lý):</label>';
+            html += '<select class="form-control" id="edit_assignedTo">';
+            html += '<option value="">-- Chưa phân công --</option>';
+            html += '</select>';
+            html += '<small class="text-muted">Có thể chọn trưởng phòng kỹ thuật hoặc nhân viên khác</small>';
+            html += '</div>';
+            
+            // Load danh sách head technicians vào dropdown
+            loadHeadTechniciansForEdit(ticket.assignedTo);
+            
+            html += '<div class="form-group">';
             html += '<label>Giải pháp / Kết quả xử lý:</label>';
             html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp hoặc kết quả xử lý...">' + (ticket.resolution ? escapeHtml(ticket.resolution) : '') + '</textarea>';
             html += '</div>';
@@ -747,6 +856,11 @@
                 resolution: $('#edit_resolution').val()
             };
             
+            // Nếu có assigned_to trong form edit
+            if ($('#edit_assignedTo').length && $('#edit_assignedTo').val()) {
+                data.assignedTo = $('#edit_assignedTo').val();
+            }
+            
             // Submit AJAX với UTF-8
             $.ajax({
                 url: 'support-update',
@@ -770,6 +884,223 @@
                 complete: function() {
                     // Enable button
                     $('#btnSaveTicket').prop('disabled', false).html('<i class="fa fa-save"></i> Lưu thay đổi');
+                }
+            });
+        }
+
+        // Load ticket để chuyển tiếp
+        var currentForwardTicketId = null;
+        
+        function loadTicketForForward(ticketId) {
+            currentForwardTicketId = ticketId;
+            
+            // Hiển thị modal
+            $('#forwardTicketModal').modal('show');
+            
+            // Reset form
+            $('#forward_ticketNumber').val('');
+            $('#forward_subject').val('');
+            $('#forward_ticketId').val('');
+            $('#forward_assignedTo').html('<option value="">-- Chọn trưởng phòng kỹ thuật --</option>');
+            $('#forward_priority').val('medium');
+            
+            // Load danh sách head technicians
+            loadHeadTechnicians();
+            
+            // Load thông tin ticket
+            $.ajax({
+                url: 'support-detail',
+                type: 'GET',
+                data: { id: ticketId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        var ticket = response.data;
+                        $('#forward_ticketNumber').val(ticket.ticketNumber);
+                        $('#forward_subject').val(ticket.subject);
+                        $('#forward_ticketId').val(ticket.id);
+                        
+                        // Set priority hiện tại nếu có
+                        if (ticket.priority) {
+                            $('#forward_priority').val(ticket.priority);
+                        }
+                    } else {
+                        alert('✗ Không thể tải thông tin ticket: ' + response.message);
+                        $('#forwardTicketModal').modal('hide');
+                    }
+                },
+                error: function() {
+                    alert('✗ Không thể tải thông tin ticket. Vui lòng thử lại!');
+                    $('#forwardTicketModal').modal('hide');
+                }
+            });
+        }
+
+        function loadHeadTechnicians() {
+            // Thử dùng URL tương đối trước (giống các API khác)
+            var url1 = 'api/support-stats';
+            // Fallback: dùng context path nếu cần
+            var url2 = ctx + '/api/support-stats';
+            
+            function tryLoad(url, isFallback) {
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    data: { action: 'getTechnicalStaff' },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response && response.success && response.data) {
+                            var select = $('#forward_assignedTo');
+                            select.html('<option value="">-- Chọn trưởng phòng kỹ thuật --</option>');
+                            
+                            response.data.forEach(function(tech) {
+                                select.append('<option value="' + tech.id + '">' + escapeHtml(tech.name) + ' (' + escapeHtml(tech.email) + ')</option>');
+                            });
+                        } else {
+                            var errorMsg = (response && response.message) ? response.message : 'Không thể tải danh sách trưởng phòng kỹ thuật';
+                            if (!isFallback) {
+                                // Thử fallback nếu chưa thử
+                                tryLoad(url2, true);
+                            } else {
+                                alert('✗ ' + errorMsg);
+                                console.error('Error loading head technicians:', response);
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error loading head technicians from ' + url + ':', {
+                            status: status,
+                            error: error,
+                            responseText: xhr.responseText,
+                            statusCode: xhr.status
+                        });
+                        if (!isFallback && url !== url2) {
+                            // Thử fallback URL
+                            console.log('Trying fallback URL:', url2);
+                            tryLoad(url2, true);
+                        } else {
+                            // Fallback: thử dùng support-management
+                            console.log('Trying support-management as last resort');
+                            $.ajax({
+                                url: 'support-management',
+                                type: 'GET',
+                                data: { action: 'getHeadTechnicians' },
+                                dataType: 'json',
+                                success: function(response) {
+                                    if (response && response.success && response.data) {
+                                        var select = $('#forward_assignedTo');
+                                        select.html('<option value="">-- Chọn trưởng phòng kỹ thuật --</option>');
+                                        response.data.forEach(function(tech) {
+                                            select.append('<option value="' + tech.id + '">' + escapeHtml(tech.name) + ' (' + escapeHtml(tech.email) + ')</option>');
+                                        });
+                                    } else {
+                                        alert('✗ Không thể tải danh sách trưởng phòng kỹ thuật. Vui lòng thử lại!');
+                                    }
+                                },
+                                error: function() {
+                                    alert('✗ Không thể tải danh sách trưởng phòng kỹ thuật. Vui lòng thử lại! (Status: ' + xhr.status + ')');
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+            
+            // Bắt đầu với URL tương đối
+            tryLoad(url1, false);
+        }
+
+        function forwardTicket() {
+            var ticketId = $('#forward_ticketId').val();
+            var assignedToId = $('#forward_assignedTo').val();
+            var priority = $('#forward_priority').val();
+            
+            if (!ticketId || !assignedToId) {
+                alert('✗ Vui lòng chọn trưởng phòng kỹ thuật');
+                return;
+            }
+            
+            // Disable button
+            $('#btnForwardTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang chuyển tiếp...');
+            
+            // Submit AJAX - gọi SupportStatsServlet
+            $.ajax({
+                url: 'api/support-stats',  // Dùng URL tương đối
+                type: 'POST',
+                data: {
+                    action: 'forward',
+                    id: ticketId,  // SupportStatsServlet dùng 'id' thay vì 'ticketId'
+                    assignedTo: assignedToId,  // SupportStatsServlet dùng 'assignedTo' thay vì 'assignedToId'
+                    forwardPriority: priority,  // SupportStatsServlet dùng 'forwardPriority' thay vì 'priority'
+                    forwardNote: ''  // Có thể thêm ghi chú nếu cần
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        alert('✓ ' + response.message);
+                        $('#forwardTicketModal').modal('hide');
+                        // Reload trang để cập nhật danh sách
+                        location.reload();
+                    } else {
+                        alert('✗ ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('✗ Không thể chuyển tiếp ticket. Vui lòng thử lại!');
+                },
+                complete: function() {
+                    // Enable button
+                    $('#btnForwardTicket').prop('disabled', false).html('<i class="fa fa-share"></i> Chuyển tiếp');
+                }
+            });
+        }
+
+        function loadHeadTechniciansForEdit(currentAssignedTo) {
+            // Thử dùng support-management vì getHeadTechnicians vẫn còn trong handleApiRequest
+            $.ajax({
+                url: 'support-management',
+                type: 'GET',
+                data: { action: 'getHeadTechnicians' },
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success && response.data) {
+                        var select = $('#edit_assignedTo');
+                        select.html('<option value="">-- Chưa phân công --</option>');
+                        
+                        response.data.forEach(function(tech) {
+                            var selected = (currentAssignedTo && currentAssignedTo == tech.id) ? ' selected' : '';
+                            select.append('<option value="' + tech.id + '"' + selected + '>' + escapeHtml(tech.name) + ' (' + escapeHtml(tech.email) + ')</option>');
+                        });
+                    } else {
+                        // Fallback: thử api/support-stats
+                        $.ajax({
+                            url: 'api/support-stats',
+                            type: 'GET',
+                            data: { action: 'getTechnicalStaff' },
+                            dataType: 'json',
+                            success: function(response2) {
+                                if (response2 && response2.success && response2.data) {
+                                    var select = $('#edit_assignedTo');
+                                    select.html('<option value="">-- Chưa phân công --</option>');
+                                    response2.data.forEach(function(tech) {
+                                        var selected = (currentAssignedTo && currentAssignedTo == tech.id) ? ' selected' : '';
+                                        select.append('<option value="' + tech.id + '"' + selected + '>' + escapeHtml(tech.name) + ' (' + escapeHtml(tech.email) + ')</option>');
+                                    });
+                                }
+                            },
+                            error: function() {
+                                console.error('Error loading head technicians for edit');
+                            }
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error loading head technicians for edit:', {
+                        status: status,
+                        error: error,
+                        responseText: xhr.responseText,
+                        statusCode: xhr.status
+                    });
                 }
             });
         }

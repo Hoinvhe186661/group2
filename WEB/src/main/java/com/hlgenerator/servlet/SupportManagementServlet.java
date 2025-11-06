@@ -1,6 +1,10 @@
 package com.hlgenerator.servlet;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.hlgenerator.dao.SupportRequestDAO;
+import com.hlgenerator.dao.UserDAO;
+import com.hlgenerator.model.User;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -9,12 +13,21 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@WebServlet("/support-management")
+@WebServlet({"/support-management", "/demo/support-management", "/support-update"})
 public class SupportManagementServlet extends HttpServlet {
+    
+    private Gson gson;
+    
+    @Override
+    public void init() throws ServletException {
+        gson = new Gson();
+    }
     
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -23,6 +36,14 @@ public class SupportManagementServlet extends HttpServlet {
         // Set encoding TRƯỚC KHI đọc bất kỳ parameter nào
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
+        
+        // Kiểm tra nếu là API request
+        String action = request.getParameter("action");
+        if (action != null) {
+            handleApiRequest(request, response);
+            return;
+        }
+        
         response.setContentType("text/html; charset=UTF-8");
         
         // Kiểm tra đăng nhập
@@ -32,7 +53,6 @@ public class SupportManagementServlet extends HttpServlet {
             return;
         }
         
-        String username = (String) session.getAttribute("username");
         String userRole = (String) session.getAttribute("userRole");
         
       
@@ -84,8 +104,141 @@ public class SupportManagementServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-       
-        doGet(request, response);
+        
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json; charset=UTF-8");
+        
+        PrintWriter out = response.getWriter();
+        JsonObject jsonResponse = new JsonObject();
+        
+        try {
+            // Kiểm tra đăng nhập
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Chưa đăng nhập");
+                out.print(jsonResponse.toString());
+                return;
+            }
+            
+            String userRole = (String) session.getAttribute("userRole");
+            
+            // Kiểm tra quyền
+            if (!"customer_support".equals(userRole) && !"admin".equals(userRole)) {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Không có quyền truy cập");
+                out.print(jsonResponse.toString());
+                return;
+            }
+            
+            String action = request.getParameter("action");
+            if (action == null) {
+                action = "update"; // Default action cho support-update
+            }
+            
+            SupportRequestDAO supportDAO = new SupportRequestDAO();
+            
+            if ("update".equals(action)) {
+                // Cập nhật ticket (priority, assigned_to, status)
+                String idParam = request.getParameter("id");
+                String priority = request.getParameter("priority");
+                String status = request.getParameter("status");
+                String assignedTo = request.getParameter("assignedTo");
+                String resolution = request.getParameter("resolution");
+                
+                if (idParam == null || idParam.trim().isEmpty()) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Thiếu thông tin ID");
+                } else {
+                    try {
+                        int ticketId = Integer.parseInt(idParam);
+                        Integer assignedToId = null;
+                        
+                        if (assignedTo != null && !assignedTo.trim().isEmpty()) {
+                            try {
+                                assignedToId = Integer.parseInt(assignedTo);
+                            } catch (NumberFormatException e) {
+                                // Ignore
+                            }
+                        }
+                        
+                        boolean success = supportDAO.updateSupportRequest(
+                            ticketId, null, priority, status, resolution, null, assignedToId
+                        );
+                        
+                        if (success) {
+                            jsonResponse.addProperty("success", true);
+                            jsonResponse.addProperty("message", "Cập nhật ticket thành công");
+                        } else {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Lỗi cập nhật: " + supportDAO.getLastError());
+                        }
+                    } catch (NumberFormatException e) {
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "ID không hợp lệ");
+                    }
+                }
+            } else {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Action không hợp lệ: " + action);
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Lỗi server: " + e.getMessage());
+        } finally {
+            out.print(jsonResponse.toString());
+            out.close();
+        }
+    }
+    
+    private void handleApiRequest(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        JsonObject jsonResponse = new JsonObject();
+        
+        try {
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Chưa đăng nhập");
+                out.print(jsonResponse.toString());
+                return;
+            }
+            
+            String action = request.getParameter("action");
+            
+            if ("getHeadTechnicians".equals(action)) {
+                UserDAO userDAO = new UserDAO();
+                List<User> headTechs = userDAO.getUsersByRole("head_technician");
+                
+                List<Map<String, Object>> headTechList = new ArrayList<>();
+                for (User user : headTechs) {
+                    Map<String, Object> techUser = new HashMap<>();
+                    techUser.put("id", user.getId());
+                    techUser.put("name", user.getFullName());
+                    techUser.put("email", user.getEmail());
+                    headTechList.add(techUser);
+                }
+                
+                jsonResponse.addProperty("success", true);
+                jsonResponse.add("data", gson.toJsonTree(headTechList));
+            } else {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Action không hợp lệ");
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Lỗi server: " + e.getMessage());
+        } finally {
+            out.print(jsonResponse.toString());
+            out.close();
+        }
     }
 }
 

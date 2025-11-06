@@ -393,6 +393,74 @@
   </div>
 </div>
 
+<!-- Modal Feedback (riêng biệt) -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:20px;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="feedbackModalLabel">
+          <i class="fas fa-star"></i> Đánh giá dịch vụ
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <div id="feedbackModalContent">
+          <div class="mb-3">
+            <label><strong>Ticket:</strong> <span id="feedbackTicketNumber"></span></label>
+          </div>
+          <div id="feedbackDisplayInModal" style="display: none;">
+            <div class="alert alert-info">
+              <strong>Đánh giá của bạn:</strong>
+              <div id="feedbackRatingDisplayModal" style="font-size: 20px; color: #ffc107; margin: 10px 0;"></div>
+              <div id="feedbackCommentDisplayModal" style="margin-top: 10px;"></div>
+              <div id="feedbackImageDisplayModal" style="margin-top: 10px;"></div>
+              <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                <small>Ngày đánh giá: <span id="feedbackDateDisplayModal"></span></small>
+              </div>
+              <button type="button" class="btn btn-sm btn-secondary mt-2" id="editFeedbackBtnModal" onclick="showFeedbackFormInModal()">Chỉnh sửa đánh giá</button>
+            </div>
+          </div>
+          <div id="feedbackFormInModal" style="display: none;">
+            <div class="mb-3">
+              <label>Mức độ hài lòng (1-5 sao):</label>
+              <div class="rating-input-modal" style="font-size: 30px; cursor: pointer; user-select: none;">
+                <span class="star-modal" data-rating="1">☆</span>
+                <span class="star-modal" data-rating="2">☆</span>
+                <span class="star-modal" data-rating="3">☆</span>
+                <span class="star-modal" data-rating="4">☆</span>
+                <span class="star-modal" data-rating="5">☆</span>
+              </div>
+              <input type="hidden" id="feedbackRatingModal" value="0">
+              <div id="ratingTextModal" style="margin-top: 5px; color: #666; font-size: 14px;"></div>
+            </div>
+            <div class="mb-3">
+              <label>Nhận xét của bạn:</label>
+              <textarea id="feedbackCommentModal" class="form-control" rows="3" placeholder="Chia sẻ cảm nhận của bạn về dịch vụ hỗ trợ..."></textarea>
+            </div>
+            <div class="mb-3">
+              <label>Ảnh minh chứng (tùy chọn, tối đa 10MB):</label>
+              <input type="file" id="feedbackImageModal" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" onchange="previewImageModal(this)">
+              <small class="text-muted">Chỉ chấp nhận file ảnh: JPG, PNG, GIF, WEBP (tối đa 10MB)</small>
+              <div id="imagePreviewModal" style="margin-top: 10px; display: none;">
+                <img id="previewImgModal" src="" alt="Preview" style="max-width: 300px; max-height: 300px; border-radius: 5px; border: 1px solid #ddd;">
+                <button type="button" class="btn btn-sm btn-danger mt-2" onclick="removeImageModal()">Xóa ảnh</button>
+              </div>
+              <div id="imageSizeErrorModal" class="text-danger" style="display: none; margin-top: 5px;"></div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-primary" id="submitFeedbackBtnModal" onclick="submitFeedbackFromModal()">Gửi đánh giá</button>
+              <button type="button" class="btn btn-secondary" id="cancelFeedbackBtnModal" onclick="hideFeedbackFormInModal()" style="display: none;">Hủy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal thông báo thành công - Simple alert style -->
 <div class="modal fade success-modal" id="successModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -429,6 +497,377 @@
 </div>
 
 <script>
+  // Context path - global scope để các hàm có thể truy cập
+  var ctx = '<%=request.getContextPath()%>';
+  
+  // ========== Feedback Modal Functions (Global scope) ==========
+  
+  // Open feedback modal
+  function openFeedbackModal(ticketId, ticketNumber) {
+    document.getElementById('feedbackTicketNumber').textContent = ticketNumber || '#' + ticketId;
+    document.getElementById('feedbackModal').setAttribute('data-current-ticket-id', ticketId);
+    
+    // Load existing feedback
+    loadFeedbackForModal(ticketId);
+    
+    // Show modal
+    const feedbackModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('feedbackModal'));
+    feedbackModal.show();
+  }
+  
+  // Load feedback for modal
+  function loadFeedbackForModal(ticketId) {
+    fetch(ctx + '/api/feedback?action=getByTicketId&ticketId=' + encodeURIComponent(ticketId), {
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(j => {
+      if (j && j.success) {
+        if (j.data) {
+          // Có feedback - hiển thị
+          displayFeedbackInModal(j.data);
+        } else {
+          // Chưa có feedback - hiển thị form
+          showFeedbackFormInModal();
+        }
+      } else {
+        // Lỗi hoặc chưa có feedback - hiển thị form
+        showFeedbackFormInModal();
+      }
+    })
+    .catch(error => {
+      console.error('Error loading feedback:', error);
+      showFeedbackFormInModal();
+    });
+  }
+  
+  // Display existing feedback in modal
+  function displayFeedbackInModal(feedback) {
+    document.getElementById('feedbackDisplayInModal').style.display = 'block';
+    document.getElementById('feedbackFormInModal').style.display = 'none';
+    
+    // Hiển thị rating
+    var ratingDisplay = document.getElementById('feedbackRatingDisplayModal');
+    if (ratingDisplay) {
+      ratingDisplay.textContent = feedback.ratingStars || '';
+      ratingDisplay.title = feedback.ratingDisplay || '';
+    }
+    
+    // Hiển thị comment
+    var commentDisplay = document.getElementById('feedbackCommentDisplayModal');
+    if (commentDisplay) {
+      commentDisplay.textContent = feedback.comment || '(Không có nhận xét)';
+    }
+    
+    // Hiển thị ảnh
+    var imageDisplay = document.getElementById('feedbackImageDisplayModal');
+    if (imageDisplay) {
+      if (feedback.imagePath) {
+        imageDisplay.innerHTML = '<img src="' + ctx + '/' + feedback.imagePath + '" alt="Feedback image" style="max-width: 300px; max-height: 300px; border-radius: 5px; border: 1px solid #ddd; margin-top: 10px;">';
+      } else {
+        imageDisplay.innerHTML = '';
+      }
+    }
+    
+    // Hiển thị ngày
+    var dateDisplay = document.getElementById('feedbackDateDisplayModal');
+    if (dateDisplay && feedback.createdAt) {
+      var date = new Date(feedback.createdAt);
+      dateDisplay.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // Lưu feedback ID để có thể cập nhật
+    document.getElementById('feedbackFormInModal').setAttribute('data-feedback-id', feedback.id || '');
+  }
+  
+  // Show feedback form in modal
+  function showFeedbackFormInModal() {
+    document.getElementById('feedbackDisplayInModal').style.display = 'none';
+    document.getElementById('feedbackFormInModal').style.display = 'block';
+    document.getElementById('cancelFeedbackBtnModal').style.display = 'none';
+    
+    // Reset form
+    document.getElementById('feedbackRatingModal').value = '0';
+    document.getElementById('feedbackCommentModal').value = '';
+    document.getElementById('feedbackImageModal').value = '';
+    document.getElementById('imagePreviewModal').style.display = 'none';
+    document.getElementById('imageSizeErrorModal').style.display = 'none';
+    updateRatingDisplayModal(0);
+    
+    // Initialize rating stars for modal
+    initRatingStarsModal();
+  }
+  
+  // Preview image
+  function previewImageModal(input) {
+    var errorDiv = document.getElementById('imageSizeErrorModal');
+    var previewDiv = document.getElementById('imagePreviewModal');
+    var previewImg = document.getElementById('previewImgModal');
+    
+    if (input.files && input.files[0]) {
+      var file = input.files[0];
+      
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        errorDiv.textContent = 'Kích thước ảnh quá lớn. Tối đa 10MB.';
+        errorDiv.style.display = 'block';
+        input.value = '';
+        previewDiv.style.display = 'none';
+        return;
+      }
+      
+      // Validate file type
+      var validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        errorDiv.textContent = 'Định dạng ảnh không hợp lệ. Chỉ chấp nhận JPG, PNG, GIF, WEBP.';
+        errorDiv.style.display = 'block';
+        input.value = '';
+        previewDiv.style.display = 'none';
+        return;
+      }
+      
+      errorDiv.style.display = 'none';
+      
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        previewDiv.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      previewDiv.style.display = 'none';
+      errorDiv.style.display = 'none';
+    }
+  }
+  
+  // Remove image
+  function removeImageModal() {
+    document.getElementById('feedbackImageModal').value = '';
+    document.getElementById('imagePreviewModal').style.display = 'none';
+    document.getElementById('imageSizeErrorModal').style.display = 'none';
+  }
+  
+  // Hide feedback form in modal
+  function hideFeedbackFormInModal() {
+    var ticketId = document.getElementById('feedbackModal').getAttribute('data-current-ticket-id');
+    if (ticketId) {
+      loadFeedbackForModal(ticketId);
+    }
+  }
+  
+  // Initialize rating stars for modal
+  function initRatingStarsModal() {
+    var stars = document.querySelectorAll('.rating-input-modal .star-modal');
+    stars.forEach(function(star) {
+      star.addEventListener('click', function() {
+        var rating = parseInt(this.getAttribute('data-rating'));
+        setRatingModal(rating);
+      });
+      star.addEventListener('mouseenter', function() {
+        var rating = parseInt(this.getAttribute('data-rating'));
+        highlightStarsModal(rating);
+      });
+    });
+    
+    var ratingInput = document.querySelector('.rating-input-modal');
+    if (ratingInput) {
+      ratingInput.addEventListener('mouseleave', function() {
+        var currentRating = parseInt(document.getElementById('feedbackRatingModal').value) || 0;
+        highlightStarsModal(currentRating);
+      });
+    }
+  }
+  
+  // Set rating in modal
+  function setRatingModal(rating) {
+    document.getElementById('feedbackRatingModal').value = rating;
+    updateRatingDisplayModal(rating);
+  }
+  
+  // Highlight stars in modal
+  function highlightStarsModal(rating) {
+    var stars = document.querySelectorAll('.rating-input-modal .star-modal');
+    stars.forEach(function(star) {
+      var starRating = parseInt(star.getAttribute('data-rating'));
+      if (starRating <= rating) {
+        star.textContent = '★';
+        star.style.color = '#ffc107';
+      } else {
+        star.textContent = '☆';
+        star.style.color = '#ccc';
+      }
+    });
+  }
+  
+  // Update rating display text in modal
+  function updateRatingDisplayModal(rating) {
+    var ratingText = document.getElementById('ratingTextModal');
+    if (!ratingText) return;
+    
+    var textMap = {
+      0: 'Vui lòng chọn đánh giá',
+      1: 'Rất không hài lòng',
+      2: 'Không hài lòng',
+      3: 'Bình thường',
+      4: 'Hài lòng',
+      5: 'Rất hài lòng'
+    };
+    
+    ratingText.textContent = textMap[rating] || '';
+    highlightStarsModal(rating);
+  }
+  
+  // Submit feedback from modal
+  function submitFeedbackFromModal() {
+    console.log('submitFeedbackFromModal called');
+    var ticketId = document.getElementById('feedbackModal').getAttribute('data-current-ticket-id');
+    if (!ticketId) {
+      alert('Không tìm thấy ticket ID');
+      console.error('Ticket ID not found');
+      return;
+    }
+    
+    var rating = parseInt(document.getElementById('feedbackRatingModal').value);
+    if (rating < 1 || rating > 5) {
+      alert('Vui lòng chọn đánh giá từ 1 đến 5 sao');
+      console.error('Invalid rating:', rating);
+      return;
+    }
+    
+    var comment = document.getElementById('feedbackCommentModal').value || '';
+    var feedbackId = document.getElementById('feedbackFormInModal').getAttribute('data-feedback-id');
+    var imageInput = document.getElementById('feedbackImageModal');
+    var hasImage = imageInput && imageInput.files && imageInput.files[0];
+    
+    var submitBtn = document.getElementById('submitFeedbackBtnModal');
+    if (!submitBtn) {
+      alert('Không tìm thấy nút submit');
+      console.error('Submit button not found');
+      return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Đang gửi...';
+    
+    // Nếu có ảnh, sử dụng FormData (multipart)
+    if (hasImage) {
+      console.log('Submitting with image');
+      var formData = new FormData();
+      formData.append('action', feedbackId ? 'update' : 'create');
+      if (feedbackId) {
+        formData.append('feedbackId', feedbackId);
+      } else {
+        formData.append('ticketId', ticketId);
+      }
+      formData.append('rating', rating);
+      formData.append('comment', comment);
+      formData.append('image', imageInput.files[0]);
+      
+      console.log('Sending request to:', ctx + '/api/feedback');
+      
+      fetch(ctx + '/api/feedback', {
+        method: 'POST',
+        body: formData
+      })
+      .then(r => {
+        console.log('Response status:', r.status);
+        if (!r.ok) {
+          throw new Error('HTTP ' + r.status);
+        }
+        return r.text().then(text => {
+          console.log('Raw response text:', text);
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('JSON parse error:', e);
+            throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+          }
+        });
+      })
+      .then(j => {
+        console.log('Parsed response:', j);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Gửi đánh giá';
+        
+        if (j && j.success) {
+          alert('✓ ' + (j.message || 'Cảm ơn bạn đã gửi feedback!'));
+          // Redirect to feedback management page
+          setTimeout(function() {
+            window.location.href = ctx + '/feedback_management.jsp';
+          }, 500);
+        } else {
+          alert('✗ ' + (j && j.message ? j.message : 'Lỗi khi gửi feedback'));
+        }
+      })
+      .catch(error => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Gửi đánh giá';
+        console.error('Error submitting feedback:', error);
+        alert('✗ Lỗi kết nối: ' + error.message);
+      });
+    } else {
+      // Không có ảnh, sử dụng URLSearchParams
+      console.log('Submitting without image');
+      var formData = new URLSearchParams();
+      formData.append('action', feedbackId ? 'update' : 'create');
+      if (feedbackId) {
+        formData.append('feedbackId', feedbackId);
+      } else {
+        formData.append('ticketId', ticketId);
+      }
+      formData.append('rating', rating);
+      formData.append('comment', comment);
+      
+      console.log('Form data:', formData.toString());
+      console.log('Sending request to:', ctx + '/api/feedback');
+      
+      fetch(ctx + '/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: formData.toString()
+      })
+      .then(r => {
+        console.log('Response status:', r.status);
+        if (!r.ok) {
+          throw new Error('HTTP ' + r.status);
+        }
+        return r.text().then(text => {
+          console.log('Raw response text:', text);
+          try {
+            return JSON.parse(text);
+          } catch (e) {
+            console.error('JSON parse error:', e);
+            throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+          }
+        });
+      })
+      .then(j => {
+        console.log('Parsed response:', j);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Gửi đánh giá';
+        
+        if (j && j.success) {
+          alert('✓ ' + (j.message || 'Cảm ơn bạn đã gửi feedback!'));
+          // Redirect to feedback management page
+          setTimeout(function() {
+            window.location.href = ctx + '/feedback_management.jsp';
+          }, 500);
+        } else {
+          alert('✗ ' + (j && j.message ? j.message : 'Lỗi khi gửi feedback'));
+        }
+      })
+      .catch(error => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Gửi đánh giá';
+        console.error('Error submitting feedback:', error);
+        alert('✗ Lỗi kết nối: ' + error.message);
+      });
+    }
+  }
+  
   // Tự động set ngày hiện tại cho trường "Ngày tạo"
   document.addEventListener('DOMContentLoaded', function() {
     // Set date using local timezone to avoid UTC offset (+/-1 day) issues
@@ -447,8 +886,6 @@
       var yyyy = d.getFullYear();
       if (createdText) createdText.textContent = dd + '/' + mm + '/' + yyyy;
     } catch(e) {}
-    
-    const ctx = '<%=request.getContextPath()%>';
     
     // Hàm hiển thị thông báo thành công - Simple alert style
     function showSuccessModal(title, message) {
@@ -644,10 +1081,13 @@
         // Hiển thị nút hủy cho pending, open, cancelled, closed
         const canCancel = finalStatus === 'pending' || finalStatus === 'open' || finalStatus === 'cancelled' || finalStatus === 'closed';
         const cancelButton = canCancel ? '<a href="#" class="cancel-link text-danger" data-id="'+ (it.id||'') +'">Hủy</a>' : '';
+        // Hiển thị nút feedback cho resolved hoặc closed
+        const canFeedback = finalStatus === 'resolved' || finalStatus === 'closed';
+        const feedbackButton = canFeedback ? '<a href="#" class="feedback-link text-success ms-2" data-id="'+ (it.id||'') +'" data-ticket-number="'+ (it.ticketNumber||'') +'" title="Đánh giá dịch vụ"><i class="fas fa-star"></i> Feedback</a>' : '';
         // Tính số thứ tự theo trang hiện tại
         const sequenceNumber = (currentPage - 1) * pageSize + idx + 1;
         var displaySubject = (it.subject||'');
-        tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ displaySubject +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + '</td>';
+        tr.innerHTML = '<td>'+ sequenceNumber +'</td><td>'+ (it.category||'') +'</td><td>'+ displaySubject +'</td><td>'+ created +'</td><td><span class="badge ' + statusClass + '">' + status + '</span></td><td><a href="#" class="view-link me-2" data-id="'+ (it.id||'') +'">Xem</a> ' + cancelButton + feedbackButton + '</td>';
         tbody.appendChild(tr);
       });
       console.log('rows() completed, added', items.length, 'rows to tbody');
@@ -954,6 +1394,15 @@
     tbody.addEventListener('click', function(e){
       const viewLink = e.target.closest('a.view-link');
       const cancelLink = e.target.closest('a.cancel-link');
+      const feedbackLink = e.target.closest('a.feedback-link');
+      
+      if(feedbackLink) {
+        e.preventDefault();
+        const id = feedbackLink.getAttribute('data-id');
+        const ticketNumber = feedbackLink.getAttribute('data-ticket-number');
+        openFeedbackModal(id, ticketNumber);
+        return;
+      }
       
       if(viewLink) {
         e.preventDefault();
@@ -1004,6 +1453,9 @@
       document.getElementById('v_assigned_to').textContent = ticketData.assignedTo || 'Chưa phân công';
       document.getElementById('v_history').textContent = ticketData.history || 'Chưa có lịch sử';
       document.getElementById('v_resolution').value = ticketData.resolution || '';
+      
+      // Store ticket ID in modal for feedback
+      document.getElementById('viewModal').setAttribute('data-current-ticket-id', ticketData.id);
       
       // Show the modal
       const vm = bootstrap.Modal.getOrCreateInstance(document.getElementById('viewModal'));
