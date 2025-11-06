@@ -450,6 +450,40 @@
         </div>
     </div>
 
+    <!-- Modal Cập nhật giá bán -->
+    <div class="modal fade" id="priceUpdateModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title"><i class="fa fa-money"></i> Cập nhật giá bán</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="priceUpdateForm">
+                        <input type="hidden" id="priceUpdateProductId">
+                        <div class="form-group">
+                            <label>Giá hiện tại</label>
+                            <input type="text" id="priceCurrent" class="form-control" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label>Giá mới <span class="text-danger">*</span></label>
+                            <input type="number" id="priceNew" class="form-control" step="1000" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Lý do</label>
+                            <input type="text" id="priceReason" class="form-control" placeholder="Ví dụ: Điều chỉnh theo thị trường">
+                        </div>
+                        <div id="priceUpdateNotice" class="alert alert-warning" style="display:none;"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-default" data-dismiss="modal">Hủy</button>
+                    <button class="btn btn-primary" onclick="submitUpdatePrice()"><i class="fa fa-save"></i> Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Nhập kho -->
     <div class="modal fade" id="stockInModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
@@ -490,7 +524,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Đơn giá nhập <span class="text-danger">*</span></label>
-                                    <input type="number" id="stockInUnitCost" class="form-control" min="0" step="1000" value="0" required>
+                                    <input type="number" id="stockInUnitCost" class="form-control" min="1" step="1000" value="1" required>
                                 </div>
                             </div>
                         </div>
@@ -510,7 +544,10 @@
                         </div>
                         <div class="form-group">
                             <label>Ghi chú</label>
-                            <textarea id="stockInNotes" class="form-control" rows="3" placeholder="Nhập ghi chú về giao dịch này..."></textarea>
+                            <textarea id="stockInNotes" class="form-control" rows="3" placeholder="Nhập ghi chú về giao dịch này..." oninput="updateWordCounter(this, 'stockInNotesCounter', 150)"></textarea>
+                            <small class="form-text text-muted">
+                                <span id="stockInNotesCounter" style="color:#5cb85c;">0</span> / 150 từ
+                            </small>
                         </div>
                     </form>
                 </div>
@@ -585,8 +622,8 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('AJAX Error:', error);
-                    // Fallback to sample data nếu có lỗi
-                    loadSampleData();
+                    var tbody = $('#inventoryTable tbody');
+                    tbody.html('<tr><td colspan="10" class="text-center text-danger">Lỗi tải dữ liệu kho: ' + (error||'') + '</td></tr>');
                 }
             });
         }
@@ -681,13 +718,15 @@
                         '<button class="btn btn-info btn-xs" onclick="invViewProduct(' + (item.productId || item.id) + ')" title="Xem chi tiết">' +
                             '<i class="fa fa-eye"></i> Xem' +
                         '</button>' +
+                        ' <button class="btn btn-primary btn-xs" onclick="openPriceUpdate(' + (item.productId || item.id) + ')" title="Cập nhật giá bán">' +
+                            '<i class="fa fa-money"></i> Cập nhật giá' +
+                        '</button>' +
                     '</td>' +
                 '</tr>';
                 tbody.append(row);
             });
             
-            // Cập nhật thông tin phân trang
-            updatePagination(data.length);
+            // Phân trang được xử lý ở backend (updatePaginationInfo sẽ cập nhật UI)
         }
         
         // Xác định trạng thái tồn kho
@@ -701,34 +740,7 @@
             }
         }
         
-        // Cập nhật dashboard
-        function updateDashboard(data) {
-            var totalProducts = data.length;
-            var totalStock = 0;
-            var lowStockCount = 0;
-            var outOfStockCount = 0;
-            
-            data.forEach(function(item) {
-                totalStock += item.currentStock;
-                if (item.currentStock === 0) {
-                    outOfStockCount++;
-                } else if (item.currentStock <= item.minStock) {
-                    lowStockCount++;
-                }
-            });
-            
-            $('#totalProducts').text(totalProducts);
-            $('#totalStock').text(totalStock);
-            $('#lowStockCount').text(lowStockCount);
-            $('#outOfStockCount').text(outOfStockCount);
-        }
-        
-        // Cập nhật phân trang
-        function updatePagination(totalItems) {
-            $('#showingStart').text(totalItems > 0 ? 1 : 0);
-            $('#showingEnd').text(Math.min(itemsPerPage, totalItems));
-            $('#totalRecords').text(totalItems);
-        }
+        // (Đã loại bỏ các hàm tổng hợp client-side; phân trang/đếm hiển thị do backend cung cấp)
         
         // Cập nhật phân trang từ response
         function updatePaginationInfo(response) {
@@ -745,8 +757,74 @@
             try { return Number(n).toLocaleString('vi-VN'); } catch(e) { return n; }
         }
 
+        // Cập nhật bộ đếm số từ + đổi màu khi vượt quá
+        function updateWordCounter(textarea, counterId, limit){
+            var text = textarea && textarea.value ? textarea.value : '';
+            var words = text.trim().length ? text.trim().split(/\s+/).filter(function(w){ return w.length>0; }) : [];
+            var count = words.length;
+            var el = document.getElementById(counterId);
+            if (el){
+                el.textContent = count;
+                if (count > limit){
+                    el.style.color = '#d9534f';
+                    textarea.style.borderColor = '#d9534f';
+                } else {
+                    el.style.color = '#5cb85c';
+                    textarea.style.borderColor = '';
+                }
+            }
+        }
+
         function buildHistoryUrl(productId){
             return '<%=request.getContextPath()%>/stock_history.jsp?productId=' + encodeURIComponent(productId);
+        }
+
+        // Mở modal cập nhật giá bán
+        function openPriceUpdate(productId){
+            if(!productId){ alert('ID sản phẩm không hợp lệ'); return; }
+            $('#priceUpdateProductId').val(productId);
+            // Lấy giá hiện tại
+            $.get('<%=request.getContextPath()%>/product', { action: 'view', id: productId }, function(res){
+                if(res && res.success){
+                    $('#priceCurrent').val((res.product.unitPrice!=null? formatCurrencyVN(res.product.unitPrice):'0') + ' VNĐ');
+                } else {
+                    $('#priceCurrent').val('--');
+                }
+            }, 'json');
+            // Đếm số lần cập nhật giá bán để cảnh báo
+            $.get('<%=request.getContextPath()%>/product', { action: 'priceHistory', productId: productId, type: 'selling', limit: 1 }, function(res){
+                if(res && res.success && typeof res.count === 'number'){
+                    if (res.count >= 3) {
+                        $('#priceUpdateNotice').text('Lưu ý: Giá bán đã được cập nhật ' + res.count + ' lần. Hãy xác nhận kỹ trước khi thay đổi tiếp.').show();
+                    } else {
+                        $('#priceUpdateNotice').hide();
+                    }
+                } else {
+                    $('#priceUpdateNotice').hide();
+                }
+            }, 'json');
+            $('#priceNew').val('');
+            $('#priceReason').val('');
+            $('#priceUpdateModal').modal('show');
+        }
+
+        // Gửi cập nhật giá bán
+        function submitUpdatePrice(){
+            var productId = $('#priceUpdateProductId').val();
+            var newPrice = $('#priceNew').val();
+            var reason = $('#priceReason').val();
+            if(!newPrice || parseFloat(newPrice) <= 0){ alert('Giá mới phải > 0'); return; }
+            $.post('<%=request.getContextPath()%>/product', { action: 'updatePrice', productId: productId, newPrice: newPrice, reason: reason }, function(res){
+                if(res && res.success){
+                    alert(res.message || 'Cập nhật thành công');
+                    $('#priceUpdateModal').modal('hide');
+                    loadInventoryData();
+                } else {
+                    alert(res && res.message ? res.message : 'Cập nhật thất bại');
+                }
+            }, 'json').fail(function(xhr){
+                alert('Lỗi server: ' + (xhr.responseText || ''));
+            });
         }
 
         // Xem chi tiết sản phẩm (modal)
@@ -856,37 +934,7 @@
         
         // Bỏ cơ chế thêm nhiều dòng sản phẩm cho nhập kho (đã thay bằng form đơn)
         
-        // Thêm dòng sản phẩm cho form xuất kho
-        function addProductRowStockOut() {
-            // Nếu chưa có danh sách sản phẩm, load lại
-            if (!window.productList || window.productList.length === 0) {
-                console.log('Loading products for dropdown...');
-                loadProductsForDropdown();
-                // Chờ một chút để load xong
-                setTimeout(function() {
-                    addProductRowStockOut();
-                }, 500);
-                return;
-            }
-            
-            var productOptions = '<option value="">-- Chọn sản phẩm --</option>';
-            window.productList.forEach(function(p) {
-                productOptions += '<option value="' + p.id + '">' + p.productCode + ' - ' + p.productName + '</option>';
-            });
-            
-            var row = '<tr>' +
-                '<td><select class="form-control product-select" required>' + productOptions + '</select></td>' +
-                '<td><input type="number" class="form-control quantity-input" min="1" required placeholder="Số lượng" onkeypress="return event.charCode >= 48 && event.charCode <= 57"></td>' +
-                '<td class="current-stock text-center">--</td>' +
-                '<td><select class="form-control warehouse-select" required>' +
-                    '<option value="Main Warehouse">Kho Chính</option>' +
-                    '<option value="Warehouse A">Kho A</option>' +
-                    '<option value="Warehouse B">Kho B</option>' +
-                '</select></td>' +
-                '<td class="text-center"><button type="button" class="btn btn-danger btn-sm" onclick="$(this).closest(\'tr\').remove()">Xóa</button></td>' +
-            '</tr>';
-            $('#productRowsStockOut').append(row);
-        }
+        // (Đã loại bỏ các hàm thêm dòng xuất kho dạng client-side)
         
         // Submit form nhập kho (form đơn)
         function submitStockIn() {
@@ -911,8 +959,8 @@
                 alert('Số lượng phải là số nguyên dương!');
                 return;
             }
-            if (unitCost === '' || unitCost < 0) {
-                alert('Đơn giá nhập không hợp lệ!');
+            if (unitCost === '' || unitCost <= 0) {
+                alert('Đơn giá nhập phải lớn hơn 0!');
                 return;
             }
             if (!supplier || supplier.trim() === '') {
@@ -934,11 +982,11 @@
                 return;
             }
 
-            // Validate ghi chú tối đa 100 từ
+            // Validate ghi chú tối đa 150 từ
             if (notes) {
                 var wordCount = notes.trim().split(/\s+/).filter(function(w){ return w.length > 0; }).length;
-                if (wordCount > 100) {
-                    alert('Ghi chú không được vượt quá 100 từ (hiện tại: ' + wordCount + ').');
+                if (wordCount > 150) {
+                    alert('Ghi chú không được vượt quá 150 từ (hiện tại: ' + wordCount + ').');
                     return;
                 }
             }
@@ -981,75 +1029,7 @@
             });
         }
         
-        // Submit form xuất kho
-        function submitStockOut() {
-            var products = [];
-            var hasError = false;
-            
-            $('#productRowsStockOut tr').each(function() {
-                var row = $(this);
-                var productId = row.find('.product-select').val();
-                var quantity = row.find('.quantity-input').val();
-                var warehouse = row.find('.warehouse-select').val();
-                
-                // Validation
-                if (!productId) {
-                    alert('Vui lòng chọn sản phẩm!');
-                    hasError = true;
-                    return false;
-                }
-                
-                if (!quantity || quantity <= 0 || !Number.isInteger(Number(quantity))) {
-                    alert('Số lượng phải là số nguyên dương!');
-                    hasError = true;
-                    return false;
-                }
-                
-                if (productId && quantity) {
-                    products.push({
-                        productId: parseInt(productId),
-                        quantity: parseInt(quantity),
-                        warehouse: warehouse
-                    });
-                }
-            });
-            
-            if (hasError) return;
-            
-            if (products.length === 0) {
-                alert('Vui lòng thêm ít nhất một sản phẩm!');
-                return;
-            }
-            
-            // Gửi dữ liệu lên server
-            var formData = {
-                action: 'stockOut',
-                referenceType: $('select[name="reference_type"]', '#stockOutForm').val(),
-                referenceId: $('input[name="reference_id"]', '#stockOutForm').val(),
-                notes: $('textarea[name="notes"]', '#stockOutForm').val(),
-                products: JSON.stringify(products)
-            };
-            
-            $.ajax({
-                url: '<%=request.getContextPath()%>/inventory',
-                type: 'POST',
-                data: formData,
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        alert('Xuất kho thành công!');
-                        $('#stockOutModal').modal('hide');
-                        loadInventoryData();
-                    } else {
-                        alert('Lỗi: ' + response.message);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', error);
-                    alert('Lỗi kết nối server: ' + error);
-                }
-            });
-        }
+        // (Đã loại bỏ các hàm submit xuất kho dạng client-side động)
         
         // Nhập kho nhanh
         function quickStockIn(productId) {
@@ -1067,26 +1047,7 @@
             }, 100);
         }
         
-        // Xuất kho nhanh
-        function quickStockOut(productId) {
-            // Reset form trước
-            $('#stockOutForm')[0].reset();
-            $('#productRowsStockOut').empty();
-            
-            // Mở modal
-            $('#stockOutModal').modal('show');
-            
-            // Thêm dòng sản phẩm và pre-fill product ID
-            setTimeout(function() {
-                addProductRowStockOut();
-                // Sau khi thêm row, chọn sản phẩm
-                setTimeout(function() {
-                    if (productId) {
-                        $('#productRowsStockOut tr:first .product-select').val(productId);
-                    }
-                }, 100);
-            }, 100);
-        }
+        // (Đã loại bỏ quickStockOut vì không dùng)
         
         // Trang lịch sử được mở tại stock_history.jsp
         
@@ -1115,11 +1076,6 @@
             $('#stockInForm')[0].reset();
         });
         
-        $('#stockOutModal').on('hidden.bs.modal', function() {
-            $('#stockOutForm')[0].reset();
-            $('#productRowsStockOut').empty();
-        });
-        
         // Thiết lập mặc định khi mở modal nhập kho
         $('#stockInModal').on('shown.bs.modal', function() {
             // set ngày hiện tại
@@ -1132,12 +1088,30 @@
             updateSupplierFromSelectedProduct();
         });
         
-        // Tự động thêm 1 dòng sản phẩm khi mở modal xuất kho
-        $('#stockOutModal').on('shown.bs.modal', function() {
-            if ($('#productRowsStockOut tr').length === 0) {
-                addProductRowStockOut();
+        // (Đã loại bỏ handler cho modal xuất kho không sử dụng)
+
+        // Cập nhật nút phân trang (backend-driven)
+        function updatePaginationButtons(totalPages) {
+            var pagination = $('#pagination');
+            pagination.empty();
+            var prevLi = $('<li class="paginate_button ' + (currentPage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
+            prevLi.on('click', function(e){ e.preventDefault(); if (currentPage > 1) { currentPage--; loadInventoryData(); } });
+            pagination.append(prevLi);
+            var maxVisible = 5;
+            var start = Math.max(1, currentPage - Math.floor(maxVisible/2));
+            var end = Math.min(totalPages, start + maxVisible - 1);
+            if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+            for (var p = start; p <= end; p++) {
+                (function(page){
+                    var li = $('<li class="paginate_button ' + (page === currentPage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
+                    li.on('click', function(e){ e.preventDefault(); currentPage = page; loadInventoryData(); });
+                    pagination.append(li);
+                })(p);
             }
-        });
+            var nextLi = $('<li class="paginate_button ' + (currentPage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
+            nextLi.on('click', function(e){ e.preventDefault(); if (currentPage < totalPages) { currentPage++; loadInventoryData(); } });
+            pagination.append(nextLi);
+        }
     </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.InventoryDAO;
 import com.hlgenerator.dao.ProductDAO;
+import com.hlgenerator.dao.PriceHistoryDAO;
 import com.hlgenerator.model.Inventory;
 import com.hlgenerator.model.StockHistory;
 import com.hlgenerator.model.Product;
@@ -20,12 +21,14 @@ import java.util.Map;
 public class InventoryServlet extends HttpServlet {
     private InventoryDAO inventoryDAO;
     private ProductDAO productDAO;
+    private PriceHistoryDAO priceHistoryDAO;
 
     @Override
     public void init() throws ServletException {
         super.init();
         inventoryDAO = new InventoryDAO();
         productDAO = new ProductDAO();
+        priceHistoryDAO = new PriceHistoryDAO();
     }
 
     @Override
@@ -370,6 +373,15 @@ public class InventoryServlet extends HttpServlet {
                 return;
             }
             
+            // Validate ghi chú tối đa 150 từ (nếu có)
+            if (notes != null && !notes.trim().isEmpty()) {
+                int noteWords = countWords(notes);
+                if (noteWords > 150) {
+                    response.getWriter().write("{\"success\":false,\"message\":\"Ghi chú không được vượt quá 150 từ\"}");
+                    return;
+                }
+            }
+
             // Validate và xử lý từng sản phẩm
             boolean allSuccess = true;
             StringBuilder errorMsg = new StringBuilder();
@@ -418,12 +430,15 @@ public class InventoryServlet extends HttpServlet {
                     continue;
                 }
                 
-                if (unitCost < 0) {
-                    errorMsg.append("Đơn giá không được âm. ");
+                if (unitCost <= 0) {
+                    errorMsg.append("Đơn giá phải lớn hơn 0. ");
                     allSuccess = false;
                     continue;
                 }
                 
+                // Ghi nhận giá nhập trước khi thêm lịch sử, để so sánh thay đổi
+                Double lastCostBefore = inventoryDAO.getLastUnitCost(productId);
+
                 // Cộng số lượng vào kho
                 boolean stockAdded = inventoryDAO.addStock(productId, warehouse, quantity);
                 
@@ -462,6 +477,26 @@ public class InventoryServlet extends HttpServlet {
                         // Không chặn quy trình nhập kho nếu cập nhật giá thất bại
                         System.err.println("Warn: updateUnitPriceIfEmpty failed for product " + productId + ": " + ex.getMessage());
                     }
+
+                    // Ghi lịch sử thay đổi giá mua nếu có thay đổi so với lần gần nhất
+                    boolean changed;
+                    if (lastCostBefore == null) {
+                        changed = true; // lần đầu có giá mua
+                    } else {
+                        changed = Math.abs(lastCostBefore - unitCost) > 1e-6;
+                    }
+                    if (changed) {
+                        com.hlgenerator.model.PriceHistory ph = new com.hlgenerator.model.PriceHistory();
+                        ph.setProductId(productId);
+                        ph.setPriceType("purchase");
+                        ph.setOldPrice(lastCostBefore);
+                        ph.setNewPrice(unitCost);
+                        ph.setReason(notes != null && !notes.isEmpty() ? notes : "Nhập kho");
+                        ph.setReferenceType(referenceType != null ? referenceType : "stock_in");
+                        // Không có reference_id cụ thể vì không lấy được ID stock_history ngay
+                        ph.setUpdatedBy(userId);
+                        try { priceHistoryDAO.insert(ph); } catch (Exception ignore) {}
+                    }
                 }
             }
             
@@ -477,6 +512,15 @@ public class InventoryServlet extends HttpServlet {
             response.getWriter().write("{\"success\":false,\"message\":\"" + 
                 escapeJson("Lỗi hệ thống: " + e.getMessage()) + "\"}");
         }
+    }
+
+    private int countWords(String s) {
+        if (s == null) return 0;
+        String trimmed = s.trim();
+        if (trimmed.isEmpty()) return 0;
+        String[] parts = trimmed.split("\\s+");
+        int c = 0; for (String p : parts) { if (!p.isEmpty()) c++; }
+        return c;
     }
     
     /**

@@ -458,6 +458,17 @@ public class ContractServlet extends HttpServlet {
             if (productsJson != null && !productsJson.isEmpty()) {
                 JSONArray products = new JSONArray(productsJson);
                 
+                // Lấy userId từ session
+                Integer userId = null;
+                try {
+                    Object sessionUserId = request.getSession().getAttribute("userId");
+                    if (sessionUserId != null && !sessionUserId.toString().equals("null")) {
+                        userId = Integer.parseInt(sessionUserId.toString());
+                    }
+                } catch (Exception e) {
+                    // Ignore if cannot get userId from session
+                }
+                
                 // Sử dụng thông tin từ database.properties
                 java.util.Properties props = new java.util.Properties();
                 java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
@@ -477,25 +488,19 @@ public class ContractServlet extends HttpServlet {
                             java.math.BigDecimal qty = toBigDecimal(product.opt("quantity"));
                             if (qty == null) qty = java.math.BigDecimal.ZERO;
 
-                            // Kiểm tra tồn kho hiện tại
-                            int currentStock = 0;
-                            String stockSql = "SELECT COALESCE(current_stock, 0) FROM inventory WHERE product_id = ? FOR UPDATE";
-                            try (java.sql.PreparedStatement ps = conn.prepareStatement(stockSql)) {
+                            // Tính toán và trừ tồn kho đa kho (nếu có nhiều dòng inventory cho cùng product)
+                            // Khóa các dòng tồn kho của product để tính an toàn
+                            String sumSql = "SELECT SUM(current_stock) FROM inventory WHERE product_id = ? FOR UPDATE";
+                            int totalAvailable = 0;
+                            try (java.sql.PreparedStatement ps = conn.prepareStatement(sumSql)) {
                                 ps.setInt(1, productId);
-                                try (java.sql.ResultSet rs = ps.executeQuery()) {
-                                    if (rs.next()) {
-                                        currentStock = rs.getInt(1);
-                                    } else {
-                                        currentStock = 0;
-                                    }
-                                }
+                                try (java.sql.ResultSet rs = ps.executeQuery()) { if (rs.next()) totalAvailable = rs.getInt(1); }
                             }
-
-                            if (currentStock <= 0) {
+                            if (totalAvailable <= 0) {
                                 throw new RuntimeException("Sản phẩm ID " + productId + " đã hết hàng");
                             }
-                            if (qty.compareTo(new java.math.BigDecimal(currentStock)) > 0) {
-                                throw new RuntimeException("Số lượng vượt quá tồn kho cho sản phẩm ID " + productId);
+                            if (qty.compareTo(new java.math.BigDecimal(totalAvailable)) > 0) {
+                                throw new RuntimeException("Số lượng vượt quá tổng tồn kho cho sản phẩm ID " + productId);
                             }
 
                             // Thêm vào contract_products
@@ -514,13 +519,46 @@ public class ContractServlet extends HttpServlet {
                                 ps.setString(7, product.optString("notes", null));
                                 ps.executeUpdate();
                             }
-
-                            // Trừ tồn kho
-                            String updateStockSql = "UPDATE inventory SET current_stock = current_stock - ? WHERE product_id = ?";
-                            try (java.sql.PreparedStatement ps = conn.prepareStatement(updateStockSql)) {
-                                ps.setBigDecimal(1, qty);
-                                ps.setInt(2, productId);
-                                ps.executeUpdate();
+                            // Trừ tồn kho phân bổ qua các kho, ghi lịch sử cho từng lần trừ
+                            int remaining = qty.intValue();
+                            // Lấy danh sách kho theo tồn giảm dần để trừ
+                            String invRowsSql = "SELECT warehouse_location, current_stock FROM inventory WHERE product_id = ? AND current_stock > 0 ORDER BY current_stock DESC";
+                            try (java.sql.PreparedStatement psInv = conn.prepareStatement(invRowsSql)) {
+                                psInv.setInt(1, productId);
+                                try (java.sql.ResultSet rs = psInv.executeQuery()) {
+                                    while (rs.next() && remaining > 0) {
+                                        String wh = rs.getString("warehouse_location");
+                                        int stock = rs.getInt("current_stock");
+                                        int deduct = Math.min(remaining, stock);
+                                        if (deduct <= 0) continue;
+                                        // Update tồn kho cho kho này
+                                        String updateStockSql = "UPDATE inventory SET current_stock = current_stock - ? WHERE product_id = ? AND warehouse_location = ?";
+                                        try (java.sql.PreparedStatement psUp = conn.prepareStatement(updateStockSql)) {
+                                            psUp.setInt(1, deduct);
+                                            psUp.setInt(2, productId);
+                                            psUp.setString(3, wh);
+                                            psUp.executeUpdate();
+                                        }
+                                        // Ghi lịch sử cho phần trừ này
+                                        String insertHistorySql = "INSERT INTO stock_history (product_id, warehouse_location, movement_type, quantity, reference_type, reference_id, notes, created_by) VALUES (?, ?, 'out', ?, 'contract', ?, ?, ?)";
+                                        try (java.sql.PreparedStatement psH = conn.prepareStatement(insertHistorySql)) {
+                                            psH.setInt(1, productId);
+                                            psH.setString(2, wh);
+                                            psH.setInt(3, deduct);
+                                            psH.setInt(4, contractId);
+                                            String notes = "Xuất kho từ hợp đồng #" + contractId;
+                                            String description = product.optString("description", null);
+                                            if (description != null && !description.isEmpty()) { notes += " - " + description; }
+                                            psH.setString(5, notes);
+                                            if (userId != null) { psH.setInt(6, userId); } else { psH.setNull(6, java.sql.Types.INTEGER); }
+                                            psH.executeUpdate();
+                                        }
+                                        remaining -= deduct;
+                                    }
+                                }
+                            }
+                            if (remaining > 0) {
+                                throw new RuntimeException("Tồn kho không đủ để xuất cho sản phẩm ID " + productId);
                             }
                         }
                         conn.commit();

@@ -147,12 +147,13 @@
               <div class="col-xs-12">
                 <div class="panel">
                    <header class="panel-heading">
-                     <h3 style="display:inline-block; margin-right:10px;">Lịch Sử Xuất Nhập Kho</h3>
-                     <a class="btn btn-default btn-sm" href="<%=request.getContextPath()%>/inventory.jsp">
-                       <i class="fa fa-arrow-left"></i> Quay lại
-                     </a>
+                     <ul class="nav nav-tabs" style="border-bottom:none;">
+                       <li class="active"><a href="#tab-stock" data-toggle="tab"><i class="fa fa-exchange"></i> Xuất/Nhập kho</a></li>
+                       <li><a href="#tab-price" data-toggle="tab"><i class="fa fa-money"></i> Giá mua/bán</a></li>
+                     </ul>
                    </header>
-                  <div class="panel-body">
+                  <div class="panel-body tab-content">
+                    <div class="tab-pane active" id="tab-stock">
                     <div class="row filter-bar" style="margin-bottom:10px;">
                       <div class="col-sm-3"><input id="searchKeyword" class="form-control"
                           placeholder="Tìm theo tên/mã sản phẩm" /></div>
@@ -180,6 +181,44 @@
                       <div class="col-sm-6"><span id="historyInfo" class="muted"></span></div>
                       <div class="col-sm-6" style="text-align:right;">
                         <ul class="pagination" id="historyPagination" style="margin:0;"></ul>
+                      </div>
+                    </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-price">
+                      <div class="row filter-bar" style="margin-bottom:10px;">
+                        <div class="col-sm-3"><input id="priceSearchKeyword" class="form-control" placeholder="Tìm theo tên/mã sản phẩm" /></div>
+                        <div class="col-sm-2"><select id="priceType" class="form-control">
+                            <option value="">Tất cả loại giá</option>
+                            <option value="purchase">Giá mua</option>
+                            <option value="selling">Giá bán</option>
+                          </select></div>
+                        <div class="col-sm-2"><button class="btn btn-primary btn-block" onclick="reloadPriceHistory()"><i class="fa fa-search"></i> Lọc</button></div>
+                        <div class="col-sm-2"><button class="btn btn-default btn-block" onclick="resetPriceFilters()"><i class="fa fa-refresh"></i> Reset</button></div>
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                          <thead>
+                            <tr>
+                              <th>Thời gian</th>
+                              <th>Sản phẩm</th>
+                              <th>Loại</th>
+                              <th>Giá cũ</th>
+                              <th>Giá mới</th>
+                              <th>Người cập nhật</th>
+                              <th>Lý do</th>
+                            </tr>
+                          </thead>
+                          <tbody id="priceHistoryBody">
+                            <tr><td colspan="7" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="row" style="margin-top:10px;">
+                        <div class="col-sm-6"><span id="priceHistoryInfo" class="muted"></span></div>
+                        <div class="col-sm-6" style="text-align:right;">
+                          <ul class="pagination" id="priceHistoryPagination" style="margin:0;"></ul>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -231,7 +270,10 @@
           var badge = isIn ? '<span class="history-badge badge-in">Nhập kho</span>' : (isOut ? '<span class="history-badge badge-out">Xuất kho</span>' : '<span class="history-badge badge-adj">Điều chỉnh</span>');
           var qtyCls = isIn ? 'qty-pos' : (isOut ? 'qty-neg' : ''); var sign = isIn ? '+' : (isOut ? '-' : '');
           var priceLabel = (h.movementType === 'in') ? 'Giá nhập' : (h.movementType === 'out' ? 'Giá bán' : 'Đơn giá');
-          var priceVal = (h.movementType === 'in') ? (h.unitCost != null ? formatCurrencyVN(h.unitCost) + ' đ' : '--') : (h.unitPrice ? formatCurrencyVN(h.unitPrice) + ' đ' : '--');
+          var unitVal = (h.movementType === 'in') ? (h.unitCost != null ? h.unitCost : null) : (typeof h.unitPrice === 'number' ? h.unitPrice : null);
+          var priceVal = unitVal != null ? (formatCurrencyVN(unitVal) + ' đ') : '--';
+          var totalVal = (unitVal != null && h.quantity != null) ? (unitVal * h.quantity) : null;
+          var totalText = totalVal != null ? (formatCurrencyVN(totalVal) + ' đ') : '--';
           var when = new Date(h.createdAt).toLocaleString('vi-VN');
           var note = h.notes ? ('<div class="muted" style="margin-top:4px;">"' + escapeHtml(h.notes) + '"</div>') : '';
           return '<div class="history-card">'
@@ -240,6 +282,7 @@
             + '<h4 style="margin-top:0">' + escapeHtml(h.productName || '') + ' <small class="muted">' + escapeHtml(h.productCode || '') + '</small> ' + badge + '</h4>'
             + '<div>Số lượng: <span class="' + qtyCls + '">' + sign + (h.quantity || 0) + '</span></div>'
             + '<div>' + priceLabel + ': ' + priceVal + '</div>'
+            + '<div><strong>Tổng tiền:</strong> ' + totalText + '</div>'
             + note
             + '</div>'
             + '<div class="col-sm-4">'
@@ -257,7 +300,15 @@
         function formatCurrencyVN(n) { try { return Number(n).toLocaleString('vi-VN'); } catch (e) { return n; } }
         function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
-        $(function () { reloadHistory(); });
+        $(function () {
+          // Auto-open price tab if tab=price in query
+          var qs = new URLSearchParams(window.location.search);
+          if (qs.get('tab') === 'price') {
+            $('a[href="#tab-price"]').tab('show');
+          }
+          reloadHistory();
+          reloadPriceHistory();
+        });
 
         //  - Render trang hiện tại
          function renderHistoryPage() {
@@ -269,6 +320,78 @@
           $('#historyInfo').text('Hiển thị ' + (histFilteredItems.length > 0 ? (start + 1) : 0) + ' đến ' + end + ' trong tổng số ' + histFilteredItems.length + ' bản ghi');
           updateHistoryPagination();
         }
+
+        // ================== PRICE HISTORY TAB ==================
+        var priceAllItems = [];
+        var pricePage = 1;
+        var pricePageSize = 10;
+        var priceTotal = 0;
+
+        function reloadPriceHistory(){
+          var urlParams = new URLSearchParams(window.location.search);
+          var productId = urlParams.get('productId');
+          var type = $('#priceType').val();
+          var q = ($('#priceSearchKeyword').val()||'').trim();
+          // Backend priceHistory không hỗ trợ q, ta lọc client theo productCode/Name nếu cần sau này
+          var params = { action: 'priceHistory', page: pricePage, pageSize: pricePageSize };
+          if (productId) params.productId = productId;
+          if (type) params.type = type;
+          if (q) params.q = q;
+          $.getJSON('<%=request.getContextPath()%>/product', params, function(res){
+            var body = $('#priceHistoryBody'); body.empty();
+            if (!res || !res.success){ body.html('<tr><td colspan="7" class="text-center">Không tải được dữ liệu</td></tr>'); return; }
+            priceAllItems = res.data || [];
+            priceTotal = res.totalCount || priceAllItems.length;
+            renderPriceHistoryServer(res);
+          }).fail(function(){ $('#priceHistoryBody').html('<tr><td colspan="7" class="text-center">Lỗi kết nối</td></tr>'); });
+        }
+
+        function renderPriceHistoryServer(meta){
+          var body = $('#priceHistoryBody'); body.empty();
+          if (priceAllItems.length === 0){ body.html('<tr><td colspan="7" class="text-center">Không có dữ liệu</td></tr>'); updatePricePagination(); $('#priceHistoryInfo').text('0 bản ghi'); return; }
+          priceAllItems.forEach(function(h){ body.append(renderPriceRow(h)); });
+          var start = (meta.currentPage - 1) * meta.pageSize + (priceAllItems.length>0?1:0);
+          var end = (meta.currentPage - 1) * meta.pageSize + priceAllItems.length;
+          $('#priceHistoryInfo').text('Hiển thị ' + (priceTotal>0?start:0) + ' đến ' + end + ' trong tổng số ' + priceTotal + ' bản ghi');
+          updatePricePagination(meta.totalPages);
+        }
+
+        function renderPriceRow(h){
+          var when = h.updatedAt ? new Date(h.updatedAt).toLocaleString('vi-VN') : '';
+          var typeText = h.priceType === 'purchase' ? 'Giá mua' : (h.priceType === 'selling' ? 'Giá bán' : h.priceType||'');
+          return '<tr>'+
+            '<td>'+ when +'</td>'+
+            '<td>'+ escapeHtml(h.productName||'') + ' <span class="muted">' + escapeHtml(h.productCode||'') + '</span></td>'+
+            '<td>'+ typeText +'</td>'+
+            '<td>'+ (h.oldPrice==null? '—' : formatCurrencyVN(h.oldPrice)) +'</td>'+
+            '<td>'+ (h.newPrice==null? '—' : formatCurrencyVN(h.newPrice)) +'</td>'+
+            '<td>'+ escapeHtml(h.updatedByName||'') +'</td>'+
+            '<td>'+ escapeHtml(h.reason||'') +'</td>'+
+          '</tr>';
+        }
+
+        function updatePricePagination(totalPages){
+          var ul = $('#priceHistoryPagination'); ul.empty();
+          var prev = $('<li class="paginate_button ' + (pricePage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
+          prev.on('click', function(e){ e.preventDefault(); if (pricePage > 1) { pricePage--; reloadPriceHistory(); } });
+          ul.append(prev);
+          var maxVisible = 5;
+          var start = Math.max(1, pricePage - Math.floor(maxVisible/2));
+          var end = Math.min(totalPages, start + maxVisible - 1);
+          if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+          for (var p = start; p <= end; p++) {
+            (function(page){
+              var li = $('<li class="paginate_button ' + (page === pricePage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
+              li.on('click', function(e){ e.preventDefault(); pricePage = page; reloadPriceHistory(); });
+              ul.append(li);
+            })(p);
+          }
+          var next = $('<li class="paginate_button ' + (pricePage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
+          next.on('click', function(e){ e.preventDefault(); if (pricePage < totalPages) { pricePage++; reloadPriceHistory(); } });
+          ul.append(next);
+        }
+
+        function resetPriceFilters(){ $('#priceSearchKeyword').val(''); $('#priceType').val(''); reloadPriceHistory(); }
 
          // Render theo dữ liệu phân trang từ server
          function renderHistoryServerPage(totalCount, totalPages){

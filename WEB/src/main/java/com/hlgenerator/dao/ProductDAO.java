@@ -132,6 +132,26 @@ public class ProductDAO {
         }
     }
 
+    /**
+     * Cập nhật giá bán (unit_price) theo productId
+     */
+    public boolean updateUnitPrice(int productId, double newPrice) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        String sql = "UPDATE products SET unit_price = ? WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setDouble(1, newPrice);
+            ps.setInt(2, productId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi cập nhật giá bán: " + e.getMessage();
+            return false;
+        }
+    }
+
     
     public boolean deleteProduct(int id) {
         if (connection == null) {

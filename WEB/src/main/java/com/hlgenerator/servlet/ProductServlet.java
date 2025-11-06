@@ -1,6 +1,8 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.ProductDAO;
+import com.hlgenerator.dao.PriceHistoryDAO;
+import com.hlgenerator.model.PriceHistory;
 import com.hlgenerator.dao.SupplierDAO;
 import com.hlgenerator.model.Product;
 import com.hlgenerator.model.Supplier;
@@ -25,11 +27,13 @@ import org.apache.commons.io.FilenameUtils;
 @WebServlet({"/product", "/product.jsp"})
 public class ProductServlet extends HttpServlet {
     private ProductDAO productDAO;
+    private PriceHistoryDAO priceHistoryDAO;
 
     @Override
     public void init() throws ServletException {
         super.init();
         productDAO = new ProductDAO();
+        priceHistoryDAO = new PriceHistoryDAO();
     }
 
     @Override
@@ -42,6 +46,8 @@ public class ProductServlet extends HttpServlet {
         
         if ("view".equals(action)) {
             viewProduct(request, response);
+        } else if ("priceHistory".equals(action)) {
+            getPriceHistory(request, response);
         } else if ("page".equals(action) || action == null) {
             showProductsPage(request, response);
         } else if ("edit".equals(action)) {
@@ -183,6 +189,8 @@ public class ProductServlet extends HttpServlet {
                 hideProduct(request, response);
             } else if ("show".equals(action)) {
                 showProduct(request, response);
+            } else if ("updatePrice".equals(action)) {
+                updateSellingPrice(request, response);
             } else {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 response.getWriter().write("{\"success\": false, \"message\": \"Invalid action or missing multipart data\"}");
@@ -548,6 +556,115 @@ public class ProductServlet extends HttpServlet {
             System.err.println("Error in viewProduct: " + e.getMessage());
             e.printStackTrace();
             out.write("{\"success\": false, \"message\": \"Lỗi máy chủ: " + escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+
+    private void getPriceHistory(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        java.io.PrintWriter out = response.getWriter();
+        try {
+            String productIdParam = request.getParameter("productId");
+            if (productIdParam == null || productIdParam.trim().isEmpty()) {
+                // Cho phép không truyền productId để xem tổng thể
+                productIdParam = null;
+            }
+            Integer productId = null;
+            if (productIdParam != null) {
+                productId = Integer.parseInt(productIdParam.trim());
+            }
+            String type = request.getParameter("type"); // purchase|selling|null
+            String q = request.getParameter("q");
+            int page = 1; int pageSize = 10;
+            String pageParam = request.getParameter("page");
+            String pageSizeParam = request.getParameter("pageSize");
+            if (pageParam != null && !pageParam.trim().isEmpty()) { try { page = Integer.parseInt(pageParam.trim()); } catch (Exception ignore) {} }
+            if (pageSizeParam != null && !pageSizeParam.trim().isEmpty()) { try { pageSize = Integer.parseInt(pageSizeParam.trim()); } catch (Exception ignore) {} }
+
+            java.util.List<PriceHistory> list = priceHistoryDAO.getFilteredPriceHistory(productId, type, q, page, pageSize);
+            int countAll = priceHistoryDAO.getFilteredPriceHistoryCount(productId, type, q);
+
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"totalCount\":").append(countAll)
+                .append(",\"currentPage\":").append(page)
+                .append(",\"pageSize\":").append(pageSize)
+                .append(",\"totalPages\":").append((int)Math.ceil((double)countAll / (double)pageSize))
+                .append(",\"data\":[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i>0) json.append(",");
+                PriceHistory h = list.get(i);
+                json.append("{");
+                json.append("\"id\":").append(h.getId()).append(",");
+                json.append("\"priceType\":\"").append(escapeJson(h.getPriceType())).append("\",");
+                json.append("\"oldPrice\":").append(h.getOldPrice()==null?"null":h.getOldPrice()).append(",");
+                json.append("\"newPrice\":").append(h.getNewPrice()==null?"null":h.getNewPrice()).append(",");
+                json.append("\"reason\":\"").append(escapeJson(h.getReason()==null?"":h.getReason())).append("\",");
+                // Thêm tên/mã sản phẩm để UI hiển thị
+                json.append("\"productName\":\"").append(escapeJson(h.getProductName()==null?"":h.getProductName())).append("\",");
+                json.append("\"productCode\":\"").append(escapeJson(h.getProductCode()==null?"":h.getProductCode())).append("\",");
+                json.append("\"updatedAt\":\"").append(h.getUpdatedAt()).append("\",");
+                json.append("\"updatedByName\":\"").append(escapeJson(h.getUpdatedByName()==null?"":h.getUpdatedByName())).append("\"");
+                json.append("}");
+            }
+            json.append("]}");
+            out.write(json.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"success\": false, \"message\": \"" + escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+
+    private void updateSellingPrice(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        java.io.PrintWriter out = response.getWriter();
+        try {
+            String productIdParam = request.getParameter("productId");
+            String newPriceParam = request.getParameter("newPrice");
+            String reason = request.getParameter("reason");
+            if (productIdParam == null || newPriceParam == null) {
+                out.write("{\"success\":false,\"message\":\"Thiếu tham số\"}");
+                return;
+            }
+            int productId = Integer.parseInt(productIdParam.trim());
+            double newPrice = Double.parseDouble(newPriceParam.trim());
+            if (newPrice <= 0) {
+                out.write("{\"success\":false,\"message\":\"Giá mới phải > 0\"}");
+                return;
+            }
+            // Lấy old price
+            Product p = productDAO.getProductById(productId);
+            if (p == null) {
+                out.write("{\"success\":false,\"message\":\"Không tìm thấy sản phẩm\"}");
+                return;
+            }
+            double oldPrice = p.getUnitPrice();
+            boolean changed = Math.abs(oldPrice - newPrice) > 1e-6;
+            if (!changed) {
+                out.write("{\"success\":true,\"message\":\"Giá bán không thay đổi\"}");
+                return;
+            }
+            boolean ok = productDAO.updateUnitPrice(productId, newPrice);
+            if (!ok) {
+                out.write("{\"success\":false,\"message\":\"" + escapeJson(productDAO.getLastError()) + "\"}");
+                return;
+            }
+            // Ghi lịch sử
+            Integer userId = (Integer) request.getSession().getAttribute("userId");
+            PriceHistory ph = new PriceHistory();
+            ph.setProductId(productId);
+            ph.setPriceType("selling");
+            ph.setOldPrice(oldPrice);
+            ph.setNewPrice(newPrice);
+            ph.setReason(reason);
+            ph.setReferenceType("manual_update");
+            ph.setUpdatedBy(userId);
+            try { priceHistoryDAO.insert(ph); } catch (Exception ignore) {}
+
+            int totalSellingUpdates = priceHistoryDAO.countUpdates(productId, "selling", null);
+            // Cho UI quyết định nếu là lần thứ 3
+            out.write("{\"success\":true,\"message\":\"Cập nhật giá bán thành công\",\"totalSellingUpdates\":" + totalSellingUpdates + "}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            out.write("{\"success\":false,\"message\":\"" + escapeJson(e.getMessage()) + "\"}");
         }
     }
     

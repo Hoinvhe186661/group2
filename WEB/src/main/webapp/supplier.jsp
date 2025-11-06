@@ -449,7 +449,10 @@
                         <div class="form-group"><label>Người liên hệ</label><input name="contact_person" class="form-control" required></div>
                         <div class="form-group"><label>Email</label><input type="email" name="email" class="form-control" required></div>
                         <div class="form-group"><label>Điện thoại</label><input name="phone" class="form-control" required></div>
-                        <div class="form-group"><label>Địa chỉ</label><textarea name="address" class="form-control" rows="2" required></textarea></div>
+                        <div class="form-group"><label>Địa chỉ</label>
+                            <textarea name="address" id="add_address" class="form-control" rows="2" required oninput="updateWordCounterGeneric(this, 'add_address_counter', 50)"></textarea>
+                            <small class="form-text text-muted"><span id="add_address_counter" style="color:#5cb85c;">0</span> / 50 từ</small>
+                        </div>
                         <div class="form-group">
                             <label>Thông tin ngân hàng</label>
                             <div class="row">
@@ -505,7 +508,10 @@
                         <div class="form-group"><label>Người liên hệ</label><input name="contact_person" id="edit_contact_person" class="form-control" required></div>
                         <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_email" class="form-control" required></div>
                         <div class="form-group"><label>Điện thoại</label><input name="phone" id="edit_phone" class="form-control" required></div>
-                        <div class="form-group"><label>Địa chỉ</label><textarea name="address" id="edit_address" class="form-control" rows="2" required></textarea></div>
+                        <div class="form-group"><label>Địa chỉ</label>
+                            <textarea name="address" id="edit_address" class="form-control" rows="2" required oninput="updateWordCounterGeneric(this, 'edit_address_counter', 50)"></textarea>
+                            <small class="form-text text-muted"><span id="edit_address_counter" style="color:#5cb85c;">0</span> / 50 từ</small>
+                        </div>
                         <div class="form-group">
                             <label>Thông tin ngân hàng</label>
                             <div class="row">
@@ -557,6 +563,22 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="<%=request.getContextPath()%>/js/bootstrap.min.js" type="text/javascript"></script>
     <script>
+        function updateWordCounterGeneric(textarea, counterId, limit){
+            var text = textarea && textarea.value ? textarea.value : '';
+            var words = text.trim().length ? text.trim().split(/\s+/).filter(function(w){ return w.length>0; }) : [];
+            var count = words.length;
+            var el = document.getElementById(counterId);
+            if (el){
+                el.textContent = count;
+                if (count > limit){
+                    el.style.color = '#d9534f';
+                    textarea.style.borderColor = '#d9534f';
+                } else {
+                    el.style.color = '#5cb85c';
+                    textarea.style.borderColor = '';
+                }
+            }
+        }
         /**
          * Kiểm tra mã nhà cung cấp có trùng không
          * Tác giả: Sơn Lê
@@ -633,6 +655,14 @@
                 var email = $('input[name="email"]', this).val().trim();
                 var phone = $('input[name="phone"]', this).val().trim();
                 var address = $('textarea[name="address"]', this).val().trim();
+                // Validate địa chỉ tối đa 50 từ
+                var addrWords = address.length ? address.split(/\s+/).filter(function(w){return w.length>0;}) : [];
+                if (addrWords.length > 50){
+                    e.preventDefault();
+                    alert('Địa chỉ không được vượt quá 50 từ (hiện tại: ' + addrWords.length + ').');
+                    $('textarea[name="address"]', this)[0].style.borderColor = '#d9534f';
+                    return false;
+                }
                 
                 if (!supplierCode) {
                     e.preventDefault();
@@ -717,6 +747,14 @@
                 var email = $('#edit_email').val().trim();
                 var phone = $('#edit_phone').val().trim();
                 var address = $('#edit_address').val().trim();
+                // Validate địa chỉ tối đa 50 từ
+                var addrWords2 = address.length ? address.split(/\s+/).filter(function(w){return w.length>0;}) : [];
+                if (addrWords2.length > 50){
+                    e.preventDefault();
+                    alert('Địa chỉ không được vượt quá 50 từ (hiện tại: ' + addrWords2.length + ').');
+                    document.getElementById('edit_address').style.borderColor = '#d9534f';
+                    return false;
+                }
                 
                 if (!supplierCode) {
                     e.preventDefault();
