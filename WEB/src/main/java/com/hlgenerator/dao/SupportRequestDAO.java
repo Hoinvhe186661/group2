@@ -233,6 +233,175 @@ public class SupportRequestDAO extends DBConnect {
         return result;
     }
 
+    // Method mới: Lấy danh sách với phân trang, lọc, tìm kiếm (chỉ theo subject và category), sắp xếp
+    public Map<String, Object> listByCustomerIdWithFiltersSimple(int customerId, int page, int pageSize, 
+                                                                  String search, String filterStatus, String filterCategory,
+                                                                  String sortField, String sortDirection) {
+        Map<String, Object> result = new HashMap<>();
+        List<Map<String, Object>> data = new ArrayList<>();
+        
+        try {
+            // Xây dựng WHERE clause
+            StringBuilder whereClause = new StringBuilder("customer_id = ?");
+            List<Object> params = new ArrayList<>();
+            params.add(customerId);
+            
+            // Tìm kiếm: chỉ tìm trong subject và category
+            if (search != null && !search.trim().isEmpty()) {
+                whereClause.append(" AND (");
+                whereClause.append("subject LIKE ? OR ");
+                whereClause.append("category LIKE ?");
+                whereClause.append(")");
+                String searchPattern = "%" + search.trim() + "%";
+                params.add(searchPattern);
+                params.add(searchPattern);
+            }
+            
+            // Lọc theo trạng thái
+            if (filterStatus != null && !filterStatus.trim().isEmpty()) {
+                if ("waiting".equals(filterStatus)) {
+                    whereClause.append(" AND (status = 'open' OR status = 'pending')");
+                } else {
+                    whereClause.append(" AND status = ?");
+                    params.add(filterStatus);
+                }
+            }
+            
+            // Lọc theo loại yêu cầu
+            if (filterCategory != null && !filterCategory.trim().isEmpty()) {
+                whereClause.append(" AND category = ?");
+                params.add(filterCategory);
+            }
+            
+            // Xây dựng ORDER BY clause
+            String orderBy = "created_at DESC"; // Mặc định
+            if (sortField != null && !sortField.trim().isEmpty()) {
+                String field = sortField.trim().toLowerCase();
+                String direction = (sortDirection != null && "desc".equalsIgnoreCase(sortDirection.trim())) ? "DESC" : "ASC";
+                
+                switch (field) {
+                    case "id":
+                        orderBy = "id " + direction;
+                        break;
+                    case "date":
+                    case "created_at":
+                    case "createdat":
+                        orderBy = "created_at " + direction;
+                        break;
+                    case "subject":
+                        orderBy = "subject " + direction;
+                        break;
+                    case "category":
+                        orderBy = "category " + direction;
+                        break;
+                    case "status":
+                        orderBy = "status " + direction;
+                        break;
+                    default:
+                        orderBy = "created_at DESC";
+                }
+            }
+            
+            // Đếm tổng số record (cho phân trang)
+            String countSql = "SELECT COUNT(*) FROM support_requests WHERE " + whereClause.toString();
+            int totalRecords = 0;
+            try (PreparedStatement countPs = connection.prepareStatement(countSql)) {
+                for (int i = 0; i < params.size(); i++) {
+                    Object param = params.get(i);
+                    if (param instanceof Integer) {
+                        countPs.setInt(i + 1, (Integer) param);
+                    } else {
+                        countPs.setString(i + 1, (String) param);
+                    }
+                }
+                ResultSet countRs = countPs.executeQuery();
+                if (countRs.next()) {
+                    totalRecords = countRs.getInt(1);
+                }
+            }
+            
+            // Tính toán phân trang
+            int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+            int offset = (page - 1) * pageSize;
+            
+            // Lấy dữ liệu với phân trang
+            String dataSql = "SELECT id, ticket_number, subject, description, category, priority, status, assigned_to, history, resolution, created_at, resolved_at, " +
+                           "DATE(created_at) AS created_local_date " +
+                           "FROM support_requests WHERE " + whereClause.toString() + 
+                           " ORDER BY " + orderBy + 
+                           " LIMIT ? OFFSET ?";
+            
+            try (PreparedStatement dataPs = connection.prepareStatement(dataSql)) {
+                int paramIndex = 1;
+                for (Object param : params) {
+                    if (param instanceof Integer) {
+                        dataPs.setInt(paramIndex, (Integer) param);
+                    } else {
+                        dataPs.setString(paramIndex, (String) param);
+                    }
+                    paramIndex++;
+                }
+                dataPs.setInt(paramIndex++, pageSize);
+                dataPs.setInt(paramIndex++, offset);
+                
+                ResultSet rs = dataPs.executeQuery();
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("id", rs.getInt("id"));
+                    row.put("ticketNumber", rs.getString("ticket_number"));
+                    row.put("subject", rs.getString("subject"));
+                    row.put("description", rs.getString("description"));
+                    row.put("category", rs.getString("category"));
+                    row.put("priority", rs.getString("priority"));
+                    row.put("status", rs.getString("status"));
+                    row.put("assignedTo", rs.getString("assigned_to"));
+                    row.put("history", rs.getString("history"));
+                    row.put("resolution", rs.getString("resolution"));
+                    java.sql.Timestamp ts = rs.getTimestamp("created_at");
+                    row.put("createdAt", ts);
+                    try {
+                        String local = rs.getString("created_local_date");
+                        if (local != null && !local.isEmpty()) {
+                            row.put("createdDate", local);
+                        } else if (ts != null) {
+                            java.time.LocalDate ld = ts.toInstant()
+                                .atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                                .toLocalDate();
+                            row.put("createdDate", ld.toString());
+                        }
+                    } catch (Exception ignore) {
+                        if (ts != null) {
+                            java.time.LocalDate ld = ts.toInstant()
+                                .atZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                                .toLocalDate();
+                            row.put("createdDate", ld.toString());
+                        }
+                    }
+                    row.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                    data.add(row);
+                }
+            }
+            
+            // Đóng gói kết quả
+            result.put("data", data);
+            result.put("totalRecords", totalRecords);
+            result.put("totalPages", totalPages);
+            result.put("currentPage", page);
+            result.put("pageSize", pageSize);
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = e.getMessage();
+            result.put("data", new ArrayList<>());
+            result.put("totalRecords", 0);
+            result.put("totalPages", 0);
+            result.put("currentPage", page);
+            result.put("pageSize", pageSize);
+        }
+        
+        return result;
+    }
+
     public boolean create(int customerId, String subject, String description, String category, String priority) {
         try {
             if (connection == null || connection.isClosed()) {

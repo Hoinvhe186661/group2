@@ -109,14 +109,14 @@ public class SupportCustomerServlet extends HttpServlet {
                             pageSize = 9;
                         }
                         
-                        // Gọi method mới với các tham số
-                        System.out.println("DEBUG: Calling listByCustomerIdWithFilters with - customerId=" + customerId + 
+                        // Gọi method mới với các tham số (chỉ tìm kiếm theo subject và category)
+                        System.out.println("DEBUG: Calling listByCustomerIdWithFiltersSimple with - customerId=" + customerId + 
                                          ", page=" + page + ", pageSize=" + pageSize + 
                                          ", search=" + search + ", filterStatus=" + filterStatus + 
                                          ", filterCategory=" + filterCategory + ", sortField=" + sortField + 
                                          ", sortDirection=" + sortDirection);
                         
-                        Map<String, Object> result = supportDAO.listByCustomerIdWithFilters(
+                        Map<String, Object> result = supportDAO.listByCustomerIdWithFiltersSimple(
                             customerId, page, pageSize, search, filterStatus, filterCategory, sortField, sortDirection
                         );
                         
