@@ -325,14 +325,6 @@
                                                     <label for="startTo">Đến</label>
                                                     <input type="date" class="form-control" id="startTo" name="startTo" value="<%= request.getParameter("startTo") != null ? request.getParameter("startTo") : "" %>">
                                                 </div>
-                                                <div class="filter-group">
-                                                    <label for="endFrom">Kết thúc từ</label>
-                                                    <input type="date" class="form-control" id="endFrom" name="endFrom" value="<%= request.getParameter("endFrom") != null ? request.getParameter("endFrom") : "" %>">
-                                                </div>
-                                                <div class="filter-group">
-                                                    <label for="endTo">Đến</label>
-                                                    <input type="date" class="form-control" id="endTo" name="endTo" value="<%= request.getParameter("endTo") != null ? request.getParameter("endTo") : "" %>">
-                                                </div>
                                             </div>
                                             <div class="filter-row">
                                                 <div class="filter-group small">

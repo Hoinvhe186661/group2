@@ -211,9 +211,6 @@
                                         </button>
                                         <a href="email-management" class="btn btn-default">
                                             <i class="fa fa-times"></i> Hủy
-                                        </a>
-                                        <button type="button" class="btn btn-info" id="testConnectionBtn">
-                                            <i class="fa fa-plug"></i> Kiểm tra kết nối
                                         </button>
                                     </div>
                                 </form>
@@ -358,8 +355,6 @@
                                                         <option value="pending" <%= "pending".equals(filterStatus) ? "selected" : "" %>>Chờ gửi</option>
                                                         <option value="sending" <%= "sending".equals(filterStatus) ? "selected" : "" %>>Đang gửi</option>
                                                         <option value="completed" <%= "completed".equals(filterStatus) ? "selected" : "" %>>Hoàn thành</option>
-                                                        <option value="failed" <%= "failed".equals(filterStatus) ? "selected" : "" %>>Thất bại</option>
-                                                        <option value="partial" <%= "partial".equals(filterStatus) ? "selected" : "" %>>Một phần</option>
                                                     </select>
                                                 </div>
                                             </div>

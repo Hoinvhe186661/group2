@@ -336,6 +336,7 @@
 
     <script>
         var currentMessageId = null;
+        var shouldReloadAfterModalClose = false;
         
         // Khởi tạo DataTable
         $(document).ready(function() {
@@ -356,6 +357,14 @@
                 },
                 "order": [[0, "desc"]],
                 "pageLength": 25
+            });
+            
+            // Xử lý khi modal đóng - reload nếu cần
+            $('#viewMessageModal').on('hidden.bs.modal', function() {
+                if (shouldReloadAfterModalClose) {
+                    shouldReloadAfterModalClose = false;
+                    location.reload();
+                }
             });
         });
         
@@ -440,17 +449,25 @@
             html += '</div>';
             
             $('#messageDetailContent').html(html);
-            $('#viewMessageModal').modal('show');
             
-            // Nếu chưa đọc, tự động đánh dấu đã đọc
-            if (status === 'Mới') {
-                updateStatus(messageId, 'read', false);
-            }
+            // Nếu chưa đọc, tự động đánh dấu đã đọc sau khi modal hiển thị
+            var isNewMessage = (status === 'Mới');
+            
+            // Đăng ký event một lần để xử lý cập nhật trạng thái
+            $('#viewMessageModal').off('shown.bs.modal.viewMessage').on('shown.bs.modal.viewMessage', function() {
+                if (isNewMessage) {
+                    updateStatus(messageId, 'read', false, false);
+                }
+            });
+            
+            // Hiển thị modal
+            $('#viewMessageModal').modal('show');
         }
         
         // Cập nhật trạng thái
-        function updateStatus(messageId, status, showAlert) {
+        function updateStatus(messageId, status, showAlert, reload) {
             if (showAlert === undefined) showAlert = true;
+            if (reload === undefined) reload = true;
             
             if (showAlert && !confirm('Bạn có chắc muốn cập nhật trạng thái?')) {
                 return;
@@ -470,7 +487,17 @@
                         if (showAlert) {
                             alert('✓ ' + response.message);
                         }
-                        location.reload();
+                        // Chỉ reload nếu được yêu cầu
+                        if (reload) {
+                            location.reload();
+                        } else {
+                            // Nếu đang mở modal, đánh dấu để reload sau khi đóng
+                            if ($('#viewMessageModal').hasClass('in') || $('#viewMessageModal').is(':visible')) {
+                                shouldReloadAfterModalClose = true;
+                            } else {
+                                location.reload();
+                            }
+                        }
                     } else {
                         alert('✗ ' + response.message);
                     }
@@ -484,7 +511,7 @@
         // Đánh dấu đã phản hồi từ modal
         $('#btnMarkAsReplied').click(function() {
             if (currentMessageId) {
-                updateStatus(currentMessageId, 'replied');
+                updateStatus(currentMessageId, 'replied', true, true);
                 $('#viewMessageModal').modal('hide');
             }
         });

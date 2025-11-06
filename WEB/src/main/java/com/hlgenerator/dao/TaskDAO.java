@@ -14,8 +14,14 @@ public class TaskDAO extends DBConnect {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
 		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
+		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
-		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason ");
+		sql.append("wo.customer_id, wo.description AS work_order_description, ");
+		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
+		sql.append("(SELECT sr.description FROM support_requests sr ");
+		sql.append(" WHERE sr.customer_id = wo.customer_id ");
+		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
+		sql.append(" ORDER BY sr.created_at DESC LIMIT 1) AS ticket_description ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
@@ -48,6 +54,8 @@ public class TaskDAO extends DBConnect {
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
 					a.setRejectionReason(rs.getString("rejection_reason"));
+					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
+					a.setTicketDescription(rs.getString("ticket_description"));
 					results.add(a);
 				}
 			}
@@ -69,8 +77,14 @@ public class TaskDAO extends DBConnect {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
 		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
+		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, ");
-		sql.append("t.rejection_reason AS rejection_reason ");
+		sql.append("wo.customer_id, wo.description AS work_order_description, ");
+		sql.append("t.rejection_reason AS rejection_reason, ");
+		sql.append("(SELECT sr.description FROM support_requests sr ");
+		sql.append(" WHERE sr.customer_id = wo.customer_id ");
+		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
+		sql.append(" ORDER BY sr.created_at DESC LIMIT 1) AS ticket_description ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
@@ -126,6 +140,8 @@ public class TaskDAO extends DBConnect {
 				a.setTaskPriority(rs.getString("task_priority"));
 				a.setWorkOrderNumber(rs.getString("work_order_number"));
 				a.setWorkOrderTitle(rs.getString("work_order_title"));
+				a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
+				a.setTicketDescription(rs.getString("ticket_description"));
 				results.add(a);
 				}
 			}
@@ -191,8 +207,14 @@ public class TaskDAO extends DBConnect {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
 		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
+		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
-		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason ");
+		sql.append("wo.customer_id, wo.description AS work_order_description, ");
+		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
+		sql.append("(SELECT sr.description FROM support_requests sr ");
+		sql.append(" WHERE sr.customer_id = wo.customer_id ");
+		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
+		sql.append(" ORDER BY sr.created_at DESC LIMIT 1) AS ticket_description ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
@@ -239,7 +261,8 @@ public class TaskDAO extends DBConnect {
 					a.setScheduledDate(rs.getTimestamp("scheduled_date"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
-					a.setRejectionReason(rs.getString("rejection_reason"));
+					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
+					a.setTicketDescription(rs.getString("ticket_description"));
 					results.add(a);
 				}
 			}
@@ -256,6 +279,56 @@ public class TaskDAO extends DBConnect {
 			try (ResultSet rs = ps.executeQuery()) {
 				if (rs.next()) {
 					return mapTask(rs);
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public TaskAssignment getAssignmentDetail(int taskId, int userId) {
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
+		sql.append("t.task_number, t.task_description, t.status AS task_status, t.priority AS task_priority, ");
+		sql.append("t.estimated_hours, ");
+		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
+		sql.append("wo.customer_id, wo.description AS work_order_description, ");
+		sql.append("t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
+		sql.append("(SELECT sr.description FROM support_requests sr ");
+		sql.append(" WHERE sr.customer_id = wo.customer_id ");
+		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
+		sql.append(" ORDER BY sr.created_at DESC LIMIT 1) AS ticket_description ");
+		sql.append("FROM task_assignments ta ");
+		sql.append("JOIN tasks t ON ta.task_id = t.id ");
+		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
+		sql.append("WHERE ta.task_id = ? AND ta.user_id = ? ");
+		sql.append("LIMIT 1");
+
+		try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+			ps.setInt(1, taskId);
+			ps.setInt(2, userId);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					TaskAssignment a = new TaskAssignment();
+					a.setId(rs.getInt("id"));
+					a.setTaskId(rs.getInt("task_id"));
+					a.setUserId(rs.getInt("user_id"));
+					a.setRole(rs.getString("role"));
+					a.setAssignedAt(rs.getTimestamp("assigned_at"));
+					a.setTaskNumber(rs.getString("task_number"));
+					a.setTaskDescription(rs.getString("task_description"));
+					a.setTaskStatus(rs.getString("task_status"));
+					a.setTaskPriority(rs.getString("task_priority"));
+					a.setWorkOrderNumber(rs.getString("work_order_number"));
+					a.setWorkOrderTitle(rs.getString("work_order_title"));
+					a.setScheduledDate(rs.getTimestamp("scheduled_date"));
+					a.setStartDate(rs.getTimestamp("start_date"));
+					a.setCompletionDate(rs.getTimestamp("completion_date"));
+					a.setRejectionReason(rs.getString("rejection_reason"));
+					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
+					a.setTicketDescription(rs.getString("ticket_description"));
+					return a;
 				}
 			}
 		} catch (SQLException e) {
@@ -293,7 +366,7 @@ public class TaskDAO extends DBConnect {
 
 	public boolean rejectTask(int taskId, String rejectionReason) {
 		System.out.println("TaskDAO - rejectTask called with taskId: " + taskId + ", reason: " + rejectionReason);
-		String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, updated_at = NOW() WHERE id = ?";
+		String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, completion_percentage = 0, updated_at = NOW() WHERE id = ?";
 		try (PreparedStatement ps = connection.prepareStatement(sql)) {
 			ps.setString(1, rejectionReason);
 			ps.setInt(2, taskId);

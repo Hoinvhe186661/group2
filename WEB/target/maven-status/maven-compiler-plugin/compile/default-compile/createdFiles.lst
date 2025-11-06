@@ -64,6 +64,7 @@ com\hlgenerator\service\EmailService.class
 com\hlgenerator\dao\ContactDAO.class
 com\hlgenerator\servlet\AdminDashboardServlet.class
 com\hlgenerator\model\TaskAssignment.class
+com\hlgenerator\service\EmailService$3.class
 com\hlgenerator\dao\ProductDAO.class
 com\hlgenerator\dao\TaskDAO.class
 com\hlgenerator\servlet\ProductServlet$ValidationResult.class

@@ -1,6 +1,7 @@
 package com.hlgenerator.dao;
 
 import com.hlgenerator.model.EmailNotification;
+import org.json.JSONArray;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -282,6 +283,86 @@ public class EmailNotificationDAO extends DBConnect {
             return result > 0;
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error setting sent_at", e);
+            return false;
+        }
+    }
+
+    // Update single email result immediately (optimized for parallel sending)
+    public boolean updateSingleEmailResult(int notificationId, boolean success, String email) {
+        if (!checkConnection()) {
+            return false;
+        }
+        String sql;
+        if (success) {
+            // Increment success_count
+            sql = "UPDATE email_notifications SET success_count = success_count + 1, " +
+                  "updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, notificationId);
+                return ps.executeUpdate() > 0;
+            } catch (SQLException e) {
+                logger.log(Level.WARNING, "Error updating single email success for notification: " + notificationId, e);
+                return false;
+            }
+        } else {
+            // Increment failed_count and add to failed_recipients
+            // First get current failed_recipients
+            String currentFailed = null;
+            String selectSql = "SELECT failed_recipients FROM email_notifications WHERE id = ?";
+            try (PreparedStatement selectPs = connection.prepareStatement(selectSql)) {
+                selectPs.setInt(1, notificationId);
+                try (ResultSet rs = selectPs.executeQuery()) {
+                    if (rs.next()) {
+                        currentFailed = rs.getString("failed_recipients");
+                    }
+                }
+            } catch (SQLException e) {
+                logger.log(Level.WARNING, "Error reading failed_recipients for notification: " + notificationId, e);
+            }
+            
+            // Build new failed_recipients JSON
+            String newFailedRecipients;
+            try {
+                JSONArray failedArray;
+                if (currentFailed == null || currentFailed.trim().isEmpty() || currentFailed.equals("[]")) {
+                    failedArray = new JSONArray();
+                } else {
+                    failedArray = new JSONArray(currentFailed);
+                }
+                failedArray.put(email);
+                newFailedRecipients = failedArray.toString();
+            } catch (Exception e) {
+                logger.log(Level.WARNING, "Error parsing failed_recipients JSON, using simple array", e);
+                newFailedRecipients = "[\"" + email.replace("\"", "\\\"") + "\"]";
+            }
+            
+            // Update with new failed_recipients
+            sql = "UPDATE email_notifications SET failed_count = failed_count + 1, " +
+                  "failed_recipients = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, newFailedRecipients);
+                ps.setInt(2, notificationId);
+                return ps.executeUpdate() > 0;
+            } catch (SQLException e) {
+                logger.log(Level.WARNING, "Error updating single email failure for notification: " + notificationId, e);
+                return false;
+            }
+        }
+    }
+
+    // Mark notification as completed
+    public boolean markAsCompleted(int notificationId) {
+        if (!checkConnection()) {
+            return false;
+        }
+        String sql = "UPDATE email_notifications SET status = 'completed', " +
+                    "completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, notificationId);
+            int result = ps.executeUpdate();
+            return result > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error marking notification as completed: " + notificationId, e);
             return false;
         }
     }

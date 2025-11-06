@@ -13,7 +13,7 @@ public class EmailNotification {
     private int successCount;
     private int failedCount;
     private String failedRecipients; // JSON array string
-    private String status; // 'pending', 'sending', 'completed', 'failed', 'partial'
+    private String status; // 'pending' (chờ gửi), 'sending' (đang gửi), 'completed' (hoàn thành)
     private Integer sentBy; // User ID
     private String sentByName;
     private Timestamp scheduledAt;
@@ -251,12 +251,8 @@ public class EmailNotification {
                 return "Đang gửi";
             case "completed":
                 return "Hoàn thành";
-            case "failed":
-                return "Thất bại";
-            case "partial":
-                return "Một phần";
             default:
-                return status;
+                return status != null ? status : "Chờ gửi";
         }
     }
 
@@ -268,10 +264,6 @@ public class EmailNotification {
                 return "label-info";
             case "completed":
                 return "label-success";
-            case "failed":
-                return "label-danger";
-            case "partial":
-                return "label-warning";
             default:
                 return "label-default";
         }

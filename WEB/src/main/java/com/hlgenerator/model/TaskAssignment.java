@@ -1,5 +1,6 @@
 package com.hlgenerator.model;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 public class TaskAssignment {
@@ -20,6 +21,8 @@ public class TaskAssignment {
 	private Timestamp startDate;     // from tasks
 	private Timestamp completionDate; // from tasks
 	private String rejectionReason;  // from tasks
+	private BigDecimal estimatedHours; // from tasks.estimated_hours
+	private String ticketDescription;  // from support_requests.description
 
 	public int getId() { return id; }
 	public void setId(int id) { this.id = id; }
@@ -66,6 +69,12 @@ public class TaskAssignment {
 	public String getRejectionReason() { return rejectionReason; }
 	public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
+	public BigDecimal getEstimatedHours() { return estimatedHours; }
+	public void setEstimatedHours(BigDecimal estimatedHours) { this.estimatedHours = estimatedHours; }
+
+	public String getTicketDescription() { return ticketDescription; }
+	public void setTicketDescription(String ticketDescription) { this.ticketDescription = ticketDescription; }
+
 	public org.json.JSONObject toJSON() {
 		org.json.JSONObject obj = new org.json.JSONObject();
 		obj.put("id", id);
@@ -83,6 +92,8 @@ public class TaskAssignment {
 		obj.put("startDate", startDate);
 		obj.put("completionDate", completionDate);
 		obj.put("rejectionReason", rejectionReason);
+		obj.put("estimatedHours", estimatedHours);
+		obj.put("ticketDescription", ticketDescription);
 		return obj;
 	}
 }

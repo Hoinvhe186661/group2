@@ -37,9 +37,6 @@
     .logo-icon { width:60px; height:60px; border-radius:50%; margin-right:15px; overflow:hidden; }
     .logo-icon img { width:100%; height:100%; object-fit:cover; }
     .logo-text { color:#343a40; font-size:16px; font-weight:600; line-height:1.2; }
-    .search-container { position:relative; margin:0 20px; }
-    .search-input { width:300px; padding:12px 45px 12px 15px; border:1px solid #dee2e6; border-radius:25px; font-size:14px; }
-    .search-icon { position:absolute; right:15px; top:50%; transform:translateY(-50%); color:#6c757d; }
     .contact-info-nav { display:flex; align-items:center; gap:20px; }
     .phone-number { color:#dc3545; font-weight:600; font-size:16px; }
     .nav-icons { display:flex; gap:15px; }
@@ -127,10 +124,6 @@
                 <div class="logo-text"><strong><%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR" %></strong></div>
             </div>
         </a>
-        <div class="search-container" role="search">
-            <input type="text" class="search-input" placeholder="Tìm kiếm...">
-            <i class="fas fa-search search-icon"></i>
-        </div>
         <div class="contact-info-nav">
             <div class="phone-number"><i class="fas fa-phone"></i> <%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989.888.999" %></div>
             <div class="nav-icons">
@@ -154,7 +147,7 @@
                                 </a>
                             </c:when>
                             <c:when test="${sessionScope.userRole eq 'technical_staff'}">
-                                <a href="${pageContext.request.contextPath}/technical_staff.jsp" class="management-icon-link" title="Trang quản lý">
+                                <a href="${pageContext.request.contextPath}/my_tasks.jsp" class="management-icon-link" title="Trang quản lý">
                                     <i class="fas fa-tools"></i>
                                 </a>
                             </c:when>

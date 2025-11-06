@@ -63,7 +63,7 @@
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
     <header class="header">
-        <a href="technical_staff.jsp" class="logo">
+        <a href="my_tasks.jsp" class="logo">
             Nhân viên Kỹ thuật
         </a>
         <!-- Header Navbar: style can be found in header.less -->

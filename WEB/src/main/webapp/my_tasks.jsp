@@ -120,6 +120,15 @@
             overflow: hidden;
             white-space: normal;
         }
+        .ticket-desc-ellipsis {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: normal;
+            word-break: break-word;
+        }
         /* Reject modal textarea counter */
         .char-counter {
             font-size: 12px;
@@ -130,7 +139,7 @@
 </head>
 <body class="skin-black">
     <header class="header">
-        <a href="technical_staff.jsp" class="logo">
+        <a href="my_tasks.jsp" class="logo">
             Nhân Viên Kỹ Thuật
         </a>
         <nav class="navbar navbar-static-top" role="navigation">
@@ -266,14 +275,16 @@
                                             <th>Nhiệm vụ</th>
                                             <th>Trạng thái</th>
                                             <th>Ưu tiên</th>
+                                            <th>Thời gian dự kiến</th>
                                             <th>Ngày nhận</th>
                                             <th>Ngày hoàn thành</th>
+                                            <th>Mô tả từ ticket</th>
                                             <th>Lý do từ chối</th>
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody id="taskBody">
-                                        <tr><td colspan="8" class="text-center text-muted">Đang tải...</td></tr>
+                                        <tr><td colspan="10" class="text-center text-muted">Đang tải...</td></tr>
                                     </tbody>
                                 </table>
                                 <nav aria-label="Task pagination">
@@ -324,11 +335,11 @@
                                 <div class="form-group">
                                     <label>Phần trăm hoàn thành <span class="text-danger">*</span></label>
                                     <input type="range" class="form-control-range" 
-                                           id="completionPercentage" min="0" max="100" value="100" 
+                                           id="completionPercentage" min="0" max="100" value="0" 
                                            style="width: 100%; margin-top: 8px;">
                                     <div class="text-center" style="margin-top: 5px;">
                                         <strong style="font-size: 18px; color: #00a65a;">
-                                            <span id="percentageValue">100</span>%
+                                            <span id="percentageValue">0</span>%
                                         </strong>
                                     </div>
                                 </div>
@@ -416,6 +427,108 @@
         </div>
     </div>
 
+    <!-- Modal: Xem chi tiết nhiệm vụ -->
+    <div class="modal fade" id="viewTaskDetailModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #3c8dbc; color: white;">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color: white; opacity: 0.8;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title">
+                        <i class="fa fa-info-circle"></i> Chi tiết nhiệm vụ
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fa fa-file-text-o"></i> Thông tin Work Order</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%;">Mã WO:</th>
+                                    <td><strong id="detailWorkOrderNumber">-</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Tiêu đề:</th>
+                                    <td id="detailWorkOrderTitle">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Ngày dự kiến:</th>
+                                    <td id="detailScheduledDate">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fa fa-tasks"></i> Thông tin Nhiệm vụ</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%;">Mã nhiệm vụ:</th>
+                                    <td><strong id="detailTaskNumber">-</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Mô tả:</th>
+                                    <td id="detailTaskDescription">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Trạng thái:</th>
+                                    <td id="detailTaskStatus">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Ưu tiên:</th>
+                                    <td id="detailTaskPriority">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Thời gian dự kiến:</th>
+                                    <td id="detailEstimatedHours">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row" style="margin-top: 15px;">
+                        <div class="col-md-6">
+                            <h5><i class="fa fa-calendar"></i> Thời gian</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%;">Ngày được giao:</th>
+                                    <td id="detailAssignedAt">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Ngày bắt đầu:</th>
+                                    <td id="detailStartDate">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Ngày hoàn thành:</th>
+                                    <td id="detailCompletionDate">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fa fa-ticket"></i> Thông tin từ Ticket</h5>
+                            <div class="well" style="min-height: 100px; max-height: 200px; overflow-y: auto;">
+                                <div id="detailTicketDescription" style="white-space: pre-wrap; word-wrap: break-word;">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row" style="margin-top: 15px;">
+                        <div class="col-md-12">
+                            <h5><i class="fa fa-exclamation-triangle"></i> Lý do từ chối</h5>
+                            <div class="well" id="detailRejectionReason" style="min-height: 50px;">
+                                <span class="text-muted">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">
+                        <i class="fa fa-times"></i> Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Xem báo cáo chi tiết -->
     <div class="modal fade" id="viewReportModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
@@ -498,6 +611,17 @@
         }
 
         var currentPage = 1;
+        var currentTasksData = []; // Lưu dữ liệu tasks hiện tại
+
+        // Hàm loại bỏ các phần trong dấu ngoặc vuông và chỉ giữ lại mô tả thực tế
+        function extractTicketDescription(text) {
+            if(!text) return '';
+            // Loại bỏ tất cả các phần trong dấu ngoặc vuông [....]
+            var cleaned = text.replace(/\[[^\]]*\]/g, '').trim();
+            // Loại bỏ khoảng trắng thừa
+            cleaned = cleaned.replace(/\s+/g, ' ').trim();
+            return cleaned;
+        }
 
         function loadTasks(){
             var status = document.getElementById('statusFilter').value;
@@ -509,9 +633,11 @@
             $.getJSON('api/tasks', { action:'listAssigned', userId: currentUserId, status: status, priority: priority, scheduledFrom: scheduledFrom, scheduledTo: scheduledTo, q: q, page: currentPage, size: size }, function(res){
                 var tbody = document.getElementById('taskBody');
                 tbody.innerHTML = '';
-                if(!res.success){ tbody.innerHTML = '<tr><td colspan="8">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
-                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); return; }
+                if(!res.success){ tbody.innerHTML = '<tr><td colspan="10">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
+                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); currentTasksData = []; return; }
                 renderPagination(res.meta);
+                // Lưu dữ liệu để sử dụng cho modal chi tiết
+                currentTasksData = res.data;
                 function fmt(ts){
                     if(!ts) return '';
                     try{
@@ -544,6 +670,9 @@
 
                 res.data.forEach(function(it){
                     var actions = [];
+                    // Nút xem chi tiết - luôn hiển thị
+                    actions.push('<button class="btn btn-xs btn-info" onclick="viewTaskDetail(' + it.taskId + ')"><i class="fa fa-info-circle"></i> Chi tiết</button>');
+                    
                     if(it.taskStatus === 'pending'){
                         actions.push('<button class="btn btn-xs btn-primary" onclick="ack(' + it.taskId + ')"><i class="fa fa-check"></i> Nhận</button>');
                         actions.push('<button class="btn btn-xs btn-danger" onclick="openRejectModal(' + it.taskId + ')"><i class="fa fa-times"></i> Từ chối</button>');
@@ -552,7 +681,34 @@
                         actions.push('<button class="btn btn-xs btn-success" onclick="openCompleteModal(' + it.taskId + ', \'' + (it.taskNumber||'').replace(/'/g, "\\'") + '\', \'' + (it.taskDescription||'').replace(/'/g, "\\'") + '\')"><i class="fa fa-flag-checkered"></i> Hoàn thành</button>');
                     }
                     if(it.taskStatus === 'completed'){
-                        actions.push('<button class="btn btn-xs btn-info" onclick="viewReport(' + it.taskId + ')"><i class="fa fa-eye"></i> Xem báo cáo</button>');
+                        actions.push('<button class="btn btn-xs btn-success" onclick="viewReport(' + it.taskId + ')"><i class="fa fa-file-text"></i> Báo cáo</button>');
+                    }
+                    
+                    // Format thời gian dự kiến
+                    var estimatedTimeDisplay = '<span class="text-muted">-</span>';
+                    if(it.estimatedHours && parseFloat(it.estimatedHours) > 0) {
+                        estimatedTimeDisplay = '<strong>' + parseFloat(it.estimatedHours).toFixed(1) + 'h</strong>';
+                    } else if(it.assignedAt) {
+                        estimatedTimeDisplay = fmt(it.assignedAt);
+                    }
+                    
+                    // Format mô tả từ ticket - loại bỏ các phần trong dấu ngoặc vuông
+                    var ticketDescDisplay = '<span class="text-muted">-</span>';
+                    if(it.ticketDescription) {
+                        var ticketDesc = String(it.ticketDescription);
+                        // Loại bỏ các phần trong dấu ngoặc vuông [....]
+                        var cleanedDesc = extractTicketDescription(ticketDesc);
+                        
+                        if(cleanedDesc) {
+                            var escapedTicketDesc = cleanedDesc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                            var originalEscaped = ticketDesc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                            if(cleanedDesc.length > 100) {
+                                ticketDescDisplay = '<span class="ticket-desc-ellipsis" title="' + originalEscaped + '">' + 
+                                    escapedTicketDesc.substring(0, 100) + '...</span>';
+                            } else {
+                                ticketDescDisplay = '<span title="' + originalEscaped + '">' + escapedTicketDesc + '</span>';
+                            }
+                        }
                     }
                     
                     var tr = document.createElement('tr');
@@ -561,8 +717,10 @@
                         '<td><div><strong>' + (it.taskNumber||'') + '</strong></div><div>' + (it.taskDescription||'') + '</div></td>' +
                         '<td>' + badgeForStatus(it.taskStatus) + '</td>' +
                         '<td>' + (it.taskPriority||'') + '</td>' +
+                        '<td>' + estimatedTimeDisplay + '</td>' +
                         '<td>' + (fmt(it.startDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
+                        '<td class="reason-cell">' + ticketDescDisplay + '</td>' +
                         '<td class="reason-cell">' + (it.rejectionReason ? (function(txt){ var esc = String(txt).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); return '<span class="text-danger reason-ellipsis" title="' + esc + '">' + esc + '</span>'; })(it.rejectionReason) : '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + actions.join(' ') + '</td>';
                     tbody.appendChild(tr);
@@ -627,7 +785,8 @@
             
             // Reset form
             $('#completeTaskForm')[0].reset();
-            $('#percentageValue').text('100');
+            $('#completionPercentage').val('0');
+            $('#percentageValue').text('0');
             $('#imagePreview').html('');
             
             $('#completeTaskModal').modal('show');
@@ -729,6 +888,135 @@
                 reader.readAsDataURL(file);
             }
         });
+
+        // Xem chi tiết nhiệm vụ
+        function viewTaskDetail(taskId) {
+            // Gọi API để lấy chi tiết task
+            $.getJSON('api/tasks', {
+                action: 'getDetail', 
+                id: taskId, 
+                userId: currentUserId
+            }, function(res) {
+                if(res.success && res.data) {
+                    displayTaskDetail(res.data);
+                } else {
+                    // Fallback: tìm trong danh sách hiện tại
+                    var taskData = null;
+                    for(var i = 0; i < currentTasksData.length; i++) {
+                        if(currentTasksData[i].taskId == taskId) {
+                            taskData = currentTasksData[i];
+                            break;
+                        }
+                    }
+                    if(taskData) {
+                        displayTaskDetail(taskData);
+                    } else {
+                        alert(res.message || 'Không tìm thấy thông tin nhiệm vụ!');
+                    }
+                }
+            }).fail(function(){
+                // Fallback: tìm trong danh sách hiện tại nếu API lỗi
+                var taskData = null;
+                for(var i = 0; i < currentTasksData.length; i++) {
+                    if(currentTasksData[i].taskId == taskId) {
+                        taskData = currentTasksData[i];
+                        break;
+                    }
+                }
+                if(taskData) {
+                    displayTaskDetail(taskData);
+                } else {
+                    alert('Lỗi kết nối! Không thể tải chi tiết nhiệm vụ.');
+                }
+            });
+        }
+        
+        // Hiển thị chi tiết nhiệm vụ
+        function displayTaskDetail(taskData) {
+            if(taskData) {
+                        // Format ngày tháng
+                        function formatDateTime(ts) {
+                            if(!ts) return '-';
+                            try {
+                                var d;
+                                if(typeof ts === 'number') {
+                                    d = new Date(ts);
+                                } else if(typeof ts === 'string') {
+                                    var norm = ts.indexOf('T') === -1 ? ts.replace(' ', 'T') : ts;
+                                    d = new Date(norm);
+                                    if(isNaN(d.getTime())) {
+                                        var parts = ts.split(' ');
+                                        var datePart = parts[0] || '';
+                                        var timePart = parts[1] || '';
+                                        var dp = datePart.split('-');
+                                        if(dp.length === 3) {
+                                            d = new Date(parseInt(dp[0],10), parseInt(dp[1],10)-1, parseInt(dp[2],10));
+                                            if(timePart) {
+                                                var tp = timePart.split(':');
+                                                if(tp.length >= 2) {
+                                                    d.setHours(parseInt(tp[0],10), parseInt(tp[1],10), tp[2] ? parseInt(tp[2],10) : 0);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    d = new Date(ts);
+                                }
+                                if(isNaN(d.getTime())) return '-';
+                                var dd = String(d.getDate()).padStart(2,'0');
+                                var mm = String(d.getMonth()+1).padStart(2,'0');
+                                var yyyy = d.getFullYear();
+                                var hh = String(d.getHours()).padStart(2,'0');
+                                var min = String(d.getMinutes()).padStart(2,'0');
+                                return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + min;
+                            } catch(e) { return '-'; }
+                        }
+                        
+                        // Hiển thị thông tin Work Order
+                        $('#detailWorkOrderNumber').text(taskData.workOrderNumber || '-');
+                        $('#detailWorkOrderTitle').text(taskData.workOrderTitle || '-');
+                        $('#detailScheduledDate').text(taskData.scheduledDate ? formatDateTime(taskData.scheduledDate) : '-');
+                        
+                        // Hiển thị thông tin Nhiệm vụ
+                        $('#detailTaskNumber').text(taskData.taskNumber || '-');
+                        $('#detailTaskDescription').text(taskData.taskDescription || '-');
+                        $('#detailTaskStatus').html(badgeForStatus(taskData.taskStatus));
+                        $('#detailTaskPriority').text(taskData.taskPriority || '-');
+                        
+                        // Thời gian dự kiến
+                        var estimatedDisplay = '-';
+                        if(taskData.estimatedHours && parseFloat(taskData.estimatedHours) > 0) {
+                            estimatedDisplay = '<strong>' + parseFloat(taskData.estimatedHours).toFixed(1) + ' giờ</strong>';
+                        }
+                        $('#detailEstimatedHours').html(estimatedDisplay);
+                        
+                        // Thời gian
+                        $('#detailAssignedAt').text(taskData.assignedAt ? formatDateTime(taskData.assignedAt) : '-');
+                        $('#detailStartDate').text(taskData.startDate ? formatDateTime(taskData.startDate) : '-');
+                        $('#detailCompletionDate').text(taskData.completionDate ? formatDateTime(taskData.completionDate) : '-');
+                        
+                        // Mô tả từ ticket (đầy đủ, không cắt)
+                        var ticketDesc = taskData.ticketDescription || '';
+                        if(ticketDesc) {
+                            // Loại bỏ các phần trong dấu ngoặc vuông
+                            var cleanedDesc = extractTicketDescription(ticketDesc);
+                            $('#detailTicketDescription').text(cleanedDesc || '-');
+                        } else {
+                            $('#detailTicketDescription').html('<span class="text-muted">-</span>');
+                        }
+                        
+                        // Lý do từ chối
+                        if(taskData.rejectionReason) {
+                            $('#detailRejectionReason').html('<span class="text-danger">' + 
+                                String(taskData.rejectionReason).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + 
+                                '</span>');
+                        } else {
+                            $('#detailRejectionReason').html('<span class="text-muted">-</span>');
+                        }
+                        
+                        $('#viewTaskDetailModal').modal('show');
+                    }
+        }
 
         // Xem báo cáo chi tiết
         function viewReport(taskId) {

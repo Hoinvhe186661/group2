@@ -85,6 +85,19 @@ public class TaskServlet extends HttpServlet {
 				result.put("success", task != null);
 				result.put("data", task != null ? new JSONObject(task) : JSONObject.NULL);
 				out.print(result.toString());
+			} else if ("getDetail".equals(action)) {
+				int taskId = Integer.parseInt(request.getParameter("id"));
+				int userId = Integer.parseInt(param(request, "userId", "0"));
+				TaskAssignment assignment = taskDAO.getAssignmentDetail(taskId, userId);
+				JSONObject result = new JSONObject();
+				if (assignment != null) {
+					result.put("success", true);
+					result.put("data", assignment.toJSON());
+				} else {
+					result.put("success", false);
+					result.put("message", "Không tìm thấy nhiệm vụ");
+				}
+				out.print(result.toString());
 			} else {
 				JSONObject error = new JSONObject();
 				error.put("success", false);
@@ -208,7 +221,7 @@ public class TaskServlet extends HttpServlet {
 			String pass = props.getProperty("db.password");
 			
 			try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-				String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, updated_at = NOW() WHERE id = ?";
+				String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, completion_percentage = 0, updated_at = NOW() WHERE id = ?";
 				try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
 					ps.setString(1, rejectionReason);
 					ps.setInt(2, taskId);

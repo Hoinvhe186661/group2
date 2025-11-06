@@ -14,11 +14,16 @@ import javax.mail.internet.MimeMultipart;
 import java.io.File;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class EmailService {
     private static final Logger logger = Logger.getLogger(EmailService.class.getName());
+    private static final int MAX_CONCURRENT_EMAILS = 10; // Số email gửi đồng thời tối đa
+    private static final ExecutorService emailExecutor = Executors.newFixedThreadPool(MAX_CONCURRENT_EMAILS);
+    
     private Properties mailProperties;
     private String smtpHost;
     private int smtpPort;
@@ -98,9 +103,10 @@ public class EmailService {
     
     /**
      * Send email to multiple recipients based on roles or email addresses
+     * Optimized: sends emails in parallel and updates DB immediately after each email
      * This method is called in background thread
      */
-    private void sendEmailNotification(int notificationId) {
+    void sendEmailNotification(int notificationId) {
         EmailNotificationDAO emailDAO = new EmailNotificationDAO();
         EmailNotification notification = emailDAO.getEmailNotificationById(notificationId);
         
@@ -110,7 +116,7 @@ public class EmailService {
         }
         
         // Update status to sending
-        notification.setStatus("sending");
+        emailDAO.updateStatus(notificationId, "sending");
         emailDAO.setSentAt(notificationId);
         
         // Get recipient emails
@@ -118,7 +124,7 @@ public class EmailService {
         
         if (recipientEmails.isEmpty()) {
             logger.warning("No recipient emails found for notification: " + notificationId);
-            emailDAO.updateSendingResults(notificationId, 0, 0, "[]", "failed", 
+            emailDAO.updateSendingResults(notificationId, 0, 0, "[]", "completed", 
                                         "Không tìm thấy địa chỉ email người nhận");
             return;
         }
@@ -128,53 +134,83 @@ public class EmailService {
         notification.setRecipientEmails(new JSONArray(recipientEmails).toString());
         emailDAO.updateEmailNotification(notification);
         
-        // Send emails
-        int successCount = 0;
-        int failedCount = 0;
-        List<String> failedEmails = new ArrayList<>();
+        // Create mail session (reusable for all emails)
+        final Session session = createMailSession();
+        final EmailNotification finalNotification = notification;
         
-        Session session = createMailSession();
+        // Use atomic counters for thread-safe counting
+        final AtomicInteger successCount = new AtomicInteger(0);
+        final AtomicInteger failedCount = new AtomicInteger(0);
+        final AtomicInteger completedCount = new AtomicInteger(0);
+        final int totalEmails = recipientEmails.size();
         
-        for (String email : recipientEmails) {
-            try {
-                MimeMessage message = createMessage(session, notification, email);
-                Transport.send(message);
-                successCount++;
-                logger.info("Email sent successfully to: " + email);
-            } catch (Exception e) {
-                failedCount++;
-                failedEmails.add(email);
-                logger.log(Level.WARNING, "Failed to send email to: " + email, e);
+        // Create CountDownLatch to wait for all emails to complete
+        final CountDownLatch latch = new CountDownLatch(totalEmails);
+        
+        // Send emails in parallel using thread pool
+        for (final String email : recipientEmails) {
+            emailExecutor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    // Create new DAO instance for each thread (thread-safe)
+                    EmailNotificationDAO threadEmailDAO = new EmailNotificationDAO();
+                    try {
+                        // Create and send email
+                        MimeMessage message = createMessage(session, finalNotification, email);
+                        Transport.send(message);
+                        
+                        // Update DB immediately - success
+                        threadEmailDAO.updateSingleEmailResult(notificationId, true, email);
+                        successCount.incrementAndGet();
+                        logger.info("Email sent successfully to: " + email);
+                    } catch (Exception e) {
+                        // Update DB immediately - failure
+                        threadEmailDAO.updateSingleEmailResult(notificationId, false, email);
+                        failedCount.incrementAndGet();
+                        logger.log(Level.WARNING, "Failed to send email to: " + email, e);
+                    } finally {
+                        // Count down latch and check if all emails are done
+                        latch.countDown();
+                        int completed = completedCount.incrementAndGet();
+                        
+                        // When all emails are sent, mark notification as completed
+                        // Only the last thread should mark as completed
+                        if (completed == totalEmails) {
+                            threadEmailDAO.markAsCompleted(notificationId);
+                            logger.info("All emails processed for notification: " + notificationId + 
+                                      " (Success: " + successCount.get() + ", Failed: " + failedCount.get() + ")");
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Wait for all emails to complete (with timeout)
+        try {
+            boolean finished = latch.await(30, TimeUnit.MINUTES); // Max 30 minutes timeout
+            if (!finished) {
+                logger.warning("Email sending timeout for notification: " + notificationId);
             }
+        } catch (InterruptedException e) {
+            logger.log(Level.SEVERE, "Email sending interrupted for notification: " + notificationId, e);
+            Thread.currentThread().interrupt();
         }
-        
-        // Update results
-        String status;
-        if (failedCount == 0) {
-            status = "completed";
-        } else if (successCount == 0) {
-            status = "failed";
-        } else {
-            status = "partial";
-        }
-        
-        String failedRecipientsJson = new JSONArray(failedEmails).toString();
-        String errorMessage = failedCount > 0 ? 
-                             "Gửi thất bại cho " + failedCount + " email(s)" : null;
-        
-        emailDAO.updateSendingResults(notificationId, successCount, failedCount, 
-                                     failedRecipientsJson, status, errorMessage);
     }
     
     /**
      * Get recipient emails based on roles or direct email addresses
+     * Logic:
+     * - If marketing type AND has roles selected: send to roles + customers
+     * - If marketing type AND only has personal emails (no roles): send ONLY to personal emails, NOT to customers
+     * - If internal type: send to roles or personal emails as specified
      */
     private List<String> getRecipientEmails(EmailNotification notification) {
         List<String> emails = new ArrayList<>();
         Set<String> emailSet = new HashSet<>(); // To avoid duplicates
+        boolean hasRoles = false;
         
         try {
-            // Get emails from recipient_emails JSON if provided
+            // Get emails from recipient_emails JSON if provided (personal emails)
             if (notification.getRecipientEmails() != null && !notification.getRecipientEmails().isEmpty()) {
                 JSONArray emailArray = new JSONArray(notification.getRecipientEmails());
                 for (int i = 0; i < emailArray.length(); i++) {
@@ -188,25 +224,36 @@ public class EmailService {
             // Get emails from roles
             if (notification.getRecipientRoles() != null && !notification.getRecipientRoles().isEmpty()) {
                 JSONArray roleArray = new JSONArray(notification.getRecipientRoles());
-                UserDAO userDAO = new UserDAO();
-                
-                for (int i = 0; i < roleArray.length(); i++) {
-                    String role = roleArray.getString(i);
-                    List<User> users = userDAO.getUsersByRole(role);
+                // Check if roles array is not empty (not just "[]")
+                if (roleArray.length() > 0) {
+                    hasRoles = true;
+                    UserDAO userDAO = new UserDAO();
                     
-                    for (User user : users) {
-                        if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
-                            emailSet.add(user.getEmail().trim().toLowerCase());
+                    for (int i = 0; i < roleArray.length(); i++) {
+                        String role = roleArray.getString(i);
+                        if (role != null && !role.trim().isEmpty()) {
+                            List<User> users = userDAO.getUsersByRole(role);
+                            
+                            for (User user : users) {
+                                if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
+                                    emailSet.add(user.getEmail().trim().toLowerCase());
+                                }
+                            }
                         }
                     }
                 }
-                
-                // If email type is marketing, also get customer emails
-                if ("marketing".equals(notification.getEmailType())) {
-                    // Get customer emails from customers table
-                    // We'll need to query customers table directly
-                    emails.addAll(getCustomerEmails());
-                }
+            }
+            
+            // Only get customer emails if:
+            // 1. Email type is marketing
+            // 2. AND has roles selected (not just personal emails)
+            // This means: if marketing but only personal emails (no roles), don't send to customers
+            if ("marketing".equals(notification.getEmailType()) && hasRoles) {
+                // Get customer emails from customers table
+                emails.addAll(getCustomerEmails());
+                logger.info("Marketing email with roles selected - including customer emails");
+            } else if ("marketing".equals(notification.getEmailType()) && !hasRoles) {
+                logger.info("Marketing email with only personal emails - NOT including customer emails");
             }
             
             emails.addAll(emailSet);

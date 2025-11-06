@@ -120,27 +120,6 @@
                             line-height: 1.2;
                         }
 
-                        .search-container {
-                            position: relative;
-                            margin: 0 20px;
-                        }
-
-                        .search-input {
-                            width: 300px;
-                            padding: 12px 45px 12px 15px;
-                            border: 1px solid #dee2e6;
-                            border-radius: 25px;
-                            font-size: 14px;
-                        }
-
-                        .search-icon {
-                            position: absolute;
-                            right: 15px;
-                            top: 50%;
-                            transform: translateY(-50%);
-                            color: #6c757d;
-                        }
-
                         .contact-info-nav {
                             display: flex;
                             align-items: center;
