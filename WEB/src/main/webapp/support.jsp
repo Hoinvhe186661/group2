@@ -375,7 +375,6 @@
           <div class="col-md-6"><label>Ngày tạo</label><div id="v_created" class="form-control-plaintext"></div></div>
           <div class="col-md-6"><label>Ngày xử lý xong</label><div id="v_resolved" class="form-control-plaintext"></div></div>
           <div class="col-md-6"><label>Người được phân công</label><div id="v_assigned_to" class="form-control-plaintext"></div></div>
-          <div class="col-md-6"><label>Lịch sử xử lý</label><div id="v_history" class="form-control-plaintext"></div></div>
           <div class="col-12"><label>Giải pháp</label><textarea id="v_resolution" class="form-control" rows="3" readonly></textarea></div>
           <div class="col-12 d-flex align-items-center justify-content-between">
             <div class="form-check">
@@ -1450,8 +1449,9 @@
       document.getElementById('v_resolved').textContent = resolved;
       
       // Hiển thị các trường mới
-      document.getElementById('v_assigned_to').textContent = ticketData.assignedTo || 'Chưa phân công';
-      document.getElementById('v_history').textContent = ticketData.history || 'Chưa có lịch sử';
+      // Ưu tiên hiển thị tên người được phân công, nếu không có thì hiển thị ID, nếu không có thì "Chưa phân công"
+      var assignedToDisplay = ticketData.assignedToName || ticketData.assignedTo || 'Chưa phân công';
+      document.getElementById('v_assigned_to').textContent = assignedToDisplay;
       document.getElementById('v_resolution').value = ticketData.resolution || '';
       
       // Store ticket ID in modal for feedback

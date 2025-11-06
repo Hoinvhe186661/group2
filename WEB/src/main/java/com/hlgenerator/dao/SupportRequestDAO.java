@@ -324,11 +324,22 @@ public class SupportRequestDAO extends DBConnect {
             int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
             int offset = (page - 1) * pageSize;
             
-            // Lấy dữ liệu với phân trang
-            String dataSql = "SELECT id, ticket_number, subject, description, category, priority, status, assigned_to, history, resolution, created_at, resolved_at, " +
-                           "DATE(created_at) AS created_local_date " +
-                           "FROM support_requests WHERE " + whereClause.toString() + 
-                           " ORDER BY " + orderBy + 
+            // Lấy dữ liệu với phân trang - JOIN với users để lấy tên người được phân công
+            // Cần thay thế các trường trong WHERE clause bằng sr. prefix vì đã JOIN
+            String whereClauseForSelect = whereClause.toString()
+                .replace("customer_id", "sr.customer_id")
+                .replace("subject", "sr.subject")
+                .replace("category", "sr.category")
+                .replace("status", "sr.status");
+            
+            String dataSql = "SELECT sr.id, sr.ticket_number, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
+                           "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                           "DATE(sr.created_at) AS created_local_date, " +
+                           "u.full_name as assigned_to_name " +
+                           "FROM support_requests sr " +
+                           "LEFT JOIN users u ON sr.assigned_to = u.id " +
+                           "WHERE " + whereClauseForSelect + 
+                           " ORDER BY " + orderBy.replace("created_at", "sr.created_at").replace("id", "sr.id").replace("subject", "sr.subject").replace("category", "sr.category").replace("status", "sr.status") + 
                            " LIMIT ? OFFSET ?";
             
             try (PreparedStatement dataPs = connection.prepareStatement(dataSql)) {
@@ -354,7 +365,16 @@ public class SupportRequestDAO extends DBConnect {
                     row.put("category", rs.getString("category"));
                     row.put("priority", rs.getString("priority"));
                     row.put("status", rs.getString("status"));
-                    row.put("assignedTo", rs.getString("assigned_to"));
+                    // Lấy ID người được phân công
+                    Object assignedToObj = rs.getObject("assigned_to");
+                    if (assignedToObj != null) {
+                        row.put("assignedTo", assignedToObj.toString());
+                    } else {
+                        row.put("assignedTo", null);
+                    }
+                    // Lấy tên người được phân công
+                    String assignedToName = rs.getString("assigned_to_name");
+                    row.put("assignedToName", assignedToName != null ? assignedToName : "Chưa phân công");
                     row.put("history", rs.getString("history"));
                     row.put("resolution", rs.getString("resolution"));
                     java.sql.Timestamp ts = rs.getTimestamp("created_at");
