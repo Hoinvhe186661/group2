@@ -58,10 +58,32 @@ public class ContactManagementServlet extends HttpServlet {
         String filterStatus = request.getParameter("status");
         String startDate = request.getParameter("startDate");
         String endDate = request.getParameter("endDate");
+        String search = request.getParameter("q");
+        //phân trang 
         
-        // Lấy tin nhắn liên hệ với bộ lọc
-        List<Map<String, Object>> filteredMessages = contactDAO.getContactMessagesWithFilters(
-            filterStatus, startDate, endDate
+        // Lấy tham số phân trang
+        String pageParam = request.getParameter("page");
+        String sizeParam = request.getParameter("size");
+        int currentPage = 1;
+        int pageSize = 10;
+        try {
+            if (pageParam != null) currentPage = Integer.parseInt(pageParam);
+        } catch (Exception ignored) {}
+        try {
+            if (sizeParam != null) pageSize = Integer.parseInt(sizeParam);
+        } catch (Exception ignored) {}
+        if (currentPage < 1) currentPage = 1;
+        if (pageSize < 1) pageSize = 10;
+        
+        // Đếm tổng số tin nhắn với bộ lọc
+        int total = contactDAO.countContactMessagesFiltered(filterStatus, startDate, endDate, search);
+        int totalPages = (int) Math.ceil(total / (double) pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        
+        // Lấy tin nhắn liên hệ với phân trang và bộ lọc
+        List<Map<String, Object>> filteredMessages = contactDAO.getContactMessagesPageFiltered(
+            currentPage, pageSize, filterStatus, startDate, endDate, search
         );
         
         // Set attributes
@@ -69,7 +91,11 @@ public class ContactManagementServlet extends HttpServlet {
         request.setAttribute("filterStatus", filterStatus);
         request.setAttribute("startDate", startDate);
         request.setAttribute("endDate", endDate);
-        request.setAttribute("totalMessages", filteredMessages.size());
+        request.setAttribute("search", search);
+        request.setAttribute("totalMessages", total);
+        request.setAttribute("currentPage", currentPage);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
         request.setAttribute("unreadCount", contactDAO.countUnreadMessages());
         
         // Forward to JSP
@@ -88,7 +114,20 @@ public class ContactManagementServlet extends HttpServlet {
         JsonObject jsonResponse = new JsonObject();
         
         try {
-            // Kiểm tra đăng nhập
+            String action = request.getParameter("action");
+            if (action == null) {
+                action = "updateStatus";
+            }
+            
+            // Xử lý submit form liên hệ (không cần đăng nhập)
+            if ("submitContact".equals(action)) {
+                handleSubmitContact(request, response, jsonResponse);
+                out.print(jsonResponse.toString());
+                out.close();
+                return;
+            }
+            
+            // Các action khác cần đăng nhập
             HttpSession session = request.getSession(false);
             if (session == null || session.getAttribute("isLoggedIn") == null) {
                 jsonResponse.addProperty("success", false);
@@ -105,11 +144,6 @@ public class ContactManagementServlet extends HttpServlet {
                 jsonResponse.addProperty("message", "Không có quyền truy cập");
                 out.print(jsonResponse.toString());
                 return;
-            }
-            
-            String action = request.getParameter("action");
-            if (action == null) {
-                action = "updateStatus";
             }
             
             if ("updateStatus".equals(action)) {
@@ -149,6 +183,110 @@ public class ContactManagementServlet extends HttpServlet {
         } finally {
             out.print(jsonResponse.toString());
             out.close();
+        }
+    }
+    
+    /**
+     * Xử lý submit form liên hệ với validation đầy đủ
+     */
+    private void handleSubmitContact(HttpServletRequest request, HttpServletResponse response, 
+                                     JsonObject jsonResponse) throws IOException {
+        // Lấy thông tin từ form
+        String fullName = request.getParameter("fullName");
+        String email = request.getParameter("email");
+        String phone = request.getParameter("phone");
+        String message = request.getParameter("message");
+        
+        // Validation: Kiểm tra các trường bắt buộc
+        if (fullName == null || fullName.trim().isEmpty()) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Vui lòng nhập họ tên");
+            return;
+        }
+        
+        if (email == null || email.trim().isEmpty()) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Vui lòng nhập email");
+            return;
+        }
+        
+        if (phone == null || phone.trim().isEmpty()) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Vui lòng nhập số điện thoại");
+            return;
+        }
+        
+        if (message == null || message.trim().isEmpty()) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Vui lòng nhập nội dung tin nhắn");
+            return;
+        }
+        
+        // Trim các giá trị
+        fullName = fullName.trim();
+        email = email.trim();
+        phone = phone.trim();
+        message = message.trim();
+        
+        // Validation: Kiểm tra độ dài tối đa
+        if (fullName.length() > 100) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Họ tên chỉ được phép tối đa 100 ký tự");
+            return;
+        }
+        
+        if (email.length() > 100) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Email chỉ được phép tối đa 100 ký tự");
+            return;
+        }
+        
+        if (message.length() > 100) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Nội dung tin nhắn chỉ được phép tối đa 100 ký tự");
+            return;
+        }
+        
+        // Validation: Kiểm tra định dạng email (phải thuộc miền gmail.com hoặc fpt.edu.vn)
+        // Giống với validation trong SettingsServlet
+        if (!email.matches("^[a-zA-Z0-9._%+-]+@(gmail\\.com|fpt\\.edu\\.vn)$")) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Email liên hệ chỉ được phép dùng miền gmail.com hoặc fpt.edu.vn");
+            return;
+        }
+        
+        // Validation: Kiểm tra định dạng số điện thoại (10-11 chữ số)
+        // Giống với validation trong settings.jsp
+        if (!phone.matches("^[0-9]{10,11}$")) {
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Số điện thoại phải gồm 10 hoặc 11 chữ số");
+            return;
+        }
+        
+        // Lưu tin nhắn liên hệ
+        try {
+            boolean success = contactDAO.saveContactMessage(fullName, email, phone, message);
+            
+            if (success) {
+                // Thêm activity log cho tin nhắn liên hệ mới (nếu có ActionLogUtil)
+                try {
+                    com.hlgenerator.util.ActionLogUtil.addAction(request, "Tin nhắn liên hệ mới", 
+                        "contact_messages", null, 
+                        "Tin nhắn liên hệ từ: " + fullName + " (" + email + ")", "info");
+                } catch (Exception e) {
+                    // Bỏ qua nếu ActionLogUtil không tồn tại
+                }
+                
+                jsonResponse.addProperty("success", true);
+                jsonResponse.addProperty("message", "Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.");
+            } else {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Có lỗi xảy ra khi gửi liên hệ. Vui lòng thử lại sau.");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            jsonResponse.addProperty("success", false);
+            jsonResponse.addProperty("message", "Lỗi máy chủ: " + e.getMessage());
         }
     }
     

@@ -173,6 +173,153 @@ public class ContactDAO extends DBConnect {
         
         return 0;
     }
+//phân trangang
+    /**
+     * Đếm tổng số tin nhắn với bộ lọc
+     */
+    public int countContactMessagesFiltered(String status, String startDate, String endDate, String search) {
+        if (connection == null) {
+            logger.severe("Database connection is not available");
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT COUNT(*) FROM contact_messages WHERE 1=1"
+        );
+        
+        List<Object> params = new ArrayList<>();
+        
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            sql.append(" AND DATE(created_at) >= ?");
+            params.add(startDate.trim());
+        }
+        
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            sql.append(" AND DATE(created_at) <= ?");
+            params.add(endDate.trim());
+        }
+        
+        // Thêm điều kiện search
+        addSearchConditions(sql, params, search, "CAST(id AS CHAR)", "full_name", "email", "phone", "message");
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error counting filtered contact messages", e);
+        }
+        
+        return 0;
+    }
+
+    /**
+     * Lấy tin nhắn liên hệ với phân trang và bộ lọc
+     */
+    public List<Map<String, Object>> getContactMessagesPageFiltered(int page, int pageSize, String status, String startDate, String endDate, String search) {
+        List<Map<String, Object>> messages = new ArrayList<>();
+        
+        if (connection == null) {
+            logger.severe("Database connection is not available");
+            return messages;
+        }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        int offset = (page - 1) * pageSize;
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, full_name, email, phone, message, status, created_at, replied_at " +
+            "FROM contact_messages WHERE 1=1"
+        );
+        
+        List<Object> params = new ArrayList<>();
+        
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            sql.append(" AND DATE(created_at) >= ?");
+            params.add(startDate.trim());
+        }
+        
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            sql.append(" AND DATE(created_at) <= ?");
+            params.add(endDate.trim());
+        }
+        
+        // Thêm điều kiện search
+        addSearchConditions(sql, params, search, "CAST(id AS CHAR)", "full_name", "email", "phone", "message");
+        
+        // Sắp xếp ID từ bé đến lớn
+        sql.append(" ORDER BY id ASC LIMIT ? OFFSET ?");
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, pageSize);
+            ps.setInt(idx, offset);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> message = new HashMap<>();
+                    message.put("id", rs.getInt("id"));
+                    message.put("fullName", rs.getString("full_name"));
+                    message.put("email", rs.getString("email"));
+                    message.put("phone", rs.getString("phone"));
+                    message.put("message", rs.getString("message"));
+                    message.put("status", rs.getString("status"));
+                    message.put("createdAt", rs.getTimestamp("created_at"));
+                    Timestamp repliedAt = rs.getTimestamp("replied_at");
+                    message.put("repliedAt", repliedAt != null ? repliedAt : null);
+                    
+                    messages.add(message);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting contact messages page with filters", e);
+        }
+        
+        return messages;
+    }
+
+    /**
+     * Helper method để thêm search conditions (giống ContractDAO)
+     */
+    private void addSearchConditions(StringBuilder sql, List<Object> params, String search, String... columns) {
+        if (search != null && !search.isEmpty()) {
+            sql.append(" AND (");
+            for (int i = 0; i < columns.length; i++) {
+                if (i > 0) sql.append(" OR ");
+                sql.append(columns[i]).append(" LIKE ?");
+                params.add("%" + search + "%");
+            }
+            // Thêm exact ID search nếu search là số
+            try {
+                int exactId = Integer.parseInt(search.trim());
+                sql.append(" OR id = ?");
+                params.add(exactId);
+            } catch (NumberFormatException ignore) {
+                // not numeric, ignore
+            }
+            sql.append(")");
+        }
+    }
 }
 
 

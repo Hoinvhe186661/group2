@@ -166,6 +166,10 @@
                                     <option value="replied" ${param.status == 'replied' ? 'selected' : ''}>Đã phản hồi</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                                <label>Tìm kiếm:</label>
+                                <input type="text" class="form-control" name="q" placeholder="ID, tên, email, SĐT, tin nhắn" value="<%= request.getParameter("q") != null ? request.getParameter("q") : "" %>">
+                            </div>
                             <div class="col-md-2">
                                 <label>Từ ngày:</label>
                                 <input type="date" name="startDate" class="form-control" value="${param.startDate}">
@@ -174,7 +178,24 @@
                                 <label>Đến ngày:</label>
                                 <input type="date" name="endDate" class="form-control" value="${param.endDate}">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-1">
+                                <label>Hiển thị:</label>
+                                <%
+                                    int _sz = 10;
+                                    try { 
+                                        String sp = request.getParameter("size"); 
+                                        if (sp != null) _sz = Integer.parseInt(sp); 
+                                    } catch (Exception ignored) {}
+                                %>
+                                <select name="size" class="form-control" onchange="this.form.submit()">
+                                    <option value="5" <%= _sz == 5 ? "selected" : "" %>>5</option>
+                                    <option value="10" <%= _sz == 10 ? "selected" : "" %>>10</option>
+                                    <option value="25" <%= _sz == 25 ? "selected" : "" %>>25</option>
+                                    <option value="50" <%= _sz == 50 ? "selected" : "" %>>50</option>
+                                    <option value="100" <%= _sz == 100 ? "selected" : "" %>>100</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <label>&nbsp;</label><br>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fa fa-filter"></i> Lọc
@@ -183,11 +204,13 @@
                                     <i class="fa fa-refresh"></i> Xóa bộ lọc
                                 </a>
                             </div>
-                            <div class="col-md-3 text-right">
-                                <label>&nbsp;</label><br>
+                        </div>
+                        <div class="row" style="margin-top: 5px;">
+                            <div class="col-md-12 text-right">
                                 <span class="text-muted">Tổng số: <strong>${totalMessages}</strong> tin nhắn</span>
                             </div>
                         </div>
+                        <input type="hidden" name="page" value="1">
                     </form>
                 </div>
 
@@ -289,6 +312,93 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                
+                                <!-- Phân trang -->
+                                <div class="row" style="margin-top: 10px;">
+                                    <div class="col-md-6">
+                                        <div class="text-muted" style="line-height: 34px;">
+                                            <%
+                                                int _currentPage = (Integer) request.getAttribute("currentPage");
+                                                int _pageSize = (Integer) request.getAttribute("pageSize");
+                                                int _total = (Integer) request.getAttribute("totalMessages");
+                                                int _startIdx = (_currentPage - 1) * _pageSize + 1;
+                                                int _endIdx = Math.min(_currentPage * _pageSize, _total);
+                                                if (_total == 0) { 
+                                                    _startIdx = 0; 
+                                                    _endIdx = 0; 
+                                                }
+                                            %>
+                                            Hiển thị <%= _startIdx %> - <%= _endIdx %> của <%= _total %> tin nhắn
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav aria-label="Phân trang tin nhắn" class="pull-right">
+                                            <ul class="pagination pagination-sm" style="margin: 0;">
+                                                <%
+                                                    // Xây base query giữ nguyên filter
+                                                    java.util.List<String> _p = new java.util.ArrayList<String>();
+                                                    try { 
+                                                        String v = request.getParameter("status"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("status=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    try { 
+                                                        String v = request.getParameter("q"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("q=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    try { 
+                                                        String v = request.getParameter("startDate"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("startDate=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    try { 
+                                                        String v = request.getParameter("endDate"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("endDate=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    _p.add("size=" + _pageSize);
+                                                    String _base = "contact-management" + (_p.isEmpty() ? "" : ("?" + String.join("&", _p)));
+                                                    
+                                                    int _totalPages = (Integer) request.getAttribute("totalPages");
+                                                    
+                                                    // Nút prev
+                                                    int _prev = Math.max(1, _currentPage - 1);
+                                                %>
+                                                <li class="<%= _currentPage == 1 ? "disabled" : "" %>">
+                                                    <a href="<%= _base + "&page=" + _prev %>">&laquo;</a>
+                                                </li>
+                                                <%
+                                                    int _s = Math.max(1, _currentPage - 2);
+                                                    int _e = Math.min(_totalPages, _currentPage + 2);
+                                                    if (_s > 1) {
+                                                %>
+                                                <li><a href="<%= _base + "&page=1" %>">1</a></li>
+                                                <%= (_s > 2) ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <%
+                                                    }
+                                                    for (int i = _s; i <= _e; i++) {
+                                                %>
+                                                <li class="<%= i == _currentPage ? "active" : "" %>">
+                                                    <a href="<%= _base + "&page=" + i %>"><%= i %></a>
+                                                </li>
+                                                <%
+                                                    }
+                                                    if (_e < _totalPages) {
+                                                %>
+                                                <%= (_e < _totalPages - 1) ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <li><a href="<%= _base + "&page=" + _totalPages %>"><%= _totalPages %></a></li>
+                                                <%
+                                                    }
+                                                    int _next = Math.min(_totalPages, _currentPage + 1);
+                                                %>
+                                                <li class="<%= _currentPage == _totalPages ? "disabled" : "" %>">
+                                                    <a href="<%= _base + "&page=" + _next %>">&raquo;</a>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -338,35 +448,7 @@
         var currentMessageId = null;
         var shouldReloadAfterModalClose = false;
         
-        // Khởi tạo DataTable
-        $(document).ready(function() {
-            $('#messagesTable').DataTable({
-                "language": {
-                    "lengthMenu": "Hiển thị _MENU_ bản ghi mỗi trang",
-                    "zeroRecords": "Không tìm thấy dữ liệu",
-                    "info": "Trang _PAGE_ / _PAGES_",
-                    "infoEmpty": "Không có dữ liệu",
-                    "infoFiltered": "(lọc từ _MAX_ tổng số bản ghi)",
-                    "search": "Tìm kiếm:",
-                    "paginate": {
-                        "first": "Đầu",
-                        "last": "Cuối",
-                        "next": "Tiếp",
-                        "previous": "Trước"
-                    }
-                },
-                "order": [[0, "desc"]],
-                "pageLength": 25
-            });
-            
-            // Xử lý khi modal đóng - reload nếu cần
-            $('#viewMessageModal').on('hidden.bs.modal', function() {
-                if (shouldReloadAfterModalClose) {
-                    shouldReloadAfterModalClose = false;
-                    location.reload();
-                }
-            });
-        });
+        
         
         // Xử lý click button xem chi tiết
         $(document).on('click', '.view-message-btn', function() {

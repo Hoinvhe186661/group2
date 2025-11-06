@@ -286,15 +286,8 @@
             var sitePhone = document.getElementById('sitePhone').value;
             var siteAddress = document.getElementById('siteAddress').value;
 
-            // Nếu trường email tồn tại, kiểm tra domain hợp lệ (gmail.com | fpt.edu.vn)
-            if (siteEmail) {
-                var emailPattern = /^[a-zA-Z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/;
-                if (!emailPattern.test(siteEmail)) {
-                    alert('Email liên hệ chỉ được phép thuộc miền gmail.com hoặc fpt.edu.vn');
-                    try { document.getElementById('siteEmail').focus(); } catch (e) {}
-                    return;
-                }
-            }
+            // Validation được thực hiện ở server-side (SettingsServlet.java)
+            // HTML5 validation vẫn hoạt động ở client-side để cải thiện UX
 
             // Lấy nút lưu để disable và hiển thị loading
             var saveButton = buttonElement || document.getElementById('saveGeneralBtn');
@@ -375,18 +368,10 @@
             var sitePhone = document.getElementById('sitePhone').value;
             var siteAddress = document.getElementById('siteAddress').value;
 
-            // HTML5 validation cho form liên hệ
+            // HTML5 validation cho form liên hệ (validation chính được thực hiện ở server-side)
             var form = document.getElementById('emailSettingsForm');
             if (form && !form.checkValidity()) {
                 form.reportValidity();
-                return;
-            }
-
-            // Bảo vệ bổ sung ở JS: kiểm tra domain email
-            var emailPattern = /^[a-zA-Z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/;
-            if (!emailPattern.test(siteEmail)) {
-                alert('Email liên hệ chỉ được phép thuộc miền gmail.com hoặc fpt.edu.vn');
-                try { document.getElementById('siteEmail').focus(); } catch (e) {}
                 return;
             }
 

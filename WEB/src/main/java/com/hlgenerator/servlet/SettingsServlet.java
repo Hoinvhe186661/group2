@@ -135,6 +135,22 @@ public class SettingsServlet extends HttpServlet {
             }
         }
 
+        // Validate số điện thoại nếu có truyền lên
+        if (sitePhone != null && !sitePhone.trim().isEmpty()) {
+            String phone = sitePhone.trim();
+            // Chỉ cho phép số, 10 hoặc 11 chữ số
+            if (!phone.matches("^[0-9]{10,11}$")) {
+                sendJsonResponse(response, false, "Số điện thoại chỉ được phép chứa số và có độ dài 10 hoặc 11 chữ số", null);
+                return;
+            }
+        }
+
+        // Validate địa chỉ nếu có truyền lên (không được để trống nếu có giá trị)
+        if (siteAddress != null && siteAddress.trim().isEmpty()) {
+            sendJsonResponse(response, false, "Địa chỉ không được để trống", null);
+            return;
+        }
+
         // Lưu tất cả các giá trị, kể cả giá trị rỗng
         if (siteName != null) {
             settings.put("site_name", siteName.trim());

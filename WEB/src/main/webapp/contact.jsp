@@ -123,7 +123,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="phone">Số điện thoại*</label>
-                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="Số điện thoại*" maxlength="11" pattern="^[0-9]{10,11}$" title="Số điện thoại phải gồm 10 hoặc 11 chữ số" required>
+                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="Số điện thoại* (10-11 chữ số)"  pattern="^[0-9]{10,11}$" title="Số điện thoại phải gồm 10 hoặc 11 chữ số" required>
                             </div>
                             <div class="form-group">
                                 <label for="message">Nhập nội dung*</label>
@@ -168,45 +168,22 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
 
-            // Client-side validation (email domain and phone format)
+            // Lấy giá trị từ form (validation chi tiết sẽ được xử lý ở server-side)
             const fullNameVal = document.getElementById('fullName').value.trim();
             const emailVal = document.getElementById('email').value.trim();
             const phoneVal = document.getElementById('phone').value.trim();
             const messageVal = document.getElementById('message').value.trim();
 
-            // Email must be @gmail.com or @fpt.edu.vn
-            const emailRegex = /^[A-Za-z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/i;
-            if (!emailRegex.test(emailVal)) {
-                showAlert('danger', 'Email phải thuộc miền gmail.com hoặc fpt.edu.vn');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-                return;
-            }
-
-            // Phone must be 10 or 11 digits
-            const phoneRegex = /^\d{10,11}$/;
-            if (!phoneRegex.test(phoneVal)) {
-                showAlert('danger', 'Số điện thoại phải gồm 10 hoặc 11 chữ số và không chứa chữ cái');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-                return;
-            }
-
-            // Enforce maxlength on message and fullName (in case of older browsers)
-            if (fullNameVal.length > 100 || messageVal.length > 100) {
-                showAlert('danger', 'Họ tên và nội dung chỉ được phép tối đa 100 ký tự');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-                return;
-            }
-
+            // Chuẩn bị dữ liệu gửi lên server
             const formData = new URLSearchParams();
+            formData.append('action', 'submitContact');
             formData.append('fullName', fullNameVal);
             formData.append('email', emailVal);
             formData.append('phone', phoneVal);
             formData.append('message', messageVal);
 
-            fetch('contact', {
+            // Gửi request đến contact-management servlet
+            fetch('contact-management', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
@@ -216,10 +193,10 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
+                    showAlert('success', data.message || 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
                     document.getElementById('contactForm').reset();
                 } else {
-                    showAlert('danger', 'Có lỗi xảy ra: ' + (data.message || 'Không thể gửi liên hệ. Vui lòng thử lại sau.'));
+                    showAlert('danger', data.message || 'Có lỗi xảy ra. Vui lòng thử lại sau.');
                 }
             })
             .catch(error => {
