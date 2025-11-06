@@ -229,13 +229,30 @@
                 </div>
                 <ul class="sidebar-menu">
                     <li>
-                        <a href="customersupport.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển khách hàng</span></a>
-                    </li>
-                    <li class="active">
-                        <a href="contracts.jsp"><i class="fa fa-file-text"></i> <span>Quản lý hợp đồng</span></a>
+                        <a href="customersupport.jsp">
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
+                        </a>
                     </li>
                     <li>
-                        <a href="support-management"><i class="fa fa-life-ring"></i> <span>Quản lý yêu cầu hỗ trợ</span></a>
+                        <a href="support-management">
+                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="feedback_management.jsp">
+                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="contracts.jsp">
+                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="contact-management">
+                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
+                            <small class="badge pull-right bg-blue" id="unreadContacts">${unreadCount}</small>
+                        </a>
                     </li>
                 </ul>
             </section>

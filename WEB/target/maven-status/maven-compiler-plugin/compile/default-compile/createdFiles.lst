@@ -22,6 +22,7 @@ com\hlgenerator\servlet\CustomerManagementServlet$1.class
 com\hlgenerator\dao\DBConnect.class
 com\hlgenerator\model\Contract.class
 com\hlgenerator\servlet\SupplierServlet.class
+com\hlgenerator\dao\PriceHistoryDAO.class
 com\hlgenerator\servlet\CharacterEncodingFilter.class
 com\hlgenerator\dao\SettingsDAO.class
 com\hlgenerator\servlet\UserManagementServlet$RoleHelper.class
@@ -69,3 +70,5 @@ com\hlgenerator\servlet\ProductServlet$ValidationResult.class
 com\hlgenerator\model\StockHistory.class
 com\hlgenerator\dao\ActivityLogDAO.class
 com\hlgenerator\servlet\SettingsServlet.class
+com\hlgenerator\model\PriceHistory.class
+com\hlgenerator\servlet\ContactManagementServlet.class

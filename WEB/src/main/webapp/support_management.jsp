@@ -169,7 +169,7 @@
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
-                    <li class="active">
+                    <li>
                         <a href="support-management">
                             <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
                         </a>
@@ -182,6 +182,12 @@
                     <li>
                         <a href="contracts.jsp">
                             <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="contact-management">
+                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
+                            <small class="badge pull-right bg-blue" id="unreadContacts">${unreadCount}</small>
                         </a>
                     </li>
                 </ul>

@@ -216,6 +216,12 @@
                             <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="contact-management">
+                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
+                            <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
+                        </a>
+                    </li>
                 </ul>
             </section>
             <!-- /.sidebar -->
@@ -503,6 +509,7 @@
         $(document).ready(function() {
             loadSupportStats();
             loadRecentTickets();
+            loadContactStats();
         });
         
         function loadSupportStats() {
@@ -559,12 +566,32 @@
             $('#openTickets').text('0');
             $('#unreadMessages').text('0');
             $('#unreadNotifications').text('0');
+            $('#unreadContacts').text('0');
         }
         
         function loadRecentTickets() {
             // Dữ liệu đã được hardcode trong HTML
             // Sau này có thể load động từ API
             console.log('Loaded recent tickets');
+        }
+        
+        function loadContactStats() {
+            // Load số lượng tin nhắn liên hệ chưa đọc
+            $.ajax({
+                url: 'contact-management?action=getStats',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        $('#unreadContacts').text(response.data.unreadCount || 0);
+                    } else {
+                        $('#unreadContacts').text('0');
+                    }
+                },
+                error: function() {
+                    $('#unreadContacts').text('0');
+                }
+            });
         }
     </script>
     

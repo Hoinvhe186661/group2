@@ -56,6 +56,13 @@ public class ContactDAO extends DBConnect {
      * Lấy tất cả tin nhắn liên hệ
      */
     public List<Map<String, Object>> getAllContactMessages() {
+        return getContactMessagesWithFilters(null, null, null);
+    }
+    
+    /**
+     * Lấy tin nhắn liên hệ với bộ lọc
+     */
+    public List<Map<String, Object>> getContactMessagesWithFilters(String status, String startDate, String endDate) {
         List<Map<String, Object>> messages = new ArrayList<>();
         
         if (connection == null) {
@@ -63,28 +70,53 @@ public class ContactDAO extends DBConnect {
             return messages;
         }
 
-        String sql = "SELECT id, full_name, email, phone, message, status, created_at, replied_at " +
-                     "FROM contact_messages ORDER BY created_at DESC";
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, full_name, email, phone, message, status, created_at, replied_at " +
+            "FROM contact_messages WHERE 1=1"
+        );
         
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        List<Object> params = new ArrayList<>();
+        
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status.trim());
+        }
+        
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            sql.append(" AND DATE(created_at) >= ?");
+            params.add(startDate.trim());
+        }
+        
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            sql.append(" AND DATE(created_at) <= ?");
+            params.add(endDate.trim());
+        }
+        
+        sql.append(" ORDER BY created_at DESC");
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
             
-            while (rs.next()) {
-                Map<String, Object> message = new HashMap<>();
-                message.put("id", rs.getInt("id"));
-                message.put("fullName", rs.getString("full_name"));
-                message.put("email", rs.getString("email"));
-                message.put("phone", rs.getString("phone"));
-                message.put("message", rs.getString("message"));
-                message.put("status", rs.getString("status"));
-                message.put("createdAt", rs.getTimestamp("created_at"));
-                Timestamp repliedAt = rs.getTimestamp("replied_at");
-                message.put("repliedAt", repliedAt != null ? repliedAt : null);
-                
-                messages.add(message);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> message = new HashMap<>();
+                    message.put("id", rs.getInt("id"));
+                    message.put("fullName", rs.getString("full_name"));
+                    message.put("email", rs.getString("email"));
+                    message.put("phone", rs.getString("phone"));
+                    message.put("message", rs.getString("message"));
+                    message.put("status", rs.getString("status"));
+                    message.put("createdAt", rs.getTimestamp("created_at"));
+                    Timestamp repliedAt = rs.getTimestamp("replied_at");
+                    message.put("repliedAt", repliedAt != null ? repliedAt : null);
+                    
+                    messages.add(message);
+                }
             }
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error getting contact messages", e);
+            logger.log(Level.SEVERE, "Error getting contact messages with filters", e);
         }
         
         return messages;
