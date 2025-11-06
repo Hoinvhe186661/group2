@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.hlgenerator.dao.SettingsDAO" %>
 <%@ page import="java.util.Map" %>
 <%
@@ -7,14 +7,14 @@
         // Load settings từ database
         SettingsDAO settingsDAO = new SettingsDAO();
         Map<String, String> settings = settingsDAO.getAllSettings();
-        
+
         // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định
         String siteName = settings.get("site_name") != null ? settings.get("site_name") : "CÔNG TY CP CHẾ TẠO MÁY HOÀ LẠC";
         String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
         String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
         String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
         String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
-        
+
         // Lưu vào pageContext để dùng lại
         pageContext.setAttribute("siteName", siteName);
         pageContext.setAttribute("siteDescription", siteDescription);
@@ -22,12 +22,13 @@
         pageContext.setAttribute("sitePhone", sitePhone);
         pageContext.setAttribute("siteAddress", siteAddress);
     }
-    
+
     // Set title từ site_name
     String pageTitle = (String) pageContext.getAttribute("siteName") + " - " + (String) pageContext.getAttribute("siteDescription");
 %>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -728,10 +729,11 @@
                                 height: 250px;
                             }
                         }
-    </style>
-</head>
-<body>
-    <%@ include file="header.jsp" %>
+                    </style>
+                </head>
+
+                <body>
+                    <%@ include file="header.jsp" %>
 
                         <!-- Hero Banner Section -->
                         <section id="home" class="hero-banner">
@@ -742,7 +744,7 @@
                                             <div class="banner-left">
                                                 <div class="company-logo-banner">
                                                     <div class="logo-circle">
-                                                        <img src="images/logo-banner.png" alt="Logo Banner Hoà Lạc"
+                                                        <img src="images/banner-logo.png" alt="Logo Banner Hoà Lạc"
                                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <div
                                                             style="display:none; width:100%; height:100%; background:var(--white); border-radius:50%; align-items:center; justify-content:center; color:var(--primary-yellow); font-size:30px;">

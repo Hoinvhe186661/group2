@@ -186,16 +186,7 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                <!-- search form -->
-                <form action="#" method="get" class="sidebar-form">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
-                        <span class="input-group-btn">
-                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
-                        </span>
-                    </div>
-                </form>
-                <!-- /.search form -->
+                
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
                     <li>
@@ -380,7 +371,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="username">Tên đăng nhập:</label>
-                                    <input type="text" class="form-control" id="username" required>
+                                    <input type="text" class="form-control" id="username" maxlength="100" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="email">Email: <small class="text-muted"></small></label>
@@ -392,7 +383,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="fullName">Họ và tên:</label>
-                                    <input type="text" class="form-control" id="fullName" required>
+                                    <input type="text" class="form-control" id="fullName" maxlength="100" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -512,7 +503,6 @@
     </div>
 
     <!-- jQuery 2.0.2 -->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="js/jquery.min.js" type="text/javascript"></script>
     <!-- jQuery UI 1.10.3 -->
     <script src="js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
@@ -1104,36 +1094,20 @@
             });
         }
 
-        // Hiển thị thông báo cho người dùng
+        // Hiển thị thông báo cho người dùng — sử dụng global floating toast (notify.js)
         function showAlert(message, type) {
-            var alertClass = 'alert-' + type;
-            var alertHtml = '<div class="alert ' + alertClass + ' alert-dismissible fade in" role="alert">' +
-                           '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
-                           '<span aria-hidden="true">&times;</span></button>' +
-                           message + '</div>';
-            
-            // Remove existing alerts
-            $('.alert').remove();
-            
-            // Try to find the best container for the alert
-            var container = $('.content');
-            if (container.length === 0) {
-                container = $('.panel');
+            try {
+                // notify.js exposes showAlert and showToast globally; prefer showAlert wrapper
+                if (window && typeof window.showAlert === 'function') {
+                    // preserve existing parameter order: showAlert(message, type)
+                    window.showAlert(message, type);
+                    return;
+                }
+            } catch (e) {
+                console.warn('Global showAlert not available, fallback to alert():', e);
             }
-            if (container.length === 0) {
-                container = $('body');
-            }
-            
-            
-            // Add new alert
-            container.prepend(alertHtml);
-            
-            // Auto remove after 3 seconds
-            setTimeout(function() {
-                $('.alert').fadeOut(500, function() {
-                    $(this).remove();
-                });
-            }, 5000);
+            // fallback: simple browser alert
+            alert((type ? ('[' + type.toUpperCase() + '] ') : '') + (message || ''));
         }
 
         // Ghi log thao tác vào localStorage để hiển thị ở dashboard

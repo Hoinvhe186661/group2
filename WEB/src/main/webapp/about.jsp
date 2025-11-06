@@ -1,10 +1,32 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.dao.SettingsDAO" %>
+<%@ page import="java.util.Map" %>
+<%
+    if (pageContext.getAttribute("siteName") == null) {
+        SettingsDAO settingsDAO = new SettingsDAO();
+        Map<String, String> settings = settingsDAO.getAllSettings();
+
+        String siteName = settings.get("site_name") != null ? settings.get("site_name") : "HOÀ LẠC ELECTRIC";
+        String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
+        String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
+        String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
+        String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
+
+        pageContext.setAttribute("siteName", siteName);
+        pageContext.setAttribute("siteDescription", siteDescription);
+        pageContext.setAttribute("siteEmail", siteEmail);
+        pageContext.setAttribute("sitePhone", sitePhone);
+        pageContext.setAttribute("siteAddress", siteAddress);
+    }
+
+    String pageTitle = (String) pageContext.getAttribute("siteName") + " - " + (String) pageContext.getAttribute("siteDescription");
+%>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giới thiệu - HOÀ LẠC ELECTRIC</title>
+    <title><%= pageTitle %></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -110,9 +132,9 @@
                 </div>
                 <div class="col-lg-6">
                     <h2 class="section-title center">VỀ CHÚNG TÔI</h2>
-                    <p>Trước tiên, chúng tôi xin gửi lời cảm ơn chân thành và lời chúc sức khỏe đến Quý khách hàng đã tin tưởng và đồng hành cùng HOÀ LẠC ELECTRIC trong suốt thời gian qua.</p>
+                    <p>Trước tiên, chúng tôi xin gửi lời cảm ơn chân thành và lời chúc sức khỏe đến Quý khách hàng đã tin tưởng và đồng hành cùng <%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC" %> trong suốt thời gian qua.</p>
                     <p>Chúng tôi là đơn vị chuyên cung cấp, bảo dưỡng, sửa chữa máy phát điện công nghiệp, đặc biệt là máy phát điện 3 pha chạy dầu Diesel, với đội ngũ gần 20 kỹ sư và công nhân lành nghề. Nhà máy đặt tại Đại Thanh – Hà Nội.</p>
-                    <p>Doanh nghiệp được thành lập bởi các chuyên gia đầu ngành với nhiều năm kinh nghiệm trong tư vấn – thiết kế – giám sát – thi công lắp đặt hệ thống điện và tổ máy phát điện. Ngay từ những ngày đầu, HOÀ LẠC ELECTRIC đã trở thành địa chỉ uy tín cho khách hàng cần máy phát điện công suất lớn phục vụ sản xuất và dự phòng.</p>
+                    <p>Doanh nghiệp được thành lập bởi các chuyên gia đầu ngành với nhiều năm kinh nghiệm trong tư vấn – thiết kế – giám sát – thi công lắp đặt hệ thống điện và tổ máy phát điện. Ngay từ những ngày đầu, <%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC" %> đã trở thành địa chỉ uy tín cho khách hàng cần máy phát điện công suất lớn phục vụ sản xuất và dự phòng.</p>
                 </div>
             </div>
         </div>
@@ -123,7 +145,7 @@
             <div class="row g-4 align-items-start">
                 <div class="col-lg-7">
                     <h2 class="section-title">CHUYÊN GIA MÁY PHÁT ĐIỆN</h2>
-                    <p>HOÀ LẠC ELECTRIC là đơn vị chuyên nhập khẩu – sản xuất – phân phối máy phát điện công nghiệp, với danh mục sản phẩm và dịch vụ đa dạng:</p>
+                    <p><%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC" %> là đơn vị chuyên nhập khẩu – sản xuất – phân phối máy phát điện công nghiệp, với danh mục sản phẩm và dịch vụ đa dạng:</p>
                     <ul>
                         <li>Máy phát điện Diesel, máy phát điện 3 pha, công suất từ 20kVA – 3000kVA</li>
                         <li>Cho thuê, sửa chữa, bảo trì máy phát điện theo yêu cầu</li>
@@ -135,7 +157,7 @@
                 </div>
                 <div class="col-lg-5">
                     <img src="images/sanpham1.jpg" alt="Promo" class="promo-image" loading="lazy" onerror="this.style.display='none'">
-                    <div class="hotline-banner">HOTLINE: 0989.888.999</div>
+                    <div class="hotline-banner">HOTLINE: <%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989.888.999" %></div>
                 </div>
             </div>
 
@@ -168,7 +190,7 @@
                 </div>
                 <div class="col-lg-6">
                     <h2 class="section-title center">KHẲNG ĐỊNH VỊ THẾ – CAM KẾT CHẤT LƯỢNG</h2>
-                    <p>Với mạng lưới khách hàng trải dài khắp cả nước cùng sự tín nhiệm từ nhiều công trình lớn, HOÀ LẠC ELECTRIC đang từng bước khẳng định vị thế vững chắc trên thị trường máy phát điện công nghiệp.</p>
+                    <p>Với mạng lưới khách hàng trải dài khắp cả nước cùng sự tín nhiệm từ nhiều công trình lớn, <%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC" %> đang từng bước khẳng định vị thế vững chắc trên thị trường máy phát điện công nghiệp.</p>
                     <p>Chúng tôi quy tụ đội ngũ kỹ sư giỏi, công nhân lành nghề và ban lãnh đạo trẻ – năng động, luôn thấu hiểu nhu cầu thực tế để mang đến giải pháp kỹ thuật tối ưu, tiết kiệm, hiệu quả cho Quý khách hàng.</p>
                     <h5>Chất lượng là kim chỉ nam</h5>
                     <ul>
@@ -197,10 +219,10 @@
             <div class="row align-items-center">
                 <div class="col-lg-8">
                     <h3 class="mb-2">Cần tư vấn giải pháp máy phát điện cho dự án của bạn?</h3>
-                    <p class="mb-0">Gọi ngay Hotline 0989.888.999 hoặc để lại thông tin để được hỗ trợ nhanh nhất.</p>
+                    <p class="mb-0">Gọi ngay Hotline <%= pageContext.getAttribute("sitePhone") != null ? pageContext.getAttribute("sitePhone") : "0989.888.999" %> hoặc để lại thông tin để được hỗ trợ nhanh nhất.</p>
                 </div>
                 <div class="col-lg-4 mt-3 mt-lg-0">
-                    <a href="tel:0989888999" class="btn">Gọi ngay</a>
+                    <a href="tel:<%= (pageContext.getAttribute("sitePhone") != null ? ((String)pageContext.getAttribute("sitePhone")).replaceAll("\\s+|\\.|-", "") : "0989888999") %>" class="btn">Gọi ngay</a>
                 </div>
             </div>
         </div>

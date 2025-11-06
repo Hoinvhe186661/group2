@@ -1,6 +1,7 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.UserDAO;
+import com.hlgenerator.dao.CustomerDAO;
 import com.hlgenerator.model.User;
 
 import javax.servlet.ServletException;
@@ -33,6 +34,7 @@ public class AdminDashboardServlet extends HttpServlet {
         }
 
         UserDAO userDAO = new UserDAO();
+        CustomerDAO customerDAO = new CustomerDAO();
 
         int totalUsers = userDAO.getTotalUserCount();
         int adminCount = userDAO.getUserCountByRole("admin");
@@ -40,7 +42,8 @@ public class AdminDashboardServlet extends HttpServlet {
         int customerSupportCount = userDAO.getUserCountByRole("customer_support");
         int storekeeperCount = userDAO.getUserCountByRole("storekeeper");
         int headTechnicianCount = userDAO.getUserCountByRole("head_technician");
-        int customerCount = userDAO.getUserCountByRole("customer");
+        // Lấy số lượng khách hàng từ bảng customers thay vì users
+        int customerCount = customerDAO.getTotalCustomerCount();
 
         request.setAttribute("totalUsers", totalUsers);
         request.setAttribute("adminCount", adminCount);
@@ -60,14 +63,51 @@ public class AdminDashboardServlet extends HttpServlet {
         request.setAttribute("recentUsers", recentUsers);
 
         // Monthly customer chart (last 12 months) rendered as inline SVG (no JS)
-        Map<String, Integer> monthCounts = userDAO.getCustomerCountsLastNMonths(12);
+        // Lấy dữ liệu từ bảng customers thay vì users
+        Map<String, Integer> monthCounts = customerDAO.getCustomerCountsLastNMonths(12);
         String chartSvg = buildCustomerChartSvg(monthCounts);
         request.setAttribute("customerChartSvg", chartSvg);
 
-        // Notifications from session
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> recentActions = (List<Map<String, Object>>) (session != null ? session.getAttribute("recentActions") : null);
-        request.setAttribute("recentActions", recentActions);
+        // Lấy activity logs từ database
+        com.hlgenerator.dao.ActivityLogDAO activityLogDAO = new com.hlgenerator.dao.ActivityLogDAO();
+        List<Map<String, Object>> recentActions = activityLogDAO.getRecentActivityLogs(20);
+        
+        // Chuyển đổi format để tương thích với view
+        if (recentActions != null && !recentActions.isEmpty()) {
+            List<Map<String, Object>> formattedActions = new java.util.ArrayList<>();
+            for (Map<String, Object> log : recentActions) {
+                Map<String, Object> action = new java.util.HashMap<>();
+                // Lấy message từ details JSON hoặc action
+                String message = (String) log.get("action");
+                String details = (String) log.get("details");
+                if (details != null && details.startsWith("{")) {
+                    try {
+                        org.json.JSONObject detailsJson = new org.json.JSONObject(details);
+                        if (detailsJson.has("message")) {
+                            message = detailsJson.getString("message");
+                        }
+                        if (detailsJson.has("type")) {
+                            action.put("type", detailsJson.getString("type"));
+                        } else {
+                            action.put("type", "info");
+                        }
+                    } catch (Exception e) {
+                        action.put("type", "info");
+                    }
+                } else {
+                    action.put("type", "info");
+                }
+                action.put("message", message);
+                action.put("time", log.get("time"));
+                formattedActions.add(action);
+            }
+            request.setAttribute("recentActions", formattedActions);
+        } else {
+            // Fallback: lấy từ session nếu database không có dữ liệu
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> sessionActions = (List<Map<String, Object>>) (session != null ? session.getAttribute("recentActions") : null);
+            request.setAttribute("recentActions", sessionActions);
+        }
 
         request.getRequestDispatcher("/admin.jsp").forward(request, response);
     }

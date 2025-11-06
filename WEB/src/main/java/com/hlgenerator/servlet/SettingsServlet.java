@@ -168,6 +168,9 @@ public class SettingsServlet extends HttpServlet {
                     e.printStackTrace();
                 }
             }
+            // Thêm activity log
+            com.hlgenerator.util.ActionLogUtil.addAction(request, "Cập nhật cài đặt chung", "settings", null, 
+                "Đã cập nhật cài đặt chung hệ thống", "success");
             System.out.println("General settings saved successfully");
             sendJsonResponse(response, true, "Đã lưu cài đặt chung thành công", null);
         } else {
@@ -262,6 +265,9 @@ public class SettingsServlet extends HttpServlet {
         boolean success = settingsDAO.saveSettings(settings, userId);
         
         if (success) {
+            // Thêm activity log
+            com.hlgenerator.util.ActionLogUtil.addAction(request, "Cập nhật cài đặt email", "settings", null, 
+                "Đã cập nhật cài đặt email hệ thống", "success");
             sendJsonResponse(response, true, "Đã lưu cài đặt email thành công", null);
         } else {
             sendJsonResponse(response, false, "Lỗi khi lưu cài đặt email", null);

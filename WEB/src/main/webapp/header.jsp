@@ -72,6 +72,36 @@
     .navbar-nav .nav-link { color:#343a40 !important; font-weight:500; margin:0 8px; padding:8px 12px !important; text-transform:uppercase; font-size:14px; }
     .navbar-nav .nav-link:hover { color:#dc3545 !important; }
     .navbar-nav .nav-link.active { color:#dc3545 !important; font-weight:700; }
+    /* Floating toast styles (global notification) */
+    .floating-toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none; /* allow clicks through when no toast */
+    }
+    .floating-toast {
+        min-width: 280px;
+        max-width: 420px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        pointer-events: auto; /* allow interacting with buttons inside */
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+        transition: opacity 220ms ease, transform 220ms ease;
+    }
+    .floating-toast.show { opacity: 1; transform: translateY(0) scale(1); }
+    .floating-toast.success { background: #28a745; }
+    .floating-toast.danger { background: #dc3545; }
+    .floating-toast.info { background: #17a2b8; }
+    .floating-toast.warning { background: #ffc107; color: #212529; }
+    .floating-toast .toast-close { float: right; margin-left: 8px; cursor: pointer; font-weight: 700; }
 </style>
 
 <div class="top-header" data-logged-in="${sessionScope.isLoggedIn eq true}">
@@ -91,7 +121,7 @@
         <a class="navbar-brand" href="index.jsp">
             <div class="logo-container">
                 <div class="logo-icon">
-                    <img src="images/logo.png" alt="Logo Hoà Lạc" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <img src="images/banner-logo.png" alt="Logo Hoà Lạc" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <div style="display:none; width:100%; height:100%; background:#dc3545; border-radius:50%; align-items:center; justify-content:center; color:white; font-size:20px;">★</div>
                 </div>
                 <div class="logo-text"><strong><%= pageContext.getAttribute("siteName") != null ? pageContext.getAttribute("siteName") : "HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR" %></strong></div>
@@ -196,3 +226,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Note: auto-logout on tab close was removed to avoid logging out on refresh
 </script>
+<!-- Global toast container will be created by notify.js if not present -->
+<div id="toastContainer" class="floating-toast-container" aria-live="polite" aria-atomic="true"></div>
+<script src="js/notify.js"></script>

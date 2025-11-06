@@ -102,6 +102,9 @@ public class CustomerServlet extends HttpServlet {
                 case "delete":
                     handleDeleteCustomer(request, out);
                     break;
+                case "hardDelete":
+                    handleHardDeleteCustomer(request, out);
+                    break;
                 case "activate":
                     handleActivateCustomer(request, out);
                     break;
@@ -232,6 +235,9 @@ public class CustomerServlet extends HttpServlet {
             
             JSONObject result = new JSONObject();
             if (success) {
+                // Thêm activity log
+                com.hlgenerator.util.ActionLogUtil.addAction(request, "Thêm khách hàng mới", "customers", 
+                    null, "Đã thêm khách hàng: " + customerCode, "success");
                 result.put("success", true);
                 result.put("message", "Đã thêm khách hàng thành công");
             } else {
@@ -315,6 +321,9 @@ public class CustomerServlet extends HttpServlet {
             
             JSONObject result = new JSONObject();
             if (success) {
+                // Thêm activity log
+                com.hlgenerator.util.ActionLogUtil.addAction(request, "Cập nhật khách hàng", "customers", 
+                    id, "Đã cập nhật khách hàng: " + customerCode, "info");
                 result.put("success", true);
                 result.put("message", "Đã cập nhật khách hàng thành công");
             } else {
@@ -339,10 +348,15 @@ public class CustomerServlet extends HttpServlet {
             }
 
             int id = Integer.parseInt(idParam);
+            Customer customer = customerDAO.getCustomerById(id);
             boolean success = customerDAO.deleteCustomer(id);
             
             JSONObject result = new JSONObject();
             if (success) {
+                // Thêm activity log
+                String customerInfo = customer != null ? customer.getCustomerCode() : "ID: " + id;
+                com.hlgenerator.util.ActionLogUtil.addAction(request, "Xóa khách hàng", "customers", 
+                    id, "Đã xóa khách hàng: " + customerInfo, "warning");
                 result.put("success", true);
                 result.put("message", "Đã xóa khách hàng thành công");
             } else {
@@ -355,6 +369,39 @@ public class CustomerServlet extends HttpServlet {
             sendErrorResponse(out, "Mã khách hàng không hợp lệ", 400);
         } catch (Exception e) {
             sendErrorResponse(out, "Lỗi khi xóa khách hàng: " + e.getMessage(), 500);
+        }
+    }
+
+    private void handleHardDeleteCustomer(HttpServletRequest request, PrintWriter out) {
+        try {
+            String idParam = request.getParameter("id");
+            if (idParam == null || idParam.trim().isEmpty()) {
+                sendErrorResponse(out, "Mã khách hàng là bắt buộc", 400);
+                return;
+            }
+
+            int id = Integer.parseInt(idParam);
+            Customer customer = customerDAO.getCustomerById(id);
+            boolean success = customerDAO.hardDeleteCustomer(id);
+
+            JSONObject result = new JSONObject();
+            if (success) {
+                String customerInfo = customer != null ? customer.getCustomerCode() : "ID: " + id;
+                // Log action
+                com.hlgenerator.util.ActionLogUtil.addAction(request, "Xóa vĩnh viễn khách hàng", "customers",
+                        id, "Đã xóa vĩnh viễn khách hàng: " + customerInfo, "danger");
+                result.put("success", true);
+                result.put("message", "Đã xóa vĩnh viễn khách hàng thành công");
+            } else {
+                result.put("success", false);
+                result.put("message", "Không thể xóa vĩnh viễn khách hàng");
+            }
+            out.print(result.toString());
+
+        } catch (NumberFormatException e) {
+            sendErrorResponse(out, "Mã khách hàng không hợp lệ", 400);
+        } catch (Exception e) {
+            sendErrorResponse(out, "Lỗi khi xóa vĩnh viễn khách hàng: " + e.getMessage(), 500);
         }
     }
 
@@ -379,6 +426,9 @@ public class CustomerServlet extends HttpServlet {
             
             JSONObject result = new JSONObject();
             if (success) {
+                // Thêm activity log
+                com.hlgenerator.util.ActionLogUtil.addAction(request, "Kích hoạt khách hàng", "customers", 
+                    id, "Đã kích hoạt khách hàng: " + customer.getCustomerCode(), "success");
                 result.put("success", true);
                 result.put("message", "Đã kích hoạt khách hàng thành công");
             } else {

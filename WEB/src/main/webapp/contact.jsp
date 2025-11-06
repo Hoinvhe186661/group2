@@ -115,19 +115,19 @@
                         <form id="contactForm">
                             <div class="form-group">
                                 <label for="fullName">Họ tên*</label>
-                                <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Họ tên*" required>
+                                <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Họ tên*" maxlength="100" required>
                             </div>
                             <div class="form-group">
                                 <label for="email">Email*</label>
-                                <input type="email" class="form-control" id="email" name="email" placeholder="Email*" required>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="Email*" maxlength="100" pattern="^[A-Za-z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$" title="Email phải thuộc miền gmail.com hoặc fpt.edu.vn" required>
                             </div>
                             <div class="form-group">
                                 <label for="phone">Số điện thoại*</label>
-                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="Số điện thoại*" required>
+                                <input type="tel" class="form-control" id="phone" name="phone" placeholder="Số điện thoại*" maxlength="11" pattern="^[0-9]{10,11}$" title="Số điện thoại phải gồm 10 hoặc 11 chữ số" required>
                             </div>
                             <div class="form-group">
                                 <label for="message">Nhập nội dung*</label>
-                                <textarea class="form-control" id="message" name="message" placeholder="Nhập nội dung*" required></textarea>
+                                <textarea class="form-control" id="message" name="message" placeholder="Nhập nội dung*" maxlength="100" required></textarea>
                             </div>
                             <button type="submit" class="submit-btn" id="submitBtn">
                                 <i class="fas fa-paper-plane"></i> Gửi liên hệ của bạn
@@ -168,11 +168,43 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
 
+            // Client-side validation (email domain and phone format)
+            const fullNameVal = document.getElementById('fullName').value.trim();
+            const emailVal = document.getElementById('email').value.trim();
+            const phoneVal = document.getElementById('phone').value.trim();
+            const messageVal = document.getElementById('message').value.trim();
+
+            // Email must be @gmail.com or @fpt.edu.vn
+            const emailRegex = /^[A-Za-z0-9._%+-]+@(gmail\.com|fpt\.edu\.vn)$/i;
+            if (!emailRegex.test(emailVal)) {
+                showAlert('danger', 'Email phải thuộc miền gmail.com hoặc fpt.edu.vn');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+
+            // Phone must be 10 or 11 digits
+            const phoneRegex = /^\d{10,11}$/;
+            if (!phoneRegex.test(phoneVal)) {
+                showAlert('danger', 'Số điện thoại phải gồm 10 hoặc 11 chữ số và không chứa chữ cái');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+
+            // Enforce maxlength on message and fullName (in case of older browsers)
+            if (fullNameVal.length > 100 || messageVal.length > 100) {
+                showAlert('danger', 'Họ tên và nội dung chỉ được phép tối đa 100 ký tự');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+
             const formData = new URLSearchParams();
-            formData.append('fullName', document.getElementById('fullName').value);
-            formData.append('email', document.getElementById('email').value);
-            formData.append('phone', document.getElementById('phone').value);
-            formData.append('message', document.getElementById('message').value);
+            formData.append('fullName', fullNameVal);
+            formData.append('email', emailVal);
+            formData.append('phone', phoneVal);
+            formData.append('message', messageVal);
 
             fetch('contact', {
                 method: 'POST',

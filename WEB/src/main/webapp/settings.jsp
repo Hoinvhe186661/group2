@@ -83,6 +83,7 @@
         <!-- Left side column. contains the logo and sidebar -->
         <aside class="left-side sidebar-offcanvas">
             <!-- sidebar: style can be found in sidebar.less -->
+            
             <section class="sidebar">
                 <!-- Sidebar user panel -->
                 <div class="user-panel">
@@ -94,27 +95,23 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
+                
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                 
                 <ul class="sidebar-menu">
                     <li>
                         <a href="admin.jsp">
                             <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span>
-                        </a>
-                    </li>
+                    
                     <li>
                         <a href="customers">
                             <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="users">
+                            <i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
                         </a>
                     </li>
                     <li>
@@ -127,13 +124,14 @@
                             <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
                         </a>
                     </li>
-                    <li class="active">
+                    <li>
                         <a href="settings.jsp">
                             <i class="fa fa-cog"></i> <span>Cài đặt</span>
                         </a>
                     </li>
                 </ul>
             </section>
+            
             <!-- /.sidebar -->
         </aside>
 
@@ -172,11 +170,11 @@
                                                 <div class="col-md-6">
                                                     <div class="form-group">
                                                         <label for="siteName">Tên website:</label>
-                                                        <input type="text" class="form-control" id="siteName" value="Cửa hàng trực tuyến">
+                                                        <input type="text" class="form-control" id="siteName" value="Cửa hàng trực tuyến" maxlength="100">
                                                     </div>
                                                     <div class="form-group">
                                                         <label for="siteDescription">Mô tả website:</label>
-                                                        <textarea class="form-control" id="siteDescription" rows="3">Cửa hàng trực tuyến chuyên bán các sản phẩm chất lượng cao</textarea>
+                                                        <textarea class="form-control" id="siteDescription" rows="3" maxlength="100">Cửa hàng trực tuyến chuyên bán các sản phẩm chất lượng cao</textarea>
                                                     </div>
                                                     
                                                 </div>
@@ -232,8 +230,7 @@
         </aside><!-- /.right-side -->
     </div><!-- ./wrapper -->
 
-    <!-- jQuery 2.0.2 -->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+    <!-- jQuery (local) -->
     <script src="js/jquery.min.js" type="text/javascript"></script>
     <!-- jQuery UI 1.10.3 -->
     <script src="js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>

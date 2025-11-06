@@ -29,18 +29,140 @@
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     
     <style>
-            .btn-xs {
-                padding: 2px 8px;
-                font-size: 11px;
-            }
-
-            .action-buttons {
-                white-space: nowrap;
-            }
-
-            .action-buttons .btn {
-                margin: 1px;
-            }
+        :root {
+            --btn-padding: 4px 12px;
+            --btn-radius: 4px;
+            --btn-transition: all 0.15s ease;
+            --shadow-light: 0 2px 4px;
+            --shadow-hover: 0 4px 8px;
+        }
+        
+        /* Alert Styles */
+        .alert {
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 4px;
+            padding: 15px 35px 15px 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .alert-success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border-left: 4px solid #3c763d;
+        }
+        
+        .alert-danger {
+            background-color: #f2dede;
+            color: #a94442;
+            border-left: 4px solid #a94442;
+        }
+        
+        .alert-warning {
+            background-color: #fcf8e3;
+            color: #8a6d3b;
+            border-left: 4px solid #8a6d3b;
+        }
+        
+        .alert-info {
+            background-color: #d9edf7;
+            color: #31708f;
+            border-left: 4px solid #31708f;
+        }
+        
+        .alert .close {
+            position: relative;
+            top: -2px;
+            right: -25px;
+            color: inherit;
+        }
+        
+        .action-buttons {
+            white-space: nowrap;
+            min-width: 200px;
+            max-width: 250px;
+        }
+        
+        .action-buttons .btn-group {
+            display: flex;
+            gap: 4px;
+            width: 100%;
+        }
+        
+        .action-buttons .btn {
+            padding: var(--btn-padding);
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: var(--btn-radius);
+            border: none;
+            transition: var(--btn-transition);
+            text-transform: none;
+            letter-spacing: 0.3px;
+            flex: 1;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .action-buttons .dropdown-menu {
+            min-width: 180px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: none;
+            border-radius: 6px;
+            padding: 5px 0;
+        }
+        
+        .action-buttons .dropdown-menu li a {
+            padding: 8px 15px;
+            font-size: 12px;
+            color: #333;
+            transition: var(--btn-transition);
+        }
+        
+        .action-buttons .dropdown-menu li a:hover {
+            background-color: #f8f9fa;
+            color: #000;
+        }
+        
+        .action-buttons .dropdown-menu .divider {
+            margin: 5px 0;
+            background-color: #e9ecef;
+        }
+        
+        .action-buttons .btn i {
+            margin-right: 4px;
+            font-size: 10px;
+        }
+        
+        /* Button colors */
+        .action-buttons .btn-info { background: linear-gradient(135deg, #3498db, #2980b9); color: white; box-shadow: var(--shadow-light) rgba(52, 152, 219, 0.3); }
+        .action-buttons .btn-info:hover { background: linear-gradient(135deg, #2980b9, #21618c); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(52, 152, 219, 0.4); }
+        .action-buttons .btn-warning { background: linear-gradient(135deg, #f39c12, #e67e22); color: white; box-shadow: var(--shadow-light) rgba(243, 156, 18, 0.3); }
+        .action-buttons .btn-warning:hover { background: linear-gradient(135deg, #e67e22, #d35400); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(243, 156, 18, 0.4); }
+        .action-buttons .btn-primary { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: white; box-shadow: var(--shadow-light) rgba(155, 89, 182, 0.3); }
+        .action-buttons .btn-primary:hover { background: linear-gradient(135deg, #8e44ad, #7d3c98); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(155, 89, 182, 0.4); }
+        .action-buttons .btn-success { background: linear-gradient(135deg, #27ae60, #229954); color: white; box-shadow: var(--shadow-light) rgba(39, 174, 96, 0.3); }
+        .action-buttons .btn-success:hover { background: linear-gradient(135deg, #229954, #1e8449); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(39, 174, 96, 0.4); }
+        .action-buttons .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; box-shadow: var(--shadow-light) rgba(231, 76, 60, 0.3); }
+        .action-buttons .btn-danger:hover { background: linear-gradient(135deg, #c0392b, #a93226); transform: translateY(-1px); box-shadow: var(--shadow-hover) rgba(231, 76, 60, 0.4); }
+        
+        .action-buttons .btn:focus { outline: none; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); }
+        .action-buttons .btn:active { transform: translateY(0); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        
+        @media (max-width: 768px) {
+            .action-buttons { min-width: 160px; max-width: 180px; }
+            .action-buttons .btn { padding: 3px 6px; font-size: 10px; }
+        }
+        
+        /* Readonly field styling */
+        .bg-gray-light {
+            background-color: #f4f4f4 !important;
+            cursor: not-allowed !important;
+            border-color: #ddd !important;
+        }
+        
+        input[readonly].bg-gray-light {
+            opacity: 0.8;
+        }
     </style>
 </head>
 
@@ -62,7 +184,7 @@
                             <i class="fa fa-user"></i>
                             <span>Admin <i class="caret"></i></span>
                         </a>
-                        <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
+                       <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
                             <li><a href="profile.jsp"><i class="fa fa-user fa-fw pull-right"></i> Hồ sơ</a></li>
                             <li><a href="settings.jsp"><i class="fa fa-cog fa-fw pull-right"></i> Cài đặt</a></li>
@@ -73,7 +195,7 @@
                 </ul>
             </div>
         </nav>
-    </header>
+    </header> 
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Sidebar -->
@@ -88,16 +210,7 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                <!-- search form -->
-                <form action="#" method="get" class="sidebar-form">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
-                        <span class="input-group-btn">
-                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
-                        </span>
-                    </div>
-                </form>
-                <!-- /.search form -->
+                
                 
                 <ul class="sidebar-menu">
                     <li><a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a></li>
@@ -221,22 +334,35 @@
                                             <td><%= customer.getTaxCode() %></td>
                                             <td><%= CustomerHelper.typeLabel(customer.getCustomerType()) %></td>
                                             <td><%= CustomerHelper.statusLabel(customer.getStatus()) %></td>
-                                            <td class="action-buttons">
-                                                <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')">
-                                                    <i class="fa fa-eye"></i> Xem
-                                                </button>
-                                                <button class="btn btn-warning btn-xs" onclick="editCustomer('<%= customer.getId() %>')">
-                                                    <i class="fa fa-edit"></i> Sửa
-                                                </button>
-                                                <% if ("active".equals(customer.getStatus())) { %>
-                                                <button class="btn btn-danger btn-xs" onclick="deleteCustomer('<%= customer.getId() %>')">
-                                                    <i class="fa fa-trash"></i> Xóa
-                                                </button>
-                                                <% } else { %>
-                                                <button class="btn btn-success btn-xs" onclick="activateCustomer('<%= customer.getId() %>')">
-                                                    <i class="fa fa-unlock"></i> Kích hoạt
-                                                </button>
-                                                <% } %>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <div class="btn-group">
+                                                        <!-- Nút Xem -->
+                                                        <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')" title="Xem chi tiết">
+                                                            <i class="fa fa-eye"></i> Xem
+                                                        </button>
+                                                        <!-- Nút Sửa với dropdown -->
+                                                        <div class="btn-group">
+                                                            <button class="btn btn-warning btn-xs dropdown-toggle" data-toggle="dropdown" title="Chỉnh sửa">
+                                                                <i class="fa fa-edit"></i> Sửa <span class="caret"></span>
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a href="#" onclick="editCustomer('<%= customer.getId() %>')"><i class="fa fa-edit"></i> Chỉnh sửa thông tin</a></li>
+                                                                <li class="divider"></li>
+                                                                <% if ("active".equals(customer.getStatus())) { %>
+                                                                    <li><a href="#" onclick="deactivateCustomer('<%= customer.getId() %>')" style="color: #f39c12;"><i class="fa fa-lock"></i> Tạm khóa</a></li>
+                                                                <% } else { %>
+                                                                    <li><a href="#" onclick="activateCustomer('<%= customer.getId() %>')" style="color: #27ae60;"><i class="fa fa-unlock"></i> Kích hoạt</a></li>
+                                                                <% } %>
+                                                                <li><a href="#" onclick="hardDeleteCustomer('<%= customer.getId() %>')" style="color: #e74c3c;"><i class="fa fa-trash"></i> Xóa vĩnh viễn</a></li>
+                                                            </ul>
+                                                        </div>
+                                                        <!-- Nút Xóa -->
+                                                        <button class="btn btn-danger btn-xs" onclick="deleteCustomer('<%= customer.getId() %>')" title="Xóa tạm thời">
+                                                            <i class="fa fa-trash-o"></i> Xóa
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </td>
                                         </tr>
                                         <% 
@@ -265,15 +391,15 @@
                     <form id="addCustomerForm">
                         <div class="form-group">
                             <label>Mã khách hàng:</label>
-                            <input type="text" class="form-control" id="customerCode" required>
+                            <input type="text" class="form-control" id="customerCode" maxlength="50" required>
                         </div>
                         <div class="form-group">
                             <label>Tên công ty:</label>
-                            <input type="text" class="form-control" id="companyName">
+                            <input type="text" class="form-control" id="companyName" maxlength="50">
                         </div>
                         <div class="form-group">
                             <label>Người liên hệ:</label>
-                            <input type="text" class="form-control" id="userContract" required>
+                            <input type="text" class="form-control" id="userContract" maxlength="50" required>
                         </div>
                         <div class="form-group">
                             <label>Email: <small class="text-muted"></small></label>
@@ -285,11 +411,11 @@
                         </div>
                         <div class="form-group">
                             <label>Địa chỉ:</label>
-                            <textarea class="form-control" id="customerAddress" rows="3" required></textarea>
+                            <textarea class="form-control" id="customerAddress" rows="3" maxlength="100" required></textarea>
                         </div>
                         <div class="form-group">
                             <label>Mã số thuế:</label>
-                            <input type="text" class="form-control" id="taxCode">
+                            <input type="text" class="form-control" id="taxCode" maxlength="100">
                         </div>
                         <div class="form-group">
                             <label>Loại khách hàng:</label>
@@ -302,6 +428,7 @@
                     </form>
                 </div>
                 <div class="modal-footer">
+                    
                     <button type="button" class="btn btn-default" data-dismiss="modal">Hủy</button>
                     <button type="button" class="btn btn-primary" onclick="saveCustomer()">Lưu khách hàng</button>
                 </div>
@@ -328,7 +455,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
     <script src="js/jquery.min.js" type="text/javascript"></script>
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
     <script src="js/plugins/datatables/jquery.dataTables.js" type="text/javascript"></script>
@@ -426,6 +552,8 @@
                         $('#customerType').val(customer.customerType);
                         currentEditingCustomer = customer;
                         $('#addCustomerModal .modal-title').text('Chỉnh sửa khách hàng');
+                        // Show permanent delete button when editing
+                        $('.btn-danger', '#addCustomerModal').show();
                         $('#addCustomerModal').modal('show');
                     } else {
                         alert('Không thể tải thông tin khách hàng: ' + response.message);
@@ -438,7 +566,7 @@
         }
 
         function deleteCustomer(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
+            if (confirm('Bạn có chắc chắn muốn xóa tạm thời khách hàng này?')) {
                 $.ajax({
                     url: 'api/customers',
                     type: 'POST',
@@ -446,7 +574,7 @@
                     dataType: 'json',
                         success: function (response) {
                         if (response.success) {
-                            alert('Đã xóa khách hàng thành công');
+                            alert('Đã xóa tạm thời khách hàng thành công');
                             location.reload();
                         } else {
                             alert('Lỗi khi xóa khách hàng: ' + response.message);
@@ -480,6 +608,65 @@
                 });
             }
         }
+
+        function deactivateCustomer(id) {
+            if (confirm('Bạn có chắc chắn muốn tạm khóa khách hàng này?')) {
+                $.ajax({
+                    url: 'api/customers',
+                    type: 'POST',
+                    data: { action: 'deactivate', id: id },
+                    dataType: 'json',
+                        success: function (response) {
+                        if (response.success) {
+                            alert('Đã tạm khóa khách hàng thành công');
+                            location.reload();
+                        } else {
+                            alert('Lỗi khi tạm khóa khách hàng: ' + response.message);
+                        }
+                    },
+                        error: function () {
+                        alert('Lỗi kết nối đến server');
+                    }
+                });
+            }
+        }
+
+        function hardDeleteCustomer(id) {
+            if (confirm('⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN khách hàng này?\n\n' +
+                       'Hành động này KHÔNG THỂ HOÀN TÁC!\n' +
+                       'Tất cả dữ liệu liên quan đến khách hàng này sẽ bị xóa vĩnh viễn.\n\n' +
+                       'Nhập "XÓA" để xác nhận:')) {
+                
+                var confirmation = prompt('Nhập "XÓA" để xác nhận xóa vĩnh viễn:');
+                if (confirmation === 'XÓA') {
+                    $.ajax({
+                        url: 'api/customers',
+                        type: 'POST',
+                        data: {
+                            action: 'hardDelete',
+                            id: id
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success) {
+                                showAlert('Đã xóa vĩnh viễn khách hàng thành công', 'success');
+                                location.reload();
+                            } else {
+                                showAlert('Lỗi khi xóa vĩnh viễn khách hàng: ' + response.message, 'danger');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('AJAX Error:', xhr.responseText);
+                            showAlert('Lỗi kết nối đến server: ' + error, 'danger');
+                        }
+                    });
+                } else {
+                    showAlert('Hủy bỏ xóa vĩnh viễn', 'info');
+                }
+            }
+        }
+        
+        // Global showAlert/toast is provided by js/notify.js (loaded via header.jsp)
 
         function saveCustomer() {
             var formData = {
@@ -562,6 +749,37 @@
             });
         }
 
+        function permanentDeleteCustomer() {
+            if (!currentEditingCustomer) {
+                alert('Không tìm thấy thông tin khách hàng');
+                return;
+            }
+
+            if (confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn khách hàng này? Hành động này không thể hoàn tác!')) {
+                $.ajax({
+                    url: 'api/customers',
+                    type: 'POST',
+                    data: { 
+                        action: 'permanentDelete', 
+                        id: currentEditingCustomer.id 
+                    },
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success) {
+                            alert('Đã xóa vĩnh viễn khách hàng thành công');
+                            $('#addCustomerModal').modal('hide');
+                            location.reload();
+                        } else {
+                            alert('Lỗi khi xóa vĩnh viễn khách hàng: ' + response.message);
+                        }
+                    },
+                    error: function () {
+                        alert('Lỗi kết nối đến server');
+                    }
+                });
+            }
+        }
+
         // Reset form when modal is closed
             $('#addCustomerModal').on('hidden.bs.modal', function () {
             $('#addCustomerForm')[0].reset();
@@ -569,6 +787,8 @@
             $('#addCustomerModal .modal-title').text('Thêm khách hàng mới');
             // Reset label về mặc định
             $('label[for="companyName"]').text('Tên công ty:');
+            // Hide permanent delete button
+            $('.btn-danger', '#addCustomerModal').hide();
         });
 
         // Cập nhật label khi thay đổi loại khách hàng

@@ -67,6 +67,9 @@ public class ContactServlet extends HttpServlet {
             );
 
             if (success) {
+                // Thêm activity log cho tin nhắn liên hệ mới
+                com.hlgenerator.util.ActionLogUtil.addAction(request, "Tin nhắn liên hệ mới", "contact_messages", 
+                    null, "Tin nhắn liên hệ từ: " + fullName + " (" + email + ")", "info");
                 sendJsonResponse(response, true, "Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.", null);
             } else {
                 sendJsonResponse(response, false, "Có lỗi xảy ra khi gửi liên hệ. Vui lòng thử lại sau.", null);

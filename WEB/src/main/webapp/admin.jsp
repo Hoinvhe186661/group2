@@ -43,14 +43,15 @@
     <!-- Theme style -->
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     
-    <!-- Custom styles for user stats -->
+    <!-- Custom styles for admin dashboard -->
     <style>
+        /* Màu sắc cho icon cards */
         .st-orange { background-color: #ff9800 !important; }
         .st-purple { background-color: #9c27b0 !important; }
         .st-cyan { background-color: #00bcd4 !important; }
         .st-pink { background-color: #e91e63 !important; }
 
-        /* Smooth animations (CSS-only) aligned with template */
+        /* Smooth animations */
         .fade-in { opacity: 0; animation: fadeInUp 500ms ease-out forwards; }
         .fade-in.delay-1 { animation-delay: 80ms; }
         .fade-in.delay-2 { animation-delay: 160ms; }
@@ -65,50 +66,30 @@
         svg .chart-bar:nth-child(odd) { animation-delay: 80ms; }
         @keyframes growBar { to { transform: scaleY(1); } }
 
-        /* Panel subtle shadow/hover consistent with theme */
-        .panel { transition: box-shadow 200ms ease; }
-        .panel:hover { box-shadow: 0 6px 14px rgba(0,0,0,0.08); }
-        .sm-st { transition: transform 180ms ease, box-shadow 180ms ease; }
-        .sm-st:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
-
-        /* Gọn gàng nội dung, không thừa khoảng trắng */
-        .right-side .content { padding: 12px 16px; }
-        .panel { margin-bottom: 12px; }
-        .panel-heading { padding: 10px 12px; }
-        .panel-body { padding: 12px; }
-        .sm-st { margin-bottom: 8px; }
-        .list-group { margin-bottom: 8px; }
+        /* Fix text bị cắt - sử dụng template gốc và chỉ thêm word-wrap */
+        .sm-st.clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        .sm-st-info { 
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+        .panel-body h3, .panel-body p { 
+            word-wrap: break-word; 
+            overflow-wrap: break-word;
+            white-space: normal;
+        }
+        
+        /* Scrollbar cho danh sách */
         #noti-box { max-height: 360px; overflow-y: auto; }
-        .footer-main { margin-top: 8px; padding: 8px 12px; }
-        /* Tránh tràn ngang và làm svg/canvas co giãn hợp lý */
-        .right-side { overflow-x: hidden; }
-        .panel-body svg, .panel-body canvas { max-width: 100%; height: auto; display: block; }
-
-        /* Căn sidebar sát lề trái, nội dung dịch phải giống template */
-        .left-side { float: left; width: 220px; max-width: 220px; margin-left: 0; padding-left: 0; }
-        .left-side .sidebar { padding-left: 0; width: 100%; }
-        .left-side .sidebar .sidebar-menu { margin-left: 0; }
-        .left-side .sidebar, .left-side .sidebar * { box-sizing: border-box; }
-        .left-side img { max-width: 100%; height: auto; }
-        .right-side { margin-left: 220px; }
-
-        /* Sidebar cố định theo template, tránh lệch layout */
-        /* Khôi phục layout giống trang Quản lý người dùng (users.jsp) */
-        body { padding-top: 0; overflow: visible; }
-        .header { position: static; height: auto; background: inherit; overscroll-behavior: auto; pointer-events: auto; }
-        .header .logo { height: auto; line-height: normal; }
-        .navbar { min-height: auto; }
-        .navbar .navbar-btn.sidebar-toggle { margin-top: 0; }
-        .wrapper { margin-top: 0; }
-        .left-side { position: static; top: auto; bottom: auto; width: auto; overflow: visible; height: auto; }
-        .left-side .sidebar { height: auto; overflow: visible; padding-bottom: 0; }
-        .right-side { position: static; top: auto; left: auto; right: auto; bottom: auto; margin-left: 0; min-height: auto; overflow: visible; }
-
-        /* Enable dropdown on hover/focus without JS */
-        .navbar .dropdown-menu { display: none; }
-        .navbar .dropdown:hover > .dropdown-menu,
-        .navbar .dropdown:focus-within > .dropdown-menu { display: block; }
-        .navbar .dropdown-menu { animation: fadeInUp 160ms ease-out; }
+        #recentUsersList { max-height: 160px; overflow-y: auto; overflow-x: hidden; }
+        #recentUsersList::-webkit-scrollbar { width: 8px; }
+        #recentUsersList::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        #recentUsersList::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        #recentUsersList::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
@@ -119,14 +100,10 @@
     <![endif]-->
 </head>
 <body class="skin-black">
-    <!-- header logo: style can be found in header.less -->
+    <!-- Header -->
     <header class="header">
-                        <a href="admin" class="logo">
-            Bảng điều khiển 
-        </a>
-        <!-- Header Navbar: style can be found in header.less -->
+        <a href="customers" class="logo">Bảng điều khiển </a>
         <nav class="navbar navbar-static-top" role="navigation">
-            <!-- Sidebar toggle button-->
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span>
@@ -135,74 +112,23 @@
             </a>
             <div class="navbar-right">
                 <ul class="nav navbar-nav">
-                    <!-- Messages: style can be found in dropdown.less-->
-                    <li class="dropdown messages-menu">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                            <i class="fa fa-envelope"></i>
-                            <span class="label label-success">4</span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li class="header">Bạn có 4 tin nhắn</li>
-                            <li>
-                                <!-- inner menu: contains the actual data -->
-                                <ul class="menu">
-                                    <li><!-- start message -->s
-                                        <a href="#">
-                                            <div class="pull-left">
-                                                <img src="img/26115.jpg" class="img-circle" alt="User Image"/>
-                                            </div>
-                                            <h4>
-                                                Hỗ trợ khách hàng
-                                            </h4>
-                                            <p>Có khách hàng cần hỗ trợ</p>
-                                            <small class="pull-right"><i class="fa fa-clock-o"></i> 5 phút</small>
-                                        </a>
-                                    </li><!-- end message -->
-                                    <li>
-                                        <a href="#">
-                                            <div class="pull-left">
-                                                <img src="img/26115.jpg" class="img-circle" alt="user image"/>
-                                            </div>
-                                            <h4>
-                                                Đơn hàng mới
-                                            </h4>
-                                            <p>Có đơn hàng mới cần xử lý</p>
-                                            <small class="pull-right"><i class="fa fa-clock-o"></i> 2 giờ</small>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                            <li class="footer"><a href="#">Xem tất cả tin nhắn</a></li>
-                        </ul>
-                    </li>
-                    <!-- User Account: style can be found in dropdown.less -->
                     <li class="dropdown user user-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <i class="fa fa-user"></i>
-                            <span><%= (String) session.getAttribute("username") %> <i class="caret"></i></span>
+                            <span>Admin <i class="caret"></i></span>
                         </a>
-                        <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
+                       <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
-                            <li>
-                                <a href="profile.jsp">
-                                <i class="fa fa-user fa-fw pull-right"></i>
-                                    Hồ sơ
-                                </a>
-                                <a href="settings.jsp">
-                                <i class="fa fa-cog fa-fw pull-right"></i>
-                                    Cài đặt
-                                </a>
-                            </li>
+                            <li><a href="profile.jsp"><i class="fa fa-user fa-fw pull-right"></i> Hồ sơ</a></li>
+                            <li><a href="settings.jsp"><i class="fa fa-cog fa-fw pull-right"></i> Cài đặt</a></li>
                             <li class="divider"></li>
-                            <li>
-                                <a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
-                            </li>
+                            <li><a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a></li>
                         </ul>
                     </li>
                 </ul>
             </div>
         </nav>
-    </header>
+    </header> 
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Left side column. contains the logo and sidebar -->
@@ -219,16 +145,8 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                <!-- search form -->
-                <form action="#" method="get" class="sidebar-form">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
-                        <span class="input-group-btn">
-                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
-                        </span>
-                    </div>
-                </form>
-                <!-- /.search form -->
+                
+               
                 <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
                     <li class="active">
@@ -356,7 +274,7 @@
                         <!--notifications start-->
                         <section class="panel slide-up">
                             <header class="panel-heading">
-                                Thông báo
+                                Nhật ký hoạt động gần đây
                             </header>
                             <div class="panel-body" id="noti-box">
                                 <%
@@ -440,7 +358,13 @@
         </aside><!-- /.right-side -->
     </div><!-- ./wrapper -->
 
-    <!-- jQuery 2.0.2 -->
-    <!-- Không dùng JavaScript cho trang này theo yêu cầu -->
+    <!-- jQuery (local) -->
+    <script src="js/jquery.min.js" type="text/javascript"></script>
+    <!-- jQuery UI 1.10.3 -->
+    <script src="js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
+    <!-- Bootstrap -->
+    <script src="js/bootstrap.min.js" type="text/javascript"></script>
+    <!-- Director App -->
+    <script src="js/Director/app.js" type="text/javascript"></script>
 </body>
 </html> 

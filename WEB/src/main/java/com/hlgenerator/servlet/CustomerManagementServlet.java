@@ -1,5 +1,6 @@
 package com.hlgenerator.servlet;
 
+import com.google.gson.Gson;
 import com.hlgenerator.dao.CustomerDAO;
 import com.hlgenerator.model.Customer;
 
@@ -173,6 +174,103 @@ public class CustomerManagementServlet extends HttpServlet {
         }
     }
     
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json");
+        
+        String action = request.getParameter("action");
+        String id = request.getParameter("id");
+        
+        try {
+            JsonResponse jsonResponse = new JsonResponse();
+            
+            switch (action) {
+                case "get":
+                    Customer customer = customerDAO.getCustomerById(Integer.parseInt(id));
+                    if (customer != null) {
+                        jsonResponse.setSuccess(true);
+                        jsonResponse.setData(customer);
+                    } else {
+                        jsonResponse.setSuccess(false);
+                        jsonResponse.setMessage("Không tìm thấy khách hàng");
+                    }
+                    break;
+                    
+                case "delete":
+                case "deactivate":
+                    // Xóa tạm thời hoặc tạm khóa (đều cập nhật status thành inactive)
+                    Customer customerToDeactivate = customerDAO.getCustomerById(Integer.parseInt(id));
+                    if (customerToDeactivate != null) {
+                        customerToDeactivate.setStatus("inactive");
+                        boolean deactivated = customerDAO.updateCustomer(customerToDeactivate);
+                        jsonResponse.setSuccess(deactivated);
+                        jsonResponse.setMessage(deactivated ? "Đã tạm khóa khách hàng" : "Lỗi khi tạm khóa khách hàng");
+                    } else {
+                        jsonResponse.setSuccess(false);
+                        jsonResponse.setMessage("Không tìm thấy khách hàng");
+                    }
+                    break;
+                    
+                case "activate":
+                    Customer customerToActivate = customerDAO.getCustomerById(Integer.parseInt(id));
+                    if (customerToActivate != null) {
+                        customerToActivate.setStatus("active");
+                        boolean activated = customerDAO.updateCustomer(customerToActivate);
+                        jsonResponse.setSuccess(activated);
+                        jsonResponse.setMessage(activated ? "Đã kích hoạt khách hàng" : "Lỗi khi kích hoạt khách hàng");
+                    } else {
+                        jsonResponse.setSuccess(false);
+                        jsonResponse.setMessage("Không tìm thấy khách hàng");
+                    }
+                    break;
+                    
+                case "hardDelete":
+                    // Xóa vĩnh viễn khỏi database
+                    boolean hardDeleted = customerDAO.hardDeleteCustomer(Integer.parseInt(id));
+                    jsonResponse.setSuccess(hardDeleted);
+                    jsonResponse.setMessage(hardDeleted ? "Đã xóa vĩnh viễn khách hàng" : "Lỗi khi xóa vĩnh viễn khách hàng");
+                    break;
+                    
+                case "update":
+                    // Xử lý cập nhật thông tin khách hàng
+                    // ... code cập nhật ...
+                    break;
+                    
+                case "add":
+                    // Xử lý thêm khách hàng mới
+                    // ... code thêm mới ...
+                    break;
+                    
+                default:
+                    jsonResponse.setSuccess(false);
+                    jsonResponse.setMessage("Hành động không hợp lệ");
+            }
+            
+            response.getWriter().write(new Gson().toJson(jsonResponse));
+            
+        } catch (Exception e) {
+            JsonResponse errorResponse = new JsonResponse();
+            errorResponse.setSuccess(false);
+            errorResponse.setMessage("Lỗi: " + e.getMessage());
+            response.getWriter().write(new Gson().toJson(errorResponse));
+        }
+    }
+    
+    private class JsonResponse {
+        private boolean success;
+        private String message;
+        private Object data;
+        
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public Object getData() { return data; }
+        public void setData(Object data) { this.data = data; }
+    }
     
     public static class CustomerHelper {
         public static String typeLabel(String raw) {

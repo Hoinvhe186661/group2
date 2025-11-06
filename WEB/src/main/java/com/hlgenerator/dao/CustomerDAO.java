@@ -357,4 +357,61 @@ public class CustomerDAO extends DBConnect {
         
         return "CUST001"; 
     }
+
+    // Get total customer count
+    public int getTotalCustomerCount() {
+        if (!checkConnection()) {
+            return 0;
+        }
+        String sql = "SELECT COUNT(*) FROM customers";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting total customer count", e);
+        }
+        
+        return 0;
+    }
+
+    // Get monthly counts for customers for the last N months (including current month)
+    public java.util.LinkedHashMap<String, Integer> getCustomerCountsLastNMonths(int months) {
+        java.util.LinkedHashMap<String, Integer> result = new java.util.LinkedHashMap<>();
+        if (!checkConnection()) {
+            return result;
+        }
+
+        // Prepare month keys in order with 0 defaults
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM");
+        java.time.YearMonth current = java.time.YearMonth.from(java.time.LocalDate.now());
+        for (int i = months - 1; i >= 0; i--) {
+            java.time.YearMonth ym = current.minusMonths(i);
+            result.put(ym.format(fmt), 0);
+        }
+
+        String sql = "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS cnt "
+                   + "FROM customers "
+                   + "WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? MONTH) "
+                   + "GROUP BY ym ORDER BY ym";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, months);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String ym = rs.getString("ym");
+                    int cnt = rs.getInt("cnt");
+                    if (result.containsKey(ym)) {
+                        result.put(ym, cnt);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting monthly customer counts", e);
+        }
+
+        return result;
+    }
 }
