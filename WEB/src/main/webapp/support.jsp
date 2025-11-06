@@ -408,7 +408,7 @@
             <label><strong>Ticket:</strong> <span id="feedbackTicketNumber"></span></label>
           </div>
           <div id="feedbackDisplayInModal" style="display: none;">
-            <div class="alert alert-info">
+            <div class="alert alert-success">
               <strong>Đánh giá của bạn:</strong>
               <div id="feedbackRatingDisplayModal" style="font-size: 20px; color: #ffc107; margin: 10px 0;"></div>
               <div id="feedbackCommentDisplayModal" style="margin-top: 10px;"></div>
@@ -416,7 +416,9 @@
               <div style="margin-top: 10px; font-size: 12px; color: #666;">
                 <small>Ngày đánh giá: <span id="feedbackDateDisplayModal"></span></small>
               </div>
-              <button type="button" class="btn btn-sm btn-secondary mt-2" id="editFeedbackBtnModal" onclick="showFeedbackFormInModal()">Chỉnh sửa đánh giá</button>
+              <div class="alert alert-warning mt-2" style="margin-bottom: 0; padding: 8px 12px; font-size: 13px;">
+                <i class="fas fa-info-circle"></i> <strong>Lưu ý:</strong> Feedback đã được gửi và không thể chỉnh sửa.
+              </div>
             </div>
           </div>
           <div id="feedbackFormInModal" style="display: none;">
@@ -575,8 +577,12 @@
       dateDisplay.textContent = date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     }
     
-    // Lưu feedback ID để có thể cập nhật
-    document.getElementById('feedbackFormInModal').setAttribute('data-feedback-id', feedback.id || '');
+    // KHÔNG lưu feedback ID - không cho phép chỉnh sửa
+    // Xóa feedback ID nếu có để ngăn chặn việc cập nhật
+    var formInModal = document.getElementById('feedbackFormInModal');
+    if (formInModal) {
+      formInModal.removeAttribute('data-feedback-id');
+    }
   }
   
   // Show feedback form in modal
@@ -726,6 +732,13 @@
       return;
     }
     
+    // Kiểm tra xem đã có feedback chưa - nếu có thì không cho phép gửi mới
+    var feedbackId = document.getElementById('feedbackFormInModal').getAttribute('data-feedback-id');
+    if (feedbackId && feedbackId !== '') {
+      alert('Feedback đã được gửi. Không thể chỉnh sửa hoặc gửi lại feedback!');
+      return;
+    }
+    
     var rating = parseInt(document.getElementById('feedbackRatingModal').value);
     if (rating < 1 || rating > 5) {
       alert('Vui lòng chọn đánh giá từ 1 đến 5 sao');
@@ -734,7 +747,6 @@
     }
     
     var comment = document.getElementById('feedbackCommentModal').value || '';
-    var feedbackId = document.getElementById('feedbackFormInModal').getAttribute('data-feedback-id');
     var imageInput = document.getElementById('feedbackImageModal');
     var hasImage = imageInput && imageInput.files && imageInput.files[0];
     
@@ -749,15 +761,12 @@
     submitBtn.textContent = 'Đang gửi...';
     
     // Nếu có ảnh, sử dụng FormData (multipart)
+    // CHỈ cho phép tạo mới, KHÔNG cho phép update
     if (hasImage) {
       console.log('Submitting with image');
       var formData = new FormData();
-      formData.append('action', feedbackId ? 'update' : 'create');
-      if (feedbackId) {
-        formData.append('feedbackId', feedbackId);
-      } else {
-        formData.append('ticketId', ticketId);
-      }
+      formData.append('action', 'create'); // Luôn là create, không cho update
+      formData.append('ticketId', ticketId);
       formData.append('rating', rating);
       formData.append('comment', comment);
       formData.append('image', imageInput.files[0]);
@@ -806,14 +815,11 @@
       });
     } else {
       // Không có ảnh, sử dụng URLSearchParams
+      // CHỈ cho phép tạo mới, KHÔNG cho phép update
       console.log('Submitting without image');
       var formData = new URLSearchParams();
-      formData.append('action', feedbackId ? 'update' : 'create');
-      if (feedbackId) {
-        formData.append('feedbackId', feedbackId);
-      } else {
-        formData.append('ticketId', ticketId);
-      }
+      formData.append('action', 'create'); // Luôn là create, không cho update
+      formData.append('ticketId', ticketId);
       formData.append('rating', rating);
       formData.append('comment', comment);
       

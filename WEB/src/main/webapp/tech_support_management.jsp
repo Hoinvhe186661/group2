@@ -73,6 +73,77 @@
         .form-horizontal .control-label {
             text-align: left;
         }
+        
+        /* Phân trang DataTables */
+        .dataTables_length {
+            display: none !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 15px;
+            text-align: center;
+            float: none !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 6px 12px;
+            margin: 0 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            color: #333 !important;
+            cursor: pointer;
+            display: inline-block !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+            color: #333 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #3c8dbc !important;
+            color: #fff !important;
+            border-color: #3c8dbc !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background: #357abd !important;
+            color: #fff !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_info {
+            margin-top: 15px;
+            padding-top: 8px;
+            float: left;
+        }
+        
+        .dataTables_wrapper::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        /* Đảm bảo phân trang luôn hiển thị, kể cả khi chỉ có 1 trang */
+        .dataTables_wrapper .dataTables_paginate.paging_full_numbers {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Đảm bảo không có CSS nào ẩn phân trang */
+        .dataTables_wrapper .dataTables_paginate[style*="display: none"] {
+            display: block !important;
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -189,14 +260,6 @@
                         <div class="box">
                             <div class="box-header">
                                 <h3 class="box-title">Danh sách yêu cầu hỗ trợ kỹ thuật</h3>
-                                <div class="box-tools">
-                                    <button type="button" class="btn btn-success btn-sm" id="btnManualRefresh" title="Tải lại danh sách">
-                                        <i class="fa fa-refresh"></i> Tải lại
-                                    </button>
-                                    <span class="label label-info" id="autoRefreshStatus" style="margin-left: 10px; font-size: 11px;" title="Tự động cập nhật mỗi 30 giây">
-                                        <i class="fa fa-clock-o"></i> Auto-refresh
-                                    </span>
-                                </div>
                             </div>
                             <div class="box-body table-responsive">
                                 <table id="ticketsTable" class="table table-bordered table-striped table-hover">
@@ -373,8 +436,8 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Giờ ước tính:</label>
                             <div class="col-sm-9">
-                                <input type="number" class="form-control" id="work_order_estimated_hours" step="0.5" min="0" placeholder="Số giờ ước tính (VD: 2.5)">
-                                <small class="help-block">Thời gian dự kiến hoàn thành (giờ)</small>
+                                <input type="number" class="form-control" id="work_order_estimated_hours" step="0.1" min="0.1" max="100" placeholder="Số giờ ước tính (VD: 2.5)">
+                                <small class="help-block">Thời gian dự kiến hoàn thành (giờ) - Tối thiểu: 0.1h, Tối đa: 100h</small>
                             </div>
                         </div>
                         
@@ -473,15 +536,25 @@
                 confirmCreateWorkOrder();
             });
             
-            // Manual refresh button
-            $('#btnManualRefresh').click(function() {
-                var $btn = $(this);
-                $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang tải...');
-                loadTickets(false); // false = not silent, show notifications
-                setTimeout(function() {
-                    $btn.prop('disabled', false).html('<i class="fa fa-refresh"></i> Tải lại');
-                }, 1000);
+            // Real-time validation for estimated hours
+            $('#work_order_estimated_hours').on('input', function() {
+                var value = $(this).val();
+                if (value && value.trim() !== '') {
+                    var numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        if (numValue <= 0) {
+                            $(this).css('border-color', '#d9534f');
+                        } else if (numValue > 100) {
+                            $(this).css('border-color', '#d9534f');
+                        } else {
+                            $(this).css('border-color', '');
+                        }
+                    }
+                } else {
+                    $(this).css('border-color', '');
+                }
             });
+            
         });
         
         function loadTickets(silent) {
@@ -664,6 +737,117 @@
                 var id = $(this).data('id');
                 showCreateWorkOrderModal(id);
             });
+            
+            // Khởi tạo DataTable với phân trang
+            initializeDataTable();
+        }
+        
+        var ticketsDataTable = null;
+        
+        function initializeDataTable() {
+            // Kiểm tra xem DataTables đã được load chưa
+            if (typeof $.fn.DataTable === 'undefined') {
+                console.error('DataTables library is not loaded');
+                return;
+            }
+            
+            // Kiểm tra và destroy DataTable nếu đã tồn tại
+            if ($.fn.DataTable.isDataTable('#ticketsTable')) {
+                try {
+                    $('#ticketsTable').DataTable().destroy();
+                    ticketsDataTable = null;
+                } catch(e) {
+                    console.log('Error destroying DataTable:', e);
+                }
+            }
+            
+            // Nếu biến ticketsDataTable vẫn còn, reset nó
+            if (ticketsDataTable) {
+                ticketsDataTable = null;
+            }
+            
+            // Khởi tạo DataTable
+            try {
+                ticketsDataTable = $('#ticketsTable').DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+                    },
+                    "pageLength": 8, // Hiển thị 8 bản ghi mỗi trang
+                    "lengthChange": false, // Ẩn dropdown "records per page"
+                    "paging": true, // Bật phân trang
+                    "pagingType": "full_numbers", // Hiển thị số trang đầy đủ (Previous, 1, 2, 3, ..., Next)
+                    "info": true, // Hiển thị thông tin "Showing X to Y of Z entries"
+                    "dom": '<"top"lf>rt<"bottom"ip><"clear">', // Cấu trúc DOM: top (length, filter), table, bottom (info, pagination)
+                    "order": [[6, "desc"]], // Sắp xếp theo Ngày tạo (column 6) giảm dần
+                    "columnDefs": [
+                        { "orderable": false, "targets": 7 } // Không sort cột Thao tác (cột cuối cùng)
+                    ],
+                    "drawCallback": function(settings) {
+                        // Đảm bảo phân trang luôn hiển thị
+                        var wrapper = $(this).closest('.dataTables_wrapper');
+                        var paginate = wrapper.find('.dataTables_paginate');
+                        if (paginate.length) {
+                            paginate.css({
+                                'display': 'block',
+                                'visibility': 'visible',
+                                'opacity': '1'
+                            }).show();
+                            
+                            // Đảm bảo tất cả các nút phân trang đều hiển thị
+                            paginate.find('.paginate_button').each(function() {
+                                $(this).css({
+                                    'display': 'inline-block',
+                                    'visibility': 'visible'
+                                }).show();
+                            });
+                        }
+                    },
+                    "initComplete": function(settings, json) {
+                        // Sau khi khởi tạo xong, đảm bảo phân trang hiển thị
+                        var wrapper = $(this).closest('.dataTables_wrapper');
+                        var paginate = wrapper.find('.dataTables_paginate');
+                        if (paginate.length) {
+                            paginate.removeAttr('style');
+                            paginate.css({
+                                'display': 'block',
+                                'visibility': 'visible',
+                                'opacity': '1'
+                            }).show();
+                            
+                            // Đảm bảo tất cả các nút phân trang đều hiển thị
+                            paginate.find('.paginate_button').each(function() {
+                                $(this).css({
+                                    'display': 'inline-block',
+                                    'visibility': 'visible'
+                                }).show();
+                            });
+                        }
+                        
+                        // Force show pagination after a short delay
+                        setTimeout(function() {
+                            var paginate = wrapper.find('.dataTables_paginate');
+                            if (paginate.length) {
+                                paginate.css({
+                                    'display': 'block !important',
+                                    'visibility': 'visible !important',
+                                    'opacity': '1 !important'
+                                }).show();
+                                
+                                // Force show all pagination buttons
+                                paginate.find('.paginate_button').each(function() {
+                                    $(this).css({
+                                        'display': 'inline-block',
+                                        'visibility': 'visible'
+                                    }).show();
+                                });
+                            }
+                        }, 200);
+                    }
+                });
+                console.log('DataTable initialized successfully');
+            } catch(e) {
+                console.error('Error initializing DataTable:', e);
+            }
         }
         
         function getCategoryBadge(category) {
@@ -899,6 +1083,27 @@
                 return;
             }
             
+            // Validate estimated hours
+            var estimatedHours = $('#work_order_estimated_hours').val();
+            if (estimatedHours && estimatedHours.trim() !== '') {
+                var hoursValue = parseFloat(estimatedHours);
+                if (isNaN(hoursValue)) {
+                    alert('Lỗi: Giờ ước tính không hợp lệ. Vui lòng nhập số.');
+                    $('#work_order_estimated_hours').focus();
+                    return;
+                }
+                if (hoursValue <= 0) {
+                    alert('Lỗi: Giờ ước tính phải lớn hơn 0. Vui lòng nhập giá trị hợp lệ.');
+                    $('#work_order_estimated_hours').focus();
+                    return;
+                }
+                if (hoursValue > 100) {
+                    alert('Lỗi: Giờ ước tính không được vượt quá 100 giờ. Vui lòng nhập giá trị nhỏ hơn.');
+                    $('#work_order_estimated_hours').focus();
+                    return;
+                }
+            }
+            
             var data = {
                 action: 'create',
                 ticketId: ticketId,
@@ -907,7 +1112,7 @@
                 description: description,
                 priority: $('#work_order_priority').val() || 'medium',
                 status: $('#work_order_status').val() || 'in_progress',
-                estimatedHours: $('#work_order_estimated_hours').val() || null,
+                estimatedHours: estimatedHours && estimatedHours.trim() !== '' ? estimatedHours : null,
                 scheduledDate: $('#work_order_scheduled_date').val() || null
             };
             

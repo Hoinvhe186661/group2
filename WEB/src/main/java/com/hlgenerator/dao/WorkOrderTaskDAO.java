@@ -75,21 +75,59 @@ public class WorkOrderTaskDAO extends DBConnect {
     }
 
     /**
-     * Generate task number for a work order
+     * Generate unique random task number
+     * Format: T-[4 digits]
+     * Example: T-1234, T-5678, T-9012
      */
     private String generateTaskNumber(int workOrderId) {
-        String sql = "SELECT COUNT(*) + 1 as next_num FROM tasks WHERE work_order_id = ?";
+        java.util.Random random = new java.util.Random();
+        int maxAttempts = 100; // Tối đa 100 lần thử để tránh vòng lặp vô hạn
+        String prefix = "T-";
+        
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            // Tạo 4 số ngẫu nhiên (0000-9999)
+            int randomNumber = random.nextInt(10000); // 0-9999
+            String numberPart = String.format("%04d", randomNumber); // Format thành 4 chữ số với leading zeros
+            
+            // Tạo mã: prefix + 4 số
+            String taskNumber = prefix + numberPart;
+            
+            // Kiểm tra xem mã đã tồn tại chưa trong toàn bộ database
+            if (!isTaskNumberExists(taskNumber)) {
+                return taskNumber;
+            }
+        }
+        
+        // Nếu sau 100 lần thử vẫn không tìm được mã unique, dùng timestamp làm fallback
+        logger.warning("Could not generate unique task number after " + maxAttempts + " attempts, using timestamp");
+        return prefix + String.format("%04d", (int)(System.currentTimeMillis() % 10000)); // Lấy 4 chữ số cuối của timestamp
+    }
+    
+    /**
+     * Kiểm tra xem task number đã tồn tại chưa trong toàn bộ database
+     */
+    private boolean isTaskNumberExists(String taskNumber) {
+        if (!checkConnection()) {
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) as count FROM tasks WHERE task_number = ?";
+        
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, workOrderId);
+            ps.setString(1, taskNumber);
+            
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return "T-" + String.format("%03d", rs.getInt("next_num"));
+                    return rs.getInt("count") > 0;
                 }
             }
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error generating task number", e);
+            logger.log(Level.WARNING, "Error checking task number existence: " + taskNumber, e);
+            // Nếu có lỗi, giả sử mã đã tồn tại để tránh duplicate
+            return true;
         }
-        return "T-001";
+        
+        return false;
     }
 
     /**

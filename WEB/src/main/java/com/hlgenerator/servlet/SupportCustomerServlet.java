@@ -481,7 +481,17 @@ public class SupportCustomerServlet extends HttpServlet {
                         }
                         
                         String currentCategory = (String) ticket.get("category");
-                        System.out.println("DEBUG: Current category=" + currentCategory);
+                        String currentStatus = (String) ticket.get("status");
+                        System.out.println("DEBUG: Current category=" + currentCategory + ", status=" + currentStatus);
+                        
+                        // Kiểm tra: Nếu ticket đã resolved hoặc closed, không cho forward
+                        if ("resolved".equals(currentStatus) || "closed".equals(currentStatus)) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Yêu cầu này đã được giải quyết hoặc đóng. Không thể chuyển tiếp!");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
+                        }
                         
                         // CHỈ cho phép forward ticket technical
                         if (!"technical".equals(currentCategory)) {

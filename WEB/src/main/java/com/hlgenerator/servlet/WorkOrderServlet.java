@@ -282,9 +282,26 @@ public class WorkOrderServlet extends HttpServlet {
                 String estimatedHoursParam = request.getParameter("estimatedHours");
                 if (estimatedHoursParam != null && !estimatedHoursParam.isEmpty() && !"null".equals(estimatedHoursParam)) {
                     try {
-                        workOrder.setEstimatedHours(new BigDecimal(estimatedHoursParam));
+                        BigDecimal estimatedHours = new BigDecimal(estimatedHoursParam);
+                        // Validate: tối thiểu > 0, tối đa 100, không cho phép số âm
+                        if (estimatedHours.compareTo(BigDecimal.ZERO) <= 0) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Giờ ước tính phải lớn hơn 0");
+                            out.print(jsonResponse.toString());
+                            return;
+                        }
+                        if (estimatedHours.compareTo(new BigDecimal("100")) > 0) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Giờ ước tính không được vượt quá 100 giờ");
+                            out.print(jsonResponse.toString());
+                            return;
+                        }
+                        workOrder.setEstimatedHours(estimatedHours);
                     } catch (NumberFormatException e) {
-                        // Ignore invalid estimated hours
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Giờ ước tính không hợp lệ: " + estimatedHoursParam);
+                        out.print(jsonResponse.toString());
+                        return;
                     }
                 }
                 
@@ -389,9 +406,19 @@ public class WorkOrderServlet extends HttpServlet {
                             String estimatedHoursParam = request.getParameter("estimatedHours");
                             if (estimatedHoursParam != null && !estimatedHoursParam.isEmpty() && !"null".equals(estimatedHoursParam)) {
                                 try {
-                                    workOrder.setEstimatedHours(new BigDecimal(estimatedHoursParam));
+                                    BigDecimal estimatedHours = new BigDecimal(estimatedHoursParam);
+                                    // Validate: tối thiểu > 0, tối đa 100, không cho phép số âm
+                                    if (estimatedHours.compareTo(BigDecimal.ZERO) <= 0) {
+                                        throw new IllegalArgumentException("Giờ ước tính phải lớn hơn 0");
+                                    }
+                                    if (estimatedHours.compareTo(new BigDecimal("100")) > 0) {
+                                        throw new IllegalArgumentException("Giờ ước tính không được vượt quá 100 giờ");
+                                    }
+                                    workOrder.setEstimatedHours(estimatedHours);
                                 } catch (NumberFormatException e) {
-                                    workOrder.setEstimatedHours(null);
+                                    throw new IllegalArgumentException("Giờ ước tính không hợp lệ: " + estimatedHoursParam);
+                                } catch (IllegalArgumentException e) {
+                                    throw e; // Re-throw validation errors
                                 }
                             } else {
                                 workOrder.setEstimatedHours(null);

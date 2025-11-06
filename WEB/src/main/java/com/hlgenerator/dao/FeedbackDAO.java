@@ -27,11 +27,12 @@ public class FeedbackDAO extends DBConnect {
             return false;
         }
         
-        // Kiểm tra xem ticket đã có feedback chưa (nếu có thì update thay vì insert)
+        // Kiểm tra xem ticket đã có feedback chưa - KHÔNG cho phép tạo mới nếu đã có
         Feedback existingFeedback = getFeedbackByTicketId(ticketId);
         if (existingFeedback != null) {
-            // Update feedback hiện có
-            return updateFeedback(existingFeedback.getId(), rating, comment, imagePath);
+            // Đã có feedback - không cho phép tạo mới
+            lastError = "Ticket này đã có feedback. Không thể tạo feedback mới.";
+            return false;
         }
         
         String sql = "INSERT INTO ticket_feedback (ticket_id, customer_id, rating, comment, image_path) VALUES (?, ?, ?, ?, ?)";

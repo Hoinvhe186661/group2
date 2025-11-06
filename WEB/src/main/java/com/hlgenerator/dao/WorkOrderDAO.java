@@ -40,31 +40,69 @@ public class WorkOrderDAO extends DBConnect {
 
     /**
      * Generate unique work order number
+     * Format: [Random Letters]-[4 digits]
+     * Example: WO-1234, ABC-5678, XYZ-9012
      */
     public String generateWorkOrderNumber() {
-        String prefix = "WO-";
-        String sql = "SELECT work_order_number FROM work_orders ORDER BY id DESC LIMIT 1";
+        java.util.Random random = new java.util.Random();
+        int maxAttempts = 100; // Tối đa 100 lần thử để tránh vòng lặp vô hạn
         
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+        // Danh sách các chữ cái để tạo prefix random
+        String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            // Tạo 2-3 chữ cái ngẫu nhiên cho prefix
+            int prefixLength = 2 + random.nextInt(2); // 2 hoặc 3 chữ cái
+            StringBuilder prefixBuilder = new StringBuilder();
+            for (int i = 0; i < prefixLength; i++) {
+                prefixBuilder.append(letters.charAt(random.nextInt(letters.length())));
+            }
+            String prefix = prefixBuilder.toString() + "-";
             
-            if (rs.next()) {
-                String lastNumber = rs.getString("work_order_number");
-                if (lastNumber != null && lastNumber.startsWith(prefix)) {
-                    try {
-                        int num = Integer.parseInt(lastNumber.substring(prefix.length()));
-                        return prefix + String.format("%06d", num + 1);
-                    } catch (NumberFormatException e) {
-                        // Fall through to timestamp-based generation
-                    }
+            // Tạo 4 số ngẫu nhiên (0000-9999)
+            int randomNumber = random.nextInt(10000); // 0-9999
+            String numberPart = String.format("%04d", randomNumber); // Format thành 4 chữ số với leading zeros
+            
+            // Tạo mã: prefix + 4 số
+            String workOrderNumber = prefix + numberPart;
+            
+            // Kiểm tra xem mã đã tồn tại chưa
+            if (!isWorkOrderNumberExists(workOrderNumber)) {
+                return workOrderNumber;
+            }
+        }
+        
+        // Nếu sau 100 lần thử vẫn không tìm được mã unique, dùng timestamp làm fallback
+        logger.warning("Could not generate unique work order number after " + maxAttempts + " attempts, using timestamp");
+        String fallbackPrefix = "WO-";
+        return fallbackPrefix + String.format("%04d", (int)(System.currentTimeMillis() % 10000)); // Lấy 4 chữ số cuối của timestamp
+    }
+    
+    /**
+     * Kiểm tra xem work order number đã tồn tại chưa
+     */
+    private boolean isWorkOrderNumberExists(String workOrderNumber) {
+        if (!checkConnection()) {
+            return false;
+        }
+        
+        String sql = "SELECT COUNT(*) as count FROM work_orders WHERE work_order_number = ?";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, workOrderNumber);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
                 }
             }
         } catch (SQLException e) {
-            logger.log(Level.WARNING, "Error generating work order number from sequence", e);
+            logger.log(Level.WARNING, "Error checking work order number existence: " + workOrderNumber, e);
+            // Nếu có lỗi, giả sử mã đã tồn tại để tránh duplicate
+            return true;
         }
         
-        // Fallback: Use timestamp
-        return prefix + System.currentTimeMillis();
+        return false;
     }
 
     /**

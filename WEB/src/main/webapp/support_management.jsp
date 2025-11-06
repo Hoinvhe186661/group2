@@ -99,6 +99,54 @@
              display: none !important;
          }
          
+         /* Tối ưu hiển thị cho modal chi tiết ticket - tránh tràn chữ */
+         .ticket-detail-view {
+             word-wrap: break-word;
+             overflow-wrap: break-word;
+         }
+         
+         .ticket-detail-view * {
+             max-width: 100%;
+             box-sizing: border-box;
+         }
+         
+         .ticket-detail-view h5 {
+             margin-top: 0;
+             margin-bottom: 12px;
+             font-size: 16px;
+             font-weight: 600;
+             color: #2c3e50;
+         }
+         
+         /* Tối ưu cho phần hợp đồng và sản phẩm */
+         .contract-product-section {
+             word-wrap: break-word;
+             word-break: break-word;
+             overflow-wrap: break-word;
+             white-space: normal;
+         }
+         
+         /* Responsive cho modal */
+         @media (max-width: 768px) {
+             .ticket-detail-view .row {
+                 margin-left: 0;
+                 margin-right: 0;
+             }
+             
+             .ticket-detail-view .col-md-8,
+             .ticket-detail-view .col-md-4 {
+                 padding-left: 0;
+                 padding-right: 0;
+                 width: 100%;
+             }
+         }
+         
+         /* Tối ưu cho các box thông tin */
+         .ticket-detail-view > div[style*="background"] {
+             word-wrap: break-word;
+             overflow-wrap: break-word;
+         }
+         
     </style>
 </head>
 <body class="skin-black">
@@ -344,9 +392,18 @@
                                                         <button class="btn btn-warning btn-xs edit-ticket-btn" data-ticket-id="${ticket.id}" title="Chỉnh sửa">
                                                             <i class="fa fa-edit"></i> Sửa
                                                         </button>
-                                                        <button class="btn btn-success btn-xs forward-ticket-btn" data-ticket-id="${ticket.id}" title="Chuyển tiếp cho trưởng phòng kỹ thuật">
-                                                            <i class="fa fa-share"></i> Chuyển tiếp
-                                                        </button>
+                                                        <c:choose>
+                                                            <c:when test="${ticket.status == 'resolved' || ticket.status == 'closed'}">
+                                                                <button class="btn btn-success btn-xs" disabled title="Không thể chuyển tiếp yêu cầu đã hoàn thành hoặc đã đóng">
+                                                                    <i class="fa fa-share"></i> Chuyển tiếp
+                                                                </button>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <button class="btn btn-success btn-xs forward-ticket-btn" data-ticket-id="${ticket.id}" title="Chuyển tiếp cho trưởng phòng kỹ thuật">
+                                                                    <i class="fa fa-share"></i> Chuyển tiếp
+                                                                </button>
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </td>
                                                 </tr>
                                                 </c:forEach>
@@ -520,11 +577,13 @@
         $(document).ready(function() {
             // Khởi tạo DataTable với dữ liệu đã có sẵn trong HTML
             $('#ticketsTable').DataTable({
-                    "language": {
-                        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
                 },
-                "pageLength": 10,
+                "pageLength": 10, // Hiển thị 10 bản ghi mỗi trang
                 "lengthChange": false, // Ẩn dropdown "records per page"
+                "paging": true, // Bật phân trang
+                "pagingType": "full_numbers", // Hiển thị số trang đầy đủ
                 "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần
                 "columnDefs": [
                     { 
@@ -626,6 +685,26 @@
                 default: statusBadge = '<span class="label label-default">' + ticket.status + '</span>';
             }
 
+            // Tách thông tin hợp đồng và sản phẩm từ description
+            var description = ticket.description || '';
+            var contractInfo = '';
+            var productInfo = '';
+            var cleanDescription = description;
+            
+            // Tìm thông tin hợp đồng: [Hợp đồng: ...]
+            var contractMatch = description.match(/\[Hợp đồng:([^\]]+)\]/);
+            if (contractMatch) {
+                contractInfo = contractMatch[1].trim();
+                cleanDescription = cleanDescription.replace(/\[Hợp đồng:[^\]]+\]\s*/g, '').trim();
+            }
+            
+            // Tìm thông tin sản phẩm: [Sản phẩm: ...]
+            var productMatch = description.match(/\[Sản phẩm:([^\]]+)\]/);
+            if (productMatch) {
+                productInfo = productMatch[1].trim();
+                cleanDescription = cleanDescription.replace(/\[Sản phẩm:[^\]]+\]\s*/g, '').trim();
+            }
+
             var html = '<div class="ticket-detail-view">';
             
             // Header
@@ -644,11 +723,40 @@
             // Cột trái - Chi tiết
             html += '<div class="col-md-8">';
             
-            // Mô tả
+            // Hợp đồng và Sản phẩm (nếu có)
+            if (contractInfo || productInfo) {
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<h5 style="margin-bottom: 12px;"><i class="fa fa-file-text"></i> <strong>Hợp đồng & Sản phẩm</strong></h5>';
+                html += '<div style="background: linear-gradient(135deg, #e7f3ff 0%, #d6e9f5 100%); padding: 15px; border-radius: 8px; border-left: 4px solid #3c8dbc; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">';
+                
+                if (contractInfo) {
+                    html += '<div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(60, 141, 188, 0.2);">';
+                    html += '<div style="display: flex; align-items: flex-start; gap: 10px;">';
+                    html += '<div style="flex-shrink: 0; color: #3c8dbc; font-size: 18px; margin-top: 2px;"><i class="fa fa-file-text-o"></i></div>';
+                    html += '<div style="flex: 1; min-width: 0;">';
+                    html += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Hợp đồng</strong>';
+                    html += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(contractInfo) + '</div>';
+                    html += '</div></div></div>';
+                }
+                
+                if (productInfo) {
+                    html += '<div style="padding-top: 0;">';
+                    html += '<div style="display: flex; align-items: flex-start; gap: 10px;">';
+                    html += '<div style="flex-shrink: 0; color: #27ae60; font-size: 18px; margin-top: 2px;"><i class="fa fa-cube"></i></div>';
+                    html += '<div style="flex: 1; min-width: 0;">';
+                    html += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Sản phẩm</strong>';
+                    html += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(productInfo) + '</div>';
+                    html += '</div></div></div>';
+                }
+                
+                html += '</div></div>';
+            }
+            
+            // Mô tả (đã loại bỏ thông tin hợp đồng/sản phẩm)
             html += '<div style="margin-bottom: 20px;">';
-            html += '<h5><i class="fa fa-info-circle"></i> <strong>Mô tả chi tiết</strong></h5>';
-            html += '<div style="background: #f9f9f9; padding: 10px; border-radius: 3px; white-space: pre-wrap; word-wrap: break-word;">';
-            html += escapeHtml(ticket.description);
+            html += '<h5 style="margin-bottom: 12px;"><i class="fa fa-info-circle"></i> <strong>Mô tả chi tiết</strong></h5>';
+            html += '<div style="background: #f9f9f9; padding: 15px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-width: 100%; line-height: 1.6; color: #2c3e50; border: 1px solid #e0e0e0;">';
+            html += escapeHtml(cleanDescription || 'Không có mô tả');
             html += '</div></div>';
 
             // Giải pháp
@@ -675,34 +783,34 @@
             html += '<div class="col-md-4">';
             
             // Thông tin khách hàng
-            html += '<div style="background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px;">';
-            html += '<h5 style="margin-top: 0;"><i class="fa fa-user"></i> <strong>Thông tin khách hàng</strong></h5>';
-            html += '<p><strong>Công ty:</strong><br>' + escapeHtml(ticket.customerName) + '</p>';
-            html += '<p><strong>Người liên hệ:</strong><br>' + escapeHtml(ticket.customerContact) + '</p>';
+            html += '<div style="background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+            html += '<h5 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #2c3e50;"><i class="fa fa-user"></i> <strong>Thông tin khách hàng</strong></h5>';
+            html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Công ty:</strong><br><span style="color: #2c3e50; font-size: 14px; word-break: break-word;">' + escapeHtml(ticket.customerName) + '</span></p>';
+            html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Người liên hệ:</strong><br><span style="color: #2c3e50; font-size: 14px; word-break: break-word;">' + escapeHtml(ticket.customerContact) + '</span></p>';
             if (ticket.customerEmail) {
-                html += '<p><strong>Email:</strong><br><a href="mailto:' + escapeHtml(ticket.customerEmail) + '">' + escapeHtml(ticket.customerEmail) + '</a></p>';
+                html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Email:</strong><br><a href="mailto:' + escapeHtml(ticket.customerEmail) + '" style="color: #3498db; font-size: 14px; word-break: break-all;">' + escapeHtml(ticket.customerEmail) + '</a></p>';
             }
             if (ticket.customerPhone) {
-                html += '<p><strong>Số điện thoại:</strong><br><a href="tel:' + escapeHtml(ticket.customerPhone) + '">' + escapeHtml(ticket.customerPhone) + '</a></p>';
+                html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Số điện thoại:</strong><br><a href="tel:' + escapeHtml(ticket.customerPhone) + '" style="color: #3498db; font-size: 14px; word-break: break-all;">' + escapeHtml(ticket.customerPhone) + '</a></p>';
             }
             if (ticket.customerAddress) {
-                html += '<p><strong>Địa chỉ:</strong><br>' + escapeHtml(ticket.customerAddress) + '</p>';
+                html += '<p style="margin-bottom: 0; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Địa chỉ:</strong><br><span style="color: #2c3e50; font-size: 14px; word-break: break-word; line-height: 1.5;">' + escapeHtml(ticket.customerAddress) + '</span></p>';
             }
             html += '</div>';
 
             // Thông tin ticket
-            html += '<div style="background: #f9f9f9; padding: 15px; border-radius: 5px;">';
-            html += '<h5 style="margin-top: 0;"><i class="fa fa-info"></i> <strong>Thông tin ticket</strong></h5>';
+            html += '<div style="background: #f9f9f9; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">';
+            html += '<h5 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #2c3e50;"><i class="fa fa-info"></i> <strong>Thông tin ticket</strong></h5>';
             if (ticket.createdAt) {
-                html += '<p><strong>Ngày tạo:</strong><br>' + ticket.createdAt + '</p>';
+                html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Ngày tạo:</strong><br><span style="color: #2c3e50; font-size: 14px;">' + ticket.createdAt + '</span></p>';
             }
             if (ticket.resolvedAt) {
-                html += '<p><strong>Ngày giải quyết:</strong><br>' + ticket.resolvedAt + '</p>';
+                html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Ngày giải quyết:</strong><br><span style="color: #2c3e50; font-size: 14px;">' + ticket.resolvedAt + '</span></p>';
             }
             if (ticket.assignedToName) {
-                html += '<p><strong>Người xử lý:</strong><br>' + escapeHtml(ticket.assignedToName);
+                html += '<p style="margin-bottom: 0; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Người xử lý:</strong><br><span style="color: #2c3e50; font-size: 14px; word-break: break-word;">' + escapeHtml(ticket.assignedToName) + '</span>';
                 if (ticket.assignedToEmail) {
-                    html += '<br><small><a href="mailto:' + escapeHtml(ticket.assignedToEmail) + '">' + escapeHtml(ticket.assignedToEmail) + '</a></small>';
+                    html += '<br><small style="display: block; margin-top: 5px;"><a href="mailto:' + escapeHtml(ticket.assignedToEmail) + '" style="color: #3498db; word-break: break-all;">' + escapeHtml(ticket.assignedToEmail) + '</a></small>';
                 }
                 html += '</p>';
             }
@@ -729,6 +837,7 @@
 
         // Load ticket để edit
         var currentEditTicketId = null;
+        var currentTicketStatus = null; // Lưu trạng thái hiện tại của ticket
         
         function loadTicketForEdit(ticketId) {
             currentEditTicketId = ticketId;
@@ -747,6 +856,7 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
+                        currentTicketStatus = response.data.status; // Lưu trạng thái
                         displayEditForm(response.data);
                     } else {
                         $('#editTicketContent').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> ' + response.message + '</div>');
@@ -804,13 +914,35 @@
             
             html += '<div class="col-md-4">';
             html += '<div class="form-group">';
+            // Kiểm tra nếu đã có người nhận hoặc ticket đã đóng/hoàn thành thì disable trường priority
+            var hasAssignedTo = false;
+            if (ticket.assignedTo !== null && ticket.assignedTo !== undefined) {
+                if (typeof ticket.assignedTo === 'number') {
+                    hasAssignedTo = ticket.assignedTo > 0;
+                } else if (typeof ticket.assignedTo === 'string') {
+                    hasAssignedTo = ticket.assignedTo.trim() !== '' && ticket.assignedTo !== '0';
+                } else {
+                    var assignedToStr = String(ticket.assignedTo).trim();
+                    hasAssignedTo = assignedToStr !== '' && assignedToStr !== '0' && assignedToStr !== 'null';
+                }
+            }
+            // Kiểm tra nếu ticket đã đóng hoặc hoàn thành
+            var isClosedOrResolved = ticket.status === 'closed' || ticket.status === 'resolved';
+            var priorityDisabled = (hasAssignedTo || isClosedOrResolved) ? ' disabled' : '';
+            var priorityReadonlyNote = '';
+            if (isClosedOrResolved) {
+                priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi ticket đã đóng hoặc hoàn thành</small>';
+            } else if (hasAssignedTo) {
+                priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi đã có người nhận</small>';
+            }
             html += '<label>Độ ưu tiên: <span class="text-danger">*</span></label>';
-            html += '<select class="form-control" id="edit_priority" required>';
+            html += '<select class="form-control" id="edit_priority"' + ((hasAssignedTo || isClosedOrResolved) ? '' : ' required') + priorityDisabled + '>';
             html += '<option value="urgent"' + (ticket.priority === 'urgent' ? ' selected' : '') + '>Khẩn cấp</option>';
             html += '<option value="high"' + (ticket.priority === 'high' ? ' selected' : '') + '>Cao</option>';
             html += '<option value="medium"' + (ticket.priority === 'medium' ? ' selected' : '') + '>Trung bình</option>';
             html += '<option value="low"' + (ticket.priority === 'low' ? ' selected' : '') + '>Thấp</option>';
             html += '</select>';
+            html += priorityReadonlyNote;
             html += '</div></div>';
             
             html += '<div class="col-md-4">';
@@ -828,13 +960,13 @@
             
             html += '<div class="form-group">';
             html += '<label>Người nhận (Người xử lý):</label>';
-            html += '<select class="form-control" id="edit_assignedTo">';
+            html += '<select class="form-control" id="edit_assignedTo" disabled>';
             html += '<option value="">-- Chưa phân công --</option>';
             html += '</select>';
-            html += '<small class="text-muted">Có thể chọn trưởng phòng kỹ thuật hoặc nhân viên khác</small>';
+            html += '<small class="text-muted">Người nhận không thể chỉnh sửa. Chỉ có thể thay đổi qua chức năng chuyển tiếp.</small>';
             html += '</div>';
             
-            // Load danh sách head technicians vào dropdown
+            // Load danh sách head technicians vào dropdown (chỉ để hiển thị, không cho chỉnh sửa)
             loadHeadTechniciansForEdit(ticket.assignedTo);
             
             html += '<div class="form-group">';
@@ -854,18 +986,24 @@
             // Disable button
             $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang lưu...');
             
-            // Lấy dữ liệu (không gửi category vì đã bị disable)
+            // Lấy dữ liệu (không gửi category và assignedTo vì đã bị disable)
             var data = {
                 id: currentEditTicketId,
-                priority: $('#edit_priority').val(),
                 status: $('#edit_status').val(),
                 resolution: $('#edit_resolution').val()
             };
             
-            // Nếu có assigned_to trong form edit
-            if ($('#edit_assignedTo').length && $('#edit_assignedTo').val()) {
-                data.assignedTo = $('#edit_assignedTo').val();
+            // Chỉ gửi priority nếu:
+            // 1. Trường priority không bị disable
+            // 2. Ticket chưa đóng hoặc hoàn thành (kiểm tra cả trạng thái hiện tại và trạng thái mới)
+            var isClosedOrResolved = currentTicketStatus === 'closed' || currentTicketStatus === 'resolved' || 
+                                     $('#edit_status').val() === 'closed' || $('#edit_status').val() === 'resolved';
+            
+            if (!$('#edit_priority').prop('disabled') && !isClosedOrResolved) {
+                data.priority = $('#edit_priority').val();
             }
+            
+            // KHÔNG gửi assignedTo vì trường này đã bị disable và không cho phép chỉnh sửa
             
             // Submit AJAX với UTF-8
             $.ajax({
@@ -900,9 +1038,6 @@
         function loadTicketForForward(ticketId) {
             currentForwardTicketId = ticketId;
             
-            // Hiển thị modal
-            $('#forwardTicketModal').modal('show');
-            
             // Reset form
             $('#forward_ticketNumber').val('');
             $('#forward_subject').val('');
@@ -910,10 +1045,7 @@
             $('#forward_assignedTo').html('<option value="">-- Chọn trưởng phòng kỹ thuật --</option>');
             $('#forward_priority').val('medium');
             
-            // Load danh sách head technicians
-            loadHeadTechnicians();
-            
-            // Load thông tin ticket
+            // Load thông tin ticket trước để kiểm tra status
             $.ajax({
                 url: 'support-detail',
                 type: 'GET',
@@ -922,6 +1054,16 @@
                 success: function(response) {
                     if (response.success) {
                         var ticket = response.data;
+                        
+                        // Kiểm tra: Nếu ticket đã resolved hoặc closed thì không cho phép chuyển tiếp
+                        if (ticket.status === 'resolved' || ticket.status === 'closed') {
+                            alert('✗ Không thể chuyển tiếp yêu cầu đã hoàn thành hoặc đã đóng!');
+                            return;
+                        }
+                        
+                        // Hiển thị modal nếu ticket chưa resolved/closed
+                        $('#forwardTicketModal').modal('show');
+                        
                         $('#forward_ticketNumber').val(ticket.ticketNumber);
                         $('#forward_subject').val(ticket.subject);
                         $('#forward_ticketId').val(ticket.id);
@@ -930,14 +1072,15 @@
                         if (ticket.priority) {
                             $('#forward_priority').val(ticket.priority);
                         }
+                        
+                        // Load danh sách head technicians
+                        loadHeadTechnicians();
                     } else {
                         alert('✗ Không thể tải thông tin ticket: ' + response.message);
-                        $('#forwardTicketModal').modal('hide');
                     }
                 },
                 error: function() {
                     alert('✗ Không thể tải thông tin ticket. Vui lòng thử lại!');
-                    $('#forwardTicketModal').modal('hide');
                 }
             });
         }

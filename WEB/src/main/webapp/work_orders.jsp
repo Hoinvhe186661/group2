@@ -153,6 +153,77 @@
             text-align: left;
         }
         
+        /* Phân trang DataTables */
+        .dataTables_length {
+            display: none !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 15px;
+            text-align: center;
+            float: none !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 6px 12px;
+            margin: 0 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            color: #333 !important;
+            cursor: pointer;
+            display: inline-block !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+            color: #333 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #3c8dbc !important;
+            color: #fff !important;
+            border-color: #3c8dbc !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background: #357abd !important;
+            color: #fff !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_info {
+            margin-top: 15px;
+            padding-top: 8px;
+            float: left;
+        }
+        
+        .dataTables_wrapper::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        /* Đảm bảo phân trang luôn hiển thị, kể cả khi chỉ có 1 trang */
+        .dataTables_wrapper .dataTables_paginate.paging_full_numbers {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        /* Đảm bảo không có CSS nào ẩn phân trang */
+        .dataTables_wrapper .dataTables_paginate[style*="display: none"] {
+            display: block !important;
+        }
+        
         /* Filter Section */
         .filter-group {
             margin-bottom: 10px;
@@ -492,11 +563,6 @@
                         <div class="box">
                             <div class="box-header">
                                 <h3 class="box-title">Danh sách đơn hàng công việc</h3>
-                                <div class="box-tools pull-right">
-                                    <button type="button" class="btn btn-success btn-sm" onclick="location.reload()">
-                                        <i class="fa fa-refresh"></i> Tải lại
-                                    </button>
-                                </div>
                             </div>
                             <div class="box-body table-responsive">
                                 <table id="workOrdersTable" class="table table-bordered table-striped table-hover">
@@ -608,12 +674,13 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Giờ ước tính:</label>
                             <div class="col-sm-3">
-                                <input type="number" class="form-control" id="detail_estimated_hours" step="0.5" min="0">
+                                <input type="number" class="form-control" id="detail_estimated_hours" step="0.1" min="0.1" max="100">
+                                <small class="help-block">Tối thiểu: 0.1h, Tối đa: 100h</small>
                             </div>
                             
                             <label class="col-sm-3 control-label">Giờ thực tế:</label>
                             <div class="col-sm-3">
-                                <input type="number" class="form-control" id="detail_actual_hours" step="0.5" min="0">
+                                <input type="number" class="form-control" id="detail_actual_hours" step="0.1" min="0">
                             </div>
                         </div>
                         
@@ -694,7 +761,8 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label>Giờ ước tính:</label>
-                                            <input type="number" class="form-control" id="taskEstimatedHours" step="0.5" min="0" placeholder="VD: 2.5">
+                                            <input type="number" class="form-control" id="taskEstimatedHours" step="0.1" min="0.1" max="100" placeholder="VD: 2.5">
+                                            <small class="help-block">Tối thiểu: 0.1h, Tối đa: 100h</small>
                                         </div>
                                     </div>
                                 </div>
@@ -903,6 +971,55 @@
         $(document).ready(function() {
             loadTechnicalStaff();
             loadWorkOrders();
+            
+            // Real-time validation for estimated hours (work order)
+            $('#detail_estimated_hours').on('input', function() {
+                var value = $(this).val();
+                if (value && value.trim() !== '') {
+                    var numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        if (numValue <= 0) {
+                            $(this).css('border-color', '#d9534f');
+                        } else if (numValue > 100) {
+                            $(this).css('border-color', '#d9534f');
+                        } else {
+                            $(this).css('border-color', '');
+                        }
+                    }
+                } else {
+                    $(this).css('border-color', '');
+                }
+            });
+            
+            // Real-time validation for estimated hours (task)
+            $(document).on('input', '#taskEstimatedHours', function() {
+                var value = $(this).val();
+                if (value && value.trim() !== '') {
+                    var numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        var workOrderId = $('#assign_work_order_id').val();
+                        var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+                        var maxHours = 100; // Default max
+                        
+                        if (workOrder && workOrder.estimatedHours) {
+                            var workOrderHours = parseFloat(workOrder.estimatedHours);
+                            if (!isNaN(workOrderHours) && workOrderHours > 0) {
+                                maxHours = workOrderHours;
+                            }
+                        }
+                        
+                        if (numValue <= 0) {
+                            $(this).css('border-color', '#d9534f');
+                        } else if (numValue > maxHours) {
+                            $(this).css('border-color', '#d9534f');
+                        } else {
+                            $(this).css('border-color', '');
+                        }
+                    }
+                } else {
+                    $(this).css('border-color', '');
+                }
+            });
             
             // Filter button
             $('#btnFilter').click(function() {
@@ -1249,6 +1366,117 @@
                 var id = $(this).data('id');
                 openReportModal(id);
             });
+            
+            // Khởi tạo DataTable với phân trang
+            initializeDataTable();
+        }
+        
+        var workOrdersDataTable = null;
+        
+        function initializeDataTable() {
+            // Kiểm tra xem DataTables đã được load chưa
+            if (typeof $.fn.DataTable === 'undefined') {
+                console.error('DataTables library is not loaded');
+                return;
+            }
+            
+            // Kiểm tra và destroy DataTable nếu đã tồn tại
+            if ($.fn.DataTable.isDataTable('#workOrdersTable')) {
+                try {
+                    $('#workOrdersTable').DataTable().destroy();
+                    workOrdersDataTable = null;
+                } catch(e) {
+                    console.log('Error destroying DataTable:', e);
+                }
+            }
+            
+            // Nếu biến workOrdersDataTable vẫn còn, reset nó
+            if (workOrdersDataTable) {
+                workOrdersDataTable = null;
+            }
+            
+            // Khởi tạo DataTable
+            try {
+                workOrdersDataTable = $('#workOrdersTable').DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+                    },
+                    "pageLength": 8, // Hiển thị 8 bản ghi mỗi trang
+                    "lengthChange": false, // Ẩn dropdown "records per page"
+                    "paging": true, // Bật phân trang
+                    "pagingType": "full_numbers", // Hiển thị số trang đầy đủ (Previous, 1, 2, 3, ..., Next)
+                    "info": true, // Hiển thị thông tin "Showing X to Y of Z entries"
+                    "dom": '<"top"lf>rt<"bottom"ip><"clear">', // Cấu trúc DOM: top (length, filter), table, bottom (info, pagination)
+                    "order": [[4, "desc"]], // Sắp xếp theo Ngày tạo (column 4) giảm dần
+                    "columnDefs": [
+                        { "orderable": false, "targets": 5 } // Không sort cột Thao tác (cột cuối cùng)
+                    ],
+                    "drawCallback": function(settings) {
+                        // Đảm bảo phân trang luôn hiển thị
+                        var wrapper = $(this).closest('.dataTables_wrapper');
+                        var paginate = wrapper.find('.dataTables_paginate');
+                        if (paginate.length) {
+                            paginate.css({
+                                'display': 'block',
+                                'visibility': 'visible',
+                                'opacity': '1'
+                            }).show();
+                            
+                            // Đảm bảo tất cả các nút phân trang đều hiển thị
+                            paginate.find('.paginate_button').each(function() {
+                                $(this).css({
+                                    'display': 'inline-block',
+                                    'visibility': 'visible'
+                                }).show();
+                            });
+                        }
+                    },
+                    "initComplete": function(settings, json) {
+                        // Sau khi khởi tạo xong, đảm bảo phân trang hiển thị
+                        var wrapper = $(this).closest('.dataTables_wrapper');
+                        var paginate = wrapper.find('.dataTables_paginate');
+                        if (paginate.length) {
+                            paginate.removeAttr('style');
+                            paginate.css({
+                                'display': 'block',
+                                'visibility': 'visible',
+                                'opacity': '1'
+                            }).show();
+                            
+                            // Đảm bảo tất cả các nút phân trang đều hiển thị
+                            paginate.find('.paginate_button').each(function() {
+                                $(this).css({
+                                    'display': 'inline-block',
+                                    'visibility': 'visible'
+                                }).show();
+                            });
+                        }
+                        
+                        // Force show pagination after a short delay
+                        setTimeout(function() {
+                            var paginate = wrapper.find('.dataTables_paginate');
+                            if (paginate.length) {
+                                paginate.css({
+                                    'display': 'block !important',
+                                    'visibility': 'visible !important',
+                                    'opacity': '1 !important'
+                                }).show();
+                                
+                                // Force show all pagination buttons
+                                paginate.find('.paginate_button').each(function() {
+                                    $(this).css({
+                                        'display': 'inline-block',
+                                        'visibility': 'visible'
+                                    }).show();
+                                });
+                            }
+                        }, 200);
+                    }
+                });
+                console.log('DataTable initialized successfully');
+            } catch(e) {
+                console.error('Error initializing DataTable:', e);
+            }
         }
         
         function getPriorityBadge(priority) {
@@ -1411,10 +1639,32 @@
         
         function saveWorkOrderChanges() {
             var id = $('#detail_work_order_id').val();
+            
+            // Validate estimated hours
+            var estimatedHours = $('#detail_estimated_hours').val();
+            if (estimatedHours && estimatedHours.trim() !== '') {
+                var hoursValue = parseFloat(estimatedHours);
+                if (isNaN(hoursValue)) {
+                    alert('Lỗi: Giờ ước tính không hợp lệ. Vui lòng nhập số.');
+                    $('#detail_estimated_hours').focus();
+                    return;
+                }
+                if (hoursValue <= 0) {
+                    alert('Lỗi: Giờ ước tính phải lớn hơn 0. Vui lòng nhập giá trị hợp lệ.');
+                    $('#detail_estimated_hours').focus();
+                    return;
+                }
+                if (hoursValue > 100) {
+                    alert('Lỗi: Giờ ước tính không được vượt quá 100 giờ. Vui lòng nhập giá trị nhỏ hơn.');
+                    $('#detail_estimated_hours').focus();
+                    return;
+                }
+            }
+            
             var data = {
                 action: 'update',
                 id: id,
-                estimatedHours: $('#detail_estimated_hours').val(),
+                estimatedHours: estimatedHours && estimatedHours.trim() !== '' ? estimatedHours : null,
                 actualHours: $('#detail_actual_hours').val(),
                 scheduledDate: $('#detail_scheduled_date').val(),
                 completionDate: $('#detail_completion_date').val()
@@ -1554,6 +1804,29 @@
             var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
             if (workOrder) {
                 var status = workOrder.status;
+                
+                // Lấy giờ ước tính của work order và cập nhật max cho input taskEstimatedHours
+                var workOrderEstimatedHours = workOrder.estimatedHours;
+                if (workOrderEstimatedHours && parseFloat(workOrderEstimatedHours) > 0) {
+                    // Cập nhật max attribute của input field
+                    $('#taskEstimatedHours').attr('max', workOrderEstimatedHours);
+                    // Cập nhật help text
+                    var helpText = 'Tối thiểu: 0.1h, Tối đa: ' + parseFloat(workOrderEstimatedHours).toFixed(1) + 'h (giờ ước tính của đơn hàng)';
+                    var helpBlock = $('#taskEstimatedHours').next('.help-block');
+                    if (helpBlock.length) {
+                        helpBlock.text(helpText);
+                    } else {
+                        $('#taskEstimatedHours').after('<small class="help-block">' + helpText + '</small>');
+                    }
+                } else {
+                    // Nếu work order không có giờ ước tính, giữ max = 100
+                    $('#taskEstimatedHours').attr('max', '100');
+                    var helpBlock = $('#taskEstimatedHours').next('.help-block');
+                    if (helpBlock.length) {
+                        helpBlock.text('Tối thiểu: 0.1h, Tối đa: 100h');
+                    }
+                }
+                
                 if (status === 'completed' || status === 'cancelled') {
                     // Show alert and disable form
                     var statusText = status === 'completed' ? 'hoàn thành' : 'hủy';
@@ -1900,6 +2173,48 @@
                 $('#taskDescriptionError').text('Mô tả công việc không được vượt quá 150 ký tự. Hiện tại: ' + description.length + ' ký tự').show();
                 $('#taskDescription').focus();
                 return;
+            }
+            
+            // Validate estimated hours
+            if (estimatedHours && estimatedHours.trim() !== '') {
+                var hoursValue = parseFloat(estimatedHours);
+                if (isNaN(hoursValue)) {
+                    alert('Lỗi: Giờ ước tính không hợp lệ. Vui lòng nhập số.');
+                    $('#taskEstimatedHours').focus();
+                    return;
+                }
+                if (hoursValue <= 0) {
+                    alert('Lỗi: Giờ ước tính phải lớn hơn 0. Vui lòng nhập giá trị hợp lệ.');
+                    $('#taskEstimatedHours').focus();
+                    return;
+                }
+                
+                // Kiểm tra giờ ước tính của task không được vượt quá giờ ước tính của work order
+                var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+                if (workOrder && workOrder.estimatedHours) {
+                    var workOrderHours = parseFloat(workOrder.estimatedHours);
+                    if (!isNaN(workOrderHours) && workOrderHours > 0) {
+                        if (hoursValue > workOrderHours) {
+                            alert('Lỗi: Giờ ước tính của công việc (' + hoursValue.toFixed(1) + 'h) không được vượt quá giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h).\n\nVui lòng nhập giá trị nhỏ hơn hoặc bằng ' + workOrderHours.toFixed(1) + ' giờ.');
+                            $('#taskEstimatedHours').focus();
+                            return;
+                        }
+                    } else {
+                        // Nếu work order không có giờ ước tính, kiểm tra max 100
+                        if (hoursValue > 100) {
+                            alert('Lỗi: Giờ ước tính không được vượt quá 100 giờ. Vui lòng nhập giá trị nhỏ hơn.');
+                            $('#taskEstimatedHours').focus();
+                            return;
+                        }
+                    }
+                } else {
+                    // Nếu không tìm thấy work order hoặc không có giờ ước tính, kiểm tra max 100
+                    if (hoursValue > 100) {
+                        alert('Lỗi: Giờ ước tính không được vượt quá 100 giờ. Vui lòng nhập giá trị nhỏ hơn.');
+                        $('#taskEstimatedHours').focus();
+                        return;
+                    }
+                }
             }
             
             // Hide error message

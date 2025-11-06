@@ -71,6 +71,90 @@
         .dataTables_length {
             display: none !important;
         }
+        
+        /* Đảm bảo phân trang hiển thị đầy đủ - LUÔN hiển thị */
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 15px;
+            text-align: center;
+            float: none !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 6px 12px;
+            margin: 0 2px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fff;
+            color: #333 !important;
+            cursor: pointer;
+            display: inline-block;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+            color: #333 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #3c8dbc !important;
+            color: #fff !important;
+            border-color: #3c8dbc !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background: #357abd !important;
+            color: #fff !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+            background: #f5f5f5 !important;
+            color: #333 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_info {
+            margin-top: 15px;
+            padding-top: 8px;
+            float: left;
+        }
+        
+        /* Đảm bảo wrapper hiển thị đúng */
+        .dataTables_wrapper::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        /* Đảm bảo phân trang luôn hiển thị, kể cả khi chỉ có ít bản ghi */
+        .dataTables_wrapper .dataTables_paginate {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            display: inline-block !important;
+            visibility: visible !important;
+        }
+        
+        /* Hiển thị phân trang ngay cả khi chỉ có 1 trang */
+        .dataTables_wrapper .dataTables_paginate.paging_full_numbers {
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        /* Đảm bảo không có CSS nào ẩn phân trang */
+        .dataTables_wrapper .dataTables_paginate[style*="display: none"] {
+            display: block !important;
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -482,9 +566,13 @@
                                 "language": {
                                     "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
                                 },
-                                "pageLength": 10,
+                                "pageLength": 10, // Hiển thị 10 bản ghi mỗi trang
                                 "lengthChange": false, // Ẩn dropdown "records per page"
-                                "order": [[0, "desc"]],
+                                "paging": true, // Bật phân trang
+                                "pagingType": "full_numbers", // Hiển thị số trang đầy đủ (Previous, 1, 2, 3, ..., Next)
+                                "info": true, // Hiển thị thông tin "Showing X to Y of Z entries"
+                                "order": [[0, "desc"]], // Sắp xếp theo ID giảm dần
+                                "dom": '<"top"lf>rt<"bottom"ip><"clear">', // Cấu trúc DOM để hiển thị phân trang
                                 "columnDefs": [
                                     { 
                                         "targets": 0, // Cột ID (cột đầu tiên)
@@ -495,7 +583,61 @@
                                     },
                                     { "orderable": false, "targets": 5 } // Không sort cột Thao tác (cột cuối cùng)
                                 ],
-                                "destroy": true
+                                "destroy": true,
+                                "drawCallback": function(settings) {
+                                    // Đảm bảo phân trang luôn hiển thị
+                                    var api = this.api();
+                                    var pageInfo = api.page.info();
+                                    var wrapper = $(this).closest('.dataTables_wrapper');
+                                    var paginate = wrapper.find('.dataTables_paginate');
+                                    
+                                    // Luôn hiển thị phân trang, kể cả khi chỉ có 1 trang
+                                    if (paginate.length) {
+                                        paginate.css({
+                                            'display': 'block !important',
+                                            'visibility': 'visible !important'
+                                        }).show();
+                                        
+                                        // Nếu chỉ có 1 trang, vẫn hiển thị nút phân trang
+                                        if (pageInfo.pages <= 1) {
+                                            paginate.find('.paginate_button').show();
+                                        }
+                                    }
+                                    
+                                    // Đảm bảo info cũng hiển thị
+                                    var info = wrapper.find('.dataTables_info');
+                                    if (info.length) {
+                                        info.show();
+                                    }
+                                },
+                                "initComplete": function(settings, json) {
+                                    // Sau khi khởi tạo xong, đảm bảo phân trang hiển thị
+                                    var wrapper = $(this).closest('.dataTables_wrapper');
+                                    var paginate = wrapper.find('.dataTables_paginate');
+                                    if (paginate.length) {
+                                        // Xóa bất kỳ style inline nào có thể ẩn phân trang
+                                        paginate.removeAttr('style');
+                                        paginate.css({
+                                            'display': 'block',
+                                            'visibility': 'visible',
+                                            'opacity': '1'
+                                        }).show();
+                                        
+                                        // Đảm bảo tất cả các nút phân trang đều hiển thị
+                                        paginate.find('.paginate_button').each(function() {
+                                            $(this).css({
+                                                'display': 'inline-block',
+                                                'visibility': 'visible'
+                                            }).show();
+                                        });
+                                    }
+                                    
+                                    // Đảm bảo info cũng hiển thị
+                                    var info = wrapper.find('.dataTables_info');
+                                    if (info.length) {
+                                        info.show();
+                                    }
+                                }
                             });
                             console.log('DataTable initialized successfully');
                         } catch(e) {

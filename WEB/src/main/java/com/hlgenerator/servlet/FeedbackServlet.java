@@ -301,6 +301,15 @@ public class FeedbackServlet extends HttpServlet {
                             return;
                         }
                         
+                        // Kiểm tra xem ticket đã có feedback chưa - KHÔNG cho phép tạo mới nếu đã có
+                        com.hlgenerator.model.Feedback existingFeedback = feedbackDAO.getFeedbackByTicketId(ticketId);
+                        if (existingFeedback != null) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Ticket này đã có feedback. Không thể tạo feedback mới hoặc chỉnh sửa.");
+                            out.print(jsonResponse.toString());
+                            return;
+                        }
+                        
                         // Tạo feedback
                         boolean success = feedbackDAO.createFeedback(ticketId, customerId.intValue(), rating, comment, imagePath);
                         

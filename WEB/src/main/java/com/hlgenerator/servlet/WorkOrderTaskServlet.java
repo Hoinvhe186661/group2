@@ -252,9 +252,33 @@ public class WorkOrderTaskServlet extends HttpServlet {
             
             if (estimatedHoursParam != null && !estimatedHoursParam.isEmpty()) {
                 try {
-                    task.setEstimatedHours(new BigDecimal(estimatedHoursParam));
+                    BigDecimal estimatedHours = new BigDecimal(estimatedHoursParam);
+                    // Validate: tối thiểu > 0, không cho phép số âm
+                    if (estimatedHours.compareTo(BigDecimal.ZERO) <= 0) {
+                        sendError(response, "Giờ ước tính phải lớn hơn 0");
+                        return;
+                    }
+                    
+                    // Kiểm tra giờ ước tính của task không được vượt quá giờ ước tính của work order
+                    BigDecimal workOrderEstimatedHours = workOrder.getEstimatedHours();
+                    if (workOrderEstimatedHours != null && workOrderEstimatedHours.compareTo(BigDecimal.ZERO) > 0) {
+                        // Work order có giờ ước tính, task không được vượt quá
+                        if (estimatedHours.compareTo(workOrderEstimatedHours) > 0) {
+                            sendError(response, "Giờ ước tính của công việc (" + estimatedHours + "h) không được vượt quá giờ ước tính của đơn hàng (" + workOrderEstimatedHours + "h)");
+                            return;
+                        }
+                    } else {
+                        // Work order không có giờ ước tính, kiểm tra max 100
+                        if (estimatedHours.compareTo(new BigDecimal("100")) > 0) {
+                            sendError(response, "Giờ ước tính không được vượt quá 100 giờ");
+                            return;
+                        }
+                    }
+                    
+                    task.setEstimatedHours(estimatedHours);
                 } catch (NumberFormatException e) {
-                    logger.warning("Invalid estimated hours: " + estimatedHoursParam);
+                    sendError(response, "Giờ ước tính không hợp lệ: " + estimatedHoursParam);
+                    return;
                 }
             }
             
@@ -330,9 +354,42 @@ public class WorkOrderTaskServlet extends HttpServlet {
             String estimatedHoursParam = request.getParameter("estimatedHours");
             if (estimatedHoursParam != null && !estimatedHoursParam.isEmpty()) {
                 try {
-                    task.setEstimatedHours(new BigDecimal(estimatedHoursParam));
+                    BigDecimal estimatedHours = new BigDecimal(estimatedHoursParam);
+                    // Validate: tối thiểu > 0, không cho phép số âm
+                    if (estimatedHours.compareTo(BigDecimal.ZERO) <= 0) {
+                        sendError(response, "Giờ ước tính phải lớn hơn 0");
+                        return;
+                    }
+                    
+                    // Lấy work order để kiểm tra giờ ước tính
+                    WorkOrder workOrder = workOrderDAO.getWorkOrderById(task.getWorkOrderId());
+                    if (workOrder != null) {
+                        BigDecimal workOrderEstimatedHours = workOrder.getEstimatedHours();
+                        if (workOrderEstimatedHours != null && workOrderEstimatedHours.compareTo(BigDecimal.ZERO) > 0) {
+                            // Work order có giờ ước tính, task không được vượt quá
+                            if (estimatedHours.compareTo(workOrderEstimatedHours) > 0) {
+                                sendError(response, "Giờ ước tính của công việc (" + estimatedHours + "h) không được vượt quá giờ ước tính của đơn hàng (" + workOrderEstimatedHours + "h)");
+                                return;
+                            }
+                        } else {
+                            // Work order không có giờ ước tính, kiểm tra max 100
+                            if (estimatedHours.compareTo(new BigDecimal("100")) > 0) {
+                                sendError(response, "Giờ ước tính không được vượt quá 100 giờ");
+                                return;
+                            }
+                        }
+                    } else {
+                        // Không tìm thấy work order, kiểm tra max 100
+                        if (estimatedHours.compareTo(new BigDecimal("100")) > 0) {
+                            sendError(response, "Giờ ước tính không được vượt quá 100 giờ");
+                            return;
+                        }
+                    }
+                    
+                    task.setEstimatedHours(estimatedHours);
                 } catch (NumberFormatException e) {
-                    logger.warning("Invalid estimated hours: " + estimatedHoursParam);
+                    sendError(response, "Giờ ước tính không hợp lệ: " + estimatedHoursParam);
+                    return;
                 }
             }
             
