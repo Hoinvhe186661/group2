@@ -635,7 +635,6 @@ public class InventoryServlet extends HttpServlet {
     
     /**
      * Lấy danh sách 3 danh mục cố định
-     * Tác giả: Sơn Lê
      * @return Danh sách 3 danh mục: Máy phát điện, Máy bơm nước, Máy tiện
      */
     private List<String> getFixedCategories() {
@@ -648,7 +647,6 @@ public class InventoryServlet extends HttpServlet {
     
     /**
      * Escape JSON string
-     * Tác giả: Sơn Lê
      */
     private String escapeJson(String str) {
         if (str == null) return "";

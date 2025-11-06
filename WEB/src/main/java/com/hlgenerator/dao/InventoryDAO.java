@@ -131,7 +131,6 @@ public class InventoryDAO {
 
     /**
      * Lấy đơn giá nhập gần nhất (unit_cost) của sản phẩm từ lịch sử nhập kho
-     * Tác giả: Sơn Lê
      */
     public Double getLastUnitCost(int productId) {
         if (connection == null) {

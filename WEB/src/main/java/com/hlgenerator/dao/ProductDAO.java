@@ -666,7 +666,6 @@ public class ProductDAO {
 
     /**
      * Kiểm tra mã sản phẩm có tồn tại không
-     * Tác giả: Sơn Lê
      * @param productCode - Mã sản phẩm cần kiểm tra
      * @return true nếu mã đã tồn tại, false nếu chưa có
      */
@@ -676,7 +675,6 @@ public class ProductDAO {
     
     /**
      * Kiểm tra mã sản phẩm có tồn tại không (trừ ID hiện tại)
-     * Tác giả: Sơn Lê
      * @param productCode - Mã sản phẩm cần kiểm tra
      * @param excludeId - ID sản phẩm cần loại trừ (dùng khi update)
      * @return true nếu mã đã tồn tại, false nếu chưa có

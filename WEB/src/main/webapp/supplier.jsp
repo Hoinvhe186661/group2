@@ -581,7 +581,6 @@
         }
         /**
          * Kiểm tra mã nhà cung cấp có trùng không
-         * Tác giả: Sơn Lê
          */
         function checkSupplierCodeExists() {
             var supplierCode = $('#add_supplier_code').val().trim();
@@ -1003,7 +1002,6 @@
         
         /**
          * Hàm reset tất cả bộ lọc và reload trang
-         * Tác giả: Sơn Lê
          */
         function resetFilters() {
             // Redirect về trang supplier không có filter parameters
@@ -1012,7 +1010,6 @@
         
         /**
          * Hàm chuyển đến trang cụ thể bằng cách submit form với page parameter
-         * Tác giả: Sơn Lê
          */
         function goToPageSuppliers(page) {
             var form = document.getElementById('filterForm');
@@ -1075,7 +1072,6 @@
         
         /**
          * Cập nhật nút phân trang từ dữ liệu backend
-         * Tác giả: Sơn Lê
          */
         function updatePaginationForBackend(currentPage, totalPages) {
             var pagination = document.getElementById('pagination');
@@ -1140,7 +1136,6 @@
         
         /**
          * Hàm load dữ liệu cho các dropdown filter
-         * Tác giả: Sơn Lê
          */
         function loadFilterOptions() {
             $.ajax({

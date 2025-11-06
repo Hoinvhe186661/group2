@@ -68,7 +68,6 @@ public class ProductServlet extends HttpServlet {
     
     /**
      * Hiển thị trang quản lý sản phẩm với tất cả dữ liệu cần thiết
-     * Tác giả: Sơn Lê
      */
     private void showProductsPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
@@ -106,7 +105,6 @@ public class ProductServlet extends HttpServlet {
     
     /**
      * Hiển thị trang thêm sản phẩm với dữ liệu cần thiết
-     * Tác giả: Sơn Lê
      */
     private void showAddProductPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
@@ -132,7 +130,6 @@ public class ProductServlet extends HttpServlet {
     
     /**
      * Hiển thị trang sửa sản phẩm với dữ liệu cần thiết
-     * Tác giả: Sơn Lê
      */
     private void showEditProductPage(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
@@ -1116,7 +1113,6 @@ public class ProductServlet extends HttpServlet {
     
     /**
      * Xử lý lọc và tìm kiếm sản phẩm từ backend
-     * Tác giả: Sơn Lê
      */
     private void filterProducts(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
@@ -1223,7 +1219,6 @@ public class ProductServlet extends HttpServlet {
     
     /**
      * Kiểm tra mã sản phẩm có tồn tại không
-     * Tác giả: Sơn Lê
      */
     private void checkProductCodeExists(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json; charset=UTF-8");
@@ -1265,7 +1260,6 @@ public class ProductServlet extends HttpServlet {
     
     /**
      * Lấy danh sách 3 danh mục cố định
-     * Tác giả: Sơn Lê
      * @return Danh sách 3 danh mục: Máy phát điện, Máy bơm nước, Máy tiện
      */
     private List<String> getFixedCategories() {
@@ -1278,3 +1272,5 @@ public class ProductServlet extends HttpServlet {
     
     
 }
+
+
