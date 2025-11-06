@@ -181,6 +181,30 @@ public class CustomerManagementServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
         
+        // Kiểm tra quyền truy cập
+        HttpSession session = request.getSession(false);
+        String username = (String) session.getAttribute("username");
+        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+        String userRole = (String) session.getAttribute("userRole");
+        
+        if (username == null || isLoggedIn == null || !isLoggedIn) {
+            JsonResponse errorResponse = new JsonResponse();
+            errorResponse.setSuccess(false);
+            errorResponse.setMessage("Bạn cần đăng nhập để thực hiện thao tác này");
+            response.getWriter().write(new Gson().toJson(errorResponse));
+            return;
+        }
+        
+        // Kiểm tra quyền: chỉ admin và customer_support mới có thể quản lý khách hàng
+        boolean canManageCustomers = "admin".equals(userRole) || "customer_support".equals(userRole);
+        if (!canManageCustomers) {
+            JsonResponse errorResponse = new JsonResponse();
+            errorResponse.setSuccess(false);
+            errorResponse.setMessage("Bạn không có quyền thực hiện thao tác này");
+            response.getWriter().write(new Gson().toJson(errorResponse));
+            return;
+        }
+        
         String action = request.getParameter("action");
         String id = request.getParameter("id");
         

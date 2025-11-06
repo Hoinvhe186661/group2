@@ -222,6 +222,11 @@
                             <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
                         </a>
                     </li>
+                    <li>
+                        <a href="customers">
+                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
+                        </a>
+                    </li>
                 </ul>
             </section>
             <!-- /.sidebar -->

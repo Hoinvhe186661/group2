@@ -1,6 +1,16 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.List, java.util.Set, com.hlgenerator.model.Customer, com.hlgenerator.servlet.CustomerManagementServlet.CustomerHelper" %>
 <%
+    // Kiểm tra đăng nhập
+    String username = (String) session.getAttribute("username");
+    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
+    
+    if (username == null || isLoggedIn == null || !isLoggedIn) {
+        response.sendRedirect(request.getContextPath() + "/login.jsp");
+        return;
+    }
+    
     // Lấy dữ liệu từ request attributes (đã được set bởi servlet)
     @SuppressWarnings("unchecked")
     List<Customer> filteredCustomers = (List<Customer>) request.getAttribute("filteredCustomers");
@@ -182,14 +192,24 @@
                     <li class="dropdown user user-menu">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                             <i class="fa fa-user"></i>
-                            <span>Admin <i class="caret"></i></span>
+                            <span><%= username %> <i class="caret"></i></span>
                         </a>
-                       <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
+                        <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
                             <li class="dropdown-header text-center">Tài khoản</li>
-                            <li><a href="profile.jsp"><i class="fa fa-user fa-fw pull-right"></i> Hồ sơ</a></li>
-                            <li><a href="settings.jsp"><i class="fa fa-cog fa-fw pull-right"></i> Cài đặt</a></li>
+                            <li>
+                                <a href="profile.jsp">
+                                <i class="fa fa-user fa-fw pull-right"></i>
+                                    Hồ sơ
+                                </a>
+                                <a href="settings.jsp">
+                                <i class="fa fa-cog fa-fw pull-right"></i>
+                                    Cài đặt cá nhân
+                                </a>
+                            </li>
                             <li class="divider"></li>
-                            <li><a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a></li>
+                            <li>
+                                <a href="logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
+                            </li>
                         </ul>
                     </li>
                 </ul>
@@ -198,32 +218,67 @@
     </header> 
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
-        <!-- Sidebar -->
+        <!-- Left side column. contains the logo and sidebar -->
         <aside class="left-side sidebar-offcanvas">
+            <!-- sidebar: style can be found in sidebar.less -->
             <section class="sidebar">
+                <!-- Sidebar user panel -->
                 <div class="user-panel">
                     <div class="pull-left image">
                         <img src="img/26115.jpg" class="img-circle" alt="User Image" />
                     </div>
                     <div class="pull-left info">
-                        <p>Xin chào, Admin</p>
+                        <p>Xin chào, <%= username %></p>
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                
-                
+                <!-- search form -->
+                <form action="#" method="get" class="sidebar-form">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm ticket..."/>
+                        <span class="input-group-btn">
+                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
+                        </span>
+                    </div>
+                </form>
+                <!-- /.search form -->
+                <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
-                    <li><a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a></li>
-                    
-                        <li class="active"><a href="customers"><i class="fa fa-users"></i> <span>Quản lý khách
-                                    hàng</span></a></li>
-                        <li><a href="users"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
-                        </li>
-                    <li><a href="email-management"><i class="fa fa-envelope"></i> <span>Quản lý Email</span></a></li>
-                    <li><a href="reports.jsp"><i class="fa fa-bar-chart"></i> <span>Báo cáo</span></a></li>
-                    <li><a href="settings.jsp"><i class="fa fa-cog"></i> <span>Cài đặt</span></a></li>
+                    <li>
+                        <a href="customersupport.jsp">
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="support-management">
+                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
+                            <small class="badge pull-right bg-red" id="openTickets">0</small>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="feedback_management.jsp">
+                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="contracts.jsp">
+                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="contact-management">
+                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
+                            <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="customers">
+                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
+                        </a>
+                    </li>
                 </ul>
             </section>
+            <!-- /.sidebar -->
         </aside>
 
         <!-- Main Content -->

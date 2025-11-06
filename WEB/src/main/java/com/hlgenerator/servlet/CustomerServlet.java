@@ -445,10 +445,19 @@ public class CustomerServlet extends HttpServlet {
     }
 
     private boolean isAuthenticated(HttpServletRequest request) {
-        // Tạm thời bỏ qua xác thực để test
-        return true;
-        // HttpSession session = request.getSession(false);
-        // return session != null && Boolean.TRUE.equals(session.getAttribute("isLoggedIn"));
+        javax.servlet.http.HttpSession session = request.getSession(false);
+        if (session == null) {
+            return false;
+        }
+        
+        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+        if (isLoggedIn == null || !isLoggedIn) {
+            return false;
+        }
+        
+        // Kiểm tra quyền: chỉ admin và customer_support mới có thể quản lý khách hàng
+        String userRole = (String) session.getAttribute("userRole");
+        return "admin".equals(userRole) || "customer_support".equals(userRole);
     }
 
     private void sendErrorResponse(HttpServletResponse response, String message, int statusCode) 
