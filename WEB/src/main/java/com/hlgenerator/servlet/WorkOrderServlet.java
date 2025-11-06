@@ -66,6 +66,14 @@ public class WorkOrderServlet extends HttpServlet {
                 // Lấy danh sách work orders
                 List<WorkOrder> workOrders = workOrderDAO.getAllWorkOrders();
                 
+                // Tính actualHours từ tổng actualHours của các tasks cho mỗi work order
+                for (WorkOrder wo : workOrders) {
+                    BigDecimal totalActualHours = taskDAO.getTotalActualHoursForWorkOrder(wo.getId());
+                    if (totalActualHours.compareTo(BigDecimal.ZERO) > 0) {
+                        wo.setActualHours(totalActualHours);
+                    }
+                }
+                
                 jsonResponse.addProperty("success", true);
                 jsonResponse.add("data", gson.toJsonTree(workOrders));
                 
@@ -81,6 +89,14 @@ public class WorkOrderServlet extends HttpServlet {
                         WorkOrder workOrder = workOrderDAO.getWorkOrderById(id);
                         
                         if (workOrder != null) {
+                            // Tính actualHours từ tổng actualHours của các tasks
+                            BigDecimal totalActualHours = taskDAO.getTotalActualHoursForWorkOrder(id);
+                            if (totalActualHours.compareTo(BigDecimal.ZERO) > 0) {
+                                workOrder.setActualHours(totalActualHours);
+                                // Cập nhật vào database
+                                workOrderDAO.updateWorkOrder(workOrder);
+                            }
+                            
                             jsonResponse.addProperty("success", true);
                             jsonResponse.add("data", gson.toJsonTree(workOrder));
                         } else {
@@ -305,14 +321,9 @@ public class WorkOrderServlet extends HttpServlet {
                     }
                 }
                 
-                String scheduledDateParam = request.getParameter("scheduledDate");
-                if (scheduledDateParam != null && !scheduledDateParam.isEmpty() && !"null".equals(scheduledDateParam)) {
-                    try {
-                        workOrder.setScheduledDate(Date.valueOf(scheduledDateParam));
-                    } catch (IllegalArgumentException e) {
-                        // Ignore invalid date format
-                    }
-                }
+                // Set scheduledDate = createdAt (ngày lên lịch trùng với ngày tạo)
+                // scheduledDate sẽ được set trong DAO sau khi work order được tạo (created_at sẽ có giá trị)
+                // Tạm thời để null, sẽ cập nhật sau khi tạo thành công
                 
                 // Set created_by from session
                 if (userId != null) {
@@ -347,6 +358,15 @@ public class WorkOrderServlet extends HttpServlet {
                 WorkOrder created = workOrderDAO.createWorkOrder(workOrder);
                 
                 if (created != null) {
+                    // Set scheduledDate = createdAt (ngày lên lịch trùng với ngày tạo)
+                    if (created.getCreatedAt() != null) {
+                        Date scheduledDate = new Date(created.getCreatedAt().getTime());
+                        created.setScheduledDate(scheduledDate);
+                        workOrderDAO.updateWorkOrder(created);
+                        // Reload để có scheduledDate
+                        created = workOrderDAO.getWorkOrderById(created.getId());
+                    }
+                    
                     jsonResponse.addProperty("success", true);
                     jsonResponse.addProperty("message", "Tạo work order thành công");
                     jsonResponse.addProperty("workOrderNumber", created.getWorkOrderNumber());
@@ -371,6 +391,23 @@ public class WorkOrderServlet extends HttpServlet {
                             jsonResponse.addProperty("success", false);
                             jsonResponse.addProperty("message", "Không tìm thấy work order");
                         } else {
+                            // Kiểm tra nếu work order đã đóng thì không cho phép update
+                            String currentStatus = workOrder.getStatus();
+                            if ("completed".equals(currentStatus) || "cancelled".equals(currentStatus) || "rejected".equals(currentStatus)) {
+                                String statusText = "";
+                                if ("completed".equals(currentStatus)) {
+                                    statusText = "đã hoàn thành";
+                                } else if ("cancelled".equals(currentStatus)) {
+                                    statusText = "đã hủy";
+                                } else if ("rejected".equals(currentStatus)) {
+                                    statusText = "đã từ chối";
+                                }
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Không thể cập nhật đơn hàng. Đơn hàng này " + statusText + " và không thể chỉnh sửa nữa.");
+                                out.print(jsonResponse.toString());
+                                return;
+                            }
+                            
                             // Update fields
                             String title = request.getParameter("title");
                             if (title != null && !title.trim().isEmpty()) {
@@ -403,58 +440,45 @@ public class WorkOrderServlet extends HttpServlet {
                                 workOrder.setAssignedTo(null);
                             }
                             
-                            String estimatedHoursParam = request.getParameter("estimatedHours");
-                            if (estimatedHoursParam != null && !estimatedHoursParam.isEmpty() && !"null".equals(estimatedHoursParam)) {
-                                try {
-                                    BigDecimal estimatedHours = new BigDecimal(estimatedHoursParam);
-                                    // Validate: tối thiểu > 0, tối đa 100, không cho phép số âm
-                                    if (estimatedHours.compareTo(BigDecimal.ZERO) <= 0) {
-                                        throw new IllegalArgumentException("Giờ ước tính phải lớn hơn 0");
-                                    }
-                                    if (estimatedHours.compareTo(new BigDecimal("100")) > 0) {
-                                        throw new IllegalArgumentException("Giờ ước tính không được vượt quá 100 giờ");
-                                    }
-                                    workOrder.setEstimatedHours(estimatedHours);
-                                } catch (NumberFormatException e) {
-                                    throw new IllegalArgumentException("Giờ ước tính không hợp lệ: " + estimatedHoursParam);
-                                } catch (IllegalArgumentException e) {
-                                    throw e; // Re-throw validation errors
-                                }
-                            } else {
-                                workOrder.setEstimatedHours(null);
-                            }
+                            // Không cho phép cập nhật estimatedHours (giữ nguyên giá trị hiện tại)
+                            // estimatedHours không được cập nhật qua form
                             
-                            String actualHoursParam = request.getParameter("actualHours");
-                            if (actualHoursParam != null && !actualHoursParam.isEmpty() && !"null".equals(actualHoursParam)) {
-                                try {
-                                    workOrder.setActualHours(new BigDecimal(actualHoursParam));
-                                } catch (NumberFormatException e) {
-                                    workOrder.setActualHours(null);
-                                }
+                            // Tính actualHours tự động từ tổng actualHours của các tasks
+                            BigDecimal totalActualHours = taskDAO.getTotalActualHoursForWorkOrder(id);
+                            if (totalActualHours.compareTo(BigDecimal.ZERO) > 0) {
+                                workOrder.setActualHours(totalActualHours);
                             } else {
                                 workOrder.setActualHours(null);
                             }
                             
-                            String scheduledDateParam = request.getParameter("scheduledDate");
-                            if (scheduledDateParam != null && !scheduledDateParam.isEmpty() && !"null".equals(scheduledDateParam)) {
-                                try {
-                                    workOrder.setScheduledDate(Date.valueOf(scheduledDateParam));
-                                } catch (IllegalArgumentException e) {
-                                    workOrder.setScheduledDate(null);
-                                }
-                            } else {
-                                workOrder.setScheduledDate(null);
-                            }
+                            // Không cho phép sửa scheduledDate, giữ nguyên giá trị hiện tại
+                            // scheduledDate không được cập nhật qua form
                             
                             String completionDateParam = request.getParameter("completionDate");
                             if (completionDateParam != null && !completionDateParam.isEmpty() && !"null".equals(completionDateParam)) {
                                 try {
-                                    workOrder.setCompletionDate(Date.valueOf(completionDateParam));
+                                    Date completionDate = Date.valueOf(completionDateParam);
+                                    System.out.println("Update work order - Setting completionDate from request: " + completionDate);
+                                    // Validate: completion_date không được trước scheduled_date
+                                    Date scheduledDate = workOrder.getScheduledDate();
+                                    if (scheduledDate != null && completionDate.before(scheduledDate)) {
+                                        jsonResponse.addProperty("success", false);
+                                        jsonResponse.addProperty("message", "Ngày hoàn thành không được trước ngày lên lịch (" + 
+                                            scheduledDate.toString() + "). Vui lòng chọn ngày từ ngày lên lịch trở đi.");
+                                        out.print(jsonResponse.toString());
+                                        return;
+                                    }
+                                    workOrder.setCompletionDate(completionDate);
+                                    System.out.println("Update work order - completionDate set successfully: " + workOrder.getCompletionDate());
                                 } catch (IllegalArgumentException e) {
-                                    workOrder.setCompletionDate(null);
+                                    System.out.println("Update work order - Invalid completionDate format: " + completionDateParam);
+                                    // Giữ nguyên completionDate hiện có nếu format không hợp lệ
+                                    // Không set về null để không mất dữ liệu
                                 }
                             } else {
-                                workOrder.setCompletionDate(null);
+                                // Nếu không có completionDate từ request, giữ nguyên giá trị hiện có
+                                // Không set về null để không mất dữ liệu đã có
+                                System.out.println("Update work order - No completionDate in request, keeping existing: " + workOrder.getCompletionDate());
                             }
                             
                             boolean success = workOrderDAO.updateWorkOrder(workOrder);
@@ -505,11 +529,50 @@ public class WorkOrderServlet extends HttpServlet {
                                     // Close work order - set status to completed
                                     workOrder.setStatus("completed");
                                     
-                                    // Set completion date if not already set
-                                    if (workOrder.getCompletionDate() == null) {
-                                        workOrder.setCompletionDate(new Date(System.currentTimeMillis()));
+                                    // Get completion date from request or use existing or current date
+                                    String completionDateParam = request.getParameter("completionDate");
+                                    Date completionDate = null;
+                                    
+                                    // Ưu tiên sử dụng completionDate từ request (user đã nhập)
+                                    if (completionDateParam != null && !completionDateParam.isEmpty() && !"null".equals(completionDateParam)) {
+                                        try {
+                                            completionDate = Date.valueOf(completionDateParam);
+                                            System.out.println("Close work order - Using completionDate from request: " + completionDate);
+                                        } catch (IllegalArgumentException e) {
+                                            // Invalid date format, log error
+                                            System.out.println("Close work order - Invalid completionDate format: " + completionDateParam);
+                                            completionDate = null;
+                                        }
                                     }
                                     
+                                    // Nếu không có từ request, sử dụng completionDate hiện có (nếu đã có)
+                                    if (completionDate == null) {
+                                        completionDate = workOrder.getCompletionDate();
+                                        if (completionDate != null) {
+                                            System.out.println("Close work order - Using existing completionDate: " + completionDate);
+                                        }
+                                    }
+                                    
+                                    // Nếu vẫn không có, sử dụng ngày hiện tại
+                                    if (completionDate == null) {
+                                        completionDate = new Date(System.currentTimeMillis());
+                                        System.out.println("Close work order - Using current date: " + completionDate);
+                                    }
+                                    
+                                    // Validate: completion_date không được trước scheduled_date
+                                    Date scheduledDate = workOrder.getScheduledDate();
+                                    if (scheduledDate != null && completionDate.before(scheduledDate)) {
+                                        jsonResponse.addProperty("success", false);
+                                        jsonResponse.addProperty("message", "Ngày hoàn thành (" + completionDate.toString() + 
+                                            ") không được trước ngày lên lịch (" + scheduledDate.toString() + 
+                                            "). Vui lòng chọn ngày từ ngày lên lịch trở đi.");
+                                        out.print(jsonResponse.toString());
+                                        return;
+                                    }
+                                    
+                                    // Set completion date vào workOrder trước khi update
+                                    workOrder.setCompletionDate(completionDate);
+                                    System.out.println("Close work order - Setting completionDate to workOrder: " + completionDate);
                                     boolean success = workOrderDAO.updateWorkOrder(workOrder);
                                     
                                     if (success) {

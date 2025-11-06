@@ -72,7 +72,7 @@
             display: none !important;
         }
         
-        /* Đảm bảo phân trang hiển thị đầy đủ - LUÔN hiển thị */
+        /* Styling cho phân trang - Giống template work_orders.jsp */
         .dataTables_wrapper .dataTables_paginate {
             margin-top: 15px;
             text-align: center;
@@ -89,7 +89,7 @@
             background: #fff;
             color: #333 !important;
             cursor: pointer;
-            display: inline-block;
+            display: inline-block !important;
         }
         
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
@@ -134,21 +134,10 @@
         }
         
         /* Đảm bảo phân trang luôn hiển thị, kể cả khi chỉ có ít bản ghi */
-        .dataTables_wrapper .dataTables_paginate {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        
-        .dataTables_wrapper .dataTables_paginate .paginate_button {
-            display: inline-block !important;
-            visibility: visible !important;
-        }
-        
-        /* Hiển thị phân trang ngay cả khi chỉ có 1 trang */
         .dataTables_wrapper .dataTables_paginate.paging_full_numbers {
             display: block !important;
             visibility: visible !important;
+            opacity: 1 !important;
         }
         
         /* Đảm bảo không có CSS nào ẩn phân trang */
@@ -572,7 +561,7 @@
                                 "pagingType": "full_numbers", // Hiển thị số trang đầy đủ (Previous, 1, 2, 3, ..., Next)
                                 "info": true, // Hiển thị thông tin "Showing X to Y of Z entries"
                                 "order": [[0, "desc"]], // Sắp xếp theo ID giảm dần
-                                "dom": '<"top"lf>rt<"bottom"ip><"clear">', // Cấu trúc DOM để hiển thị phân trang
+                                "dom": '<"top"lf>rt<"bottom"ip><"clear">', // Cấu trúc DOM: top (length, filter), table, bottom (info, pagination)
                                 "columnDefs": [
                                     { 
                                         "targets": 0, // Cột ID (cột đầu tiên)
@@ -586,28 +575,22 @@
                                 "destroy": true,
                                 "drawCallback": function(settings) {
                                     // Đảm bảo phân trang luôn hiển thị
-                                    var api = this.api();
-                                    var pageInfo = api.page.info();
                                     var wrapper = $(this).closest('.dataTables_wrapper');
                                     var paginate = wrapper.find('.dataTables_paginate');
-                                    
-                                    // Luôn hiển thị phân trang, kể cả khi chỉ có 1 trang
                                     if (paginate.length) {
                                         paginate.css({
-                                            'display': 'block !important',
-                                            'visibility': 'visible !important'
+                                            'display': 'block',
+                                            'visibility': 'visible',
+                                            'opacity': '1'
                                         }).show();
                                         
-                                        // Nếu chỉ có 1 trang, vẫn hiển thị nút phân trang
-                                        if (pageInfo.pages <= 1) {
-                                            paginate.find('.paginate_button').show();
-                                        }
-                                    }
-                                    
-                                    // Đảm bảo info cũng hiển thị
-                                    var info = wrapper.find('.dataTables_info');
-                                    if (info.length) {
-                                        info.show();
+                                        // Đảm bảo tất cả các nút phân trang đều hiển thị
+                                        paginate.find('.paginate_button').each(function() {
+                                            $(this).css({
+                                                'display': 'inline-block',
+                                                'visibility': 'visible'
+                                            }).show();
+                                        });
                                     }
                                 },
                                 "initComplete": function(settings, json) {
@@ -615,7 +598,6 @@
                                     var wrapper = $(this).closest('.dataTables_wrapper');
                                     var paginate = wrapper.find('.dataTables_paginate');
                                     if (paginate.length) {
-                                        // Xóa bất kỳ style inline nào có thể ẩn phân trang
                                         paginate.removeAttr('style');
                                         paginate.css({
                                             'display': 'block',
@@ -632,11 +614,26 @@
                                         });
                                     }
                                     
-                                    // Đảm bảo info cũng hiển thị
-                                    var info = wrapper.find('.dataTables_info');
-                                    if (info.length) {
-                                        info.show();
-                                    }
+                                    // Force show pagination after a short delay
+                                    setTimeout(function() {
+                                        var paginate = wrapper.find('.dataTables_paginate');
+                                        if (paginate.length) {
+                                            paginate.removeAttr('style');
+                                            paginate.css({
+                                                'display': 'block',
+                                                'visibility': 'visible',
+                                                'opacity': '1'
+                                            }).show();
+                                            
+                                            // Force show all pagination buttons
+                                            paginate.find('.paginate_button').each(function() {
+                                                $(this).css({
+                                                    'display': 'inline-block',
+                                                    'visibility': 'visible'
+                                                }).show();
+                                            });
+                                        }
+                                    }, 100);
                                 }
                             });
                             console.log('DataTable initialized successfully');

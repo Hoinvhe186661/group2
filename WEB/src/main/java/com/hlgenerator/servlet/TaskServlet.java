@@ -1,8 +1,11 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.TaskDAO;
+import com.hlgenerator.dao.WorkOrderDAO;
+import com.hlgenerator.dao.WorkOrderTaskDAO;
 import com.hlgenerator.model.Task;
 import com.hlgenerator.model.TaskAssignment;
+import com.hlgenerator.model.WorkOrder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -31,11 +34,15 @@ import java.util.List;
 public class TaskServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private TaskDAO taskDAO;
+	private WorkOrderTaskDAO workOrderTaskDAO;
+	private WorkOrderDAO workOrderDAO;
 
 	@Override
 	public void init() throws ServletException {
 		super.init();
 		taskDAO = new TaskDAO();
+		workOrderTaskDAO = new WorkOrderTaskDAO();
+		workOrderDAO = new WorkOrderDAO();
 	}
 
 	@Override
@@ -61,9 +68,20 @@ public class TaskServlet extends HttpServlet {
 				int page = Integer.parseInt(param(request, "page", "1"));
 				int size = Integer.parseInt(param(request, "size", "10"));
 				if (page < 1) page = 1; if (size < 1) size = 10; if (size > 100) size = 100;
+				
+				// Debug logging
+				System.out.println("=== TaskServlet.listAssigned DEBUG ===");
+				System.out.println("Request params: userId=" + userId + ", status=" + status + 
+					", priority=" + priority + ", scheduledFrom=" + scheduledFrom + 
+					", scheduledTo=" + scheduledTo + ", keyword=" + keyword + 
+					", page=" + page + ", size=" + size);
+				
 				int total = taskDAO.countAssignmentsForUser(userId, status, priority, from, to, keyword);
 				int offset = (page - 1) * size;
+				System.out.println("Total count: " + total + ", offset: " + offset);
+				
 				List<TaskAssignment> items = taskDAO.getAssignmentsForUserPaged(userId, status, priority, from, to, keyword, size, offset);
+				System.out.println("Items returned: " + items.size());
 				JSONObject result = new JSONObject();
 				result.put("success", true);
 				JSONArray dataArray = new JSONArray();
@@ -170,6 +188,28 @@ public class TaskServlet extends HttpServlet {
 				// Update task with detailed report
 				boolean ok = taskDAO.completeTask(taskId, actualHours, completionPercentage,
 				                                 workDesc, issuesFound, notes, uploadedFiles);
+				
+				// Sau khi task hoàn thành, cập nhật actualHours của work order
+				if (ok) {
+					try {
+						Task task = taskDAO.getTaskById(taskId);
+						if (task != null && task.getWorkOrderId() > 0) {
+							// Tính tổng actualHours từ tất cả tasks của work order
+							BigDecimal totalActualHours = workOrderTaskDAO.getTotalActualHoursForWorkOrder(task.getWorkOrderId());
+							if (totalActualHours.compareTo(BigDecimal.ZERO) > 0) {
+								WorkOrder workOrder = workOrderDAO.getWorkOrderById(task.getWorkOrderId());
+								if (workOrder != null) {
+									workOrder.setActualHours(totalActualHours);
+									workOrderDAO.updateWorkOrder(workOrder);
+								}
+							}
+						}
+					} catch (Exception e) {
+						// Log error nhưng không fail toàn bộ request
+						System.out.println("Error updating work order actual hours: " + e.getMessage());
+					}
+				}
+				
 				out.print(jsonResult(ok, ok ? "Đã báo cáo hoàn thành!" : "Không thể cập nhật").toString());
 			} else if ("updateNotes".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));

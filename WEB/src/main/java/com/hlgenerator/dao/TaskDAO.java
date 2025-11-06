@@ -8,8 +8,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TaskDAO extends DBConnect {
+	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(TaskDAO.class.getName());
+
+	public TaskDAO() {
+		super();
+		if (connection == null) {
+			logger.severe("TaskDAO: Database connection failed during initialization");
+		}
+	}
+
+	// Check database connection
+	private boolean checkConnection() {
+		try {
+			if (connection == null || connection.isClosed()) {
+				logger.severe("Database connection is not available");
+				return false;
+			}
+			return true;
+		} catch (SQLException e) {
+			logger.severe("Error checking database connection: " + e.getMessage());
+			return false;
+		}
+	}
 
 	public List<TaskAssignment> getAssignmentsForUser(int userId, String statusFilter) {
+		if (!checkConnection()) {
+			return new ArrayList<>();
+		}
 		List<TaskAssignment> results = new ArrayList<>();
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
@@ -25,7 +50,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
-		sql.append("WHERE ta.user_id = ? ");
+		sql.append("WHERE ta.user_id = ? AND ta.role = 'assignee' ");
 		if (statusFilter != null && !statusFilter.isEmpty()) {
 			sql.append("AND t.status = ? ");
 		}
@@ -88,18 +113,19 @@ public class TaskDAO extends DBConnect {
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
-		sql.append("WHERE ta.user_id = ? ");
+		sql.append("WHERE ta.user_id = ? AND ta.role = 'assignee' ");
 		if (status != null && !status.isEmpty()) {
 			sql.append("AND t.status = ? ");
 		}
 		if (priority != null && !priority.isEmpty()) {
 			sql.append("AND t.priority = ? ");
 		}
+		// Xử lý scheduled_date NULL: Nếu có filter, vẫn hiển thị task nếu scheduled_date là NULL
 		if (scheduledFrom != null) {
-			sql.append("AND wo.scheduled_date >= ? ");
+			sql.append("AND (wo.scheduled_date >= ? OR wo.scheduled_date IS NULL) ");
 		}
 		if (scheduledTo != null) {
-			sql.append("AND wo.scheduled_date <= ? ");
+			sql.append("AND (wo.scheduled_date <= ? OR wo.scheduled_date IS NULL) ");
 		}
 		if (keyword != null && !keyword.isEmpty()) {
 			sql.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?)) ");
@@ -159,16 +185,21 @@ public class TaskDAO extends DBConnect {
 			java.sql.Date scheduledTo,
 			String keyword
 	) {
+		if (!checkConnection()) {
+			return 0;
+		}
+		
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT COUNT(*) AS cnt ");
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
-		sql.append("WHERE ta.user_id = ? ");
+		sql.append("WHERE ta.user_id = ? AND ta.role = 'assignee' ");
 		if (status != null && !status.isEmpty()) sql.append("AND t.status = ? ");
 		if (priority != null && !priority.isEmpty()) sql.append("AND t.priority = ? ");
-		if (scheduledFrom != null) sql.append("AND wo.scheduled_date >= ? ");
-		if (scheduledTo != null) sql.append("AND wo.scheduled_date <= ? ");
+		// Xử lý scheduled_date NULL: Nếu có filter, vẫn hiển thị task nếu scheduled_date là NULL
+		if (scheduledFrom != null) sql.append("AND (wo.scheduled_date >= ? OR wo.scheduled_date IS NULL) ");
+		if (scheduledTo != null) sql.append("AND (wo.scheduled_date <= ? OR wo.scheduled_date IS NULL) ");
 		if (keyword != null && !keyword.isEmpty()) {
 			sql.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?)) ");
 		}
@@ -184,10 +215,23 @@ public class TaskDAO extends DBConnect {
 			ps.setString(idx++, like);
 			ps.setString(idx++, like);
 		}
+		
+		// Debug logging
+		System.out.println("=== TaskDAO.countAssignmentsForUser DEBUG ===");
+		System.out.println("SQL: " + sql.toString());
+		System.out.println("Parameters: userId=" + userId + ", status=" + status + 
+			", priority=" + priority + ", scheduledFrom=" + scheduledFrom + 
+			", scheduledTo=" + scheduledTo + ", keyword=" + keyword);
+		
 		try (ResultSet rs = ps.executeQuery()) {
-			if (rs.next()) return rs.getInt("cnt");
+			if (rs.next()) {
+				int count = rs.getInt("cnt");
+				System.out.println("Count result: " + count);
+				return count;
+			}
 			}
 		} catch (SQLException e) {
+			System.err.println("ERROR in countAssignmentsForUser: " + e.getMessage());
 			e.printStackTrace();
 		}
 		return 0;
@@ -203,6 +247,10 @@ public class TaskDAO extends DBConnect {
 			int limit,
 			int offset
 	) {
+		if (!checkConnection()) {
+			return new ArrayList<>();
+		}
+		
 		List<TaskAssignment> results = new ArrayList<>();
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
@@ -218,11 +266,12 @@ public class TaskDAO extends DBConnect {
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
-		sql.append("WHERE ta.user_id = ? ");
+		sql.append("WHERE ta.user_id = ? AND ta.role = 'assignee' ");
 		if (status != null && !status.isEmpty()) sql.append("AND t.status = ? ");
 		if (priority != null && !priority.isEmpty()) sql.append("AND t.priority = ? ");
-		if (scheduledFrom != null) sql.append("AND wo.scheduled_date >= ? ");
-		if (scheduledTo != null) sql.append("AND wo.scheduled_date <= ? ");
+		// Xử lý scheduled_date NULL: Nếu có filter, chỉ lọc khi scheduled_date không phải NULL
+		if (scheduledFrom != null) sql.append("AND (wo.scheduled_date >= ? OR wo.scheduled_date IS NULL) ");
+		if (scheduledTo != null) sql.append("AND (wo.scheduled_date <= ? OR wo.scheduled_date IS NULL) ");
 		if (keyword != null && !keyword.isEmpty()) {
 			sql.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?)) ");
 		}
@@ -243,8 +292,18 @@ public class TaskDAO extends DBConnect {
 		}
 		ps.setInt(idx++, limit);
 		ps.setInt(idx, offset);
+		
+		// Debug logging
+		System.out.println("=== TaskDAO.getAssignmentsForUserPaged DEBUG ===");
+		System.out.println("SQL: " + sql.toString());
+		System.out.println("Parameters: userId=" + userId + ", status=" + status + ", priority=" + priority + 
+			", scheduledFrom=" + scheduledFrom + ", scheduledTo=" + scheduledTo + ", keyword=" + keyword + 
+			", limit=" + limit + ", offset=" + offset);
+		
 			try (ResultSet rs = ps.executeQuery()) {
+				int count = 0;
 				while (rs.next()) {
+					count++;
 					TaskAssignment a = new TaskAssignment();
 					a.setId(rs.getInt("id"));
 					a.setTaskId(rs.getInt("task_id"));
@@ -264,9 +323,18 @@ public class TaskDAO extends DBConnect {
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));
 					results.add(a);
+					
+					// Debug: log first task
+					if (count == 1) {
+						System.out.println("First task found: task_id=" + a.getTaskId() + 
+							", task_number=" + a.getTaskNumber() + ", user_id=" + a.getUserId() + 
+							", role=" + a.getRole());
+					}
 				}
+				System.out.println("Total tasks found: " + count);
 			}
 		} catch (SQLException e) {
+			System.err.println("ERROR in getAssignmentsForUserPaged: " + e.getMessage());
 			e.printStackTrace();
 		}
 		return results;
@@ -302,7 +370,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("FROM task_assignments ta ");
 		sql.append("JOIN tasks t ON ta.task_id = t.id ");
 		sql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
-		sql.append("WHERE ta.task_id = ? AND ta.user_id = ? ");
+		sql.append("WHERE ta.task_id = ? AND ta.user_id = ? AND ta.role = 'assignee' ");
 		sql.append("LIMIT 1");
 
 		try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {

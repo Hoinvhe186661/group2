@@ -674,25 +674,28 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Giờ ước tính:</label>
                             <div class="col-sm-3">
-                                <input type="number" class="form-control" id="detail_estimated_hours" step="0.1" min="0.1" max="100">
-                                <small class="help-block">Tối thiểu: 0.1h, Tối đa: 100h</small>
+                                <input type="number" class="form-control" id="detail_estimated_hours" step="0.1" min="0.1" max="100" readonly>
+                                <small class="help-block">Tối thiểu: 0.1h, Tối đa: 100h (Không thể chỉnh sửa)</small>
                             </div>
                             
                             <label class="col-sm-3 control-label">Giờ thực tế:</label>
                             <div class="col-sm-3">
-                                <input type="number" class="form-control" id="detail_actual_hours" step="0.1" min="0">
+                                <input type="number" class="form-control" id="detail_actual_hours" step="0.1" min="0" readonly>
+                                <small class="help-block">Tự động tính từ tổng giờ thực tế của các task</small>
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Ngày lên lịch:</label>
                             <div class="col-sm-3">
-                                <input type="date" class="form-control" id="detail_scheduled_date">
+                                <input type="date" class="form-control" id="detail_scheduled_date" readonly>
+                                <small class="help-block">Trùng với ngày tạo (Không thể chỉnh sửa)</small>
                             </div>
                             
                             <label class="col-sm-3 control-label">Ngày hoàn thành:</label>
                             <div class="col-sm-3">
                                 <input type="date" class="form-control" id="detail_completion_date">
+                                <small class="help-block text-muted" id="completionDateHelp"></small>
                             </div>
                         </div>
                     </form>
@@ -778,6 +781,16 @@
                         <div class="box-header">
                             <h3 class="box-title">Danh sách công việc</h3>
                             <div class="box-tools pull-right">
+                                <%
+                                    // Chỉ hiển thị nút fix assignments cho admin hoặc head_technician
+                                    if ("admin".equals(userRole) || "head_technician".equals(userRole)) {
+                                %>
+                                <button type="button" class="btn btn-sm btn-warning" id="fixAssignmentsBtn" title="Sửa các task assignments có role không đúng">
+                                    <i class="fa fa-wrench"></i> Sửa Assignments
+                                </button>
+                                <%
+                                    }
+                                %>
                                 <button type="button" class="btn btn-sm btn-default" id="btnResetTaskFilter" title="Đặt lại bộ lọc">
                                     <i class="fa fa-refresh"></i>
                                 </button>
@@ -829,6 +842,7 @@
                                         <th style="width: 80px;">Mã</th>
                                         <th>Mô tả</th>
                                         <th style="width: 100px;">Độ ưu tiên</th>
+                                        <th style="width: 100px;">Giờ ước tính</th>
                                         <th style="width: 100px;">Trạng thái</th>
                                         <th style="width: 100px;">Phân công</th>
                                         <th style="width: 200px;">Lý do từ chối</th>
@@ -837,7 +851,7 @@
                                 </thead>
                                 <tbody id="tasksTableBody">
                                     <tr>
-                                        <td colspan="7" class="text-center">Đang tải...</td>
+                                        <td colspan="8" class="text-center">Đang tải...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -992,6 +1006,84 @@
             });
             
             // Real-time validation for estimated hours (task)
+            // Validate estimated hours against total tasks estimated hours
+            $(document).on('input blur', '#taskEstimatedHours', function() {
+                var workOrderId = $('#assign_work_order_id').val();
+                var estimatedHours = $(this).val();
+                
+                if (!estimatedHours || estimatedHours.trim() === '') {
+                    return;
+                }
+                
+                var hoursValue = parseFloat(estimatedHours);
+                if (isNaN(hoursValue) || hoursValue <= 0) {
+                    return;
+                }
+                
+                // Check total estimated hours
+                var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+                if (workOrder && workOrder.estimatedHours) {
+                    var workOrderHours = parseFloat(workOrder.estimatedHours);
+                    if (!isNaN(workOrderHours) && workOrderHours > 0) {
+                        // Load current tasks to calculate total
+                        $.ajax({
+                            url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
+                            type: 'GET',
+                            dataType: 'json',
+                            success: function(response) {
+                                if (response && response.success && response.data) {
+                                    var tasks = response.data;
+                                    var totalEstimatedHours = 0;
+                                    tasks.forEach(function(task) {
+                                        // Không tính các task có status = 'rejected' vào tổng giờ ước tính
+                                        if (task.status !== 'rejected' && task.estimatedHours && !isNaN(parseFloat(task.estimatedHours))) {
+                                            totalEstimatedHours += parseFloat(task.estimatedHours);
+                                        }
+                                    });
+                                    
+                                    // Add new task estimated hours
+                                    var newTotal = totalEstimatedHours + hoursValue;
+                                    var remaining = workOrderHours - totalEstimatedHours;
+                                    
+                                    // Show warning if exceeds
+                                    var helpBlock = $('#taskEstimatedHours').next('.help-block');
+                                    if (newTotal > workOrderHours) {
+                                        if (remaining <= 0) {
+                                            var warningMsg = '<span class="text-danger"><i class="fa fa-warning"></i> Tổng giờ ước tính của các công việc hiện tại (' + 
+                                                totalEstimatedHours.toFixed(1) + 'h) đã đạt giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h).</span>';
+                                            if (helpBlock.length) {
+                                                helpBlock.html(warningMsg);
+                                            } else {
+                                                $('#taskEstimatedHours').after('<small class="help-block">' + warningMsg + '</small>');
+                                            }
+                                        } else {
+                                            var warningMsg = '<span class="text-danger"><i class="fa fa-warning"></i> Nếu tạo công việc này, tổng sẽ là ' + 
+                                                newTotal.toFixed(1) + 'h, vượt quá giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h). Còn lại: ' + 
+                                                remaining.toFixed(1) + 'h.</span>';
+                                            if (helpBlock.length) {
+                                                helpBlock.html(warningMsg);
+                                            } else {
+                                                $('#taskEstimatedHours').after('<small class="help-block">' + warningMsg + '</small>');
+                                            }
+                                        }
+                                    } else {
+                                        // Update help text with remaining hours
+                                        var helpText = 'Tối thiểu: 0.1h, Tối đa: ' + workOrderHours.toFixed(1) + 'h (giờ ước tính của đơn hàng). ';
+                                        helpText += 'Đã sử dụng: ' + totalEstimatedHours.toFixed(1) + 'h, Còn lại: ' + (workOrderHours - totalEstimatedHours).toFixed(1) + 'h';
+                                        if (helpBlock.length) {
+                                            helpBlock.html(helpText);
+                                        }
+                                    }
+                                }
+                            },
+                            error: function() {
+                                // Ignore error, just use basic validation
+                            }
+                        });
+                    }
+                }
+            });
+            
             $(document).on('input', '#taskEstimatedHours', function() {
                 var value = $(this).val();
                 if (value && value.trim() !== '') {
@@ -1084,7 +1176,6 @@
                 }
             });
             
-            // Load task count when user is selected
             $(document).on('change', '#assign_user_id', function() {
                 var userId = $(this).val();
                 if(userId && userId !== '') {
@@ -1532,9 +1623,73 @@
             $('#detail_status').val(workOrder.status || 'pending');
             $('#detail_created').text(formatDate(workOrder.createdAt));
             $('#detail_estimated_hours').val(workOrder.estimatedHours || '');
-            $('#detail_actual_hours').val(workOrder.actualHours || '');
-            $('#detail_scheduled_date').val(workOrder.scheduledDate || '');
+            
+            // Tính actualHours từ tổng actualHours của các tasks
+            calculateAndUpdateActualHours(id);
+            
+            // Set scheduledDate từ createdAt nếu chưa có
+            if (workOrder.scheduledDate) {
+                $('#detail_scheduled_date').val(workOrder.scheduledDate);
+            } else if (workOrder.createdAt) {
+                // Format createdAt thành date string (YYYY-MM-DD)
+                var createdDate = new Date(workOrder.createdAt);
+                var year = createdDate.getFullYear();
+                var month = String(createdDate.getMonth() + 1).padStart(2, '0');
+                var day = String(createdDate.getDate()).padStart(2, '0');
+                $('#detail_scheduled_date').val(year + '-' + month + '-' + day);
+            } else {
+                $('#detail_scheduled_date').val('');
+            }
+            
             $('#detail_completion_date').val(workOrder.completionDate || '');
+            
+            // Set min date cho completion_date = scheduled_date (không cho chọn trước ngày lên lịch)
+            var scheduledDate = $('#detail_scheduled_date').val();
+            if (scheduledDate) {
+                $('#detail_completion_date').attr('min', scheduledDate);
+                
+                // Format scheduledDate để hiển thị trong help text
+                var scheduledDateObj = new Date(scheduledDate);
+                var day = String(scheduledDateObj.getDate()).padStart(2, '0');
+                var month = String(scheduledDateObj.getMonth() + 1).padStart(2, '0');
+                var year = scheduledDateObj.getFullYear();
+                var scheduledDateStr = day + '/' + month + '/' + year;
+                $('#completionDateHelp').text('Ngày hoàn thành phải từ ngày ' + scheduledDateStr + ' trở đi');
+            } else {
+                $('#detail_completion_date').removeAttr('min');
+                $('#completionDateHelp').text('');
+            }
+            
+            // Validate khi user thay đổi completion date
+            $('#detail_completion_date').off('change.completionDateValidation').on('change.completionDateValidation', function() {
+                var completionDate = $(this).val();
+                var scheduledDate = $('#detail_scheduled_date').val();
+                
+                if (completionDate && scheduledDate) {
+                    var completionDateObj = new Date(completionDate);
+                    var scheduledDateObj = new Date(scheduledDate);
+                    
+                    completionDateObj.setHours(0, 0, 0, 0);
+                    scheduledDateObj.setHours(0, 0, 0, 0);
+                    
+                    if (completionDateObj < scheduledDateObj) {
+                        var compDay = String(completionDateObj.getDate()).padStart(2, '0');
+                        var compMonth = String(completionDateObj.getMonth() + 1).padStart(2, '0');
+                        var compYear = completionDateObj.getFullYear();
+                        var schedDay = String(scheduledDateObj.getDate()).padStart(2, '0');
+                        var schedMonth = String(scheduledDateObj.getMonth() + 1).padStart(2, '0');
+                        var schedYear = scheduledDateObj.getFullYear();
+                        
+                        alert('✗ Lỗi: Ngày hoàn thành (' + compDay + '/' + compMonth + '/' + compYear + ') ' +
+                            'không được trước ngày lên lịch (' + schedDay + '/' + schedMonth + '/' + schedYear + ').\n\n' +
+                            'Vui lòng chọn ngày hoàn thành từ ngày lên lịch trở đi.');
+                        
+                        // Reset về giá trị hợp lệ hoặc rỗng
+                        $(this).val('');
+                        return;
+                    }
+                }
+            });
             
             // Load danh sách người đã được phân công từ các task
             loadAssignedUsers(id);
@@ -1542,7 +1697,76 @@
             // Check if work order can be closed and show/hide close button
             checkCanCloseWorkOrder(id);
             
+            // Disable form fields và nút lưu nếu work order đã đóng
+            var workOrderStatus = workOrder.status;
+            if (workOrderStatus === 'completed' || workOrderStatus === 'cancelled' || workOrderStatus === 'rejected') {
+                // Disable tất cả input fields trong modal (trừ các field đã readonly)
+                $('#workOrderDetailModal').find('input:not([readonly]), textarea:not([readonly]), select:not([disabled])').prop('readonly', true);
+                
+                // Ẩn nút "Lưu thay đổi"
+                $('#btnSaveWorkOrder').hide();
+                
+                // Hiển thị thông báo
+                var statusText = '';
+                if (workOrderStatus === 'completed') {
+                    statusText = 'Đã hoàn thành';
+                } else if (workOrderStatus === 'cancelled') {
+                    statusText = 'Đã hủy';
+                } else if (workOrderStatus === 'rejected') {
+                    statusText = 'Đã từ chối';
+                }
+                
+                // Xóa alert cũ nếu có và thêm alert mới
+                $('#workOrderDetailLockedAlert').remove();
+                $('#workOrderDetailModal .modal-body').first().prepend(
+                    '<div class="alert alert-warning" id="workOrderDetailLockedAlert" style="margin-bottom: 15px;">' +
+                    '<i class="fa fa-lock"></i> <strong>Đơn hàng ' + statusText + '.</strong> ' +
+                    'Không thể chỉnh sửa thông tin đơn hàng này.' +
+                    '</div>'
+                );
+            } else {
+                // Enable tất cả input fields
+                $('#workOrderDetailModal').find('input[readonly], textarea[readonly]').not('#detail_scheduled_date, #detail_estimated_hours, #detail_actual_hours, #detail_assigned_to').prop('readonly', false);
+                
+                // Hiển thị nút "Lưu thay đổi"
+                $('#btnSaveWorkOrder').show();
+                
+                // Ẩn alert nếu có
+                $('#workOrderDetailLockedAlert').remove();
+            }
+            
             $('#workOrderDetailModal').modal('show');
+        }
+        
+        // Function to calculate actualHours from tasks
+        function calculateAndUpdateActualHours(workOrderId) {
+            $.ajax({
+                url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var tasks = response.data;
+                        var totalActualHours = 0;
+                        
+                        tasks.forEach(function(task) {
+                            if (task.actualHours && !isNaN(parseFloat(task.actualHours))) {
+                                totalActualHours += parseFloat(task.actualHours);
+                            }
+                        });
+                        
+                        // Update actualHours field
+                        if (totalActualHours > 0) {
+                            $('#detail_actual_hours').val(totalActualHours.toFixed(2));
+                        } else {
+                            $('#detail_actual_hours').val('');
+                        }
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log('Error calculating actual hours:', error);
+                }
+            });
         }
         
         function checkCanCloseWorkOrder(workOrderId) {
@@ -1640,33 +1864,64 @@
         function saveWorkOrderChanges() {
             var id = $('#detail_work_order_id').val();
             
-            // Validate estimated hours
-            var estimatedHours = $('#detail_estimated_hours').val();
-            if (estimatedHours && estimatedHours.trim() !== '') {
-                var hoursValue = parseFloat(estimatedHours);
-                if (isNaN(hoursValue)) {
-                    alert('Lỗi: Giờ ước tính không hợp lệ. Vui lòng nhập số.');
-                    $('#detail_estimated_hours').focus();
-                    return;
-                }
-                if (hoursValue <= 0) {
-                    alert('Lỗi: Giờ ước tính phải lớn hơn 0. Vui lòng nhập giá trị hợp lệ.');
-                    $('#detail_estimated_hours').focus();
-                    return;
-                }
-                if (hoursValue > 100) {
-                    alert('Lỗi: Giờ ước tính không được vượt quá 100 giờ. Vui lòng nhập giá trị nhỏ hơn.');
-                    $('#detail_estimated_hours').focus();
+            // Kiểm tra nếu work order đã đóng (completed, cancelled, rejected) thì không cho phép lưu thay đổi
+            var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
+            if (workOrder) {
+                var status = workOrder.status;
+                if (status === 'completed' || status === 'cancelled' || status === 'rejected') {
+                    var statusText = '';
+                    if (status === 'completed') {
+                        statusText = 'hoàn thành';
+                    } else if (status === 'cancelled') {
+                        statusText = 'hủy';
+                    } else if (status === 'rejected') {
+                        statusText = 'từ chối';
+                    }
+                    alert('✗ Không thể lưu thay đổi!\n\n' +
+                        'Đơn hàng này đã ' + statusText + ' và không thể chỉnh sửa nữa.\n\n' +
+                        'Vui lòng kiểm tra lại trạng thái đơn hàng.');
                     return;
                 }
             }
             
+            // Validate completion date không được trước scheduled date
+            var completionDate = $('#detail_completion_date').val();
+            var scheduledDate = $('#detail_scheduled_date').val();
+            
+            if (completionDate && scheduledDate) {
+                var completionDateObj = new Date(completionDate);
+                var scheduledDateObj = new Date(scheduledDate);
+                
+                // Reset time to compare dates only
+                completionDateObj.setHours(0, 0, 0, 0);
+                scheduledDateObj.setHours(0, 0, 0, 0);
+                
+                if (completionDateObj < scheduledDateObj) {
+                    // Format dates for display
+                    var compDay = String(completionDateObj.getDate()).padStart(2, '0');
+                    var compMonth = String(completionDateObj.getMonth() + 1).padStart(2, '0');
+                    var compYear = completionDateObj.getFullYear();
+                    var schedDay = String(scheduledDateObj.getDate()).padStart(2, '0');
+                    var schedMonth = String(scheduledDateObj.getMonth() + 1).padStart(2, '0');
+                    var schedYear = scheduledDateObj.getFullYear();
+                    
+                    alert('✗ Lỗi: Ngày hoàn thành (' + compDay + '/' + compMonth + '/' + compYear + ') ' +
+                        'không được trước ngày lên lịch (' + schedDay + '/' + schedMonth + '/' + schedYear + ').\n\n' +
+                        'Vui lòng chọn ngày hoàn thành từ ngày lên lịch trở đi.');
+                    $('#detail_completion_date').focus();
+                    return;
+                }
+            }
+            
+            // Không cần validate estimatedHours vì không cho phép sửa
+            // Không cần gửi estimatedHours, actualHours, scheduledDate vì:
+            // - estimatedHours: không cho phép sửa
+            // - actualHours: tự động tính từ tasks ở server
+            // - scheduledDate: không cho phép sửa (trùng với createdAt)
+            
             var data = {
                 action: 'update',
                 id: id,
-                estimatedHours: estimatedHours && estimatedHours.trim() !== '' ? estimatedHours : null,
-                actualHours: $('#detail_actual_hours').val(),
-                scheduledDate: $('#detail_scheduled_date').val(),
                 completionDate: $('#detail_completion_date').val()
             };
             
@@ -1692,6 +1947,35 @@
         
         function closeWorkOrder() {
             var id = $('#detail_work_order_id').val();
+            
+            // Validate completion date không được trước scheduled date
+            var completionDate = $('#detail_completion_date').val();
+            var scheduledDate = $('#detail_scheduled_date').val();
+            
+            if (completionDate && scheduledDate) {
+                var completionDateObj = new Date(completionDate);
+                var scheduledDateObj = new Date(scheduledDate);
+                
+                // Reset time to compare dates only
+                completionDateObj.setHours(0, 0, 0, 0);
+                scheduledDateObj.setHours(0, 0, 0, 0);
+                
+                if (completionDateObj < scheduledDateObj) {
+                    // Format dates for display
+                    var compDay = String(completionDateObj.getDate()).padStart(2, '0');
+                    var compMonth = String(completionDateObj.getMonth() + 1).padStart(2, '0');
+                    var compYear = completionDateObj.getFullYear();
+                    var schedDay = String(scheduledDateObj.getDate()).padStart(2, '0');
+                    var schedMonth = String(scheduledDateObj.getMonth() + 1).padStart(2, '0');
+                    var schedYear = scheduledDateObj.getFullYear();
+                    
+                    alert('✗ Lỗi: Ngày hoàn thành (' + compDay + '/' + compMonth + '/' + compYear + ') ' +
+                        'không được trước ngày lên lịch (' + schedDay + '/' + schedMonth + '/' + schedYear + ').\n\n' +
+                        'Vui lòng chọn ngày hoàn thành từ ngày lên lịch trở đi.');
+                    $('#detail_completion_date').focus();
+                    return;
+                }
+            }
             
             // Confirm before closing
             if(!confirm('Bạn có chắc chắn muốn đóng đơn hàng này?\n\n' +
@@ -1725,21 +2009,46 @@
                     }
                     
                     // If no active tasks, proceed to close
+                    // Send completion date from input (if set) to ensure validation
+                    var completionDateValue = $('#detail_completion_date').val();
+                    console.log('Closing work order with completionDate: ', completionDateValue);
+                    
                     $.ajax({
                         url: ctx + '/api/work-orders',
                         type: 'POST',
                         data: {
                             action: 'close',
-                            id: id
+                            id: id,
+                            completionDate: completionDateValue || ''
                         },
                         dataType: 'json',
                         success: function(response) {
                             if(response && response.success) {
                                 alert('✓ Đóng đơn hàng thành công!');
+                                
                                 // Update status in modal
                                 $('#detail_status').val('completed');
-                                // Hide close button
+                                
+                                // Update work order status in local array
+                                var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
+                                if (workOrder) {
+                                    workOrder.status = 'completed';
+                                }
+                                
+                                // Disable form và ẩn nút lưu
+                                $('#workOrderDetailModal').find('input:not([readonly]), textarea:not([readonly]), select:not([disabled])').prop('readonly', true);
+                                $('#btnSaveWorkOrder').hide();
                                 $('#btnCloseWorkOrder').hide();
+                                
+                                // Hiển thị alert
+                                $('#workOrderDetailLockedAlert').remove();
+                                $('#workOrderDetailModal .modal-body').first().prepend(
+                                    '<div class="alert alert-warning" id="workOrderDetailLockedAlert" style="margin-bottom: 15px;">' +
+                                    '<i class="fa fa-lock"></i> <strong>Đơn hàng Đã hoàn thành.</strong> ' +
+                                    'Không thể chỉnh sửa thông tin đơn hàng này.' +
+                                    '</div>'
+                                );
+                                
                                 // Reload work orders list
                                 loadWorkOrders();
                             } else {
@@ -1794,6 +2103,61 @@
         }
         
         // Functions for task management
+        
+        /**
+         * Load available users for task assignment (exclude users đã từ chối task)
+         */
+        function loadAvailableUsersForTaskAssignment(taskId) {
+            var url = ctx + '/api/work-order-tasks?action=getAvailableUsers';
+            if (taskId && taskId > 0) {
+                url += '&taskId=' + taskId;
+            }
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success && response.data) {
+                        var select = $('#assign_user_id');
+                        select.empty();
+                        select.append('<option value="">Chọn nhân viên...</option>');
+                        
+                        response.data.forEach(function(user) {
+                            select.append('<option value="' + user.id + '">' + user.fullName + '</option>');
+                        });
+                        
+                        if (response.excludedCount && response.excludedCount > 0) {
+                            console.log('Đã loại bỏ ' + response.excludedCount + ' nhân viên đã từ chối task này');
+                        }
+                    } else {
+                        // Fallback: load all technical staff nếu API fail
+                        console.warn('Không thể load available users, sử dụng danh sách tất cả technical staff');
+                        var select = $('#assign_user_id');
+                        select.empty();
+                        select.append('<option value="">Chọn nhân viên...</option>');
+                        if (typeof technicalStaff !== 'undefined' && technicalStaff.length > 0) {
+                            technicalStaff.forEach(function(staff) {
+                                select.append('<option value="' + staff.id + '">' + staff.fullName + '</option>');
+                            });
+                        }
+                    }
+                },
+                error: function() {
+                    // Fallback: load all technical staff nếu API fail
+                    console.warn('Error loading available users, sử dụng danh sách tất cả technical staff');
+                    var select = $('#assign_user_id');
+                    select.empty();
+                    select.append('<option value="">Chọn nhân viên...</option>');
+                    if (typeof technicalStaff !== 'undefined' && technicalStaff.length > 0) {
+                        technicalStaff.forEach(function(staff) {
+                            select.append('<option value="' + staff.id + '">' + staff.fullName + '</option>');
+                        });
+                    }
+                }
+            });
+        }
+        
         function openAssignTaskModal(workOrderId) {
             $('#assign_work_order_id').val(workOrderId);
             // Reset filters when opening modal
@@ -1827,15 +2191,25 @@
                     }
                 }
                 
-                if (status === 'completed' || status === 'cancelled') {
+                if (status === 'completed' || status === 'cancelled' || status === 'rejected') {
                     // Show alert and disable form
-                    var statusText = status === 'completed' ? 'hoàn thành' : 'hủy';
-                    var statusLabel = status === 'completed' ? 'Đã hoàn thành' : 'Đã hủy';
+                    var statusText = '';
+                    var statusLabel = '';
+                    if (status === 'completed') {
+                        statusText = 'hoàn thành';
+                        statusLabel = 'Đã hoàn thành';
+                    } else if (status === 'cancelled') {
+                        statusText = 'hủy';
+                        statusLabel = 'Đã hủy';
+                    } else if (status === 'rejected') {
+                        statusText = 'từ chối';
+                        statusLabel = 'Đã từ chối';
+                    }
                     
                     $('#workOrderClosedAlert').show();
                     $('#workOrderClosedMessage').html(
                         '<strong>Đơn hàng này đã ' + statusText + '.</strong><br>' +
-                        'Không thể tạo thêm công việc mới cho đơn hàng đã đóng.<br>' +
+                        'Không thể tạo thêm công việc mới cho đơn hàng đã ' + statusText + '.<br>' +
                         '<small class="text-muted">Trạng thái: <span class="label label-warning">' + statusLabel + '</span></small>'
                     );
                     
@@ -1861,9 +2235,16 @@
             
             $('#assignTaskModal').modal('show');
             loadTasks(workOrderId);
+            // Load users for assignment dropdown
+            loadUsersForTaskAssignment(workOrderId);
         }
         
         function loadTasks(workOrderId) {
+            // Tính lại actualHours khi load tasks (nếu đang xem chi tiết work order)
+            if ($('#detail_work_order_id').val() == workOrderId) {
+                calculateAndUpdateActualHours(workOrderId);
+            }
+            
             var priority = $('#filterTaskPriority').val() || '';
             var status = $('#filterTaskStatus').val() || '';
             
@@ -1883,11 +2264,11 @@
                     if(response && response.success) {
                         renderTasksTable(response.data);
                     } else {
-                        $('#tasksTableBody').html('<tr><td colspan="7" class="text-center">Không có công việc nào</td></tr>');
+                        $('#tasksTableBody').html('<tr><td colspan="8" class="text-center">Không có công việc nào</td></tr>');
                     }
                 },
                 error: function() {
-                    $('#tasksTableBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>');
+                    $('#tasksTableBody').html('<tr><td colspan="8" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>');
                 }
             });
         }
@@ -1898,7 +2279,7 @@
             tbody.empty();
             
             if(!tasks || tasks.length === 0) {
-                tbody.append('<tr><td colspan="7" class="text-center">Chưa có công việc nào</td></tr>');
+                tbody.append('<tr><td colspan="8" class="text-center">Chưa có công việc nào</td></tr>');
                 return;
             }
             
@@ -1975,10 +2356,17 @@
                     '</button>';
                 }
                 
+                // Format giờ ước tính
+                var estimatedHoursDisplay = '-';
+                if (task.estimatedHours && parseFloat(task.estimatedHours) > 0) {
+                    estimatedHoursDisplay = '<strong>' + parseFloat(task.estimatedHours).toFixed(1) + 'h</strong>';
+                }
+                
                 var row = '<tr>' +
                     '<td><strong>' + (task.taskNumber || 'N/A') + '</strong></td>' +
                     '<td><span class="task-description-text" title="' + escapedTaskDesc + '" data-toggle="tooltip">' + taskDescDisplay + '</span></td>' +
                     '<td>' + getPriorityBadge(task.priority) + '</td>' +
+                    '<td class="text-center">' + estimatedHoursDisplay + '</td>' +
                     '<td>' + statusCell + '</td>' +
                     '<td>' + assignedBadge + '</td>' +
                     '<td>' + rejectionReasonCell + '</td>' +
@@ -2058,13 +2446,8 @@
                         $('#assign_task_description').text(taskDescription);
                         $('#assign_user_id').val('');
                         
-                        var select = $('#assign_user_id');
-                        select.empty();
-                        select.append('<option value="">Chọn nhân viên...</option>');
-                        
-                        technicalStaff.forEach(function(staff) {
-                            select.append('<option value="' + staff.id + '">' + staff.fullName + '</option>');
-                        });
+                        // Load available users (exclude users đã từ chối task này)
+                        loadAvailableUsersForTaskAssignment(taskId);
                         
                         // Hide task count info when modal opens
                         $('#userTaskCountInfo').hide();
@@ -2150,9 +2533,16 @@
             var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
             if (workOrder) {
                 var status = workOrder.status;
-                if (status === 'completed' || status === 'cancelled') {
-                    alert('Không thể tạo công việc mới cho đơn hàng đã ' + 
-                        (status === 'completed' ? 'hoàn thành' : 'hủy') + '.\n\n' +
+                if (status === 'completed' || status === 'cancelled' || status === 'rejected') {
+                    var statusText = '';
+                    if (status === 'completed') {
+                        statusText = 'hoàn thành';
+                    } else if (status === 'cancelled') {
+                        statusText = 'hủy';
+                    } else if (status === 'rejected') {
+                        statusText = 'từ chối';
+                    }
+                    alert('Không thể tạo công việc mới cho đơn hàng đã ' + statusText + '.\n\n' +
                         'Vui lòng kiểm tra lại trạng thái đơn hàng.');
                     return;
                 }
@@ -2189,15 +2579,60 @@
                     return;
                 }
                 
-                // Kiểm tra giờ ước tính của task không được vượt quá giờ ước tính của work order
+                // Kiểm tra tổng giờ ước tính của tất cả tasks (bao gồm task mới) không được vượt quá giờ ước tính của work order
                 var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
                 if (workOrder && workOrder.estimatedHours) {
                     var workOrderHours = parseFloat(workOrder.estimatedHours);
                     if (!isNaN(workOrderHours) && workOrderHours > 0) {
-                        if (hoursValue > workOrderHours) {
-                            alert('Lỗi: Giờ ước tính của công việc (' + hoursValue.toFixed(1) + 'h) không được vượt quá giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h).\n\nVui lòng nhập giá trị nhỏ hơn hoặc bằng ' + workOrderHours.toFixed(1) + ' giờ.');
-                            $('#taskEstimatedHours').focus();
-                            return;
+                        // Load current tasks to calculate total (synchronous call before submit)
+                        var totalEstimatedHours = 0;
+                        var tasksLoaded = false;
+                        
+                        $.ajax({
+                            url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
+                            type: 'GET',
+                            dataType: 'json',
+                            async: false, // Synchronous to validate before submit
+                            success: function(response) {
+                                if (response && response.success && response.data) {
+                                    var tasks = response.data;
+                                    tasks.forEach(function(task) {
+                                        // Không tính các task có status = 'rejected' vào tổng giờ ước tính
+                                        if (task.status !== 'rejected' && task.estimatedHours && !isNaN(parseFloat(task.estimatedHours))) {
+                                            totalEstimatedHours += parseFloat(task.estimatedHours);
+                                        }
+                                    });
+                                    tasksLoaded = true;
+                                }
+                            }
+                        });
+                        
+                        if (tasksLoaded) {
+                            // Calculate new total with new task
+                            var newTotal = totalEstimatedHours + hoursValue;
+                            var remaining = workOrderHours - totalEstimatedHours;
+                            
+                            if (newTotal > workOrderHours) {
+                                if (remaining <= 0) {
+                                    alert('Lỗi: Không thể tạo công việc mới.\n\n' +
+                                        'Tổng giờ ước tính của các công việc hiện tại (' + totalEstimatedHours.toFixed(1) + 
+                                        'h) đã đạt hoặc vượt quá giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h).');
+                                } else {
+                                    alert('Lỗi: Không thể tạo công việc mới.\n\n' +
+                                        'Nếu tạo công việc này (' + hoursValue.toFixed(1) + 'h), tổng giờ ước tính sẽ là ' + 
+                                        newTotal.toFixed(1) + 'h, vượt quá giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h).\n\n' +
+                                        'Còn lại: ' + remaining.toFixed(1) + 'h.');
+                                }
+                                $('#taskEstimatedHours').focus();
+                                return;
+                            }
+                        } else {
+                            // Fallback: Check if single task exceeds work order hours
+                            if (hoursValue > workOrderHours) {
+                                alert('Lỗi: Giờ ước tính của công việc (' + hoursValue.toFixed(1) + 'h) không được vượt quá giờ ước tính của đơn hàng (' + workOrderHours.toFixed(1) + 'h).');
+                                $('#taskEstimatedHours').focus();
+                                return;
+                            }
                         }
                     } else {
                         // Nếu work order không có giờ ước tính, kiểm tra max 100
@@ -2219,7 +2654,7 @@
             
             // Hide error message
             $('#taskDescriptionError').hide();
-
+            
             $.ajax({
                 url: ctx + '/api/work-order-tasks?action=create',
                 type: 'POST',
@@ -2232,7 +2667,8 @@
                 dataType: 'json',
                 success: function(response) {
                     if(response && response.success) {
-                        alert('Thêm công việc thành công!');
+                        var message = response.message || 'Thêm công việc thành công!';
+                        alert(message);
                         $('#addTaskForm')[0].reset();
                         $('#taskDescriptionCounter').text('0');
                         $('#taskDescriptionError').hide();
@@ -2569,6 +3005,39 @@
                 return dateStr;
             }
         }
+        // Fix task assignments button click handler
+        $(document).on('click', '#fixAssignmentsBtn', function() {
+            if (!confirm('Bạn có chắc chắn muốn sửa tất cả task assignments có role không đúng? Hành động này sẽ cập nhật tất cả assignments có role NULL hoặc không phải "assignee" thành "assignee".')) {
+                return;
+            }
+            
+            $.ajax({
+                url: ctx + '/api/work-order-tasks?action=fixAssignments',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success) {
+                        alert(response.message || 'Đã sửa ' + (response.fixedCount || 0) + ' task assignment(s) thành công!');
+                        // Reload tasks nếu đang xem chi tiết work order
+                        var currentWorkOrderId = $('#detail_work_order_id').val();
+                        if (currentWorkOrderId) {
+                            loadTasks(currentWorkOrderId);
+                            viewWorkOrderDetail(currentWorkOrderId);
+                        }
+                    } else {
+                        alert('Lỗi: ' + (response.message || 'Không thể sửa task assignments'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error fixing assignments:', error);
+                    var errorMsg = 'Lỗi khi sửa task assignments';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    alert(errorMsg);
+                }
+            });
+        });
     </script>
 </body>
 </html>

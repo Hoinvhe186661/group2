@@ -439,12 +439,14 @@ public class WorkOrderTaskDAO extends DBConnect {
                 }
                 
                 // Assign the new task to the new user
+                // Đảm bảo role luôn là 'assignee'
+                String finalRole = (role != null && !role.isEmpty()) ? role : "assignee";
                 String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
                              "VALUES (?, ?, ?)";
                 try (PreparedStatement ps = connection.prepareStatement(sql)) {
                     ps.setInt(1, newTaskId);
                     ps.setInt(2, userId);
-                    ps.setString(3, role);
+                    ps.setString(3, finalRole);
                     ps.executeUpdate();
                 }
                 
@@ -468,6 +470,8 @@ public class WorkOrderTaskDAO extends DBConnect {
             }
             
             // If task doesn't have assignment yet, or assigning to same user, proceed with normal assignment
+            // Đảm bảo role luôn là 'assignee' khi assign task
+            String finalRole = (role != null && !role.isEmpty()) ? role : "assignee";
             String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
                          "VALUES (?, ?, ?) " +
                          "ON DUPLICATE KEY UPDATE role = VALUES(role)";
@@ -475,7 +479,7 @@ public class WorkOrderTaskDAO extends DBConnect {
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, taskId);
                 ps.setInt(2, userId);
-                ps.setString(3, role);
+                ps.setString(3, finalRole);
                 ps.executeUpdate();
             }
             
@@ -706,6 +710,91 @@ public class WorkOrderTaskDAO extends DBConnect {
     }
     
     /**
+     * Get total actual hours from all tasks for a work order
+     * Returns sum of actual_hours from all tasks that have actual_hours not null
+     */
+    public BigDecimal getTotalActualHoursForWorkOrder(int workOrderId) {
+        if (!checkConnection()) {
+            return BigDecimal.ZERO;
+        }
+
+        String sql = "SELECT COALESCE(SUM(actual_hours), 0) as total_hours " +
+                     "FROM tasks " +
+                     "WHERE work_order_id = ? AND actual_hours IS NOT NULL";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    BigDecimal total = rs.getBigDecimal("total_hours");
+                    return total != null ? total : BigDecimal.ZERO;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting total actual hours for work order: " + workOrderId, e);
+        }
+        return BigDecimal.ZERO;
+    }
+    
+    /**
+     * Get total estimated hours from all tasks for a work order
+     * Returns sum of estimated_hours from all tasks that have estimated_hours not null
+     */
+    public BigDecimal getTotalEstimatedHoursForWorkOrder(int workOrderId) {
+        if (!checkConnection()) {
+            return BigDecimal.ZERO;
+        }
+
+        // Không tính các task có status = 'rejected' vào tổng giờ ước tính
+        String sql = "SELECT COALESCE(SUM(estimated_hours), 0) as total_hours " +
+                     "FROM tasks " +
+                     "WHERE work_order_id = ? AND estimated_hours IS NOT NULL AND status != 'rejected'";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    BigDecimal total = rs.getBigDecimal("total_hours");
+                    return total != null ? total : BigDecimal.ZERO;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting total estimated hours for work order: " + workOrderId, e);
+        }
+        return BigDecimal.ZERO;
+    }
+    
+    /**
+     * Get total estimated hours for work order excluding a specific task (for update validation)
+     * Excludes tasks with status = 'rejected' and the specified taskId
+     */
+    public BigDecimal getTotalEstimatedHoursForWorkOrderExcludingTask(int workOrderId, int excludeTaskId) {
+        if (!checkConnection()) {
+            return BigDecimal.ZERO;
+        }
+
+        // Không tính các task có status = 'rejected' và task đang được update vào tổng giờ ước tính
+        String sql = "SELECT COALESCE(SUM(estimated_hours), 0) as total_hours " +
+                     "FROM tasks " +
+                     "WHERE work_order_id = ? AND estimated_hours IS NOT NULL " +
+                     "AND status != 'rejected' AND id != ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            ps.setInt(2, excludeTaskId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    BigDecimal total = rs.getBigDecimal("total_hours");
+                    return total != null ? total : BigDecimal.ZERO;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting total estimated hours for work order excluding task: " + workOrderId + ", excludeTaskId: " + excludeTaskId, e);
+        }
+        return BigDecimal.ZERO;
+    }
+    
+    /**
      * Check if a task with the same description and assigned user already exists in the work order 
      * with pending or in_progress status
      * Returns true if duplicate task exists (pending or in_progress) with same description and user, false otherwise
@@ -799,6 +888,119 @@ public class WorkOrderTaskDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error getting duplicate task status with user", e);
         }
         return null;
+    }
+    
+    /**
+     * Fix task assignments: Update all task_assignments with NULL or wrong role to 'assignee'
+     * Returns the number of fixed records
+     */
+    public int fixTaskAssignmentsRole() {
+        if (!checkConnection()) {
+            return 0;
+        }
+        
+        try {
+            // Update assignments with NULL or empty role to 'assignee'
+            String sql = "UPDATE task_assignments SET role = 'assignee' " +
+                         "WHERE role IS NULL OR role = '' OR role != 'assignee'";
+            
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                int updatedRows = ps.executeUpdate();
+                logger.info("Fixed " + updatedRows + " task assignments with wrong role");
+                return updatedRows;
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error fixing task assignments role", e);
+            return 0;
+        }
+    }
+    
+    /**
+     * Assign task directly to user without complex logic
+     * Used when creating a new task and assigning immediately
+     * Returns true if successful, false otherwise
+     */
+    public boolean assignTaskDirectly(int taskId, int userId, String role) {
+        if (!checkConnection()) {
+            return false;
+        }
+        
+        // Đảm bảo role luôn là 'assignee'
+        String finalRole = (role != null && !role.isEmpty()) ? role : "assignee";
+        
+        try {
+            // Kiểm tra xem task đã có assignment với role='assignee' chưa
+            int existingAssignedUserId = getAssignedUserId(taskId);
+            if (existingAssignedUserId > 0 && existingAssignedUserId != userId) {
+                // Task đã có assignment cho user khác, không thể assign trực tiếp
+                logger.warning("Task " + taskId + " already assigned to user " + existingAssignedUserId);
+                return false;
+            }
+            
+            // Insert assignment với ON DUPLICATE KEY UPDATE để tránh lỗi nếu đã tồn tại
+            String sql = "INSERT INTO task_assignments (task_id, user_id, role) " +
+                         "VALUES (?, ?, ?) " +
+                         "ON DUPLICATE KEY UPDATE role = VALUES(role)";
+            
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, taskId);
+                ps.setInt(2, userId);
+                ps.setString(3, finalRole);
+                int rowsAffected = ps.executeUpdate();
+                
+                if (rowsAffected > 0) {
+                    logger.info("Successfully assigned task " + taskId + " to user " + userId + " with role " + finalRole);
+                    return true;
+                } else {
+                    logger.warning("Failed to assign task " + taskId + " to user " + userId);
+                    return false;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error assigning task directly: " + taskId + " to user " + userId, e);
+            return false;
+        }
+    }
+    
+    /**
+     * Lấy danh sách user_id đã từ chối task
+     * Logic: Lấy tất cả user_id đã từ chối task này (task có status = 'rejected' và có assignment)
+     * Returns list of user IDs who rejected this task
+     */
+    public List<Integer> getRejectedUserIdsForTask(int taskId) {
+        List<Integer> rejectedUserIds = new ArrayList<>();
+        if (!checkConnection()) {
+            return rejectedUserIds;
+        }
+        
+        // Lấy task info để biết work_order_id và task_description
+        WorkOrderTask task = getTaskById(taskId);
+        if (task == null) {
+            return rejectedUserIds;
+        }
+        
+        // Lấy danh sách user_id đã từ chối task này HOẶC các task khác với cùng description trong cùng work_order
+        // Nếu task có status = 'rejected', thì những user đã được assign là những user đã từ chối
+        String sql = "SELECT DISTINCT ta.user_id " +
+                     "FROM task_assignments ta " +
+                     "JOIN tasks t ON ta.task_id = t.id " +
+                     "WHERE t.work_order_id = ? " +
+                     "AND LOWER(TRIM(t.task_description)) = LOWER(TRIM(?)) " +
+                     "AND t.status = 'rejected' " +
+                     "AND ta.role = 'assignee'";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, task.getWorkOrderId());
+            ps.setString(2, task.getTaskDescription());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    rejectedUserIds.add(rs.getInt("user_id"));
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting rejected user IDs for task: " + taskId, e);
+        }
+        return rejectedUserIds;
     }
 }
 
