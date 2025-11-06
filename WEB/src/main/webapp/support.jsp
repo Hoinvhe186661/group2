@@ -1535,10 +1535,10 @@
       } catch(e) {}
       
       // Attach handlers for edit functionality
-      attachEditHandlers(ticketData.id, ticketData.status, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn);
+      attachEditHandlers(ticketData.id, ticketData.status, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn, vm);
       }
       
-      function attachEditHandlers(ticketId, ticketStatus, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn) {
+      function attachEditHandlers(ticketId, ticketStatus, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn, vm) {
       // Kiểm tra trạng thái để quyết định có cho phép chỉnh sửa không
       const finalStatus = cancelledItems.has(String(ticketId)) ? 'cancelled' : (ticketStatus || 'pending');
       const canEdit = finalStatus === 'pending' || finalStatus === 'open';
