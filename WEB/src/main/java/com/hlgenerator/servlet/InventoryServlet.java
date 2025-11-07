@@ -3,9 +3,11 @@ package com.hlgenerator.servlet;
 import com.hlgenerator.dao.InventoryDAO;
 import com.hlgenerator.dao.ProductDAO;
 import com.hlgenerator.dao.PriceHistoryDAO;
+import com.hlgenerator.dao.SupplierDAO;
 import com.hlgenerator.model.Inventory;
 import com.hlgenerator.model.StockHistory;
 import com.hlgenerator.model.Product;
+import com.hlgenerator.model.Supplier;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -22,6 +24,7 @@ public class InventoryServlet extends HttpServlet {
     private InventoryDAO inventoryDAO;
     private ProductDAO productDAO;
     private PriceHistoryDAO priceHistoryDAO;
+    private SupplierDAO supplierDAO;
 
     @Override
     public void init() throws ServletException {
@@ -29,6 +32,7 @@ public class InventoryServlet extends HttpServlet {
         inventoryDAO = new InventoryDAO();
         productDAO = new ProductDAO();
         priceHistoryDAO = new PriceHistoryDAO();
+        supplierDAO = new SupplierDAO();
     }
 
     @Override
@@ -49,6 +53,8 @@ public class InventoryServlet extends HttpServlet {
             getInventoryDetail(request, response);
         } else if ("getStats".equals(action)) {
             getStatistics(request, response);
+        } else if ("getSuppliers".equals(action)) {
+            getSuppliersForDropdown(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
         }
@@ -251,6 +257,42 @@ public class InventoryServlet extends HttpServlet {
     }
     
     /**
+     * Lấy danh sách nhà cung cấp cho dropdown (chỉ lấy active)
+     */
+    private void getSuppliersForDropdown(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        try {
+            List<Supplier> suppliers = supplierDAO.getAllSuppliers();
+            
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":[");
+            
+            int count = 0;
+            for (Supplier s : suppliers) {
+                // Chỉ lấy nhà cung cấp active
+                if (s.getStatus() != null && "active".equals(s.getStatus())) {
+                    if (count > 0) json.append(",");
+                    json.append("{");
+                    json.append("\"id\":").append(s.getId()).append(",");
+                    json.append("\"supplierCode\":\"").append(escapeJson(s.getSupplierCode())).append("\",");
+                    json.append("\"companyName\":\"").append(escapeJson(s.getCompanyName())).append("\",");
+                    json.append("\"contactPerson\":\"").append(escapeJson(s.getContactPerson())).append("\"");
+                    json.append("}");
+                    count++;
+                }
+            }
+            
+            json.append("]}");
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + 
+                escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
      * Lấy lịch sử xuất nhập kho
      */
     private void getStockHistory(HttpServletRequest request, HttpServletResponse response) 
@@ -362,9 +404,27 @@ public class InventoryServlet extends HttpServlet {
             String referenceType = request.getParameter("referenceType");
             String referenceId = request.getParameter("referenceId");
             String notes = request.getParameter("notes");
+            @SuppressWarnings("unused")
+            String supplierId = request.getParameter("supplierId"); // Lưu để có thể validate sau này
+            String supplierName = request.getParameter("supplierName");
+            String receiptDate = request.getParameter("receiptDate");
             
             // Lấy danh sách sản phẩm (JSON array từ frontend)
             String productsJson = request.getParameter("products");
+            
+            // Tạo notes với thông tin nhà cung cấp nếu có
+            StringBuilder fullNotes = new StringBuilder();
+            if (supplierName != null && !supplierName.trim().isEmpty()) {
+                fullNotes.append("Nhà cung cấp: ").append(supplierName);
+                if (receiptDate != null && !receiptDate.trim().isEmpty()) {
+                    fullNotes.append(" | Ngày nhập: ").append(receiptDate);
+                }
+                if (notes != null && !notes.trim().isEmpty()) {
+                    fullNotes.append("\n").append(notes);
+                }
+            } else if (notes != null && !notes.trim().isEmpty()) {
+                fullNotes.append(notes);
+            }
             
             // Parse products JSON - simplified parsing
             // Format: [{"productId":1,"quantity":10,"unitCost":1000,"warehouse":"Main Warehouse"}, ...]
@@ -374,8 +434,9 @@ public class InventoryServlet extends HttpServlet {
             }
             
             // Validate ghi chú tối đa 150 từ (nếu có)
-            if (notes != null && !notes.trim().isEmpty()) {
-                int noteWords = countWords(notes);
+            String notesToValidate = fullNotes.length() > 0 ? fullNotes.toString() : notes;
+            if (notesToValidate != null && !notesToValidate.trim().isEmpty()) {
+                int noteWords = countWords(notesToValidate);
                 if (noteWords > 150) {
                     response.getWriter().write("{\"success\":false,\"message\":\"Ghi chú không được vượt quá 150 từ\"}");
                     return;
@@ -463,7 +524,7 @@ public class InventoryServlet extends HttpServlet {
                     }
                 }
                 history.setUnitCost(unitCost > 0 ? unitCost : null);
-                history.setNotes(notes);
+                history.setNotes(fullNotes.length() > 0 ? fullNotes.toString() : notes);
                 history.setCreatedBy(userId);
                 
                 inventoryDAO.addStockHistory(history);
@@ -524,7 +585,7 @@ public class InventoryServlet extends HttpServlet {
     }
     
     /**
-     * Xử lý xuất kho
+     * Xử lý xuất kho 
      */
     private void handleStockOut(HttpServletRequest request, HttpServletResponse response) 
             throws IOException {
@@ -538,7 +599,7 @@ public class InventoryServlet extends HttpServlet {
             String referenceId = request.getParameter("referenceId");
             String notes = request.getParameter("notes");
             
-            // Lấy danh sách sản phẩm
+            // Lấy danh sách sản phẩm (JSON array từ frontend)
             String productsJson = request.getParameter("products");
             
             if (productsJson == null || productsJson.trim().isEmpty()) {
@@ -546,14 +607,32 @@ public class InventoryServlet extends HttpServlet {
                 return;
             }
             
+            // Validate ghi chú tối đa 150 từ (nếu có)
+            if (notes != null && !notes.trim().isEmpty()) {
+                int noteWords = countWords(notes);
+                if (noteWords > 150) {
+                    response.getWriter().write("{\"success\":false,\"message\":\"Ghi chú không được vượt quá 150 từ\"}");
+                    return;
+                }
+            }
+            
             boolean allSuccess = true;
             StringBuilder errorMsg = new StringBuilder();
             
-            // Parse JSON
+            // Parse JSON - cải thiện parsing để xử lý đúng format JSON
+            productsJson = productsJson.trim();
+            if (!productsJson.startsWith("[")) {
+                response.getWriter().write("{\"success\":false,\"message\":\"Định dạng danh sách sản phẩm không hợp lệ\"}");
+                return;
+            }
+            
+            // Parse JSON array - xử lý đơn giản hóa
             String[] productEntries = productsJson.replace("[", "").replace("]", "").split("},\\{");
             
             for (String entry : productEntries) {
-                entry = entry.replace("{", "").replace("}", "");
+                entry = entry.replace("{", "").replace("}", "").trim();
+                if (entry.isEmpty()) continue;
+                
                 String[] fields = entry.split(",");
                 
                 int productId = 0;
@@ -564,20 +643,32 @@ public class InventoryServlet extends HttpServlet {
                 for (String field : fields) {
                     String[] kv = field.split(":");
                     if (kv.length == 2) {
-                        String key = kv[0].trim().replace("\"", "");
-                        String value = kv[1].trim().replace("\"", "");
+                        String key = kv[0].trim().replace("\"", "").replace("'", "");
+                        String value = kv[1].trim().replace("\"", "").replace("'", "");
                         
                         if ("productId".equals(key)) {
-                            productId = Integer.parseInt(value);
+                            try {
+                                productId = Integer.parseInt(value);
+                            } catch (NumberFormatException e) {
+                                errorMsg.append("ID sản phẩm không hợp lệ: ").append(value).append(". ");
+                                allSuccess = false;
+                                continue;
+                            }
                         } else if ("quantity".equals(key)) {
-                            quantity = Integer.parseInt(value);
+                            try {
+                                quantity = Integer.parseInt(value);
+                            } catch (NumberFormatException e) {
+                                errorMsg.append("Số lượng không hợp lệ: ").append(value).append(". ");
+                                allSuccess = false;
+                                continue;
+                            }
                         } else if ("warehouse".equals(key)) {
                             warehouse = value;
                         }
                     }
                 }
                 
-                // Validation
+                // Validation cơ bản
                 if (productId <= 0) {
                     errorMsg.append("ID sản phẩm không hợp lệ. ");
                     allSuccess = false;
@@ -590,11 +681,30 @@ public class InventoryServlet extends HttpServlet {
                     continue;
                 }
                 
+                // VALIDATION TỒN KHO Ở BACKEND - Kiểm tra tồn kho hiện tại
+                Inventory currentInventory = inventoryDAO.getInventoryByProductAndWarehouse(productId, warehouse);
+                if (currentInventory == null) {
+                    errorMsg.append("Sản phẩm ID ").append(productId).append(" không có trong kho ").append(warehouse).append(". ");
+                    allSuccess = false;
+                    continue;
+                }
+                
+                int currentStock = currentInventory.getCurrentStock();
+                if (quantity > currentStock) {
+                    errorMsg.append("Sản phẩm ID ").append(productId)
+                            .append(" (").append(currentInventory.getProductName()).append("): ")
+                            .append("Số lượng xuất (").append(quantity)
+                            .append(") vượt quá tồn kho hiện tại (").append(currentStock).append("). ");
+                    allSuccess = false;
+                    continue;
+                }
+                
                 // Trừ số lượng từ kho
                 boolean stockSubtracted = inventoryDAO.subtractStock(productId, warehouse, quantity);
                 
                 if (!stockSubtracted) {
-                    errorMsg.append(inventoryDAO.getLastError()).append(" ");
+                    errorMsg.append("Lỗi khi xuất kho sản phẩm ID ").append(productId)
+                            .append(": ").append(inventoryDAO.getLastError()).append(". ");
                     allSuccess = false;
                     continue;
                 }
@@ -610,7 +720,7 @@ public class InventoryServlet extends HttpServlet {
                     try {
                         history.setReferenceId(Integer.parseInt(referenceId));
                     } catch (NumberFormatException e) {
-                        // Ignore
+                        // Ignore if not a number
                     }
                 }
                 history.setNotes(notes);

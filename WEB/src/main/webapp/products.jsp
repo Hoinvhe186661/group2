@@ -196,11 +196,6 @@
                             <i class="fa fa-archive"></i> <span>Quản lý kho</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/email-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
-                        </a>
-                    </li>
                 </ul>
             </section>
             <!-- /.sidebar -->
@@ -538,7 +533,12 @@
                         </div>
                         <div class="form-group">
                             <label for="edit_unit">Đơn vị tính</label>
-                            <input type="text" class="form-control" id="edit_unit" name="unit">
+                            <select class="form-control" id="edit_unit" name="unit" required>
+                                <option value="">-- Chọn đơn vị tính --</option>
+                                <option value="cái">Cái</option>
+                                <option value="bộ">Bộ</option>
+                                <option value="công hàng">Công hàng</option>
+                            </select>
                         </div>
                         <div class="form-group">
                     <label for="edit_unit_price">Giá bán (VNĐ)</label>
@@ -617,8 +617,8 @@
                         <input type="hidden" name="action" value="add">
                         <div class="form-group">
                             <label for="product_code">Mã sản phẩm <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="product_code" name="product_code" required onblur="checkProductCodeExists()">
-                            <small class="form-text text-muted" id="product_code_feedback"></small>
+                            <input type="text" class="form-control" id="product_code" name="product_code" required onblur="checkProductCodeExists()" oninput="productPrefixHint()" placeholder="GEN..." pattern="^GEN.*$" title="Mã sản phẩm phải bắt đầu bằng 'GEN'">
+                            <small class="form-text text-muted" id="product_code_feedback">Mã sản phẩm phải bắt đầu bằng "GEN"</small>
                         </div>
                         <div class="form-group">
                             <label for="product_name">Tên sản phẩm <span class="text-danger">*</span></label>
@@ -642,7 +642,12 @@
                         </div>
                         <div class="form-group">
                             <label for="unit">Đơn vị tính <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="unit" name="unit" value="pcs" required>
+                            <select class="form-control" id="unit" name="unit" required>
+                                <option value="">-- Chọn đơn vị tính --</option>
+                                <option value="cái" selected>cái</option>
+                                <option value="bộ">bộ</option>
+                                <option value="công hàng">công hàng</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label for="unit_price">Giá bán (VNĐ)</label>
@@ -745,7 +750,14 @@
             var feedbackElement = $('#product_code_feedback');
             
             if (!productCode) {
-                feedbackElement.text('').removeClass('text-danger text-success');
+                feedbackElement.text('Mã sản phẩm phải bắt đầu bằng "GEN"').removeClass('text-danger text-success');
+                return;
+            }
+            
+            // Kiểm tra prefix GEN trước khi gọi AJAX
+            if (!/^GEN/.test(productCode)) {
+                feedbackElement.text("Mã sản phẩm phải bắt đầu bằng 'GEN'").removeClass('text-success').addClass('text-danger');
+                $('#product_code').addClass('is-invalid').removeClass('is-valid');
                 return;
             }
             
@@ -772,6 +784,24 @@
                     $('#product_code').removeClass('is-invalid is-valid');
                 }
             });
+        }
+        
+        // Gợi ý realtime cho prefix GEN
+        function productPrefixHint() {
+            var code = $('#product_code').val();
+            var feedbackElement = $('#product_code_feedback');
+            if (!code || !code.trim()) {
+                feedbackElement.text('Mã sản phẩm phải bắt đầu bằng "GEN"').removeClass('text-danger text-success');
+                $('#product_code').removeClass('is-invalid is-valid');
+                return;
+            }
+            if (!/^GEN/.test(code)) {
+                feedbackElement.text("Mã sản phẩm phải bắt đầu bằng 'GEN'").removeClass('text-success').addClass('text-danger');
+                $('#product_code').addClass('is-invalid').removeClass('is-valid');
+            } else {
+                feedbackElement.text('Đang kiểm tra tính duy nhất...').removeClass('text-danger text-success');
+                $('#product_code').removeClass('is-invalid is-valid');
+            }
         }
         
         /**
@@ -1794,6 +1824,7 @@
     </script>
 </body>
 </html>
+
 
 
 

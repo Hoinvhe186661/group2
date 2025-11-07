@@ -172,11 +172,7 @@
                             <i class="fa fa-archive"></i> <span>Quản lý kho</span>
                         </a>
                     </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/email-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
-                        </a>
-                    </li>
+
                 </ul>
             </section>
             <!-- /.sidebar -->
@@ -442,8 +438,8 @@
                         <input type="hidden" name="action" value="add">
                         <div class="form-group">
                             <label>Mã NCC</label>
-                            <input name="supplier_code" id="add_supplier_code" class="form-control" required onblur="checkSupplierCodeExists()">
-                            <small class="form-text text-muted" id="supplier_code_feedback"></small>
+                            <input name="supplier_code" id="add_supplier_code" class="form-control" required onblur="checkSupplierCodeExists()" oninput="supplierPrefixHint()" placeholder="SUP..." pattern="^SUP.*$" title="Mã nhà cung cấp phải bắt đầu bằng 'SUP'">
+                            <small class="form-text text-muted" id="supplier_code_feedback">Mã nhà cung cấp phải bắt đầu bằng "SUP"</small>
                         </div>
                         <div class="form-group"><label>Tên công ty</label><input name="company_name" class="form-control" required></div>
                         <div class="form-group"><label>Người liên hệ</label><input name="contact_person" class="form-control" required></div>
@@ -590,6 +586,12 @@
                 feedbackElement.text('').removeClass('text-danger text-success');
                 return;
             }
+            // Kiểm tra prefix SUP trước khi gọi AJAX
+            if (!/^SUP/.test(supplierCode)) {
+                feedbackElement.text("Mã nhà cung cấp phải bắt đầu bằng 'SUP'").removeClass('text-success').addClass('text-danger');
+                $('#add_supplier_code').addClass('is-invalid').removeClass('is-valid');
+                return;
+            }
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/supplier',
@@ -614,6 +616,24 @@
                     $('#add_supplier_code').removeClass('is-invalid is-valid');
                 }
             });
+        }
+
+        // Gợi ý realtime khi nhập mã NCC để đảm bảo prefix SUP
+        function supplierPrefixHint(){
+            var supplierCode = $('#add_supplier_code').val();
+            var feedbackElement = $('#supplier_code_feedback');
+            if (!supplierCode || !supplierCode.trim()) {
+                feedbackElement.text('Mã nhà cung cấp phải bắt đầu bằng "SUP"').removeClass('text-danger text-success');
+                $('#add_supplier_code').removeClass('is-invalid is-valid');
+                return;
+            }
+            if (!/^SUP/.test(supplierCode)) {
+                feedbackElement.text("Mã nhà cung cấp phải bắt đầu bằng 'SUP'").removeClass('text-success').addClass('text-danger');
+                $('#add_supplier_code').addClass('is-invalid').removeClass('is-valid');
+            } else {
+                feedbackElement.text('Đang kiểm tra tính duy nhất...').removeClass('text-danger text-success');
+                $('#add_supplier_code').removeClass('is-invalid is-valid');
+            }
         }
         
         // Hàm tạo JSON từ 2 trường bank_name và account_number
@@ -666,6 +686,13 @@
                 if (!supplierCode) {
                     e.preventDefault();
                     alert('Mã nhà cung cấp không được để trống!');
+                    $('input[name="supplier_code"]', this).focus();
+                    return false;
+                }
+                // Bắt buộc bắt đầu bằng SUP
+                if (!/^SUP/.test(supplierCode)) {
+                    e.preventDefault();
+                    alert("Mã nhà cung cấp phải bắt đầu bằng 'SUP'!");
                     $('input[name="supplier_code"]', this).focus();
                     return false;
                 }
