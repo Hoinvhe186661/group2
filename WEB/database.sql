@@ -177,6 +177,7 @@ CREATE TABLE tasks (
     actual_hours DECIMAL(5,2),
     start_date DATETIME,
     completion_date DATETIME,
+    deadline DATETIME COMMENT 'Ngày deadline cho nhân viên thực hiện công việc',
     rejection_reason VARCHAR(500) COMMENT 'Lý do từ chối nhiệm vụ',
     notes TEXT,
     work_description TEXT COMMENT 'Mô tả công việc đã thực hiện',
@@ -215,6 +216,7 @@ CREATE TABLE support_requests (
     resolution TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_at DATETIME,
+    deadline DATE COMMENT 'Ngày mong muốn công việc hoàn thành',
     FOREIGN KEY (customer_id) REFERENCES customers(id),
     FOREIGN KEY (assigned_to) REFERENCES users(id)
 );

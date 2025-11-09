@@ -173,6 +173,11 @@
                             <i class="fa fa-file-text-o"></i> <span>Đơn hàng công việc</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="technical_staff_management.jsp">
+                            <i class="fa fa-users"></i> <span>Quản lý nhân viên kỹ thuật</span>
+                        </a>
+                    </li>
                 </ul>
             </section>
             <!-- /.sidebar -->

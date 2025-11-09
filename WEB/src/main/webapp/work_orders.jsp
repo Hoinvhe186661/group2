@@ -139,6 +139,19 @@
         }
         
         /* Modal */
+        /* Modal adjustments for wide tables */
+        #assignTaskModal .modal-dialog {
+            width: 95%;
+            max-width: 1400px;
+        }
+        
+        @media (max-width: 768px) {
+            #assignTaskModal .modal-dialog {
+                width: 98%;
+                margin: 10px auto;
+            }
+        }
+        
         .modal-lg {
             width: 900px;
         }
@@ -275,7 +288,7 @@
         
         /* Tasks table - Description column */
         #tasksTable td:nth-child(2) {
-            max-width: 300px;
+            max-width: 200px;
             min-width: 150px;
             word-wrap: break-word;
             word-break: break-word;
@@ -283,13 +296,46 @@
             overflow-wrap: break-word;
         }
         
-        /* Tasks table - Rejection reason column */
-        #tasksTable td:nth-child(6) {
-            max-width: 200px;
+        /* Tasks table - Rejection reason column (now 9th column after adding 2 date columns) */
+        #tasksTable td:nth-child(9) {
+            max-width: 150px;
+            min-width: 150px;
             word-wrap: break-word;
             word-break: break-word;
             white-space: normal;
             overflow-wrap: break-word;
+        }
+        
+        /* Tasks table - Date columns */
+        #tasksTable td:nth-child(5),
+        #tasksTable td:nth-child(6) {
+            white-space: nowrap;
+            font-size: 12px;
+        }
+        
+        /* Tasks table - Action column */
+        #tasksTable td:last-child {
+            white-space: nowrap;
+        }
+        
+        /* Tasks table - Compact buttons */
+        #tasksTable .btn-xs {
+            padding: 1px 5px;
+            font-size: 11px;
+            margin: 1px;
+        }
+        
+        /* Make table more compact */
+        #tasksTable th,
+        #tasksTable td {
+            padding: 6px 8px;
+            font-size: 12px;
+        }
+        
+        /* Table responsive wrapper */
+        .table-responsive {
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
         
         /* Readonly textarea */
@@ -511,6 +557,11 @@
                     <li class="active">
                         <a href="work_orders.jsp">
                             <i class="fa fa-file-text-o"></i> <span>Đơn hàng công việc</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="technical_staff_management.jsp">
+                            <i class="fa fa-users"></i> <span>Quản lý nhân viên kỹ thuật</span>
                         </a>
                     </li>
                 </ul>
@@ -769,6 +820,22 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Ngày thực hiện:</label>
+                                            <input type="date" class="form-control" id="taskStartDate" min="">
+                                            <small class="help-block">Ngày bắt đầu thực hiện công việc (không được chọn ngày quá khứ)</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Deadline:</label>
+                                            <input type="date" class="form-control" id="taskDeadline" min="">
+                                            <small class="help-block">Ngày deadline hoàn thành công việc (không được chọn ngày quá khứ)</small>
+                                        </div>
+                                    </div>
+                                </div>
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fa fa-plus"></i> Thêm công việc
                                 </button>
@@ -781,16 +848,6 @@
                         <div class="box-header">
                             <h3 class="box-title">Danh sách công việc</h3>
                             <div class="box-tools pull-right">
-                                <%
-                                    // Chỉ hiển thị nút fix assignments cho admin hoặc head_technician
-                                    if ("admin".equals(userRole) || "head_technician".equals(userRole)) {
-                                %>
-                                <button type="button" class="btn btn-sm btn-warning" id="fixAssignmentsBtn" title="Sửa các task assignments có role không đúng">
-                                    <i class="fa fa-wrench"></i> Sửa Assignments
-                                </button>
-                                <%
-                                    }
-                                %>
                                 <button type="button" class="btn btn-sm btn-default" id="btnResetTaskFilter" title="Đặt lại bộ lọc">
                                     <i class="fa fa-refresh"></i>
                                 </button>
@@ -836,25 +893,31 @@
                                 </div>
                             </div>
                             
-                            <table class="table table-bordered table-hover" id="tasksTable">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 80px;">Mã</th>
-                                        <th>Mô tả</th>
-                                        <th style="width: 100px;">Độ ưu tiên</th>
-                                        <th style="width: 100px;">Giờ ước tính</th>
-                                        <th style="width: 100px;">Trạng thái</th>
-                                        <th style="width: 100px;">Phân công</th>
-                                        <th style="width: 200px;">Lý do từ chối</th>
-                                        <th style="width: 120px;">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tasksTableBody">
-                                    <tr>
-                                        <td colspan="8" class="text-center">Đang tải...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <!-- Table wrapper with horizontal scroll -->
+                            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                <table class="table table-bordered table-hover table-condensed" id="tasksTable" style="margin-bottom: 0;">
+                                    <thead>
+                                        <tr>
+                                        <th style="width: 70px; min-width: 70px;">Mã</th>
+                                        <th style="min-width: 150px; max-width: 200px;">Mô tả</th>
+                                        <th style="width: 90px; min-width: 90px;">Độ ưu tiên</th>
+                                        <th style="width: 90px; min-width: 90px;">Giờ ước tính</th>
+                                        <th style="width: 110px; min-width: 110px;">Ngày giao việc</th>
+                                        <th style="width: 110px; min-width: 110px;">Deadline</th>
+                                        <th style="width: 120px; min-width: 120px;">Ngày hoàn thành</th>
+                                        <th style="width: 90px; min-width: 90px;">Trạng thái</th>
+                                        <th style="width: 100px; min-width: 100px;">Phân công</th>
+                                        <th style="width: 150px; min-width: 150px;">Lý do từ chối</th>
+                                        <th style="width: 110px; min-width: 110px;">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tasksTableBody">
+                                        <tr>
+                                            <td colspan="11" class="text-center">Đang tải...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -880,8 +943,8 @@
                         <p class="form-control-static" id="assign_task_description"></p>
                     </div>
                     <div class="form-group">
-                        <label>Phân công cho nhân viên:</label>
-                        <select class="form-control" id="assign_user_id">
+                        <label>Phân công cho nhân viên: <span class="text-danger">*</span></label>
+                        <select class="form-control" id="assign_user_id" required>
                             <option value="">Chọn nhân viên...</option>
                         </select>
                         <div id="userTaskCountInfo" class="help-block" style="margin-top: 8px; display: none;">
@@ -1416,6 +1479,19 @@
                 var escapedCustomerName = customerName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 var escapedTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 
+                // Kiểm tra nếu work order đã completed/cancelled/rejected thì ẩn nút Chia việc
+                var isWorkOrderClosed = workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected';
+                var assignTaskButton = '';
+                if (!isWorkOrderClosed) {
+                    assignTaskButton = '<button class="btn btn-success btn-assign-task" data-id="' + workOrder.id + '" title="Chia việc">' +
+                        '<i class="fa fa-tasks"></i>' +
+                    '</button>';
+                } else {
+                    assignTaskButton = '<button class="btn btn-success btn-assign-task" disabled data-id="' + workOrder.id + '" title="Không thể chia việc cho đơn hàng đã đóng">' +
+                        '<i class="fa fa-tasks"></i>' +
+                    '</button>';
+                }
+                
                 var row = '<tr>' +
                     '<td><strong>' + (workOrder.workOrderNumber || '#' + workOrder.id) + '</strong></td>' +
                     '<td><span class="work-order-customer" title="' + escapedCustomerName + '" data-toggle="tooltip">' + customerName + '</span></td>' +
@@ -1426,9 +1502,7 @@
                         '<button class="btn btn-info btn-view" data-id="' + workOrder.id + '" title="Xem chi tiết">' +
                             '<i class="fa fa-eye"></i>' +
                         '</button>' +
-                        '<button class="btn btn-success btn-assign-task" data-id="' + workOrder.id + '" title="Chia việc">' +
-                            '<i class="fa fa-tasks"></i>' +
-                        '</button>' +
+                        assignTaskButton +
                         '<button class="btn btn-warning btn-report" data-id="' + workOrder.id + '" title="Báo cáo">' +
                             '<i class="fa fa-file-text-o"></i>' +
                         '</button>' +
@@ -1449,6 +1523,11 @@
             // Bind assign task button
             $('.btn-assign-task').click(function() {
                 var id = $(this).data('id');
+                var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
+                if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
+                    alert('Không thể chia việc cho đơn hàng đã đóng!');
+                    return;
+                }
                 openAssignTaskModal(id);
             });
             
@@ -1641,7 +1720,27 @@
                 $('#detail_scheduled_date').val('');
             }
             
-            $('#detail_completion_date').val(workOrder.completionDate || '');
+            // Set completion date vào input field (format YYYY-MM-DD cho input type="date")
+            if (workOrder.completionDate) {
+                try {
+                    var completionDate = new Date(workOrder.completionDate);
+                    var year = completionDate.getFullYear();
+                    var month = String(completionDate.getMonth() + 1).padStart(2, '0');
+                    var day = String(completionDate.getDate()).padStart(2, '0');
+                    var dateString = year + '-' + month + '-' + day;
+                    $('#detail_completion_date').val(dateString);
+                } catch(e) {
+                    // Nếu completionDate là string format YYYY-MM-DD, dùng trực tiếp
+                    if (workOrder.completionDate.includes('T')) {
+                        var datePart = workOrder.completionDate.split('T')[0];
+                        $('#detail_completion_date').val(datePart);
+                    } else {
+                        $('#detail_completion_date').val(workOrder.completionDate);
+                    }
+                }
+            } else {
+                $('#detail_completion_date').val('');
+            }
             
             // Set min date cho completion_date = scheduled_date (không cho chọn trước ngày lên lịch)
             var scheduledDate = $('#detail_scheduled_date').val();
@@ -2035,6 +2134,8 @@
                                     workOrder.status = 'completed';
                                 }
                                 
+                                // Ngày hoàn thành đã được hiển thị trong input field
+                                
                                 // Disable form và ẩn nút lưu
                                 $('#workOrderDetailModal').find('input:not([readonly]), textarea:not([readonly]), select:not([disabled])').prop('readonly', true);
                                 $('#btnSaveWorkOrder').hide();
@@ -2159,13 +2260,19 @@
         }
         
         function openAssignTaskModal(workOrderId) {
+            // Kiểm tra work order status trước khi mở modal
+            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
+                alert('Không thể chia việc cho đơn hàng đã đóng!');
+                return;
+            }
+            
             $('#assign_work_order_id').val(workOrderId);
             // Reset filters when opening modal
             $('#filterTaskPriority').val('');
             $('#filterTaskStatus').val('');
             
             // Check work order status and disable form if completed/cancelled
-            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
             if (workOrder) {
                 var status = workOrder.status;
                 
@@ -2233,6 +2340,9 @@
                 $('#addTaskForm').closest('.box').removeClass('box-warning').addClass('box-success');
             }
             
+            // Set minimum date for date fields
+            setMinDateForTaskCreateDates();
+            
             $('#assignTaskModal').modal('show');
             loadTasks(workOrderId);
             // Load users for assignment dropdown
@@ -2264,11 +2374,11 @@
                     if(response && response.success) {
                         renderTasksTable(response.data);
                     } else {
-                        $('#tasksTableBody').html('<tr><td colspan="8" class="text-center">Không có công việc nào</td></tr>');
+                        $('#tasksTableBody').html('<tr><td colspan="11" class="text-center">Không có công việc nào</td></tr>');
                     }
                 },
                 error: function() {
-                    $('#tasksTableBody').html('<tr><td colspan="8" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>');
+                    $('#tasksTableBody').html('<tr><td colspan="11" class="text-center text-danger">Lỗi tải dữ liệu</td></tr>');
                 }
             });
         }
@@ -2279,7 +2389,7 @@
             tbody.empty();
             
             if(!tasks || tasks.length === 0) {
-                tbody.append('<tr><td colspan="8" class="text-center">Chưa có công việc nào</td></tr>');
+                tbody.append('<tr><td colspan="11" class="text-center">Chưa có công việc nào</td></tr>');
                 return;
             }
             
@@ -2309,17 +2419,17 @@
                     // Hiển thị lý do từ chối trong cột riêng
                     var reasonText = task.rejectionReason;
                     // Nếu lý do dài, chỉ hiển thị một phần và có tooltip
-                    if(reasonText.length > 50) {
-                        var shortReason = reasonText.substring(0, 50) + '...';
+                    if(reasonText.length > 40) {
+                        var shortReason = reasonText.substring(0, 40) + '...';
                         var escapedReason = task.rejectionReason
                             .replace(/&/g, '&amp;')
                             .replace(/</g, '&lt;')
                             .replace(/>/g, '&gt;')
                             .replace(/"/g, '&quot;')
                             .replace(/'/g, '&#39;');
-                        rejectionReasonCell = '<span title="' + escapedReason + '" data-toggle="tooltip" data-placement="top" style="color: #d9534f; cursor: help;">' + shortReason + '</span>';
+                        rejectionReasonCell = '<span title="' + escapedReason + '" data-toggle="tooltip" data-placement="top" style="color: #d9534f; cursor: help; font-size: 11px;">' + shortReason + '</span>';
                     } else {
-                        rejectionReasonCell = '<span style="color: #d9534f;">' + reasonText + '</span>';
+                        rejectionReasonCell = '<span style="color: #d9534f; font-size: 11px;">' + reasonText + '</span>';
                     }
                 } else {
                     rejectionReasonCell = '<span class="text-muted">-</span>';
@@ -2336,10 +2446,10 @@
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
                 
-                // Nếu mô tả dài hơn 100 ký tự, hiển thị rút gọn với tooltip
+                // Nếu mô tả dài hơn 60 ký tự, hiển thị rút gọn với tooltip
                 var taskDescDisplay = taskDescription;
-                if(taskDescription.length > 100) {
-                    taskDescDisplay = taskDescription.substring(0, 100) + '...';
+                if(taskDescription.length > 60) {
+                    taskDescDisplay = taskDescription.substring(0, 60) + '...';
                 }
                 
                 // Nút xóa - chỉ hiển thị nếu task chưa hoàn thành
@@ -2362,11 +2472,69 @@
                     estimatedHoursDisplay = '<strong>' + parseFloat(task.estimatedHours).toFixed(1) + 'h</strong>';
                 }
                 
+                // Format ngày giao việc (start_date)
+                var startDateDisplay = '-';
+                if (task.startDate) {
+                    try {
+                        var startDate = new Date(task.startDate);
+                        var day = String(startDate.getDate()).padStart(2, '0');
+                        var month = String(startDate.getMonth() + 1).padStart(2, '0');
+                        var year = startDate.getFullYear();
+                        startDateDisplay = day + '/' + month + '/' + year;
+                    } catch(e) {
+                        startDateDisplay = '-';
+                    }
+                }
+                
+                // Format deadline
+                var deadlineDisplay = '-';
+                if (task.deadline) {
+                    try {
+                        var deadline = new Date(task.deadline);
+                        var day = String(deadline.getDate()).padStart(2, '0');
+                        var month = String(deadline.getMonth() + 1).padStart(2, '0');
+                        var year = deadline.getFullYear();
+                        deadlineDisplay = day + '/' + month + '/' + year;
+                        
+                        // Kiểm tra nếu deadline đã qua (màu đỏ nếu quá hạn)
+                        var today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        deadline.setHours(0, 0, 0, 0);
+                        if (deadline < today && task.status !== 'completed') {
+                            deadlineDisplay = '<span class="text-danger" style="font-weight: bold;" title="Đã quá hạn">' + deadlineDisplay + ' ⚠</span>';
+                        }
+                    } catch(e) {
+                        deadlineDisplay = '-';
+                    }
+                }
+                
+                // Format ngày hoàn thành
+                var completionDateDisplay = '-';
+                if (task.completionDate) {
+                    try {
+                        var completionDate = new Date(task.completionDate);
+                        var day = String(completionDate.getDate()).padStart(2, '0');
+                        var month = String(completionDate.getMonth() + 1).padStart(2, '0');
+                        var year = completionDate.getFullYear();
+                        completionDateDisplay = day + '/' + month + '/' + year;
+                        
+                        // Nếu task đã hoàn thành, hiển thị màu xanh với icon
+                        if (task.status === 'completed') {
+                            completionDateDisplay = '<span class="text-success" style="font-weight: bold;" title="Đã hoàn thành"><i class="fa fa-check-circle"></i> ' + completionDateDisplay + '</span>';
+                        }
+                    } catch(e) {
+                        completionDateDisplay = '-';
+                    }
+                }
+                
                 var row = '<tr>' +
                     '<td><strong>' + (task.taskNumber || 'N/A') + '</strong></td>' +
                     '<td><span class="task-description-text" title="' + escapedTaskDesc + '" data-toggle="tooltip">' + taskDescDisplay + '</span></td>' +
                     '<td>' + getPriorityBadge(task.priority) + '</td>' +
                     '<td class="text-center">' + estimatedHoursDisplay + '</td>' +
+                    '<td class="text-center">' + startDateDisplay + '</td>' +
+                    '<td class="text-center">' + deadlineDisplay + '</td>' +
+                    '<td class="text-center">' + completionDateDisplay + '</td>' +
                     '<td>' + statusCell + '</td>' +
                     '<td>' + assignedBadge + '</td>' +
                     '<td>' + rejectionReasonCell + '</td>' +
@@ -2387,6 +2555,23 @@
                 // Kiểm tra lại status trước khi mở modal
                 if(taskStatus === 'completed') {
                     alert('Công việc đã hoàn thành không thể giao cho người khác');
+                    return;
+                }
+                
+                // Kiểm tra work order status
+                var workOrderId = $('#assign_work_order_id').val();
+                var workOrder = null;
+                if (workOrderId) {
+                    workOrder = allWorkOrders.find(function(w) { return w.id == parseInt(workOrderId); });
+                }
+                if (!workOrder) {
+                    var detailWorkOrderId = $('#detail_work_order_id').val();
+                    if (detailWorkOrderId) {
+                        workOrder = allWorkOrders.find(function(w) { return w.id == parseInt(detailWorkOrderId); });
+                    }
+                }
+                if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
+                    alert('Không thể phân công công việc cho đơn hàng đã đóng!');
                     return;
                 }
                 
@@ -2420,6 +2605,13 @@
                 return;
             }
             
+            // Kiểm tra work order status trước
+            var workOrder = allWorkOrders.find(function(w) { return w.id == parseInt(workOrderId); });
+            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
+                alert('Không thể phân công công việc cho đơn hàng đã đóng!');
+                return;
+            }
+            
             // Load lại task để kiểm tra status
             $.ajax({
                 url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
@@ -2430,6 +2622,15 @@
                         var task = response.data.find(function(t) { return t.id == taskId; });
                         if(!task) {
                             alert('Không tìm thấy công việc');
+                            return;
+                        }
+                        
+                        // Kiểm tra work order status một lần nữa sau khi load
+                        var workOrder = allWorkOrders.find(function(w) { return w.id == parseInt(workOrderId); });
+                        if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
+                            alert('Không thể phân công công việc cho đơn hàng đã đóng!');
+                            // Reload lại danh sách tasks để cập nhật UI
+                            loadTasks(workOrderId);
                             return;
                         }
                         
@@ -2519,6 +2720,8 @@
         
         // Initialize counter on page load or modal open
         $(document).on('shown.bs.modal', '#assignTaskModal', function() {
+            // Set minimum date for date fields
+            setMinDateForTaskCreateDates();
             var length = $('#taskDescription').val().length;
             $('#taskDescriptionCounter').text(length);
         });
@@ -2551,6 +2754,8 @@
             var description = $('#taskDescription').val().trim();
             var priority = $('#taskPriority').val();
             var estimatedHours = $('#taskEstimatedHours').val();
+            var startDate = $('#taskStartDate').val();
+            var deadline = $('#taskDeadline').val();
             
             // Validate description
             if(!description || description === '') {
@@ -2563,6 +2768,22 @@
                 $('#taskDescriptionError').text('Mô tả công việc không được vượt quá 150 ký tự. Hiện tại: ' + description.length + ' ký tự').show();
                 $('#taskDescription').focus();
                 return;
+            }
+            
+            // Validate dates
+            if (!validateTaskCreateDates()) {
+                return;
+            }
+            
+            // Validate deadline must be after or equal to start date
+            if (startDate && deadline) {
+                var start = new Date(startDate);
+                var end = new Date(deadline);
+                if (end < start) {
+                    alert('⚠ Lỗi: Deadline phải sau hoặc bằng ngày thực hiện!');
+                    $('#taskDeadline').focus();
+                    return;
+                }
             }
             
             // Validate estimated hours
@@ -2662,7 +2883,9 @@
                     workOrderId: workOrderId,
                     taskDescription: description,
                     priority: priority,
-                    estimatedHours: estimatedHours
+                    estimatedHours: estimatedHours,
+                    startDate: startDate || null,
+                    deadline: deadline || null
                 },
                 dataType: 'json',
                 success: function(response) {
@@ -2672,6 +2895,8 @@
                         $('#addTaskForm')[0].reset();
                         $('#taskDescriptionCounter').text('0');
                         $('#taskDescriptionError').hide();
+                        // Reset date fields and set min date
+                        setMinDateForTaskCreateDates();
                         loadTasks(workOrderId);
                     } else {
                         var errorMsg = response.message || 'Không thể thêm công việc';
@@ -2714,9 +2939,17 @@
         $('#btnConfirmAssign').click(function() {
             var taskId = $('#assign_task_id').val();
             var userId = $('#assign_user_id').val();
+            var workOrderId = $('#assign_work_order_id').val();
             
             if(!userId) {
                 alert('Vui lòng chọn nhân viên');
+                return;
+            }
+            
+            // Kiểm tra work order status trước khi phân công
+            var workOrder = allWorkOrders.find(function(w) { return w.id == parseInt(workOrderId); });
+            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
+                alert('Không thể phân công công việc cho đơn hàng đã đóng!');
                 return;
             }
             
@@ -2990,6 +3223,95 @@
             $('#reportContent').html(html);
         }
         
+        // Set minimum date for task create dates (form thêm task mới)
+        function setMinDateForTaskCreateDates() {
+            // Set minimum date to today (YYYY-MM-DD format)
+            var today = new Date();
+            var dd = String(today.getDate()).padStart(2, '0');
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var yyyy = today.getFullYear();
+            var todayStr = yyyy + '-' + mm + '-' + dd;
+            $('#taskStartDate').attr('min', todayStr);
+            $('#taskDeadline').attr('min', todayStr);
+        }
+        
+        // Validate task create dates
+        function validateTaskCreateDates() {
+            var startDate = $('#taskStartDate').val();
+            var deadline = $('#taskDeadline').val();
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Validate start date
+            if (startDate) {
+                var start = new Date(startDate);
+                start.setHours(0, 0, 0, 0);
+                if (start < today) {
+                    alert('⚠ Lỗi: Ngày thực hiện không được là ngày quá khứ!');
+                    $('#taskStartDate').val('');
+                    $('#taskStartDate').focus();
+                    return false;
+                }
+            }
+            
+            // Validate deadline
+            if (deadline) {
+                var end = new Date(deadline);
+                end.setHours(0, 0, 0, 0);
+                if (end < today) {
+                    alert('⚠ Lỗi: Deadline không được là ngày quá khứ!');
+                    $('#taskDeadline').val('');
+                    $('#taskDeadline').focus();
+                    return false;
+                }
+                
+                // Validate deadline must be after or equal to start date
+                if (startDate) {
+                    var start = new Date(startDate);
+                    start.setHours(0, 0, 0, 0);
+                    if (end < start) {
+                        alert('⚠ Lỗi: Deadline phải sau hoặc bằng ngày thực hiện!');
+                        $('#taskDeadline').val('');
+                        $('#taskDeadline').focus();
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
+        // Update deadline min date when start date changes (form thêm task)
+        $(document).on('change', '#taskStartDate', function() {
+            var startDate = $(this).val();
+            if (startDate) {
+                $('#taskDeadline').attr('min', startDate);
+                // If deadline is set and is before start date, clear it
+                var deadline = $('#taskDeadline').val();
+                if (deadline && deadline < startDate) {
+                    $('#taskDeadline').val('');
+                }
+            } else {
+                // Reset to today if start date is cleared
+                setMinDateForTaskCreateDates();
+            }
+        });
+        
+        // Validate dates on change (form thêm task)
+        $(document).on('change', '#taskStartDate, #taskDeadline', function() {
+            validateTaskCreateDates();
+        });
+        
+        // Set minimum date when modal is shown (form thêm task)
+        $(document).on('shown.bs.modal', '#assignTaskModal', function() {
+            setMinDateForTaskCreateDates();
+        });
+        
+        // Reset form when modal is closed
+        $(document).on('hidden.bs.modal', '#assignTaskUserModal', function() {
+            $('#userTaskCountInfo').hide();
+        });
+        
         // Function to format datetime
         function formatDateTime(dateStr) {
             if(!dateStr) return '';
@@ -3005,39 +3327,6 @@
                 return dateStr;
             }
         }
-        // Fix task assignments button click handler
-        $(document).on('click', '#fixAssignmentsBtn', function() {
-            if (!confirm('Bạn có chắc chắn muốn sửa tất cả task assignments có role không đúng? Hành động này sẽ cập nhật tất cả assignments có role NULL hoặc không phải "assignee" thành "assignee".')) {
-                return;
-            }
-            
-            $.ajax({
-                url: ctx + '/api/work-order-tasks?action=fixAssignments',
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response && response.success) {
-                        alert(response.message || 'Đã sửa ' + (response.fixedCount || 0) + ' task assignment(s) thành công!');
-                        // Reload tasks nếu đang xem chi tiết work order
-                        var currentWorkOrderId = $('#detail_work_order_id').val();
-                        if (currentWorkOrderId) {
-                            loadTasks(currentWorkOrderId);
-                            viewWorkOrderDetail(currentWorkOrderId);
-                        }
-                    } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể sửa task assignments'));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error fixing assignments:', error);
-                    var errorMsg = 'Lỗi khi sửa task assignments';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMsg = xhr.responseJSON.message;
-                    }
-                    alert(errorMsg);
-                }
-            });
-        });
     </script>
 </body>
 </html>

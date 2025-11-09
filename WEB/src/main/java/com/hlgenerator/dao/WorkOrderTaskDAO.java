@@ -42,23 +42,47 @@ public class WorkOrderTaskDAO extends DBConnect {
             return -1;
         }
 
-        String sql = "INSERT INTO tasks (work_order_id, task_number, task_description, status, priority, " +
-                     "estimated_hours, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        // Build dynamic SQL based on whether start_date and deadline are provided
+        StringBuilder sqlBuilder = new StringBuilder("INSERT INTO tasks (work_order_id, task_number, task_description, status, priority, ");
+        
+        sqlBuilder.append("estimated_hours, notes");
+        if (task.getStartDate() != null) {
+            sqlBuilder.append(", start_date");
+        }
+        if (task.getDeadline() != null) {
+            sqlBuilder.append(", deadline");
+        }
+        sqlBuilder.append(") VALUES (?, ?, ?, ?, ?, ?, ?");
+        if (task.getStartDate() != null) {
+            sqlBuilder.append(", ?");
+        }
+        if (task.getDeadline() != null) {
+            sqlBuilder.append(", ?");
+        }
+        sqlBuilder.append(")");
 
-        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt(1, task.getWorkOrderId());
-            ps.setString(2, generateTaskNumber(task.getWorkOrderId()));
-            ps.setString(3, task.getTaskDescription());
-            ps.setString(4, task.getStatus() != null ? task.getStatus() : "pending");
-            ps.setString(5, task.getPriority() != null ? task.getPriority() : "medium");
+        try (PreparedStatement ps = connection.prepareStatement(sqlBuilder.toString(), Statement.RETURN_GENERATED_KEYS)) {
+            int paramIndex = 1;
+            ps.setInt(paramIndex++, task.getWorkOrderId());
+            ps.setString(paramIndex++, generateTaskNumber(task.getWorkOrderId()));
+            ps.setString(paramIndex++, task.getTaskDescription());
+            ps.setString(paramIndex++, task.getStatus() != null ? task.getStatus() : "pending");
+            ps.setString(paramIndex++, task.getPriority() != null ? task.getPriority() : "medium");
             
             if (task.getEstimatedHours() != null) {
-                ps.setBigDecimal(6, task.getEstimatedHours());
+                ps.setBigDecimal(paramIndex++, task.getEstimatedHours());
             } else {
-                ps.setNull(6, Types.DECIMAL);
+                ps.setNull(paramIndex++, Types.DECIMAL);
             }
             
-            ps.setString(7, task.getNotes());
+            ps.setString(paramIndex++, task.getNotes());
+            
+            if (task.getStartDate() != null) {
+                ps.setTimestamp(paramIndex++, task.getStartDate());
+            }
+            if (task.getDeadline() != null) {
+                ps.setTimestamp(paramIndex++, task.getDeadline());
+            }
 
             int affected = ps.executeUpdate();
             if (affected > 0) {
@@ -223,7 +247,7 @@ public class WorkOrderTaskDAO extends DBConnect {
 
         String sql = "UPDATE tasks SET task_description = ?, status = ?, priority = ?, " +
                      "estimated_hours = ?, actual_hours = ?, start_date = ?, completion_date = ?, " +
-                     "notes = ? WHERE id = ?";
+                     "deadline = ?, notes = ? WHERE id = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, task.getTaskDescription());
@@ -254,8 +278,14 @@ public class WorkOrderTaskDAO extends DBConnect {
                 ps.setNull(7, Types.TIMESTAMP);
             }
             
-            ps.setString(8, task.getNotes());
-            ps.setInt(9, task.getId());
+            if (task.getDeadline() != null) {
+                ps.setTimestamp(8, task.getDeadline());
+            } else {
+                ps.setNull(8, Types.TIMESTAMP);
+            }
+            
+            ps.setString(9, task.getNotes());
+            ps.setInt(10, task.getId());
 
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -369,6 +399,10 @@ public class WorkOrderTaskDAO extends DBConnect {
      * - Task mới luôn có status 'pending', chỉ chuyển sang 'in_progress' khi nhân viên acknowledge
      */
     public int assignTaskToUser(int taskId, int userId, String role) {
+        return assignTaskToUser(taskId, userId, role, null, null);
+    }
+    
+    public int assignTaskToUser(int taskId, int userId, String role, java.sql.Timestamp startDate, java.sql.Timestamp deadline) {
         if (!checkConnection()) {
             return -1;
         }
@@ -428,6 +462,13 @@ public class WorkOrderTaskDAO extends DBConnect {
                 newTask.setPriority(task.getPriority());
                 newTask.setStatus("pending"); // New task always starts with pending status
                 newTask.setEstimatedHours(task.getEstimatedHours());
+                // Set start date and deadline if provided
+                if (startDate != null) {
+                    newTask.setStartDate(startDate);
+                }
+                if (deadline != null) {
+                    newTask.setDeadline(deadline);
+                }
                 
                 // Create the new task
                 int newTaskId = createTask(newTask);
@@ -483,13 +524,44 @@ public class WorkOrderTaskDAO extends DBConnect {
                 ps.executeUpdate();
             }
             
+            // Update task with start date, deadline, and status if needed
+            boolean needUpdateTask = false;
+            StringBuilder updateTaskSql = new StringBuilder("UPDATE tasks SET ");
+            List<Object> updateParams = new ArrayList<>();
+            
+            if (startDate != null) {
+                updateTaskSql.append("start_date = ?");
+                updateParams.add(startDate);
+                needUpdateTask = true;
+            }
+            
+            if (deadline != null) {
+                if (needUpdateTask) {
+                    updateTaskSql.append(", ");
+                }
+                updateTaskSql.append("deadline = ?");
+                updateParams.add(deadline);
+                needUpdateTask = true;
+            }
+            
             // If task status is 'rejected', update to 'pending' when assigning
             if ("rejected".equals(task.getStatus())) {
-                String updateSql = "UPDATE tasks SET status = 'pending', updated_at = NOW() WHERE id = ?";
-                try (PreparedStatement ps = connection.prepareStatement(updateSql)) {
-                    ps.setInt(1, taskId);
+                if (needUpdateTask) {
+                    updateTaskSql.append(", ");
+                }
+                updateTaskSql.append("status = 'pending'");
+                needUpdateTask = true;
+            }
+            
+            if (needUpdateTask) {
+                updateTaskSql.append(", updated_at = NOW() WHERE id = ?");
+                updateParams.add(taskId);
+                try (PreparedStatement ps = connection.prepareStatement(updateTaskSql.toString())) {
+                    for (int i = 0; i < updateParams.size(); i++) {
+                        ps.setObject(i + 1, updateParams.get(i));
+                    }
                     int updateResult = ps.executeUpdate();
-                    logger.info("Updated task " + taskId + " status from 'rejected' to 'pending': " + updateResult + " row(s) affected");
+                    logger.info("Updated task " + taskId + " with start_date, deadline, and/or status: " + updateResult + " row(s) affected");
                 }
             }
             
@@ -580,6 +652,11 @@ public class WorkOrderTaskDAO extends DBConnect {
         task.setActualHours(rs.getBigDecimal("actual_hours"));
         task.setStartDate(rs.getTimestamp("start_date"));
         task.setCompletionDate(rs.getTimestamp("completion_date"));
+        try {
+            task.setDeadline(rs.getTimestamp("deadline"));
+        } catch (SQLException e) {
+            // Column might not be present in older database
+        }
         task.setNotes(rs.getString("notes"));
         
         // Map report fields if present
@@ -1001,6 +1078,133 @@ public class WorkOrderTaskDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error getting rejected user IDs for task: " + taskId, e);
         }
         return rejectedUserIds;
+    }
+    
+    /**
+     * Get all technical staff with their assigned tasks
+     * Returns list of users with their tasks
+     * @param statusFilter Filter by task status (null or empty for all)
+     * @param priorityFilter Filter by task priority (null or empty for all)
+     * @param searchKeyword Search keyword for staff name, task number, or task description (null or empty for all)
+     */
+    public List<java.util.Map<String, Object>> getAllTechnicalStaffWithTasks(String statusFilter, String priorityFilter, String searchKeyword) {
+        List<java.util.Map<String, Object>> result = new ArrayList<>();
+        if (!checkConnection()) {
+            return result;
+        }
+        
+        try {
+            // Get all technical staff users
+            com.hlgenerator.dao.UserDAO userDAO = new com.hlgenerator.dao.UserDAO();
+            List<com.hlgenerator.model.User> technicalStaff = userDAO.getUsersByRole("technical_staff");
+            
+            // Filter staff by search keyword if provided
+            if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+                String keyword = searchKeyword.toLowerCase().trim();
+                List<com.hlgenerator.model.User> filteredStaff = new ArrayList<>();
+                for (com.hlgenerator.model.User user : technicalStaff) {
+                    boolean matches = false;
+                    if (user.getFullName() != null && user.getFullName().toLowerCase().contains(keyword)) {
+                        matches = true;
+                    }
+                    if (!matches && user.getEmail() != null && user.getEmail().toLowerCase().contains(keyword)) {
+                        matches = true;
+                    }
+                    if (matches) {
+                        filteredStaff.add(user);
+                    }
+                }
+                technicalStaff = filteredStaff;
+            }
+            
+            // For each user, get their assigned tasks with filters
+            for (com.hlgenerator.model.User user : technicalStaff) {
+                java.util.Map<String, Object> staffData = new java.util.HashMap<>();
+                staffData.put("id", user.getId());
+                staffData.put("fullName", user.getFullName());
+                staffData.put("email", user.getEmail());
+                staffData.put("role", user.getRole());
+                
+                // Build SQL with filters
+                StringBuilder sqlBuilder = new StringBuilder();
+                sqlBuilder.append("SELECT t.*, wo.work_order_number, wo.title AS work_order_title ");
+                sqlBuilder.append("FROM tasks t ");
+                sqlBuilder.append("JOIN task_assignments ta ON t.id = ta.task_id ");
+                sqlBuilder.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
+                sqlBuilder.append("WHERE ta.user_id = ? AND ta.role = 'assignee' ");
+                
+                // Add status filter
+                if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                    sqlBuilder.append("AND t.status = ? ");
+                }
+                
+                // Add priority filter
+                if (priorityFilter != null && !priorityFilter.trim().isEmpty()) {
+                    sqlBuilder.append("AND t.priority = ? ");
+                }
+                
+                // Add search keyword filter for task
+                if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+                    sqlBuilder.append("AND (LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?) OR LOWER(wo.work_order_number) LIKE LOWER(?)) ");
+                }
+                
+                sqlBuilder.append("ORDER BY t.updated_at DESC, t.created_at DESC");
+                
+                List<java.util.Map<String, Object>> tasks = new ArrayList<>();
+                try (PreparedStatement ps = connection.prepareStatement(sqlBuilder.toString())) {
+                    int paramIndex = 1;
+                    ps.setInt(paramIndex++, user.getId());
+                    
+                    if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                        ps.setString(paramIndex++, statusFilter);
+                    }
+                    
+                    if (priorityFilter != null && !priorityFilter.trim().isEmpty()) {
+                        ps.setString(paramIndex++, priorityFilter);
+                    }
+                    
+                    if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+                        String keywordPattern = "%" + searchKeyword.trim() + "%";
+                        ps.setString(paramIndex++, keywordPattern);
+                        ps.setString(paramIndex++, keywordPattern);
+                        ps.setString(paramIndex++, keywordPattern);
+                    }
+                    
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            java.util.Map<String, Object> task = new java.util.HashMap<>();
+                            task.put("id", rs.getInt("id"));
+                            task.put("taskNumber", rs.getString("task_number"));
+                            task.put("taskDescription", rs.getString("task_description"));
+                            task.put("status", rs.getString("status"));
+                            task.put("priority", rs.getString("priority"));
+                            task.put("estimatedHours", rs.getBigDecimal("estimated_hours"));
+                            task.put("startDate", rs.getTimestamp("start_date"));
+                            task.put("deadline", rs.getTimestamp("deadline"));
+                            task.put("completionDate", rs.getTimestamp("completion_date"));
+                            task.put("workOrderNumber", rs.getString("work_order_number"));
+                            task.put("workOrderTitle", rs.getString("work_order_title"));
+                            tasks.add(task);
+                        }
+                    }
+                }
+                
+                // Only add staff if they have tasks or if no filters are applied
+                // If filters are applied and staff has no matching tasks, skip them
+                boolean hasFilters = (statusFilter != null && !statusFilter.trim().isEmpty()) ||
+                                 (priorityFilter != null && !priorityFilter.trim().isEmpty()) ||
+                                 (searchKeyword != null && !searchKeyword.trim().isEmpty());
+                
+                if (!hasFilters || tasks.size() > 0) {
+                    staffData.put("tasks", tasks);
+                    result.add(staffData);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting technical staff with tasks", e);
+        }
+        
+        return result;
     }
 }
 

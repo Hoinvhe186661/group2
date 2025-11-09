@@ -14,6 +14,7 @@ public class WorkOrderTask {
     private BigDecimal actualHours;
     private Timestamp startDate;
     private Timestamp completionDate;
+    private Timestamp deadline;
     private String notes;
     private String assignedToName; // For display purposes when joining with users table
     private String workDescription; // Mô tả công việc đã thực hiện
@@ -113,6 +114,14 @@ public class WorkOrderTask {
 
     public void setCompletionDate(Timestamp completionDate) {
         this.completionDate = completionDate;
+    }
+
+    public Timestamp getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(Timestamp deadline) {
+        this.deadline = deadline;
     }
 
     public String getNotes() {

@@ -9,6 +9,7 @@ D:\10-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
 D:\10-11\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
 D:\10-11\group2\WEB\src\main\java\com\hlgenerator\servlet\FeedbackServlet.java
 D:\10-11\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
+D:\10-11\group2\WEB\src\main\java\com\hlgenerator\servlet\TechnicalStaffManagementServlet.java
 D:\10-11\group2\WEB\src\main\java\com\hlgenerator\dao\ActivityLogDAO.java
 D:\10-11\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
 D:\10-11\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java

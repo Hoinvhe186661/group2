@@ -204,6 +204,8 @@ public class WorkOrderTaskServlet extends HttpServlet {
             String estimatedHoursParam = request.getParameter("estimatedHours");
             String notes = request.getParameter("notes");
             String assignToUserIdParam = request.getParameter("assignToUserId"); // User ID để tự động assign
+            String startDateParam = request.getParameter("startDate");
+            String deadlineParam = request.getParameter("deadline");
             
             if (workOrderIdParam == null || workOrderIdParam.isEmpty()) {
                 sendError(response, "Work order ID is required");
@@ -294,11 +296,32 @@ public class WorkOrderTaskServlet extends HttpServlet {
                 }
             }
             
+            // Parse dates if provided
+            java.sql.Timestamp startDate = null;
+            java.sql.Timestamp deadline = null;
+            try {
+                if (startDateParam != null && !startDateParam.isEmpty() && !"null".equals(startDateParam)) {
+                    // Parse date string (YYYY-MM-DD) to Timestamp
+                    java.sql.Date date = java.sql.Date.valueOf(startDateParam);
+                    startDate = new java.sql.Timestamp(date.getTime());
+                }
+                if (deadlineParam != null && !deadlineParam.isEmpty() && !"null".equals(deadlineParam)) {
+                    // Parse date string (YYYY-MM-DD) to Timestamp
+                    java.sql.Date date = java.sql.Date.valueOf(deadlineParam);
+                    deadline = new java.sql.Timestamp(date.getTime());
+                }
+            } catch (IllegalArgumentException e) {
+                sendError(response, "Invalid date format. Please use YYYY-MM-DD format.");
+                return;
+            }
+            
             WorkOrderTask task = new WorkOrderTask();
             task.setWorkOrderId(workOrderId);
             task.setTaskDescription(trimmedDescription);
             task.setPriority(priority != null ? priority : "medium");
             task.setStatus("pending");
+            task.setStartDate(startDate);
+            task.setDeadline(deadline);
             
             if (estimatedHoursParam != null && !estimatedHoursParam.isEmpty()) {
                 try {
@@ -610,6 +633,8 @@ public class WorkOrderTaskServlet extends HttpServlet {
             String taskIdParam = request.getParameter("taskId");
             String userIdParam = request.getParameter("userId");
             String role = request.getParameter("role");
+            String startDateParam = request.getParameter("startDate");
+            String deadlineParam = request.getParameter("deadline");
             
             if (taskIdParam == null || taskIdParam.isEmpty()) {
                 sendError(response, "Task ID is required");
@@ -624,10 +649,51 @@ public class WorkOrderTaskServlet extends HttpServlet {
             int taskId = Integer.parseInt(taskIdParam);
             int userId = Integer.parseInt(userIdParam);
             
+            // Parse dates if provided
+            java.sql.Timestamp startDate = null;
+            java.sql.Timestamp deadline = null;
+            try {
+                if (startDateParam != null && !startDateParam.isEmpty() && !"null".equals(startDateParam)) {
+                    // Parse date string (YYYY-MM-DD) to Timestamp
+                    java.sql.Date date = java.sql.Date.valueOf(startDateParam);
+                    startDate = new java.sql.Timestamp(date.getTime());
+                }
+                if (deadlineParam != null && !deadlineParam.isEmpty() && !"null".equals(deadlineParam)) {
+                    // Parse date string (YYYY-MM-DD) to Timestamp
+                    java.sql.Date date = java.sql.Date.valueOf(deadlineParam);
+                    deadline = new java.sql.Timestamp(date.getTime());
+                }
+            } catch (IllegalArgumentException e) {
+                sendError(response, "Invalid date format. Please use YYYY-MM-DD format.");
+                return;
+            }
+            
             // Kiểm tra xem task có đã hoàn thành không
             WorkOrderTask task = taskDAO.getTaskById(taskId);
             if (task == null) {
                 sendError(response, "Task not found");
+                return;
+            }
+            
+            // Kiểm tra work order status trước khi cho phép phân công
+            WorkOrder workOrder = workOrderDAO.getWorkOrderById(task.getWorkOrderId());
+            if (workOrder == null) {
+                sendError(response, "Không tìm thấy đơn hàng công việc");
+                return;
+            }
+            if ("completed".equals(workOrder.getStatus()) || "cancelled".equals(workOrder.getStatus()) || "rejected".equals(workOrder.getStatus())) {
+                String statusText = "";
+                if ("completed".equals(workOrder.getStatus())) {
+                    statusText = "Đã hoàn thành";
+                } else if ("cancelled".equals(workOrder.getStatus())) {
+                    statusText = "Đã hủy";
+                } else if ("rejected".equals(workOrder.getStatus())) {
+                    statusText = "Đã từ chối";
+                }
+                JsonObject result = new JsonObject();
+                result.addProperty("success", false);
+                result.addProperty("message", "Không thể phân công công việc cho đơn hàng đã đóng! Trạng thái đơn hàng: " + statusText);
+                sendJson(response, result);
                 return;
             }
             
@@ -667,7 +733,7 @@ public class WorkOrderTaskServlet extends HttpServlet {
             if (!"assignee".equals(finalRole)) {
                 finalRole = "assignee"; // Force to assignee
             }
-            int assignedTaskId = taskDAO.assignTaskToUser(taskId, userId, finalRole);
+            int assignedTaskId = taskDAO.assignTaskToUser(taskId, userId, finalRole, startDate, deadline);
             
             JsonObject result = new JsonObject();
             if (assignedTaskId > 0) {

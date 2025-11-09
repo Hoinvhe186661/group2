@@ -45,9 +45,14 @@
             border-radius: 5px;
          }
          .ticket-priority-urgent { border-left: 4px solid #d9534f; }
-         .ticket-priority-high { border-left: 4px solid #f0ad4e; }
+         .ticket-priority-high { border-left: 4px solid #d9534f; }
          .ticket-priority-medium { border-left: 4px solid #5bc0de; }
          .ticket-priority-low { border-left: 4px solid #5cb85c; }
+         
+         /* Màu cho độ ưu tiên và trạng thái - đồng nhất */
+         .label-priority-high { background-color: #d9534f !important; }
+         .label-priority-urgent { background-color: #d9534f !important; }
+         .label-status-in_progress { background-color: #337ab7 !important; }
          
          /* Tối ưu cho tiếng Việt */
          #detailDescription {
@@ -256,8 +261,7 @@
                                             <option value="">Tất cả</option>
                                     <option value="open" ${param.status == 'open' ? 'selected' : ''}>Đang chờ</option>
                                     <option value="in_progress" ${param.status == 'in_progress' ? 'selected' : ''}>Đang xử lý</option>
-                                    <option value="resolved" ${param.status == 'resolved' ? 'selected' : ''}>Hoàn thành</option>
-                                    <option value="closed" ${param.status == 'closed' ? 'selected' : ''}>Đã đóng</option>
+                                    <option value="resolved" ${param.status == 'resolved' || param.status == 'closed' ? 'selected' : ''}>Đã giải quyết</option>
                                         </select>
                                     </div>
                         <div class="col-md-3">
@@ -353,10 +357,10 @@
                                                                 <span class='label label-warning'>Trung bình</span>
                                                             </c:when>
                                                             <c:when test="${ticket.priority == 'high'}">
-                                                                <span class='label label-danger'>Cao</span>
+                                                                <span class='label label-danger label-priority-high'>Cao</span>
                                                             </c:when>
                                                             <c:when test="${ticket.priority == 'urgent'}">
-                                                                <span class='label label-danger'>Khẩn cấp</span>
+                                                                <span class='label label-danger label-priority-urgent'>Khẩn cấp</span>
                                                             </c:when>
                                                             <c:otherwise>
                                                                 <span class='label label-default'>${ticket.priority}</span>
@@ -369,13 +373,10 @@
                                                                 <span class='label label-primary'>Đang chờ</span>
                                                             </c:when>
                                                             <c:when test="${ticket.status == 'in_progress'}">
-                                                                <span class='label label-warning'>Đang xử lý</span>
+                                                                <span class='label label-primary label-status-in_progress'>Đang xử lý</span>
                                                             </c:when>
-                                                            <c:when test="${ticket.status == 'resolved'}">
-                                                                <span class='label label-success'>Hoàn thành</span>
-                                                            </c:when>
-                                                            <c:when test="${ticket.status == 'closed'}">
-                                                                <span class='label label-default'>Đã đóng</span>
+                                                            <c:when test="${ticket.status == 'resolved' || ticket.status == 'closed'}">
+                                                                <span class='label label-success'>Đã giải quyết</span>
                                                             </c:when>
                                                             <c:otherwise>
                                                                 <span class='label label-default'>${ticket.status}</span>
@@ -394,7 +395,7 @@
                                                         </button>
                                                         <c:choose>
                                                             <c:when test="${ticket.status == 'resolved' || ticket.status == 'closed'}">
-                                                                <button class="btn btn-success btn-xs" disabled title="Không thể chuyển tiếp yêu cầu đã hoàn thành hoặc đã đóng">
+                                                                <button class="btn btn-success btn-xs" disabled title="Không thể chuyển tiếp yêu cầu đã giải quyết">
                                                                     <i class="fa fa-share"></i> Chuyển tiếp
                                                                 </button>
                                                             </c:when>
@@ -670,8 +671,8 @@
             switch(ticket.priority) {
                 case 'low': priorityBadge = '<span class="label label-info">Thấp</span>'; break;
                 case 'medium': priorityBadge = '<span class="label label-warning">Trung bình</span>'; break;
-                case 'high': priorityBadge = '<span class="label label-danger">Cao</span>'; break;
-                case 'urgent': priorityBadge = '<span class="label label-danger">Khẩn cấp</span>'; break;
+                case 'high': priorityBadge = '<span class="label label-danger label-priority-high">Cao</span>'; break;
+                case 'urgent': priorityBadge = '<span class="label label-danger label-priority-urgent">Khẩn cấp</span>'; break;
                 default: priorityBadge = '<span class="label label-default">' + ticket.priority + '</span>';
             }
 
@@ -679,9 +680,9 @@
             var statusBadge = '';
             switch(ticket.status) {
                 case 'open': statusBadge = '<span class="label label-primary">Đang chờ</span>'; break;
-                case 'in_progress': statusBadge = '<span class="label label-warning">Đang xử lý</span>'; break;
-                case 'resolved': statusBadge = '<span class="label label-success">Hoàn thành</span>'; break;
-                case 'closed': statusBadge = '<span class="label label-default">Đã đóng</span>'; break;
+                case 'in_progress': statusBadge = '<span class="label label-primary label-status-in_progress">Đang xử lý</span>'; break;
+                case 'resolved':
+                case 'closed': statusBadge = '<span class="label label-success">Đã giải quyết</span>'; break;
                 default: statusBadge = '<span class="label label-default">' + ticket.status + '</span>';
             }
 
@@ -926,17 +927,17 @@
                     hasAssignedTo = assignedToStr !== '' && assignedToStr !== '0' && assignedToStr !== 'null';
                 }
             }
-            // Kiểm tra nếu ticket đã đóng hoặc hoàn thành
-            var isClosedOrResolved = ticket.status === 'closed' || ticket.status === 'resolved';
-            var priorityDisabled = (hasAssignedTo || isClosedOrResolved) ? ' disabled' : '';
+            // Kiểm tra nếu ticket đã giải quyết
+            var isResolved = ticket.status === 'closed' || ticket.status === 'resolved';
+            var priorityDisabled = (hasAssignedTo || isResolved) ? ' disabled' : '';
             var priorityReadonlyNote = '';
-            if (isClosedOrResolved) {
-                priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi ticket đã đóng hoặc hoàn thành</small>';
+            if (isResolved) {
+                priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi ticket đã giải quyết</small>';
             } else if (hasAssignedTo) {
                 priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi đã có người nhận</small>';
             }
             html += '<label>Độ ưu tiên: <span class="text-danger">*</span></label>';
-            html += '<select class="form-control" id="edit_priority"' + ((hasAssignedTo || isClosedOrResolved) ? '' : ' required') + priorityDisabled + '>';
+            html += '<select class="form-control" id="edit_priority"' + ((hasAssignedTo || isResolved) ? '' : ' required') + priorityDisabled + '>';
             html += '<option value="urgent"' + (ticket.priority === 'urgent' ? ' selected' : '') + '>Khẩn cấp</option>';
             html += '<option value="high"' + (ticket.priority === 'high' ? ' selected' : '') + '>Cao</option>';
             html += '<option value="medium"' + (ticket.priority === 'medium' ? ' selected' : '') + '>Trung bình</option>';
@@ -951,8 +952,7 @@
             html += '<select class="form-control" id="edit_status" required>';
             html += '<option value="open"' + (ticket.status === 'open' ? ' selected' : '') + '>Đang chờ</option>';
             html += '<option value="in_progress"' + (ticket.status === 'in_progress' ? ' selected' : '') + '>Đang xử lý</option>';
-            html += '<option value="resolved"' + (ticket.status === 'resolved' ? ' selected' : '') + '>Hoàn thành</option>';
-            html += '<option value="closed"' + (ticket.status === 'closed' ? ' selected' : '') + '>Đã đóng</option>';
+            html += '<option value="resolved"' + (ticket.status === 'resolved' || ticket.status === 'closed' ? ' selected' : '') + '>Đã giải quyết</option>';
             html += '</select>';
             html += '</div></div>';
             
@@ -995,12 +995,17 @@
             
             // Chỉ gửi priority nếu:
             // 1. Trường priority không bị disable
-            // 2. Ticket chưa đóng hoặc hoàn thành (kiểm tra cả trạng thái hiện tại và trạng thái mới)
-            var isClosedOrResolved = currentTicketStatus === 'closed' || currentTicketStatus === 'resolved' || 
-                                     $('#edit_status').val() === 'closed' || $('#edit_status').val() === 'resolved';
+            // 2. Ticket chưa giải quyết (kiểm tra cả trạng thái hiện tại và trạng thái mới)
+            var isResolved = currentTicketStatus === 'closed' || currentTicketStatus === 'resolved' || 
+                             $('#edit_status').val() === 'resolved';
             
-            if (!$('#edit_priority').prop('disabled') && !isClosedOrResolved) {
+            if (!$('#edit_priority').prop('disabled') && !isResolved) {
                 data.priority = $('#edit_priority').val();
+            }
+            
+            // Nếu status là resolved, đảm bảo gửi "resolved" thay vì "closed"
+            if ($('#edit_status').val() === 'resolved') {
+                data.status = 'resolved';
             }
             
             // KHÔNG gửi assignedTo vì trường này đã bị disable và không cho phép chỉnh sửa
@@ -1057,7 +1062,7 @@
                         
                         // Kiểm tra: Nếu ticket đã resolved hoặc closed thì không cho phép chuyển tiếp
                         if (ticket.status === 'resolved' || ticket.status === 'closed') {
-                            alert('✗ Không thể chuyển tiếp yêu cầu đã hoàn thành hoặc đã đóng!');
+                            alert('✗ Không thể chuyển tiếp yêu cầu đã giải quyết!');
                             return;
                         }
                         

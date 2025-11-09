@@ -45,14 +45,14 @@
             margin-bottom: 10px;
         }
         .badge-urgent { background-color: #d9534f !important; }
-        .badge-high { background-color: #f0ad4e !important; }
+        .badge-high { background-color: #d9534f !important; }
         .badge-medium { background-color: #5bc0de !important; }
         .badge-low { background-color: #5cb85c !important; }
         
         .badge-open { background-color: #f0ad4e !important; }
-        .badge-in_progress { background-color: #5bc0de !important; }
+        .badge-in_progress { background-color: #337ab7 !important; }
         .badge-resolved { background-color: #5cb85c !important; }
-        .badge-closed { background-color: #777 !important; }
+        .badge-closed { background-color: #5cb85c !important; }
         
         .ticket-actions {
             white-space: nowrap;
@@ -228,6 +228,11 @@
                     <li>
                         <a href="work_orders.jsp">
                             <i class="fa fa-file-text-o"></i> <span>Đơn hàng công việc</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="technical_staff_management.jsp">
+                            <i class="fa fa-users"></i> <span>Quản lý nhân viên kỹ thuật</span>
                         </a>
                     </li>
                 </ul>
@@ -444,8 +449,8 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Ngày hẹn thực hiện:</label>
                             <div class="col-sm-9">
-                                <input type="date" class="form-control" id="work_order_scheduled_date">
-                                <small class="help-block">Ngày dự kiến bắt đầu thực hiện công việc</small>
+                                <input type="date" class="form-control" id="work_order_scheduled_date" min="">
+                                <small class="help-block">Ngày dự kiến bắt đầu thực hiện công việc (không được chọn ngày quá khứ)</small>
                             </div>
                         </div>
                         
@@ -480,6 +485,9 @@
         
         $(document).ready(function() {
             loadTickets();
+            
+            // Set minimum date for scheduled date input (today)
+            setMinDateForScheduledDate();
             
             // Sync ticket status for completed work orders on page load (one-time)
             syncTicketStatusForCompletedWorkOrders();
@@ -555,7 +563,45 @@
                 }
             });
             
+            // Validate scheduled date when modal is shown
+            $('#createWorkOrderModal').on('shown.bs.modal', function() {
+                setMinDateForScheduledDate();
+            });
+            
+            // Validate scheduled date on change
+            $('#work_order_scheduled_date').on('change', function() {
+                validateScheduledDate();
+            });
+            
         });
+        
+        function setMinDateForScheduledDate() {
+            // Set minimum date to today (YYYY-MM-DD format)
+            var today = new Date();
+            var dd = String(today.getDate()).padStart(2, '0');
+            var mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+            var yyyy = today.getFullYear();
+            var todayStr = yyyy + '-' + mm + '-' + dd;
+            $('#work_order_scheduled_date').attr('min', todayStr);
+        }
+        
+        function validateScheduledDate() {
+            var scheduledDate = $('#work_order_scheduled_date').val();
+            if (scheduledDate) {
+                var selectedDate = new Date(scheduledDate);
+                var today = new Date();
+                today.setHours(0, 0, 0, 0); // Reset time to 00:00:00
+                selectedDate.setHours(0, 0, 0, 0);
+                
+                if (selectedDate < today) {
+                    alert('⚠ Lỗi: Ngày hẹn thực hiện không được là ngày quá khứ. Vui lòng chọn ngày hôm nay hoặc ngày trong tương lai.');
+                    $('#work_order_scheduled_date').val('');
+                    $('#work_order_scheduled_date').focus();
+                    return false;
+                }
+            }
+            return true;
+        }
         
         function loadTickets(silent) {
             // silent: if true, don't show console logs (for auto-refresh)
@@ -569,11 +615,11 @@
                     if (response.success) {
                         // Store previous ticket count for comparison
                         var previousCount = allTickets.length;
-                        var previousResolvedCount = allTickets.filter(function(t) { return t.status === 'resolved'; }).length;
+                        var previousResolvedCount = allTickets.filter(function(t) { return t.status === 'resolved' || t.status === 'closed'; }).length;
                         
                         // Tất cả ticket đã được lọc ở backend (chỉ technical)
                         var newTickets = response.data || [];
-                        var newResolvedCount = newTickets.filter(function(t) { return t.status === 'resolved'; }).length;
+                        var newResolvedCount = newTickets.filter(function(t) { return t.status === 'resolved' || t.status === 'closed'; }).length;
                         
                         // Check if any ticket status changed
                         var statusChanged = false;
@@ -883,9 +929,11 @@
                 'open': 'Chờ xử lý',
                 'in_progress': 'Đang xử lý',
                 'resolved': 'Đã giải quyết',
-                'closed': 'Đã đóng'
+                'closed': 'Đã giải quyết'
             };
-            var badge = status ? 'badge-' + status : '';
+            // Nếu status là closed, hiển thị như resolved
+            var displayStatus = (status === 'closed') ? 'resolved' : status;
+            var badge = displayStatus ? 'badge-' + displayStatus : '';
             return '<span class="badge ' + badge + '">' + (labels[status] || 'N/A') + '</span>';
         }
         
@@ -927,7 +975,7 @@
                 'open': 'Chờ xử lý',
                 'in_progress': 'Đang xử lý',
                 'resolved': 'Đã giải quyết',
-                'closed': 'Đã đóng'
+                'closed': 'Đã giải quyết'
             };
             
             $('#detail_category').text(categoryLabels[ticket.category] || ticket.category || 'N/A');
@@ -1020,6 +1068,9 @@
             $('#work_order_estimated_hours').val('');
             $('#work_order_scheduled_date').val('');
             
+            // Set minimum date when opening modal
+            setMinDateForScheduledDate();
+            
             $('#createWorkOrderModal').modal('show');
         }
         
@@ -1035,6 +1086,11 @@
             
             if(!description) {
                 alert('Lỗi: Không có mô tả từ ticket!');
+                return;
+            }
+            
+            // Validate scheduled date before submitting
+            if (!validateScheduledDate()) {
                 return;
             }
             
