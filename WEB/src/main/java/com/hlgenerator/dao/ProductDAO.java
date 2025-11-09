@@ -708,6 +708,97 @@ public class ProductDAO {
     }
 
     /**
+     * Sinh mã sản phẩm tự động theo định dạng: GEN-YYYYMMDD-XXXX
+     * - YYYYMMDD: ngày hiện tại theo múi giờ DB
+     * - XXXX: số thứ tự tăng dần trong ngày, bắt đầu từ 0001
+     * Bảo đảm không trùng với bản ghi.
+     */
+    public String generateNextProductCode() {
+        if (connection == null) {
+            // Thử khởi tạo lại connection
+            DBConnect dbConnect = new DBConnect();
+            this.connection = dbConnect.connection;
+            if (connection == null) {
+                lastError = "Không thể kết nối đến cơ sở dữ liệu";
+                return null;
+            }
+        }
+        
+        // Kiểm tra connection còn hoạt động không
+        try {
+            if (connection.isClosed()) {
+                // Thử khởi tạo lại connection
+                DBConnect dbConnect = new DBConnect();
+                this.connection = dbConnect.connection;
+                if (connection == null || connection.isClosed()) {
+                    lastError = "Kết nối cơ sở dữ liệu đã bị đóng";
+                    return null;
+                }
+            }
+        } catch (SQLException e) {
+            lastError = "Lỗi kiểm tra kết nối: " + e.getMessage();
+            e.printStackTrace();
+            return null;
+        }
+        
+        // Lấy ngày theo định dạng yyyymmdd từ DB để đồng bộ múi giờ với DB
+        String currentYmd = null;
+        try (PreparedStatement ps = connection.prepareStatement("SELECT DATE_FORMAT(CURRENT_DATE, '%Y%m%d')")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    currentYmd = rs.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        if (currentYmd == null) {
+            java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+            currentYmd = java.time.LocalDate.now().format(fmt);
+        }
+
+        String prefix = "GEN-" + currentYmd + "-"; // e.g. GEN-20251109-
+        String like = prefix + "%";
+
+        int nextSeq = 1;
+        String lastNumber = null;
+        // Lấy mã sản phẩm lớn nhất theo prefix rồi tăng +1
+        String sql = "SELECT product_code FROM products WHERE product_code LIKE ? ORDER BY product_code DESC LIMIT 1";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, like);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    lastNumber = rs.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        if (lastNumber != null && lastNumber.startsWith(prefix)) {
+            String tail = lastNumber.substring(prefix.length());
+            try {
+                nextSeq = Integer.parseInt(tail) + 1;
+            } catch (NumberFormatException ignore) {
+                nextSeq = 1;
+            }
+        }
+
+        // Thử tối đa 10 lần để tránh xung đột song song hiếm gặp
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String candidate = prefix + String.format("%04d", nextSeq);
+            if (!isProductCodeExists(candidate)) {
+                return candidate;
+            }
+            nextSeq++;
+        }
+
+        // Cuối cùng nếu vẫn trùng, tạo chuỗi ngẫu nhiên an toàn hơn
+        String fallback = prefix + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return fallback;
+    }
+    
+    /**
      * Lấy lỗi cuối cùng
      */
     public String getLastError() {

@@ -648,6 +648,170 @@ public class InventoryDAO {
     }
     
     /**
+     * Lấy danh sách sản phẩm với tổng tồn kho (gộp tất cả các kho)
+     */
+    public List<Map<String, Object>> getProductsWithStock(String category, String search, 
+                                                           String stockStatus, int page, int pageSize) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return result;
+        }
+        
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ");
+        sql.append("p.id as product_id, ");
+        sql.append("p.product_code, ");
+        sql.append("p.product_name, ");
+        sql.append("p.category, ");
+        sql.append("p.unit, ");
+        sql.append("p.unit_price, ");
+        sql.append("p.image_url, ");
+        sql.append("COALESCE(SUM(i.current_stock), 0) as total_stock, ");
+        sql.append("MIN(i.min_stock) as min_stock, ");
+        sql.append("MAX(i.max_stock) as max_stock ");
+        sql.append("FROM products p ");
+        sql.append("LEFT JOIN inventory i ON p.id = i.product_id ");
+        sql.append("WHERE 1=1 ");
+        
+        List<Object> params = new ArrayList<>();
+        
+        // Lọc theo danh mục
+        if (category != null && !category.trim().isEmpty()) {
+            sql.append("AND p.category = ? ");
+            params.add(category);
+        }
+        
+        // Tìm kiếm theo tên hoặc mã sản phẩm
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ?) ");
+            String searchPattern = "%" + search.trim() + "%";
+            params.add(searchPattern);
+            params.add(searchPattern);
+        }
+        
+        sql.append("GROUP BY p.id, p.product_code, p.product_name, p.category, p.unit, p.unit_price, p.image_url ");
+        
+        // Lọc theo trạng thái tồn kho (sau khi GROUP BY)
+        if (stockStatus != null && !stockStatus.trim().isEmpty()) {
+            switch (stockStatus) {
+                case "out":
+                    sql.append("HAVING total_stock <= 0 ");
+                    break;
+                case "low":
+                    sql.append("HAVING total_stock > 0 AND total_stock <= min_stock ");
+                    break;
+                case "normal":
+                    sql.append("HAVING total_stock > min_stock ");
+                    break;
+            }
+        }
+        
+        sql.append("ORDER BY p.product_name ASC ");
+        
+        // Phân trang
+        int offset = (page - 1) * pageSize;
+        sql.append("LIMIT ? OFFSET ?");
+        params.add(pageSize);
+        params.add(offset);
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> product = new HashMap<>();
+                    product.put("productId", rs.getInt("product_id"));
+                    product.put("productCode", rs.getString("product_code"));
+                    product.put("productName", rs.getString("product_name"));
+                    product.put("category", rs.getString("category"));
+                    product.put("unit", rs.getString("unit"));
+                    product.put("unitPrice", rs.getDouble("unit_price"));
+                    product.put("imageUrl", rs.getString("image_url"));
+                    product.put("totalStock", rs.getInt("total_stock"));
+                    product.put("minStock", rs.getInt("min_stock"));
+                    int maxStock = rs.getInt("max_stock");
+                    product.put("maxStock", rs.wasNull() ? null : maxStock);
+                    result.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi lấy danh sách sản phẩm với tồn kho: " + e.getMessage();
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Đếm số lượng sản phẩm có tồn kho (với bộ lọc)
+     */
+    public int getProductsWithStockCount(String category, String search, String stockStatus) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return 0;
+        }
+        
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(DISTINCT p.id) ");
+        sql.append("FROM products p ");
+        sql.append("LEFT JOIN inventory i ON p.id = i.product_id ");
+        sql.append("WHERE 1=1 ");
+        
+        List<Object> params = new ArrayList<>();
+        
+        if (category != null && !category.trim().isEmpty()) {
+            sql.append("AND p.category = ? ");
+            params.add(category);
+        }
+        
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ?) ");
+            String searchPattern = "%" + search.trim() + "%";
+            params.add(searchPattern);
+            params.add(searchPattern);
+        }
+        
+        sql.append("GROUP BY p.id ");
+        
+        if (stockStatus != null && !stockStatus.trim().isEmpty()) {
+            switch (stockStatus) {
+                case "out":
+                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) <= 0 ");
+                    break;
+                case "low":
+                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > 0 AND COALESCE(SUM(i.current_stock), 0) <= MIN(i.min_stock) ");
+                    break;
+                case "normal":
+                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > MIN(i.min_stock) ");
+                    break;
+            }
+        }
+        
+        // Đếm số lượng sản phẩm sau khi GROUP BY
+        String countSql = "SELECT COUNT(*) FROM (" + sql.toString() + ") as subquery";
+        
+        try (PreparedStatement ps = connection.prepareStatement(countSql)) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi đếm sản phẩm với tồn kho: " + e.getMessage();
+        }
+        
+        return 0;
+    }
+    
+    /**
      * Lấy danh sách các warehouse location
      */
     public List<String> getAllWarehouseLocations() {

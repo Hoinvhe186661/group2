@@ -4,10 +4,12 @@ import com.hlgenerator.dao.InventoryDAO;
 import com.hlgenerator.dao.ProductDAO;
 import com.hlgenerator.dao.PriceHistoryDAO;
 import com.hlgenerator.dao.SupplierDAO;
+import com.hlgenerator.dao.ContractDAO;
 import com.hlgenerator.model.Inventory;
 import com.hlgenerator.model.StockHistory;
 import com.hlgenerator.model.Product;
 import com.hlgenerator.model.Supplier;
+import com.hlgenerator.model.Contract;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -25,6 +27,7 @@ public class InventoryServlet extends HttpServlet {
     private ProductDAO productDAO;
     private PriceHistoryDAO priceHistoryDAO;
     private SupplierDAO supplierDAO;
+    private ContractDAO contractDAO;
 
     @Override
     public void init() throws ServletException {
@@ -33,6 +36,7 @@ public class InventoryServlet extends HttpServlet {
         productDAO = new ProductDAO();
         priceHistoryDAO = new PriceHistoryDAO();
         supplierDAO = new SupplierDAO();
+        contractDAO = new ContractDAO();
     }
 
     @Override
@@ -55,6 +59,14 @@ public class InventoryServlet extends HttpServlet {
             getStatistics(request, response);
         } else if ("getSuppliers".equals(action)) {
             getSuppliersForDropdown(request, response);
+        } else if ("getContracts".equals(action)) {
+            getContractsForDropdown(request, response);
+        } else if ("getContractInfo".equals(action)) {
+            getContractInfo(request, response);
+        } else if ("getContractsList".equals(action)) {
+            getContractsList(request, response);
+        } else if ("getStockList".equals(action)) {
+            getStockList(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
         }
@@ -137,6 +149,101 @@ public class InventoryServlet extends HttpServlet {
             handleStockOut(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
+        }
+    }
+    
+    /**
+     * Lấy danh sách hợp đồng với lọc và phân trang
+     */
+    private void getContractsList(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        try {
+            String status = request.getParameter("status");
+            String search = request.getParameter("search");
+            
+            int page = 1;
+            int pageSize = 10;
+            try {
+                if (request.getParameter("page") != null) {
+                    page = Integer.parseInt(request.getParameter("page"));
+                }
+                if (request.getParameter("pageSize") != null) {
+                    pageSize = Integer.parseInt(request.getParameter("pageSize"));
+                }
+            } catch (NumberFormatException e) {
+                // Use default values
+            }
+            
+            // Lấy danh sách hợp đồng
+            List<Contract> allContracts = contractDAO.getAllContracts();
+            
+            // Lọc theo trạng thái và tìm kiếm
+            List<Contract> filteredContracts = new java.util.ArrayList<>();
+            for (Contract c : allContracts) {
+                // Lọc theo trạng thái
+                if (status != null && !status.trim().isEmpty()) {
+                    if (!status.equals(c.getStatus())) {
+                        continue;
+                    }
+                }
+                
+                // Lọc theo tìm kiếm (mã hợp đồng hoặc tên khách hàng)
+                if (search != null && !search.trim().isEmpty()) {
+                    String searchLower = search.toLowerCase();
+                    String contractNumber = c.getContractNumber() != null ? c.getContractNumber().toLowerCase() : "";
+                    String customerName = c.getCustomerName() != null ? c.getCustomerName().toLowerCase() : "";
+                    if (!contractNumber.contains(searchLower) && !customerName.contains(searchLower)) {
+                        continue;
+                    }
+                }
+                
+                filteredContracts.add(c);
+            }
+            
+            int totalCount = filteredContracts.size();
+            
+            // Phân trang
+            int start = (page - 1) * pageSize;
+            int end = Math.min(start + pageSize, totalCount);
+            List<Contract> pagedContracts = new java.util.ArrayList<>();
+            if (start < totalCount) {
+                pagedContracts = filteredContracts.subList(start, end);
+            }
+            
+            // Build JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":[");
+            
+            for (int i = 0; i < pagedContracts.size(); i++) {
+                if (i > 0) json.append(",");
+                Contract c = pagedContracts.get(i);
+                json.append("{");
+                json.append("\"id\":").append(c.getId()).append(",");
+                json.append("\"contractNumber\":\"").append(escapeJson(c.getContractNumber())).append("\",");
+                json.append("\"customerId\":").append(c.getCustomerId()).append(",");
+                json.append("\"customerName\":\"").append(escapeJson(c.getCustomerName() != null ? c.getCustomerName() : "")).append("\",");
+                json.append("\"customerPhone\":\"").append(escapeJson(c.getCustomerPhone() != null ? c.getCustomerPhone() : "")).append("\",");
+                json.append("\"contractType\":\"").append(escapeJson(c.getContractType() != null ? c.getContractType() : "")).append("\",");
+                json.append("\"title\":\"").append(escapeJson(c.getTitle() != null ? c.getTitle() : "")).append("\",");
+                json.append("\"startDate\":\"").append(c.getStartDate() != null ? c.getStartDate().toString() : "").append("\",");
+                json.append("\"endDate\":\"").append(c.getEndDate() != null ? c.getEndDate().toString() : "").append("\",");
+                json.append("\"contractValue\":").append(c.getContractValue() != null ? c.getContractValue() : "null").append(",");
+                json.append("\"status\":\"").append(escapeJson(c.getStatus() != null ? c.getStatus() : "")).append("\"");
+                json.append("}");
+            }
+            
+            json.append("],\"totalCount\":").append(totalCount);
+            json.append(",\"currentPage\":").append(page);
+            json.append(",\"pageSize\":").append(pageSize);
+            json.append(",\"totalPages\":").append((int) Math.ceil((double) totalCount / pageSize));
+            json.append("}");
+            
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + 
+                escapeJson(e.getMessage()) + "\"}");
         }
     }
     
@@ -283,6 +390,111 @@ public class InventoryServlet extends HttpServlet {
             }
             
             json.append("]}");
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + 
+                escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
+     * Lấy danh sách hợp đồng cho dropdown (lấy tất cả trừ deleted)
+     */
+    private void getContractsForDropdown(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        try {
+            List<Contract> contracts = contractDAO.getAllContracts();
+            
+            System.out.println("getContractsForDropdown: Found " + contracts.size() + " contracts (excluding deleted)");
+            
+            // Nếu không có hợp đồng nào, thử lấy cả deleted để debug
+            if (contracts.isEmpty()) {
+                List<Contract> allContracts = contractDAO.getAllContractsIncludingDeleted();
+                System.out.println("getContractsForDropdown: Total contracts in DB (including deleted): " + allContracts.size());
+                if (!allContracts.isEmpty()) {
+                    System.out.println("Warning: All contracts are marked as deleted!");
+                }
+            }
+            
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":[");
+            
+            int count = 0;
+            for (Contract c : contracts) {
+                // Lấy tất cả hợp đồng (trừ deleted - đã được filter ở getAllContracts)
+                // Bao gồm: draft, active, completed, terminated, expired
+                if (count > 0) json.append(",");
+                json.append("{");
+                json.append("\"id\":").append(c.getId()).append(",");
+                json.append("\"contractNumber\":\"").append(escapeJson(c.getContractNumber() != null ? c.getContractNumber() : "")).append("\",");
+                json.append("\"customerId\":").append(c.getCustomerId()).append(",");
+                json.append("\"customerName\":\"").append(escapeJson(c.getCustomerName() != null ? c.getCustomerName() : "")).append("\",");
+                json.append("\"status\":\"").append(escapeJson(c.getStatus() != null ? c.getStatus() : "")).append("\"");
+                json.append("}");
+                count++;
+                System.out.println("Added contract: ID=" + c.getId() + ", Number=" + c.getContractNumber() + ", Status=" + c.getStatus());
+            }
+            
+            json.append("]}");
+            System.out.println("getContractsForDropdown: Returning JSON with " + count + " contracts");
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Error in getContractsForDropdown: " + e.getMessage());
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + 
+                escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
+     * Lấy thông tin hợp đồng và sản phẩm trong hợp đồng
+     */
+    private void getContractInfo(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        try {
+            String contractIdParam = request.getParameter("contractId");
+            if (contractIdParam == null || contractIdParam.trim().isEmpty()) {
+                response.getWriter().write("{\"success\":false,\"message\":\"Thiếu contractId\"}");
+                return;
+            }
+            
+            int contractId = Integer.parseInt(contractIdParam);
+            Contract contract = contractDAO.getContractById(contractId);
+            
+            if (contract == null) {
+                response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy hợp đồng\"}");
+                return;
+            }
+            
+            // Lấy danh sách sản phẩm trong hợp đồng - query được xử lý ở DAO
+            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProducts(contractId);
+            
+            // Build JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":{");
+            json.append("\"contractId\":").append(contract.getId()).append(",");
+            json.append("\"contractNumber\":\"").append(escapeJson(contract.getContractNumber())).append("\",");
+            json.append("\"customerId\":").append(contract.getCustomerId()).append(",");
+            json.append("\"customerName\":\"").append(escapeJson(contract.getCustomerName() != null ? contract.getCustomerName() : "")).append("\",");
+            json.append("\"products\":[");
+            
+            for (int i = 0; i < contractProducts.size(); i++) {
+                if (i > 0) json.append(",");
+                java.util.Map<String, Object> p = contractProducts.get(i);
+                json.append("{");
+                json.append("\"productId\":").append(p.get("productId")).append(",");
+                json.append("\"quantity\":").append(p.get("quantity")).append(",");
+                json.append("\"productCode\":\"").append(escapeJson((String)p.get("productCode"))).append("\",");
+                json.append("\"productName\":\"").append(escapeJson((String)p.get("productName"))).append("\",");
+                json.append("\"unit\":\"").append(escapeJson((String)p.get("unit"))).append("\"");
+                json.append("}");
+            }
+            
+            json.append("]}}");
             response.getWriter().write(json.toString());
             
         } catch (Exception e) {
@@ -753,6 +965,82 @@ public class InventoryServlet extends HttpServlet {
         categories.add("Máy bơm nước");
         categories.add("Máy tiện");
         return categories;
+    }
+    
+    /**
+     * Lấy danh sách tồn kho cho trang stock.jsp
+     * Hiển thị danh sách sản phẩm với tổng tồn kho (gộp tất cả các kho)
+     * Filter được xử lý hoàn toàn bằng query ở backend
+     */
+    private void getStockList(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        try {
+            String category = request.getParameter("category");
+            String status = request.getParameter("status");
+            String keyword = request.getParameter("keyword");
+            // Hỗ trợ cả "search" parameter để nhất quán với các trang khác
+            if (keyword == null || keyword.isEmpty()) {
+                keyword = request.getParameter("search");
+            }
+            
+            int page = 1;
+            int pageSize = 10;
+            try {
+                if (request.getParameter("page") != null) {
+                    page = Integer.parseInt(request.getParameter("page"));
+                }
+                if (request.getParameter("pageSize") != null) {
+                    pageSize = Integer.parseInt(request.getParameter("pageSize"));
+                }
+            } catch (NumberFormatException e) {
+                // Use default values
+            }
+            
+            List<Map<String, Object>> productsList = inventoryDAO.getProductsWithStock(
+                category, keyword, status, page, pageSize);
+            int totalCount = inventoryDAO.getProductsWithStockCount(
+                category, keyword, status);
+            
+            // Build JSON response
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":[");
+            
+            for (int i = 0; i < productsList.size(); i++) {
+                if (i > 0) json.append(",");
+                Map<String, Object> product = productsList.get(i);
+                json.append("{");
+                json.append("\"productId\":").append(product.get("productId")).append(",");
+                json.append("\"productCode\":\"").append(escapeJson(product.get("productCode") != null ? product.get("productCode").toString() : "")).append("\",");
+                json.append("\"productName\":\"").append(escapeJson(product.get("productName") != null ? product.get("productName").toString() : "")).append("\",");
+                json.append("\"category\":\"").append(escapeJson(product.get("category") != null ? product.get("category").toString() : "")).append("\",");
+                json.append("\"unit\":\"").append(escapeJson(product.get("unit") != null ? product.get("unit").toString() : "")).append("\",");
+                json.append("\"totalStock\":").append(product.get("totalStock")).append(",");
+                json.append("\"minStock\":").append(product.get("minStock")).append(",");
+                Object maxStock = product.get("maxStock");
+                json.append("\"maxStock\":").append(maxStock != null ? maxStock : "null").append(",");
+                json.append("\"unitPrice\":").append(product.get("unitPrice")).append(",");
+                json.append("\"imageUrl\":\"").append(escapeJson(product.get("imageUrl") != null ? product.get("imageUrl").toString() : "")).append("\"");
+                json.append("}");
+            }
+            
+            json.append("],\"pagination\":{");
+            json.append("\"total\":").append(totalCount).append(",");
+            json.append("\"currentPage\":").append(page).append(",");
+            json.append("\"pageSize\":").append(pageSize).append(",");
+            json.append("\"totalPages\":").append((int) Math.ceil((double) totalCount / pageSize)).append(",");
+            int from = totalCount > 0 ? (page - 1) * pageSize + 1 : 0;
+            int to = Math.min(page * pageSize, totalCount);
+            json.append("\"from\":").append(from).append(",");
+            json.append("\"to\":").append(to);
+            json.append("}}");
+            
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + 
+                escapeJson(e.getMessage()) + "\"}");
+        }
     }
     
     /**

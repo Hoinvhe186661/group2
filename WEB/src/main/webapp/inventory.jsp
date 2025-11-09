@@ -277,7 +277,7 @@
                     <div class="col-xs-12">
                         <div class="panel">
                             <header class="panel-heading">
-                                <h3>Quản lý tồn kho</h3>
+                                <h3>Danh sách hợp đồng</h3>
                                 <div class="panel-tools">
                                     <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#stockInModal">
                                         <i class="fa fa-arrow-down"></i> Nhập kho
@@ -285,6 +285,9 @@
                                     <button class="btn btn-danger btn-sm" data-toggle="modal" data-target="#stockOutModal">
                                         <i class="fa fa-arrow-up"></i> Xuất kho
                                     </button>
+                                    <a class="btn btn-warning btn-sm" href="<%=request.getContextPath()%>/stock.jsp">
+                                        <i class="fa fa-cubes"></i> Tồn kho
+                                    </a>
                                     <a class="btn btn-info btn-sm" href="<%=request.getContextPath()%>/stock_history.jsp">
                                         <i class="fa fa-history"></i> Lịch sử
                                     </a>
@@ -296,52 +299,28 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="row">
-                                            <!-- Lọc theo danh mục -->
+                                            <!-- Lọc theo trạng thái hợp đồng -->
                                             <div class="col-md-3">
                                                 <div class="form-group">
-                                                    <label for="filterCategory">Danh mục:</label>
-                                                    <select class="form-control" id="filterCategory">
-                                                        <option value="">Tất cả danh mục</option>
-                                                        <option value="Máy phát điện">Máy phát điện</option>
-                                                        <option value="Máy bơm nước">Máy bơm nước</option>
-                                                        <option value="Máy tiện">Máy tiện</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Lọc theo vị trí kho -->
-                                            <div class="col-md-3">
-                                                <div class="form-group">
-                                                    <label for="filterWarehouse">Vị trí kho:</label>
-                                                <select class="form-control" id="filterWarehouse">
-                                                        <option value="">Tất cả kho</option>
-                                                        <option value="Main Warehouse">Kho Chính</option>
-                                                        <option value="Warehouse A">Kho A</option>
-                                                        <option value="Warehouse B">Kho B</option>
-                                                </select>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Lọc theo trạng thái tồn -->
-                                            <div class="col-md-2">
-                                                <div class="form-group">
-                                                    <label for="filterStockStatus">Trạng thái:</label>
-                                                    <select class="form-control" id="filterStockStatus">
-                                                        <option value="">Tất cả</option>
-                                                        <option value="normal">Bình thường</option>
-                                                        <option value="low">Sắp hết</option>
-                                                        <option value="out">Hết hàng</option>
+                                                    <label for="filterContractStatus">Trạng thái:</label>
+                                                    <select class="form-control" id="filterContractStatus">
+                                                        <option value="">Tất cả trạng thái</option>
+                                                        <option value="draft">Nháp</option>
+                                                        <option value="active">Đang hoạt động</option>
+                                                        <option value="completed">Hoàn thành</option>
+                                                        <option value="terminated">Chấm dứt</option>
+                                                        <option value="expired">Hết hạn</option>
                                                     </select>
                                                 </div>
                                             </div>
                                             
                                             <!-- Tìm kiếm -->
-                                            <div class="col-md-2">
+                                            <div class="col-md-7">
                                                 <div class="form-group">
-                                                    <label for="searchInventory">Tìm kiếm:</label>
-                                                    <input type="text" class="form-control" id="searchInventory" 
-                                                           placeholder="Tên sản phẩm..." 
-                                                           onkeypress="if(event.key==='Enter') filterInventory()">
+                                                    <label for="searchContract">Tìm kiếm:</label>
+                                                    <input type="text" class="form-control" id="searchContract" 
+                                                           placeholder="Mã hợp đồng, tên khách hàng..." 
+                                                           onkeypress="if(event.key==='Enter') filterContracts()">
                                                 </div>
                                             </div>
                                             
@@ -350,7 +329,7 @@
                                                 <div class="form-group">
                                                     <label style="color: transparent;">Lọc</label>
                                                     <button type="button" class="btn btn-primary btn-sm" 
-                                                            style="width: 100%;" onclick="filterInventory()" 
+                                                            style="width: 100%;" onclick="filterContracts()" 
                                                             title="Áp dụng bộ lọc">
                                                         <i class="fa fa-search"></i>
                                                     </button>
@@ -374,24 +353,25 @@
                             </div>
                             
                             <div class="panel-body table-responsive">
-                                <table class="table table-hover" id="inventoryTable">
+                                <table class="table table-hover" id="contractsTable">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
-                                            <th>Mã sản phẩm</th>
-                                            <th>Tên sản phẩm</th>
-                                            <th>Danh mục</th>
-                                            <th>Vị trí kho</th>
-                                            <th>Tồn hiện tại</th>
-                                            <th>Giá nhập</th>
-                                            <th>Giá bán</th>
+                                            <th>Số hợp đồng</th>
+                                            <th>Tên khách hàng</th>
+                                            <th>Số điện thoại</th>
+                                            <th>Loại</th>
+                                            <th>Tiêu đề</th>
+                                            <th>Ngày bắt đầu</th>
+                                            <th>Ngày kết thúc</th>
+                                            <th>Giá trị</th>
                                             <th>Trạng thái</th>
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td colspan="10" class="text-center">
+                                            <td colspan="11" class="text-center">
                                                 <i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...
                                             </td>
                                         </tr>
@@ -403,7 +383,7 @@
                                     <div class="col-md-8">
                                         <div class="dataTables_info" id="paginationInfo" role="status" aria-live="polite">
                                             Hiển thị <span id="showingStart">0</span> đến <span id="showingEnd">0</span> 
-                                            trong tổng số <span id="totalRecords">0</span> sản phẩm
+                                            trong tổng số <span id="totalRecords">0</span> hợp đồng
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -599,7 +579,7 @@
                     <form id="stockOutForm">
                         <!-- Thông tin chung -->
                         <div class="row" style="margin-bottom: 20px;">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Kho <span class="text-danger">*</span></label>
                                     <select id="stockOutWarehouse" class="form-control" required>
@@ -609,7 +589,21 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Mã hợp đồng</label>
+                                    <select id="stockOutContractId" class="form-control">
+                                        <option value="">-- Chọn mã hợp đồng --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tên khách hàng</label>
+                                    <input type="text" id="stockOutCustomerName" class="form-control" readonly style="background-color: #f5f5f5;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Lý do xuất kho <span class="text-danger">*</span></label>
                                     <select id="stockOutReason" class="form-control" required>
@@ -622,6 +616,8 @@
                                     </select>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row" style="margin-bottom: 20px;">
                             <div class="col-md-4">
                                 <div class="form-group">
                                     <label>Ngày xuất <span class="text-danger">*</span></label>
@@ -703,44 +699,36 @@
             console.log('Page loaded, initializing...');
             loadProductsForDropdown();
             loadSuppliersForDropdown();
-            loadInventoryData();
+            loadContractsData();
         });
         
         /**
-         * Hàm load dữ liệu tồn kho
+         * Hàm load dữ liệu hợp đồng
          */
-        function loadInventoryData() {
+        function loadContractsData() {
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
                 type: 'GET',
                 data: {
-                    action: 'getInventory',
-                    category: $('#filterCategory').val(),
-                    warehouse: $('#filterWarehouse').val(),
-                    stockStatus: $('#filterStockStatus').val(),
-                    search: $('#searchInventory').val(),
+                    action: 'getContractsList',
+                    status: $('#filterContractStatus').val(),
+                    search: $('#searchContract').val(),
                     page: currentPage,
                     pageSize: itemsPerPage
                 },
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        allProducts = response.data;
-                        updateInventoryTable(response.data);
+                        updateContractsTable(response.data);
                         updatePaginationInfo(response);
-                        
-                        // Cập nhật dropdown danh mục
-                        if (response.categories) {
-                            updateCategoryFilter(response.categories);
-                        }
                     } else {
                         alert('Lỗi khi tải dữ liệu: ' + response.message);
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('AJAX Error:', error);
-                    var tbody = $('#inventoryTable tbody');
-                    tbody.html('<tr><td colspan="10" class="text-center text-danger">Lỗi tải dữ liệu kho: ' + (error||'') + '</td></tr>');
+                    var tbody = $('#contractsTable tbody');
+                    tbody.html('<tr><td colspan="11" class="text-center text-danger">Lỗi tải dữ liệu hợp đồng: ' + (error||'') + '</td></tr>');
                 }
             });
         }
@@ -806,44 +794,77 @@
             updateDashboard(sampleData);
         }
         
-        // Cập nhật bảng tồn kho
-        function updateInventoryTable(data) {
-            var tbody = $('#inventoryTable tbody');
+        // Cập nhật bảng hợp đồng
+        function updateContractsTable(data) {
+            var tbody = $('#contractsTable tbody');
             tbody.empty();
             
             if (data.length === 0) {
-                tbody.append('<tr><td colspan="10" class="text-center">Không có dữ liệu</td></tr>');
+                tbody.append('<tr><td colspan="11" class="text-center">Không có dữ liệu</td></tr>');
                 return;
             }
             
-            data.forEach(function(item) {
-                var status = getStockStatus(item.currentStock, item.minStock);
-                var statusClass = status.class;
-                var statusText = status.text;
+            data.forEach(function(contract) {
+                var statusBadge = getStatusBadge(contract.status);
+                var contractValue = contract.contractValue != null && contract.contractValue !== 'null' 
+                    ? formatCurrencyVN(contract.contractValue) + ' VNĐ' 
+                    : '--';
                 
                 var row = '<tr>' +
-                    '<td>' + item.id + '</td>' +
-                    '<td>' + item.productCode + '</td>' +
-                    '<td>' + item.productName + '</td>' +
-                    '<td>' + item.category + '</td>' +
-                    '<td>' + item.warehouse + '</td>' +
-                    '<td class="' + statusClass + '">' + item.currentStock + '</td>' +
-                    '<td>' + (item.unitCost != null ? formatCurrencyVN(item.unitCost) + ' VNĐ' : '--') + '</td>' +
-                    '<td>' + (item.unitPrice != null ? formatCurrencyVN(item.unitPrice) + ' VNĐ' : '--') + '</td>' +
-                    '<td><span class="label ' + (statusClass === 'stock-out' ? 'label-danger' : (statusClass === 'stock-low' ? 'label-warning' : 'label-success')) + '">' + statusText + '</span></td>' +
+                    '<td>' + contract.id + '</td>' +
+                    '<td>' + escapeHtml(contract.contractNumber || '--') + '</td>' +
+                    '<td>' + escapeHtml(contract.customerName || '--') + '</td>' +
+                    '<td>' + escapeHtml(contract.customerPhone || '--') + '</td>' +
+                    '<td>' + escapeHtml(contract.contractType || '--') + '</td>' +
+                    '<td>' + escapeHtml(contract.title || '--') + '</td>' +
+                    '<td>' + (contract.startDate || '--') + '</td>' +
+                    '<td>' + (contract.endDate || '--') + '</td>' +
+                    '<td>' + contractValue + '</td>' +
+                    '<td>' + statusBadge + '</td>' +
                     '<td>' +
-                        '<button class="btn btn-info btn-xs" onclick="invViewProduct(' + (item.productId || item.id) + ')" title="Xem chi tiết">' +
+                        '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
                             '<i class="fa fa-eye"></i> Xem' +
-                        '</button>' +
-                        ' <button class="btn btn-primary btn-xs" onclick="openPriceUpdate(' + (item.productId || item.id) + ')" title="Cập nhật giá bán">' +
-                            '<i class="fa fa-money"></i> Cập nhật giá' +
                         '</button>' +
                     '</td>' +
                 '</tr>';
                 tbody.append(row);
             });
+        }
+        
+        // Lấy badge trạng thái hợp đồng
+        function getStatusBadge(status) {
+            var badgeClass = 'label-default';
+            var statusText = status;
             
-            // Phân trang được xử lý ở backend (updatePaginationInfo sẽ cập nhật UI)
+            switch(status) {
+                case 'draft':
+                    badgeClass = 'label-default';
+                    statusText = 'Nháp';
+                    break;
+                case 'active':
+                    badgeClass = 'label-success';
+                    statusText = 'Đang hoạt động';
+                    break;
+                case 'completed':
+                    badgeClass = 'label-info';
+                    statusText = 'Hoàn thành';
+                    break;
+                case 'terminated':
+                    badgeClass = 'label-warning';
+                    statusText = 'Chấm dứt';
+                    break;
+                case 'expired':
+                    badgeClass = 'label-danger';
+                    statusText = 'Hết hạn';
+                    break;
+            }
+            
+            return '<span class="label ' + badgeClass + '">' + statusText + '</span>';
+        }
+        
+        // Xem chi tiết hợp đồng
+        function viewContract(contractId) {
+            window.location.href = '<%=request.getContextPath()%>/contracts.jsp?id=' + contractId;
         }
         
         // Xác định trạng thái tồn kho
@@ -1610,23 +1631,21 @@
         // Trang lịch sử được mở tại stock_history.jsp
         
         /**
-         * Lọc tồn kho với AJAX từ backend
+         * Lọc hợp đồng với AJAX từ backend
          */
-        function filterInventory() {
+        function filterContracts() {
             currentPage = 1; // Reset về trang đầu khi lọc
-            loadInventoryData(); // Load lại dữ liệu với bộ lọc hiện tại
+            loadContractsData(); // Load lại dữ liệu với bộ lọc hiện tại
         }
         
         /**
          * Reset bộ lọc về trạng thái ban đầu
          */
         function resetFilters() {
-            $('#filterCategory').val('');
-            $('#filterWarehouse').val('');
-            $('#filterStockStatus').val('');
-            $('#searchInventory').val('');
+            $('#filterContractStatus').val('');
+            $('#searchContract').val('');
             currentPage = 1;
-            loadInventoryData(); // Load lại dữ liệu ban đầu
+            loadContractsData(); // Load lại dữ liệu ban đầu
         }
         
         // Reset form khi đóng modal
@@ -1658,9 +1677,193 @@
         // Reset form khi đóng modal xuất kho
         $('#stockOutModal').on('hidden.bs.modal', function() {
             $('#stockOutForm')[0].reset();
+            $('#stockOutContractId').val('');
+            $('#stockOutCustomerName').val('');
             $('#stockOutProductsBody').empty();
             stockOutRowCounter = 0;
         });
+        
+        // Load danh sách hợp đồng cho dropdown
+        function loadContractsForDropdown() {
+            var selectEl = $('#stockOutContractId');
+            if (selectEl.length === 0) {
+                console.error('Element #stockOutContractId not found');
+                return;
+            }
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { action: 'getContracts' },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Contracts loaded:', response);
+                    if (response && response.success) {
+                        selectEl.empty();
+                        selectEl.append('<option value="">-- Chọn mã hợp đồng --</option>');
+                        
+                        if (response.data && response.data.length > 0) {
+                            response.data.forEach(function(contract) {
+                                if (contract && contract.id && contract.contractNumber) {
+                                    var displayText = escapeHtml(contract.contractNumber || '');
+                                    if (contract.customerName) {
+                                        displayText += ' - ' + escapeHtml(contract.customerName);
+                                    }
+                                    selectEl.append('<option value="' + contract.id + '" data-customer-name="' + escapeHtml(contract.customerName || '') + '">' + 
+                                                  displayText + '</option>');
+                                }
+                            });
+                            console.log('Loaded ' + response.data.length + ' contracts');
+                        } else {
+                            console.warn('No contracts found in response data');
+                            selectEl.append('<option value="" disabled>Không có hợp đồng nào</option>');
+                        }
+                    } else {
+                        console.warn('Response failed:', response);
+                        selectEl.empty();
+                        selectEl.append('<option value="">-- Lỗi tải dữ liệu --</option>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contracts:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    selectEl.empty();
+                    selectEl.append('<option value="">-- Lỗi: ' + error + ' --</option>');
+                }
+            });
+        }
+        
+        // Load thông tin hợp đồng khi chọn
+        function loadContractInfo(contractId) {
+            if (!contractId || contractId === '') {
+                $('#stockOutCustomerName').val('');
+                // Xóa tất cả sản phẩm trong bảng
+                $('#stockOutProductsBody').empty();
+                stockOutRowCounter = 0;
+                return;
+            }
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { action: 'getContractInfo', contractId: contractId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var data = response.data;
+                        
+                        // Hiển thị tên khách hàng
+                        $('#stockOutCustomerName').val(data.customerName || '');
+                        
+                        // Xóa tất cả sản phẩm hiện tại trong bảng
+                        $('#stockOutProductsBody').empty();
+                        stockOutRowCounter = 0;
+                        
+                        // Tự động thêm sản phẩm từ hợp đồng vào bảng
+                        if (data.products && data.products.length > 0) {
+                            data.products.forEach(function(product) {
+                                stockOutRowCounter++;
+                                var rowId = 'stockOutRow_' + stockOutRowCounter;
+                                var tbody = $('#stockOutProductsBody');
+                                
+                                var row = '<tr id="' + rowId + '">' +
+                                    '<td style="text-align: center; vertical-align: middle;">' + stockOutRowCounter + '</td>' +
+                                    '<td>' +
+                                        '<select class="form-control stockOutProductSelect" data-row-id="' + rowId + '" required>' +
+                                        '</select>' +
+                                    '</td>' +
+                                    '<td style="vertical-align: middle;">' +
+                                        '<input type="text" class="form-control stockOutProductName" readonly style="background-color: #f5f5f5;">' +
+                                    '</td>' +
+                                    '<td style="text-align: center; vertical-align: middle;">' +
+                                        '<input type="text" class="form-control stockOutProductUnit" readonly style="background-color: #f5f5f5; text-align: center;">' +
+                                    '</td>' +
+                                    '<td style="text-align: center; vertical-align: middle;">' +
+                                        '<span class="stockOutCurrentStock" style="font-weight: bold; color: #5cb85c;">--</span>' +
+                                    '</td>' +
+                                    '<td>' +
+                                        '<input type="number" class="form-control stockOutQuantity" min="1" value="' + (product.quantity || 0) + '" required style="text-align: right;">' +
+                                    '</td>' +
+                                    '<td style="text-align: center; vertical-align: middle;">' +
+                                        '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockOutRow(\'' + rowId + '\')" title="Xóa dòng">' +
+                                            '<i class="fa fa-trash"></i>' +
+                                        '</button>' +
+                                    '</td>' +
+                                '</tr>';
+                                
+                                tbody.append(row);
+                                
+                                // Render options cho dropdown sản phẩm
+                                var selectEl = $('#' + rowId + ' .stockOutProductSelect');
+                                renderStockOutProductOptions(selectEl);
+                                
+                                // Chọn sản phẩm từ hợp đồng và cập nhật thông tin
+                                var rowEl = $('#' + rowId);
+                                setTimeout(function() {
+                                    selectEl.val(product.productId);
+                                    var selectedOption = selectEl.find('option:selected');
+                                    if (selectedOption.length > 0) {
+                                        rowEl.find('.stockOutProductName').val(selectedOption.data('name') || product.productName || '');
+                                        rowEl.find('.stockOutProductUnit').val(selectedOption.data('unit') || product.unit || '');
+                                    } else {
+                                        // Nếu không tìm thấy trong dropdown, dùng thông tin từ hợp đồng
+                                        rowEl.find('.stockOutProductName').val(product.productName || '');
+                                        rowEl.find('.stockOutProductUnit').val(product.unit || '');
+                                    }
+                                    
+                                    // Load tồn kho hiện tại
+                                    var warehouse = $('#stockOutWarehouse').val();
+                                    loadCurrentStock(product.productId, warehouse, rowEl);
+                                }, 100);
+                                
+                                // Gán sự kiện change cho dropdown sản phẩm
+                                selectEl.off('change').on('change', function() {
+                                    var row = $(this).closest('tr');
+                                    var selectedOption = $(this).find('option:selected');
+                                    var productId = $(this).val();
+                                    var warehouse = $('#stockOutWarehouse').val();
+                                    
+                                    if (productId) {
+                                        row.find('.stockOutProductName').val(selectedOption.data('name') || '');
+                                        row.find('.stockOutProductUnit').val(selectedOption.data('unit') || '');
+                                        loadCurrentStock(productId, warehouse, row);
+                                    } else {
+                                        row.find('.stockOutProductName').val('');
+                                        row.find('.stockOutProductUnit').val('');
+                                        row.find('.stockOutCurrentStock').text('--');
+                                    }
+                                });
+                                
+                                // Validate số lượng xuất không vượt quá tồn kho
+                                $('#' + rowId + ' .stockOutQuantity').off('input').on('input', function() {
+                                    var row = $(this).closest('tr');
+                                    var quantity = parseInt($(this).val()) || 0;
+                                    var currentStock = parseInt(row.find('.stockOutCurrentStock').text()) || 0;
+                                    
+                                    if (quantity > currentStock) {
+                                        $(this).css('border-color', '#d9534f');
+                                        alert('Số lượng xuất (' + quantity + ') không được vượt quá tồn kho hiện tại (' + currentStock + ')!');
+                                        $(this).val(currentStock);
+                                    } else {
+                                        $(this).css('border-color', '');
+                                    }
+                                });
+                            });
+                            
+                            // Cập nhật lại STT cho tất cả các dòng
+                            updateStockOutRowNumbers();
+                        }
+                    } else {
+                        alert('Không thể tải thông tin hợp đồng: ' + (response.message || ''));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contract info:', error);
+                    alert('Lỗi khi tải thông tin hợp đồng: ' + error);
+                }
+            });
+        }
         
         // Thiết lập mặc định khi mở modal xuất kho
         $('#stockOutModal').on('shown.bs.modal', function() {
@@ -1671,10 +1874,23 @@
             var dd = ('0' + today.getDate()).slice(-2);
             $('#stockOutDate').val(yyyy + '-' + mm + '-' + dd);
             
+            // Load danh sách hợp đồng
+            loadContractsForDropdown();
+            
+            // Reset các trường hợp đồng và khách hàng
+            $('#stockOutContractId').val('');
+            $('#stockOutCustomerName').val('');
+            
             // Reset bảng và thêm dòng đầu tiên
             $('#stockOutProductsBody').empty();
             stockOutRowCounter = 0;
             addStockOutRow();
+        });
+        
+        // Xử lý khi chọn hợp đồng
+        $('#stockOutContractId').on('change', function() {
+            var contractId = $(this).val();
+            loadContractInfo(contractId);
         });
 
         // Cập nhật nút phân trang (backend-driven)
@@ -1682,7 +1898,7 @@
             var pagination = $('#pagination');
             pagination.empty();
             var prevLi = $('<li class="paginate_button ' + (currentPage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
-            prevLi.on('click', function(e){ e.preventDefault(); if (currentPage > 1) { currentPage--; loadInventoryData(); } });
+            prevLi.on('click', function(e){ e.preventDefault(); if (currentPage > 1) { currentPage--; loadContractsData(); } });
             pagination.append(prevLi);
             var maxVisible = 5;
             var start = Math.max(1, currentPage - Math.floor(maxVisible/2));
@@ -1691,12 +1907,12 @@
             for (var p = start; p <= end; p++) {
                 (function(page){
                     var li = $('<li class="paginate_button ' + (page === currentPage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
-                    li.on('click', function(e){ e.preventDefault(); currentPage = page; loadInventoryData(); });
+                    li.on('click', function(e){ e.preventDefault(); currentPage = page; loadContractsData(); });
                     pagination.append(li);
                 })(p);
             }
             var nextLi = $('<li class="paginate_button ' + (currentPage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
-            nextLi.on('click', function(e){ e.preventDefault(); if (currentPage < totalPages) { currentPage++; loadInventoryData(); } });
+            nextLi.on('click', function(e){ e.preventDefault(); if (currentPage < totalPages) { currentPage++; loadContractsData(); } });
             pagination.append(nextLi);
         }
     </script>

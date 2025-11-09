@@ -438,8 +438,8 @@
                         <input type="hidden" name="action" value="add">
                         <div class="form-group">
                             <label>Mã NCC</label>
-                            <input name="supplier_code" id="add_supplier_code" class="form-control" required onblur="checkSupplierCodeExists()" oninput="supplierPrefixHint()" placeholder="SUP..." pattern="^SUP.*$" title="Mã nhà cung cấp phải bắt đầu bằng 'SUP'">
-                            <small class="form-text text-muted" id="supplier_code_feedback">Mã nhà cung cấp phải bắt đầu bằng "SUP"</small>
+                            <input name="supplier_code" id="add_supplier_code" class="form-control" required readonly style="background-color: #f5f5f5;">
+                            <small class="form-text text-muted" id="supplier_code_feedback">Mã nhà cung cấp sẽ được tạo tự động</small>
                         </div>
                         <div class="form-group"><label>Tên công ty</label><input name="company_name" class="form-control" required></div>
                         <div class="form-group"><label>Người liên hệ</label><input name="contact_person" class="form-control" required></div>
@@ -576,64 +576,34 @@
             }
         }
         /**
-         * Kiểm tra mã nhà cung cấp có trùng không
+         * Tạo mã nhà cung cấp tự động
          */
-        function checkSupplierCodeExists() {
-            var supplierCode = $('#add_supplier_code').val().trim();
-            var feedbackElement = $('#supplier_code_feedback');
-            
-            if (!supplierCode) {
-                feedbackElement.text('').removeClass('text-danger text-success');
-                return;
-            }
-            // Kiểm tra prefix SUP trước khi gọi AJAX
-            if (!/^SUP/.test(supplierCode)) {
-                feedbackElement.text("Mã nhà cung cấp phải bắt đầu bằng 'SUP'").removeClass('text-success').addClass('text-danger');
-                $('#add_supplier_code').addClass('is-invalid').removeClass('is-valid');
-                return;
-            }
-            
+        function generateSupplierCode() {
             $.ajax({
                 url: '<%=request.getContextPath()%>/supplier',
                 type: 'GET',
                 data: {
-                    action: 'checkCode',
-                    supplier_code: supplierCode
+                    action: 'generateCode'
                 },
                 dataType: 'json',
                 success: function(response) {
-                    if (response.exists) {
-                        feedbackElement.text('Mã nhà cung cấp đã tồn tại trong hệ thống').removeClass('text-success').addClass('text-danger');
-                        $('#add_supplier_code').addClass('is-invalid').removeClass('is-valid');
+                    if (response && response.success && response.supplierCode) {
+                        $('#add_supplier_code').val(response.supplierCode);
+                        $('#supplier_code_feedback').text('Mã nhà cung cấp đã được tạo tự động').removeClass('text-danger').addClass('text-success');
+                        $('#add_supplier_code').removeClass('is-invalid').addClass('is-valid');
                     } else {
-                        feedbackElement.text('Mã nhà cung cấp hợp lệ').removeClass('text-danger').addClass('text-success');
-                        $('#add_supplier_code').addClass('is-valid').removeClass('is-invalid');
+                        var errorMsg = (response && response.message) ? response.message : 'Không thể tạo mã nhà cung cấp';
+                        $('#supplier_code_feedback').text(errorMsg).removeClass('text-success').addClass('text-danger');
+                        $('#add_supplier_code').removeClass('is-valid').addClass('is-invalid');
+                        console.error('Error generating supplier code:', response);
                     }
                 },
-                error: function() {
-                    // Không hiển thị lỗi nếu không kiểm tra được
-                    feedbackElement.text('').removeClass('text-danger text-success');
-                    $('#add_supplier_code').removeClass('is-invalid is-valid');
+                error: function(xhr, status, error) {
+                    $('#supplier_code_feedback').text('Lỗi khi tạo mã nhà cung cấp: ' + error).removeClass('text-success').addClass('text-danger');
+                    $('#add_supplier_code').removeClass('is-valid').addClass('is-invalid');
+                    console.error('AJAX error:', status, error, xhr.responseText);
                 }
             });
-        }
-
-        // Gợi ý realtime khi nhập mã NCC để đảm bảo prefix SUP
-        function supplierPrefixHint(){
-            var supplierCode = $('#add_supplier_code').val();
-            var feedbackElement = $('#supplier_code_feedback');
-            if (!supplierCode || !supplierCode.trim()) {
-                feedbackElement.text('Mã nhà cung cấp phải bắt đầu bằng "SUP"').removeClass('text-danger text-success');
-                $('#add_supplier_code').removeClass('is-invalid is-valid');
-                return;
-            }
-            if (!/^SUP/.test(supplierCode)) {
-                feedbackElement.text("Mã nhà cung cấp phải bắt đầu bằng 'SUP'").removeClass('text-success').addClass('text-danger');
-                $('#add_supplier_code').addClass('is-invalid').removeClass('is-valid');
-            } else {
-                feedbackElement.text('Đang kiểm tra tính duy nhất...').removeClass('text-danger text-success');
-                $('#add_supplier_code').removeClass('is-invalid is-valid');
-            }
         }
         
         // Hàm tạo JSON từ 2 trường bank_name và account_number
@@ -658,10 +628,15 @@
         
         // Xử lý form submit để ghép JSON
         $(document).ready(function() {
+            // Tự động tạo mã khi mở modal thêm mới
+            $('#addSupplierModal').on('shown.bs.modal', function () {
+                generateSupplierCode();
+            });
+            
             // Reset feedback khi đóng modal thêm
             $('#addSupplierModal').on('hidden.bs.modal', function () {
-                $('#supplier_code_feedback').text('').removeClass('text-danger text-success');
-                $('#add_supplier_code').removeClass('is-invalid is-valid');
+                $('#supplier_code_feedback').text('Mã nhà cung cấp sẽ được tạo tự động').removeClass('text-danger text-success');
+                $('#add_supplier_code').removeClass('is-invalid is-valid').val('');
                 $('#addSupplierForm')[0].reset();
             });
             
@@ -683,28 +658,7 @@
                     return false;
                 }
                 
-                if (!supplierCode) {
-                    e.preventDefault();
-                    alert('Mã nhà cung cấp không được để trống!');
-                    $('input[name="supplier_code"]', this).focus();
-                    return false;
-                }
-                // Bắt buộc bắt đầu bằng SUP
-                if (!/^SUP/.test(supplierCode)) {
-                    e.preventDefault();
-                    alert("Mã nhà cung cấp phải bắt đầu bằng 'SUP'!");
-                    $('input[name="supplier_code"]', this).focus();
-                    return false;
-                }
-                
-                // Kiểm tra mã nhà cung cấp có trùng không
-                var hasError = $('#add_supplier_code').hasClass('is-invalid');
-                if (hasError) {
-                    e.preventDefault();
-                    alert('Mã nhà cung cấp đã tồn tại trong hệ thống. Vui lòng chọn mã khác!');
-                    $('#add_supplier_code').focus();
-                    return false;
-                }
+                // Mã nhà cung cấp sẽ được tự động tạo nếu để trống (xử lý ở backend)
                 
                 if (!companyName) {
                     e.preventDefault();

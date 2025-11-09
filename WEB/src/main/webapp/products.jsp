@@ -617,8 +617,8 @@
                         <input type="hidden" name="action" value="add">
                         <div class="form-group">
                             <label for="product_code">Mã sản phẩm <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="product_code" name="product_code" required onblur="checkProductCodeExists()" oninput="productPrefixHint()" placeholder="GEN..." pattern="^GEN.*$" title="Mã sản phẩm phải bắt đầu bằng 'GEN'">
-                            <small class="form-text text-muted" id="product_code_feedback">Mã sản phẩm phải bắt đầu bằng "GEN"</small>
+                            <input type="text" class="form-control" id="product_code" name="product_code" required readonly style="background-color: #f5f5f5;">
+                            <small class="form-text text-muted" id="product_code_feedback">Mã sản phẩm sẽ được tạo tự động</small>
                         </div>
                         <div class="form-group">
                             <label for="product_name">Tên sản phẩm <span class="text-danger">*</span></label>
@@ -742,66 +742,34 @@
         }
         
         /**
-         * Kiểm tra mã sản phẩm có trùng không
-         * Tác giả: Sơn Lê
+         * Tạo mã sản phẩm tự động
          */
-        function checkProductCodeExists() {
-            var productCode = $('#product_code').val().trim();
-            var feedbackElement = $('#product_code_feedback');
-            
-            if (!productCode) {
-                feedbackElement.text('Mã sản phẩm phải bắt đầu bằng "GEN"').removeClass('text-danger text-success');
-                return;
-            }
-            
-            // Kiểm tra prefix GEN trước khi gọi AJAX
-            if (!/^GEN/.test(productCode)) {
-                feedbackElement.text("Mã sản phẩm phải bắt đầu bằng 'GEN'").removeClass('text-success').addClass('text-danger');
-                $('#product_code').addClass('is-invalid').removeClass('is-valid');
-                return;
-            }
-            
+        function generateProductCode() {
             $.ajax({
                 url: '<%=request.getContextPath()%>/product',
                 type: 'GET',
                 data: {
-                    action: 'checkCode',
-                    product_code: productCode
+                    action: 'generateCode'
                 },
                 dataType: 'json',
                 success: function(response) {
-                    if (response.exists) {
-                        feedbackElement.text('Mã sản phẩm đã tồn tại trong hệ thống').removeClass('text-success').addClass('text-danger');
-                        $('#product_code').addClass('is-invalid').removeClass('is-valid');
+                    if (response && response.success && response.productCode) {
+                        $('#product_code').val(response.productCode);
+                        $('#product_code_feedback').text('Mã sản phẩm đã được tạo tự động').removeClass('text-danger').addClass('text-success');
+                        $('#product_code').removeClass('is-invalid').addClass('is-valid');
                     } else {
-                        feedbackElement.text('Mã sản phẩm hợp lệ').removeClass('text-danger').addClass('text-success');
-                        $('#product_code').addClass('is-valid').removeClass('is-invalid');
+                        var errorMsg = (response && response.message) ? response.message : 'Không thể tạo mã sản phẩm';
+                        $('#product_code_feedback').text(errorMsg).removeClass('text-success').addClass('text-danger');
+                        $('#product_code').removeClass('is-valid').addClass('is-invalid');
+                        console.error('Error generating product code:', response);
                     }
                 },
-                error: function() {
-                    // Không hiển thị lỗi nếu không kiểm tra được
-                    feedbackElement.text('').removeClass('text-danger text-success');
-                    $('#product_code').removeClass('is-invalid is-valid');
+                error: function(xhr, status, error) {
+                    $('#product_code_feedback').text('Lỗi khi tạo mã sản phẩm: ' + error).removeClass('text-success').addClass('text-danger');
+                    $('#product_code').removeClass('is-valid').addClass('is-invalid');
+                    console.error('AJAX error:', status, error, xhr.responseText);
                 }
             });
-        }
-        
-        // Gợi ý realtime cho prefix GEN
-        function productPrefixHint() {
-            var code = $('#product_code').val();
-            var feedbackElement = $('#product_code_feedback');
-            if (!code || !code.trim()) {
-                feedbackElement.text('Mã sản phẩm phải bắt đầu bằng "GEN"').removeClass('text-danger text-success');
-                $('#product_code').removeClass('is-invalid is-valid');
-                return;
-            }
-            if (!/^GEN/.test(code)) {
-                feedbackElement.text("Mã sản phẩm phải bắt đầu bằng 'GEN'").removeClass('text-success').addClass('text-danger');
-                $('#product_code').addClass('is-invalid').removeClass('is-valid');
-            } else {
-                feedbackElement.text('Đang kiểm tra tính duy nhất...').removeClass('text-danger text-success');
-                $('#product_code').removeClass('is-invalid is-valid');
-            }
         }
         
         /**
@@ -933,6 +901,11 @@
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
             
+            // Tự động tạo mã khi mở modal thêm mới
+            $('#addProductModal').on('shown.bs.modal', function () {
+                generateProductCode();
+            });
+            
             // Ẩn thông báo lỗi khi đóng modal
             $('#addProductModal').on('hidden.bs.modal', function () {
                 errorDiv.hide();
@@ -943,8 +916,8 @@
                 validateWordCount('description', 'description_count');
                 validateWordCount('specifications', 'specifications_count');
                 // Reset feedback mã sản phẩm
-                $('#product_code_feedback').text('').removeClass('text-danger text-success');
-                $('#product_code').removeClass('is-invalid is-valid');
+                $('#product_code_feedback').text('Mã sản phẩm sẽ được tạo tự động').removeClass('text-danger text-success');
+                $('#product_code').removeClass('is-invalid is-valid').val('');
                 // Xóa error parameters khỏi URL
                 if (urlParams.has('validation_error') || urlParams.has('database_error') || urlParams.has('system_error')) {
                     window.history.replaceState({}, document.title, window.location.pathname);
@@ -1230,16 +1203,7 @@
                 return;
             }
             
-            // Kiểm tra mã sản phẩm có trùng không
-            var productCodeCheck = $('#product_code').val().trim();
-            if (productCodeCheck) {
-                var hasError = $('#product_code').hasClass('is-invalid');
-                if (hasError) {
-                    alert('Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác!');
-                    $('#product_code').focus();
-                    return;
-                }
-            }
+            // Mã sản phẩm sẽ được tự động tạo nếu để trống (xử lý ở backend)
             
             // Kiểm tra số từ của mô tả
             var descriptionWordCount = countWords(description);

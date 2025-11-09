@@ -160,14 +160,37 @@ public class ContractDAO extends DBConnect {
 
     public List<Contract> getAllContracts() {
         List<Contract> list = new ArrayList<>();
-        if (!checkConnection()) return list;
+        if (!checkConnection()) {
+            logger.warning("ContractDAO: No database connection");
+            return list;
+        }
         String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.status != 'deleted' ORDER BY c.id DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+            int count = 0;
+            while (rs.next()) {
+                list.add(mapRow(rs));
+                count++;
+            }
+            logger.info("ContractDAO.getAllContracts: Found " + count + " contracts (excluding deleted)");
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error fetching all contracts", e);
+        }
+        return list;
+    }
+    
+    /**
+     * Lấy tất cả hợp đồng (kể cả deleted) - dùng để debug
+     */
+    public List<Contract> getAllContractsIncludingDeleted() {
+        List<Contract> list = new ArrayList<>();
+        if (!checkConnection()) return list;
+        String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id ORDER BY c.id DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 list.add(mapRow(rs));
             }
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error fetching all contracts", e);
+            logger.log(Level.SEVERE, "Error fetching all contracts including deleted", e);
         }
         return list;
     }
@@ -613,6 +636,42 @@ public class ContractDAO extends DBConnect {
         // Cuối cùng nếu vẫn trùng, tạo chuỗi ngẫu nhiên an toàn hơn
         String fallback = prefix + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         return fallback;
+    }
+    
+    /**
+     * Lấy danh sách sản phẩm của hợp đồng
+     * @param contractId ID của hợp đồng
+     * @return Danh sách Map chứa thông tin sản phẩm (productId, quantity, productCode, productName, unit)
+     */
+    public List<java.util.Map<String, Object>> getContractProducts(int contractId) {
+        List<java.util.Map<String, Object>> contractProducts = new ArrayList<>();
+        if (!checkConnection()) {
+            return contractProducts;
+        }
+        
+        String sql = "SELECT cp.product_id, cp.quantity, p.product_code, p.product_name, p.unit " +
+                    "FROM contract_products cp " +
+                    "LEFT JOIN products p ON p.id = cp.product_id " +
+                    "WHERE cp.contract_id = ? ORDER BY cp.id";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> product = new java.util.HashMap<>();
+                    product.put("productId", rs.getInt("product_id"));
+                    product.put("quantity", rs.getBigDecimal("quantity"));
+                    product.put("productCode", rs.getString("product_code"));
+                    product.put("productName", rs.getString("product_name"));
+                    product.put("unit", rs.getString("unit"));
+                    contractProducts.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting contract products for contract ID: " + contractId, e);
+        }
+        
+        return contractProducts;
     }
 }
 

@@ -58,6 +58,8 @@ public class ProductServlet extends HttpServlet {
             filterProducts(request, response);
         } else if ("checkCode".equals(action)) {
             checkProductCodeExists(request, response);
+        } else if ("generateCode".equals(action)) {
+            generateProductCode(request, response);
         } else if ("jsp".equals(action)) {
             // Xử lý request từ /product.jsp
             showProductsPage(request, response);
@@ -399,12 +401,22 @@ public class ProductServlet extends HttpServlet {
             System.out.println("Description: " + product.getDescription());
             System.out.println("Specifications: " + product.getSpecifications());
             
-            // Kiểm tra trùng mã sản phẩm
-            if (product.getProductCode() != null && !product.getProductCode().trim().isEmpty()) {
-                if (productDAO.isProductCodeExists(product.getProductCode())) {
-                    out.write("{\"success\": false, \"message\": \"Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác.\"}");
+            // Tự động tạo mã sản phẩm nếu không có hoặc để trống
+            if (product.getProductCode() == null || product.getProductCode().trim().isEmpty()) {
+                String generatedCode = productDAO.generateNextProductCode();
+                if (generatedCode != null) {
+                    product.setProductCode(generatedCode);
+                    System.out.println("Auto-generated product code: " + generatedCode);
+                } else {
+                    out.write("{\"success\": false, \"message\": \"Không thể tạo mã sản phẩm tự động\"}");
                     return;
                 }
+            }
+            
+            // Kiểm tra trùng mã sản phẩm
+            if (productDAO.isProductCodeExists(product.getProductCode())) {
+                out.write("{\"success\": false, \"message\": \"Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác.\"}");
+                return;
             }
             
             boolean success = productDAO.addProduct(product);
@@ -1020,10 +1032,9 @@ public class ProductServlet extends HttpServlet {
         String description = request.getParameter("description");
         String specifications = request.getParameter("specifications");
         
-        // Validate required fields
-        if (isEmpty(productCode)) {
-            errors.append("Mã sản phẩm không được để trống. ");
-        } else {
+        // Mã sản phẩm sẽ được tự động tạo nếu để trống (xử lý ở createProductFromAddRequest)
+        // Chỉ kiểm tra trùng nếu có mã
+        if (!isEmpty(productCode)) {
             // Kiểm tra trùng mã sản phẩm
             if (productDAO.isProductCodeExists(productCode)) {
                 errors.append("Mã sản phẩm đã tồn tại trong hệ thống. Vui lòng chọn mã khác. ");
@@ -1084,7 +1095,19 @@ public class ProductServlet extends HttpServlet {
     }
     
     private Product createProductFromAddRequest(HttpServletRequest request, String imageUrl) {
-        String productCode = request.getParameter("product_code").trim();
+        String productCode = request.getParameter("product_code");
+        if (productCode != null) {
+            productCode = productCode.trim();
+        }
+        
+        // Tự động tạo mã sản phẩm nếu không có hoặc để trống
+        if (isEmpty(productCode)) {
+            productCode = productDAO.generateNextProductCode();
+            if (productCode == null) {
+                throw new RuntimeException("Không thể tạo mã sản phẩm tự động");
+            }
+        }
+        
         String productName = request.getParameter("product_name").trim();
         String category = request.getParameter("category").trim();
         String unit = request.getParameter("unit").trim();
@@ -1236,6 +1259,37 @@ public class ProductServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             out.write("{\"exists\": false, \"error\": \"" + escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
+     * Sinh mã sản phẩm tự động
+     */
+    private void generateProductCode(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(HttpServletResponse.SC_OK);
+        
+        PrintWriter out = null;
+        try {
+            out = response.getWriter();
+            String generatedCode = productDAO.generateNextProductCode();
+            if (generatedCode != null) {
+                out.print("{\"success\": true, \"productCode\": \"" + escapeJson(generatedCode) + "\"}");
+            } else {
+                String errorMsg = productDAO.getLastError();
+                if (errorMsg == null || errorMsg.isEmpty()) {
+                    errorMsg = "Không thể tạo mã sản phẩm";
+                }
+                out.print("{\"success\": false, \"message\": \"" + escapeJson(errorMsg) + "\"}");
+            }
+            out.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (out != null) {
+                out.print("{\"success\": false, \"message\": \"" + escapeJson(e.getMessage()) + "\"}");
+                out.flush();
+            }
         }
     }
     

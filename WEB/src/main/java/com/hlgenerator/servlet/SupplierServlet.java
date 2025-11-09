@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,10 @@ public class SupplierServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Thiết lập encoding UTF-8 TRƯỚC KHI đọc parameters
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        
         String action = request.getParameter("action");
         
         if ("view".equals(action)) {
@@ -41,6 +46,8 @@ public class SupplierServlet extends HttpServlet {
             getFilterOptions(request, response);
         } else if ("checkCode".equals(action)) {
             checkSupplierCodeExists(request, response);
+        } else if ("generateCode".equals(action)) {
+            generateSupplierCode(request, response);
         } else {
             getAllSuppliers(request, response);
         }
@@ -419,11 +426,17 @@ public class SupplierServlet extends HttpServlet {
                 supplier.setStatus("active");
             }
             
-            // Validation
+            // Tự động tạo mã nhà cung cấp nếu không có hoặc để trống
             if (supplier.getSupplierCode() == null || supplier.getSupplierCode().trim().isEmpty()) {
-                response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
-                    URLEncoder.encode("Mã nhà cung cấp không được để trống", "UTF-8"));
-                return;
+                String generatedCode = supplierDAO.generateNextSupplierCode();
+                if (generatedCode != null) {
+                    supplier.setSupplierCode(generatedCode);
+                    System.out.println("Auto-generated supplier code: " + generatedCode);
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/supplier?message=validation_error&error=" + 
+                        URLEncoder.encode("Không thể tạo mã nhà cung cấp tự động", "UTF-8"));
+                    return;
+                }
             }
             
             if (supplier.getCompanyName() == null || supplier.getCompanyName().trim().isEmpty()) {
@@ -865,6 +878,37 @@ public class SupplierServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             response.getWriter().write("{\"exists\": false, \"error\": \"" + escapeJsonString(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
+     * Sinh mã nhà cung cấp tự động
+     */
+    private void generateSupplierCode(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json; charset=UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(HttpServletResponse.SC_OK);
+        
+        PrintWriter out = null;
+        try {
+            out = response.getWriter();
+            String generatedCode = supplierDAO.generateNextSupplierCode();
+            if (generatedCode != null) {
+                out.print("{\"success\": true, \"supplierCode\": \"" + escapeJsonString(generatedCode) + "\"}");
+            } else {
+                String errorMsg = supplierDAO.getLastError();
+                if (errorMsg == null || errorMsg.isEmpty()) {
+                    errorMsg = "Không thể tạo mã nhà cung cấp";
+                }
+                out.print("{\"success\": false, \"message\": \"" + escapeJsonString(errorMsg) + "\"}");
+            }
+            out.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (out != null) {
+                out.print("{\"success\": false, \"message\": \"" + escapeJsonString(e.getMessage()) + "\"}");
+                out.flush();
+            }
         }
     }
 }
