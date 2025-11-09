@@ -12,7 +12,7 @@ public class SupportRequestDAO extends DBConnect {
     private String lastError;
 
     public List<Map<String, Object>> listByCustomerId(int customerId) {
-        String sql = "SELECT id, ticket_number, subject, description, category, priority, status, assigned_to, history, resolution, created_at, resolved_at, " +
+        String sql = "SELECT id, ticket_number, subject, description, category, priority, status, assigned_to, history, resolution, created_at, resolved_at, deadline, " +
                      "DATE(created_at) AS created_local_date " +
                      "FROM support_requests WHERE customer_id = ? ORDER BY created_at DESC";
         List<Map<String, Object>> out = new ArrayList<>();
@@ -52,6 +52,13 @@ public class SupportRequestDAO extends DBConnect {
                     }
                 }
                 row.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                // Lấy deadline
+                java.sql.Date deadline = rs.getDate("deadline");
+                if (deadline != null) {
+                    row.put("deadline", deadline.toString()); // Format: yyyy-MM-dd
+                } else {
+                    row.put("deadline", null);
+                }
                 out.add(row);
             }
         } catch (SQLException e) {
@@ -333,7 +340,7 @@ public class SupportRequestDAO extends DBConnect {
                 .replace("status", "sr.status");
             
             String dataSql = "SELECT sr.id, sr.ticket_number, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
-                           "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                           "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, sr.deadline, " +
                            "DATE(sr.created_at) AS created_local_date, " +
                            "u.full_name as assigned_to_name " +
                            "FROM support_requests sr " +
@@ -398,6 +405,13 @@ public class SupportRequestDAO extends DBConnect {
                         }
                     }
                     row.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                    // Lấy deadline
+                    java.sql.Date deadline = rs.getDate("deadline");
+                    if (deadline != null) {
+                        row.put("deadline", deadline.toString()); // Format: yyyy-MM-dd
+                    } else {
+                        row.put("deadline", null);
+                    }
                     data.add(row);
                 }
             }
@@ -423,6 +437,10 @@ public class SupportRequestDAO extends DBConnect {
     }
 
     public boolean create(int customerId, String subject, String description, String category, String priority) {
+        return create(customerId, subject, description, category, priority, null);
+    }
+    
+    public boolean create(int customerId, String subject, String description, String category, String priority, java.sql.Date deadline) {
         try {
             if (connection == null || connection.isClosed()) {
                 lastError = "DB connection is not available";
@@ -432,8 +450,9 @@ public class SupportRequestDAO extends DBConnect {
             lastError = "DB connection check failed: " + e.getMessage();
             return false;
         }
-        String sql = "INSERT INTO support_requests (ticket_number, customer_id, subject, description, category, priority, status) VALUES (?, ?, ?, ?, ?, ?, 'open')";
+        String sql = "INSERT INTO support_requests (ticket_number, customer_id, subject, description, category, priority, status, deadline) VALUES (?, ?, ?, ?, ?, ?, 'open', ?)";
         String ticketNumber = "SR-" + System.currentTimeMillis();
+        System.out.println("DEBUG SupportRequestDAO.create: deadline = " + deadline);
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, ticketNumber);
             ps.setInt(2, customerId);
@@ -441,7 +460,15 @@ public class SupportRequestDAO extends DBConnect {
             ps.setString(4, description);
             ps.setString(5, category);
             ps.setString(6, priority);
+            if (deadline != null) {
+                System.out.println("DEBUG SupportRequestDAO.create: Setting deadline to " + deadline);
+                ps.setDate(7, deadline);
+            } else {
+                System.out.println("DEBUG SupportRequestDAO.create: Setting deadline to NULL");
+                ps.setNull(7, java.sql.Types.DATE);
+            }
             int result = ps.executeUpdate();
+            System.out.println("DEBUG SupportRequestDAO.create: executeUpdate returned " + result);
             lastError = null;
             return result > 0;
         } catch (SQLException e) {
@@ -481,7 +508,7 @@ public class SupportRequestDAO extends DBConnect {
     public List<Map<String, Object>> getAllSupportRequests() {
         System.out.println("Getting all support requests...");
         String sql = "SELECT sr.id, sr.ticket_number, sr.customer_id, sr.subject, sr.description, sr.category, sr.priority, sr.status, " +
-                     "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                     "sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, sr.deadline, " +
                      "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
                      "u.full_name as assigned_to_name, " +
                      "DATE(sr.created_at) AS created_local_date " +
@@ -554,6 +581,13 @@ public class SupportRequestDAO extends DBConnect {
                     }
                 }
                 row.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                // Lấy deadline
+                java.sql.Date deadline = rs.getDate("deadline");
+                if (deadline != null) {
+                    row.put("deadline", deadline.toString()); // Format: yyyy-MM-dd
+                } else {
+                    row.put("deadline", null);
+                }
                 out.add(row);
             }
         } catch (SQLException e) {
@@ -566,11 +600,16 @@ public class SupportRequestDAO extends DBConnect {
     }
 
     public boolean updateSupportRequest(int id, String category, String priority, String status, String resolution, String internalNotes) {
-        return updateSupportRequest(id, category, priority, status, resolution, internalNotes, null);
+        return updateSupportRequest(id, category, priority, status, resolution, internalNotes, null, null);
     }
     
     // Overload method with assignedTo parameter
     public boolean updateSupportRequest(int id, String category, String priority, String status, String resolution, String internalNotes, Integer assignedTo) {
+        return updateSupportRequest(id, category, priority, status, resolution, internalNotes, assignedTo, null);
+    }
+    
+    // Overload method with assignedTo and deadline parameters
+    public boolean updateSupportRequest(int id, String category, String priority, String status, String resolution, String internalNotes, Integer assignedTo, java.sql.Date deadline) {
         try {
             if (connection == null || connection.isClosed()) {
                 lastError = "DB connection is not available";
@@ -622,6 +661,13 @@ public class SupportRequestDAO extends DBConnect {
             first = false;
         }
         
+        if (deadline != null) {
+            if (!first) sql.append(", ");
+            sql.append("deadline = ?");
+            params.add(deadline);
+            first = false;
+        }
+        
         sql.append(" WHERE id = ?");
         params.add(id);
         
@@ -630,6 +676,8 @@ public class SupportRequestDAO extends DBConnect {
                 Object param = params.get(i);
                 if (param instanceof Integer) {
                     ps.setInt(i + 1, (Integer) param);
+                } else if (param instanceof java.sql.Date) {
+                    ps.setDate(i + 1, (java.sql.Date) param);
                 } else {
                     ps.setString(i + 1, (String) param);
                 }
@@ -783,7 +831,7 @@ public class SupportRequestDAO extends DBConnect {
     public Map<String, Object> getSupportRequestById(int id) {
         System.out.println("Getting support request by id: " + id);
         String sql = "SELECT sr.id, sr.ticket_number, sr.customer_id, sr.subject, sr.description, sr.category, " +
-                     "sr.priority, sr.status, sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, " +
+                     "sr.priority, sr.status, sr.assigned_to, sr.history, sr.resolution, sr.created_at, sr.resolved_at, sr.deadline, " +
                      "c.company_name, c.contact_person, c.email as customer_email, c.phone as customer_phone, " +
                      "c.address as customer_address, " +
                      "u.full_name as assigned_to_name, u.email as assigned_to_email " +
@@ -838,6 +886,17 @@ public class SupportRequestDAO extends DBConnect {
                 ticket.put("customerAddress", rs.getString("customer_address"));
                 ticket.put("createdAt", rs.getTimestamp("created_at"));
                 ticket.put("resolvedAt", rs.getTimestamp("resolved_at"));
+                // Lấy deadline
+                java.sql.Date deadline = rs.getDate("deadline");
+                System.out.println("DEBUG getSupportRequestById: deadline from DB = " + deadline);
+                if (deadline != null) {
+                    String deadlineStr = deadline.toString(); // Format: yyyy-MM-dd
+                    ticket.put("deadline", deadlineStr);
+                    System.out.println("DEBUG getSupportRequestById: deadline string = " + deadlineStr);
+                } else {
+                    ticket.put("deadline", null);
+                    System.out.println("DEBUG getSupportRequestById: deadline is NULL");
+                }
                 
                 System.out.println("Found ticket: " + ticket.get("ticketNumber"));
                 return ticket;

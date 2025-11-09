@@ -275,8 +275,9 @@ public class SupportCustomerServlet extends HttpServlet {
                 String category = request.getParameter("category");
                 String priority = request.getParameter("priority");
                 String deleteOldId = request.getParameter("delete_old_id");
+                String deadlineStr = request.getParameter("deadline");
                 
-                System.out.println("DEBUG: subject=" + subject + ", category=" + category);
+                System.out.println("DEBUG: subject=" + subject + ", category=" + category + ", deadline=" + deadlineStr);
                 
                 // Lấy customer_id từ session
                 HttpSession session = request.getSession(false);
@@ -371,7 +372,22 @@ public class SupportCustomerServlet extends HttpServlet {
                         }
                     }
                     
-                    boolean success = supportDAO.create(customerId.intValue(), subject, description, category, priority);
+                    // Parse deadline
+                    java.sql.Date deadline = null;
+                    if (deadlineStr != null && !deadlineStr.trim().isEmpty()) {
+                        try {
+                            deadline = java.sql.Date.valueOf(deadlineStr.trim());
+                            System.out.println("DEBUG: Parsed deadline: " + deadline);
+                        } catch (IllegalArgumentException e) {
+                            System.out.println("WARNING: Invalid deadline format: " + deadlineStr);
+                            e.printStackTrace();
+                        }
+                    } else {
+                        System.out.println("DEBUG: No deadline provided (deadlineStr is null or empty)");
+                    }
+                    
+                    System.out.println("DEBUG: Creating support request with deadline: " + deadline);
+                    boolean success = supportDAO.create(customerId.intValue(), subject, description, category, priority, deadline);
                     System.out.println("DEBUG: supportDAO.create() returned: " + success);
                     
                     if (success) {
@@ -418,12 +434,13 @@ public class SupportCustomerServlet extends HttpServlet {
                 }
                 
             } else if ("update".equals(action)) {
-                // Cập nhật yêu cầu hỗ trợ - chỉ cho phép chỉnh sửa priority, status, resolution, internalNotes
+                // Cập nhật yêu cầu hỗ trợ - chỉ cho phép chỉnh sửa priority, status, resolution, internalNotes, deadline
                 String idParam = request.getParameter("id");
                 String priority = request.getParameter("priority");
                 String status = request.getParameter("status");
                 String resolution = request.getParameter("resolution");
                 String internalNotes = request.getParameter("internalNotes");
+                String deadlineStr = request.getParameter("deadline");
                 
                 if (idParam == null || idParam.trim().isEmpty()) {
                     jsonResponse.addProperty("success", false);
@@ -438,8 +455,18 @@ public class SupportCustomerServlet extends HttpServlet {
                         if (resolution == null) resolution = "";
                         if (internalNotes == null) internalNotes = "";
                         
+                        // Parse deadline
+                        java.sql.Date deadline = null;
+                        if (deadlineStr != null && !deadlineStr.trim().isEmpty()) {
+                            try {
+                                deadline = java.sql.Date.valueOf(deadlineStr.trim());
+                            } catch (IllegalArgumentException e) {
+                                System.out.println("WARNING: Invalid deadline format: " + deadlineStr);
+                            }
+                        }
+                        
                         // Chỉ cập nhật các trường được phép chỉnh sửa
-                        boolean success = supportDAO.updateSupportRequest(id, null, priority, status, resolution, internalNotes);
+                        boolean success = supportDAO.updateSupportRequest(id, null, priority, status, resolution, internalNotes, null, deadline);
                         
                         if (success) {
                             jsonResponse.addProperty("success", true);

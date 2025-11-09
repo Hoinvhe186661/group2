@@ -312,8 +312,13 @@
           </div>
           <div class="mb-2">
             <label>Ngày tạo :</label>
-            <input type="date" class="form-control" id="createdDate" readonly>
+            <input type="text" class="form-control" id="createdDate" readonly style="background-color: #e9ecef;">
             <small class="text-muted" id="createdDateText"></small>
+          </div>
+          <div class="mb-2">
+            <label>Ngày mong muốn công việc hoàn thành :</label>
+            <input type="text" class="form-control" id="deadline" placeholder="dd/MM/yyyy" maxlength="10">
+            
           </div>
           <div class="mb-2">
             <label>Chi tiết vấn đề :</label>
@@ -374,6 +379,7 @@
           <div class="col-12"><label>Chi tiết vấn đề</label><textarea id="v_description_inp" class="form-control" rows="4" disabled></textarea></div>
           <div class="col-md-6"><label>Ngày tạo</label><div id="v_created" class="form-control-plaintext"></div></div>
           <div class="col-md-6"><label>Ngày xử lý xong</label><div id="v_resolved" class="form-control-plaintext"></div></div>
+          <div class="col-md-6"><label>Ngày mong muốn công việc hoàn thành</label><input type="text" id="v_deadline" class="form-control" placeholder="dd/MM/yyyy" disabled></div>
           <div class="col-md-6"><label>Người được phân công</label><div id="v_assigned_to" class="form-control-plaintext"></div></div>
           <div class="col-12"><label>Giải pháp</label><textarea id="v_resolution" class="form-control" rows="3" readonly></textarea></div>
           <div class="col-12 d-flex align-items-center justify-content-between">
@@ -381,7 +387,7 @@
               <input class="form-check-input" type="checkbox" id="v_enable_edit">
               <label class="form-check-label" for="v_enable_edit">Chỉnh sửa </label>
             </div>
-            <button type="button" id="v_save_btn" class="btn btn-success" disabled>Lưu thành yêu cầu mới</button>
+            <button type="button" id="v_save_btn" class="btn btn-success" disabled>Lưu yêu cầu</button>
           </div>
         </div>
       </div>
@@ -873,8 +879,8 @@
     }
   }
   
-  // Tự động set ngày hiện tại cho trường "Ngày tạo"
-  document.addEventListener('DOMContentLoaded', function() {
+    // Tự động set ngày hiện tại cho trường "Ngày tạo" và set min date cho deadline
+    document.addEventListener('DOMContentLoaded', function() {
     // Set date using local timezone to avoid UTC offset (+/-1 day) issues
     var now = new Date();
     var yyyyLocal = now.getFullYear();
@@ -883,7 +889,73 @@
     var todayLocal = yyyyLocal + '-' + mmLocal + '-' + ddLocal;
     var createdInput = document.getElementById('createdDate');
     var createdText = document.getElementById('createdDateText');
-    if (createdInput) createdInput.value = todayLocal;
+    var deadlineInput = document.getElementById('deadline');
+    // Format ngày tạo theo dd/MM/yyyy
+    if (createdInput) {
+      try {
+        var d = new Date();
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        var formattedDate = dd + '/' + mm + '/' + yyyy;
+        createdInput.value = formattedDate;
+        if (createdText) createdText.textContent = '';
+      } catch(e) {
+        console.error('Error setting created date:', e);
+      }
+    }
+    // Format deadline input với dd/MM/yyyy và set mặc định là ngày hiện tại
+    if (deadlineInput) {
+      // Set giá trị mặc định là ngày hiện tại
+      try {
+        var d = new Date();
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        var formattedDeadline = dd + '/' + mm + '/' + yyyy;
+        deadlineInput.value = formattedDeadline;
+      } catch(e) {
+        console.error('Error setting default deadline:', e);
+      }
+      
+      // Thêm event listener để format tự động
+      deadlineInput.addEventListener('input', function(e) {
+        var value = e.target.value.replace(/\D/g, ''); // Chỉ giữ số
+        if (value.length >= 2) {
+          value = value.substring(0, 2) + '/' + value.substring(2);
+        }
+        if (value.length >= 5) {
+          value = value.substring(0, 5) + '/' + value.substring(5, 9);
+        }
+        e.target.value = value;
+      });
+      
+      // Validate format khi blur
+      deadlineInput.addEventListener('blur', function(e) {
+        var value = e.target.value;
+        if (value && value.length === 10) {
+          var parts = value.split('/');
+          if (parts.length === 3) {
+            var day = parseInt(parts[0], 10);
+            var month = parseInt(parts[1], 10);
+            var year = parseInt(parts[2], 10);
+            var date = new Date(year, month - 1, day);
+            if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+              alert('Ngày không hợp lệ! Vui lòng nhập đúng định dạng dd/MM/yyyy');
+              e.target.value = '';
+            } else {
+              // Kiểm tra không được là ngày quá khứ
+              var today = new Date();
+              today.setHours(0, 0, 0, 0);
+              if (date < today) {
+                alert('Ngày deadline không được là ngày quá khứ!');
+                e.target.value = '';
+              }
+            }
+          }
+        }
+      });
+    }
     try {
       var d = new Date();
       var dd = String(d.getDate()).padStart(2,'0');
@@ -987,6 +1059,35 @@
               const name = (sessionFullName && sessionFullName !== 'null') ? sessionFullName : (sessionUsername && sessionUsername !== 'null' ? sessionUsername : '');
               nameInp.value = name;
             }
+            // Reset và set lại ngày tạo khi mở modal
+            const createdInput = document.getElementById('createdDate');
+            if (createdInput) {
+              try {
+                var d = new Date();
+                var dd = String(d.getDate()).padStart(2, '0');
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var yyyy = d.getFullYear();
+                var formattedDate = dd + '/' + mm + '/' + yyyy;
+                createdInput.value = formattedDate;
+              } catch(e) {
+                console.error('Error setting created date:', e);
+              }
+            }
+            // Set deadline field mặc định là ngày hiện tại khi mở modal
+            const deadlineInp = document.getElementById('deadline');
+            if (deadlineInp) {
+              try {
+                var d = new Date();
+                var dd = String(d.getDate()).padStart(2, '0');
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var yyyy = d.getFullYear();
+                var formattedDeadline = dd + '/' + mm + '/' + yyyy;
+                deadlineInp.value = formattedDeadline;
+              } catch(e) {
+                console.error('Error setting deadline:', e);
+                deadlineInp.value = '';
+              }
+            }
           });
         }
       } catch(e) {}
@@ -1027,14 +1128,35 @@
     let sortField = ''; // Field để sắp xếp
     let sortDirection = 'desc'; // 'asc' hoặc 'desc'
     function formatDate(it){
-      if (it.createdDate && typeof it.createdDate === 'string' && it.createdDate.includes('-')) {
-        var parts = it.createdDate.split('-');
-        if (parts.length === 3) return parts[2] + '/' + parts[1] + '/' + parts[0];
+      // Format theo dd/MM/yyyy
+      if (it.createdDate && typeof it.createdDate === 'string') {
+        if (it.createdDate.includes('-')) {
+          // Format yyyy-MM-dd từ database
+          var parts = it.createdDate.split('-');
+          if (parts.length === 3) {
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+          }
+        } else if (it.createdDate.includes('/')) {
+          // Đã có format với dấu /
+          var testParts = it.createdDate.split('/');
+          if (testParts.length === 3 && testParts[0].length === 4) {
+            // Là yyyy/MM/dd, convert sang dd/MM/yyyy
+            return testParts[2] + '/' + testParts[1] + '/' + testParts[0];
+          }
+          // Đã là dd/MM/yyyy, giữ nguyên
+          return it.createdDate;
+        }
       }
       if (it.createdAt) {
         try {
-          return new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(it.createdAt));
-        } catch (e) {}
+          var date = new Date(it.createdAt);
+          var dd = String(date.getDate()).padStart(2, '0');
+          var mm = String(date.getMonth() + 1).padStart(2, '0');
+          var yyyy = date.getFullYear();
+          return dd + '/' + mm + '/' + yyyy;
+        } catch (e) {
+          console.error('Error formatting date:', e);
+        }
       }
       return '';
     }
@@ -1336,6 +1458,25 @@
       data.append('description', composed);
       data.append('category', document.getElementById('category').value || 'general');
       data.append('priority', 'medium'); // Set priority mặc định
+      // Thêm deadline nếu có - convert từ dd/MM/yyyy sang yyyy-MM-dd
+      const deadlineInp = document.getElementById('deadline');
+      if (deadlineInp && deadlineInp.value && deadlineInp.value.trim() !== '') {
+        var deadlineValue = deadlineInp.value.trim();
+        // Convert từ dd/MM/yyyy sang yyyy-MM-dd
+        if (deadlineValue.includes('/')) {
+          var parts = deadlineValue.split('/');
+          if (parts.length === 3) {
+            var day = parts[0].padStart(2, '0');
+            var month = parts[1].padStart(2, '0');
+            var year = parts[2];
+            deadlineValue = year + '-' + month + '-' + day;
+          }
+        }
+        console.log('DEBUG: Sending deadline:', deadlineValue);
+        data.append('deadline', deadlineValue);
+      } else {
+        console.log('DEBUG: No deadline value found');
+      }
       // backend tự xác định người dùng theo session; không gửi priority/customer/email
       fetch(ctx + '/api/support-customer', {
         method: 'POST',
@@ -1371,6 +1512,20 @@
             if (catSel) catSel.value = 'general';
             if (cSel2) cSel2.selectedIndex = 0;
             if (pSel2) { pSel2.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; pSel2.disabled = true; }
+            // Reset deadline field về ngày hiện tại sau khi tạo thành công
+            const deadlineInp = document.getElementById('deadline');
+            if (deadlineInp) {
+              try {
+                var d = new Date();
+                var dd = String(d.getDate()).padStart(2, '0');
+                var mm = String(d.getMonth() + 1).padStart(2, '0');
+                var yyyy = d.getFullYear();
+                var formattedDeadline = dd + '/' + mm + '/' + yyyy;
+                deadlineInp.value = formattedDeadline;
+              } catch(e) {
+                deadlineInp.value = '';
+              }
+            }
 
             const modalEl = document.getElementById('supportModal');
             const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -1419,11 +1574,14 @@
         fetch(ctx + '/api/support-stats?action=getById&id=' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' } })
           .then(r => r.json())
           .then(j => {
+            console.log('DEBUG: getById response:', j);
             if (j && j.success && j.data) {
               // Use fresh data from server instead of cached data
               const freshData = j.data;
+              console.log('DEBUG: freshData.deadline =', freshData.deadline);
               displayTicketDetail(freshData);
             } else {
+              console.log('DEBUG: API failed, using cached data');
               // Fallback to cached data if API fails
               displayTicketDetail(it);
             }
@@ -1445,12 +1603,95 @@
       var desInp = document.getElementById('v_description_inp');
       var vContract = document.getElementById('v_contract_select');
       var vProduct = document.getElementById('v_product_select');
+      var vDeadline = document.getElementById('v_deadline');
       if (catInp) catInp.value = (ticketData.category||'general');
       if (priInp) priInp.value = (ticketData.priority ? ticketData.priority : '');
       if (subInp) subInp.value = (ticketData.subject||'');
       if (desInp) desInp.value = (ticketData.description||'');
-      const created = formatDate(ticketData);
-      const resolved = (ticketData.resolvedAt ? new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(ticketData.resolvedAt)) : '');
+      // Hiển thị deadline - convert từ yyyy-MM-dd sang dd/MM/yyyy
+      if (vDeadline) {
+        console.log('DEBUG: ticketData.deadline =', ticketData.deadline);
+        if (ticketData.deadline) {
+          var deadlineValue = ticketData.deadline;
+          // Convert từ yyyy-MM-dd sang dd/MM/yyyy
+          if (typeof deadlineValue === 'string') {
+            if (deadlineValue.includes('-')) {
+              // Format yyyy-MM-dd
+              var parts = deadlineValue.split('-');
+              if (parts.length === 3) {
+                deadlineValue = parts[2] + '/' + parts[1] + '/' + parts[0];
+              }
+            } else if (deadlineValue.includes('/')) {
+              // Đã là dd/MM/yyyy, giữ nguyên
+              // Nhưng kiểm tra xem có phải yyyy/MM/dd không
+              var testParts = deadlineValue.split('/');
+              if (testParts.length === 3 && testParts[0].length === 4) {
+                // Là yyyy/MM/dd, convert sang dd/MM/yyyy
+                deadlineValue = testParts[2] + '/' + testParts[1] + '/' + testParts[0];
+              }
+            }
+            vDeadline.value = deadlineValue;
+          } else {
+            vDeadline.value = deadlineValue;
+          }
+          console.log('DEBUG: Set deadline value to:', vDeadline.value);
+        } else {
+          vDeadline.value = '';
+          console.log('DEBUG: No deadline, cleared field');
+        }
+      }
+      // Format ngày tạo theo dd/MM/yyyy
+      var created = '';
+      if (ticketData.createdDate) {
+        // Nếu có createdDate từ database (format: yyyy-MM-dd)
+        if (ticketData.createdDate.includes('-')) {
+          var parts = ticketData.createdDate.split('-');
+          if (parts.length === 3) {
+            created = parts[2] + '/' + parts[1] + '/' + parts[0];
+          } else {
+            created = ticketData.createdDate;
+          }
+        } else if (ticketData.createdDate.includes('/')) {
+          // Đã là dd/MM/yyyy hoặc MM/dd/yyyy
+          var testParts = ticketData.createdDate.split('/');
+          if (testParts.length === 3 && testParts[0].length === 4) {
+            // Là yyyy/MM/dd, convert sang dd/MM/yyyy
+            created = testParts[2] + '/' + testParts[1] + '/' + testParts[0];
+          } else {
+            created = ticketData.createdDate;
+          }
+        } else {
+          created = ticketData.createdDate;
+        }
+      } else if (ticketData.createdAt) {
+        // Fallback: format từ timestamp
+        try {
+          var date = new Date(ticketData.createdAt);
+          var dd = String(date.getDate()).padStart(2, '0');
+          var mm = String(date.getMonth() + 1).padStart(2, '0');
+          var yyyy = date.getFullYear();
+          created = dd + '/' + mm + '/' + yyyy;
+        } catch(e) {
+          created = formatDate(ticketData);
+        }
+      } else {
+        created = formatDate(ticketData);
+      }
+      
+      // Format ngày xử lý xong theo dd/MM/yyyy
+      var resolved = '';
+      if (ticketData.resolvedAt) {
+        try {
+          var resolvedDate = new Date(ticketData.resolvedAt);
+          var rdd = String(resolvedDate.getDate()).padStart(2, '0');
+          var rmm = String(resolvedDate.getMonth() + 1).padStart(2, '0');
+          var ryyyy = resolvedDate.getFullYear();
+          resolved = rdd + '/' + rmm + '/' + ryyyy;
+        } catch(e) {
+          resolved = '';
+        }
+      }
+      
       document.getElementById('v_created').textContent = created;
       document.getElementById('v_resolved').textContent = resolved;
       
@@ -1470,7 +1711,7 @@
       // reset edit state
       const enable = document.getElementById('v_enable_edit');
       const saveBtn = document.getElementById('v_save_btn');
-      [catInp, priInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = true; }});
+      [catInp, priInp, subInp, desInp, vDeadline].forEach(function(el){ if(el){ el.disabled = true; }});
       if (enable) enable.checked = false;
       if (saveBtn) saveBtn.disabled = true;
       
@@ -1548,6 +1789,48 @@
       // Kiểm tra trạng thái để quyết định có cho phép chỉnh sửa không
       const finalStatus = cancelledItems.has(String(ticketId)) ? 'cancelled' : (ticketStatus || 'pending');
       const canEdit = finalStatus === 'pending' || finalStatus === 'open';
+      const vDeadline = document.getElementById('v_deadline');
+      
+      // Thêm event listener cho deadline format tự động
+      if (vDeadline) {
+        // Format tự động khi nhập
+        vDeadline.addEventListener('input', function(e) {
+          var value = e.target.value.replace(/\D/g, ''); // Chỉ giữ số
+          if (value.length >= 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2);
+          }
+          if (value.length >= 5) {
+            value = value.substring(0, 5) + '/' + value.substring(5, 9);
+          }
+          e.target.value = value;
+        });
+        
+        // Validate format khi blur
+        vDeadline.addEventListener('blur', function(e) {
+          var value = e.target.value;
+          if (value && value.length === 10) {
+            var parts = value.split('/');
+            if (parts.length === 3) {
+              var day = parseInt(parts[0], 10);
+              var month = parseInt(parts[1], 10);
+              var year = parseInt(parts[2], 10);
+              var date = new Date(year, month - 1, day);
+              if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+                alert('Ngày không hợp lệ! Vui lòng nhập đúng định dạng dd/MM/yyyy');
+                e.target.value = '';
+              } else {
+                // Kiểm tra không được là ngày quá khứ
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (date < today) {
+                  alert('Ngày deadline không được là ngày quá khứ!');
+                  e.target.value = '';
+                }
+              }
+            }
+          }
+        });
+      }
       
       // attach handlers
       if (enable) {
@@ -1558,8 +1841,8 @@
             return;
           }
           var on = !!enable.checked;
-          // chỉnh sửa loại yêu cầu, tiêu đề, mô tả
-          [catInp, subInp, desInp].forEach(function(el){ if(el){ el.disabled = !on; }});
+          // chỉnh sửa loại yêu cầu, tiêu đề, mô tả, deadline
+          [catInp, subInp, desInp, vDeadline].forEach(function(el){ if(el){ el.disabled = !on; }});
           if (priInp) priInp.disabled = true;
           if (saveBtn) saveBtn.disabled = !on;
           // Cho phép chọn hợp đồng/sản phẩm khi bật chỉnh sửa
@@ -1620,6 +1903,21 @@
           data.append('category', catInp.value || 'general');
           data.append('priority', 'medium');
           data.append('delete_old_id', ticketId); // thêm ID để xóa bản cũ
+          // Thêm deadline nếu có - convert từ dd/MM/yyyy sang yyyy-MM-dd
+          if (vDeadline && vDeadline.value && vDeadline.value.trim() !== '') {
+            var deadlineValue = vDeadline.value.trim();
+            // Convert từ dd/MM/yyyy sang yyyy-MM-dd
+            if (deadlineValue.includes('/')) {
+              var parts = deadlineValue.split('/');
+              if (parts.length === 3) {
+                var day = parts[0].padStart(2, '0');
+                var month = parts[1].padStart(2, '0');
+                var year = parts[2];
+                deadlineValue = year + '-' + month + '-' + day;
+              }
+            }
+            data.append('deadline', deadlineValue);
+          }
           fetch(ctx + '/api/support-customer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
