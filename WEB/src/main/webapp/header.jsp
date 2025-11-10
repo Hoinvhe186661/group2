@@ -162,6 +162,11 @@
                             <i class="fas fa-user"></i>
                             <c:out value="${empty sessionScope.fullName ? sessionScope.username : sessionScope.fullName}"/>
                         </a>
+                        <c:if test="${sessionScope.userRole eq 'customer'}">
+                            <a href="customer_contracts.jsp" style="color: inherit; text-decoration: none; margin-right: 12px;" title="Hợp đồng của tôi">
+                                <i class="fas fa-file-contract"></i>
+                            </a>
+                        </c:if>
                         <a href="logout" style="color: inherit; text-decoration: none;" title="Đăng xuất">
                             <i class="fas fa-sign-out-alt"></i>
                         </a>
@@ -190,6 +195,9 @@
             <li class="nav-item"><a class="nav-link" href="contact.jsp" id="nav-contact">LIÊN HỆ</a></li>
             <c:if test="${sessionScope.isLoggedIn eq true}">
                 <li class="nav-item"><a class="nav-link" href="support.jsp" id="nav-support">HỖ TRỢ</a></li>
+                <c:if test="${sessionScope.userRole eq 'customer'}">
+                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/customer-contracts" id="nav-contracts">HỢP ĐỒNG</a></li>
+                </c:if>
             </c:if>
         </ul>
     </div>
