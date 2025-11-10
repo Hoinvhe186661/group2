@@ -21,28 +21,19 @@
     <meta charset="UTF-8">
     <title>Tồn kho | Bảng điều khiển quản trị</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+    <meta name="description" content="Admin Panel for Web Application">
+    <meta name="keywords" content="Admin, Bootstrap 3, Template, Theme, Responsive">
+    
+    <!-- bootstrap 3.0.2 -->
     <link href="<%=request.getContextPath()%>/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <!-- font Awesome -->
     <link href="<%=request.getContextPath()%>/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+    <!-- Ionicons -->
+    <link href="<%=request.getContextPath()%>/css/ionicons.min.css" rel="stylesheet" type="text/css" />
+    <!-- Theme style -->
     <link href="<%=request.getContextPath()%>/css/style.css" rel="stylesheet" type="text/css" />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     <style>
-        .stock-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .badge-normal {
-            background: #d4edda;
-            color: #155724;
-        }
-        .badge-low {
-            background: #fff3cd;
-            color: #856404;
-        }
-        .badge-out {
-            background: #f8d7da;
-            color: #721c24;
-        }
         .filter-panel {
             background-color: #f9f9f9;
             border-radius: 5px;
@@ -107,48 +98,68 @@
         body {
             background: #f5f6f8;
         }
-        .stock-value {
-            font-weight: bold;
-        }
-        .stock-value.normal {
-            color: #28a745;
-        }
-        .stock-value.low {
-            color: #ffc107;
-        }
-        .stock-value.out {
-            color: #dc3545;
-        }
         #stockTable img {
             object-fit: cover;
         }
     </style>
+    
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
 </head>
 <body class="skin-black">
     <header class="header">
-        <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">Bảng điều khiển</a>
-        <nav class="navbar navbar-static-top" role="navigation">
-            <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
-                <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
-            </a>
-            <div class="navbar-right">
-                <ul class="nav navbar-nav">
-                    <li class="dropdown user user-menu">
-                        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                            <i class="fa fa-user"></i><span><%= username %> <i class="caret"></i></span>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li class="dropdown-header text-center">Tài khoản</li>
-                            <li><a href="profile.jsp">Hồ sơ</a><a href="<%=request.getContextPath()%>/logout">Đăng xuất</a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </nav>
+      <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">
+        Bảng điều khiển 
+      </a>
+      <!-- Header Navbar: style can be found in header.less -->
+      <nav class="navbar navbar-static-top" role="navigation">
+        <!-- Sidebar toggle button-->
+        <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </a>
+        <div class="navbar-right">
+          <ul class="nav navbar-nav">
+            <!-- User Account: style can be found in dropdown.less -->
+            <li class="dropdown user user-menu">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                <i class="fa fa-user"></i>
+                <span><%= username %> <i class="caret"></i></span>
+              </a>
+              <ul class="dropdown-menu dropdown-custom dropdown-menu-right">
+                <li class="dropdown-header text-center">Tài khoản</li>
+                <li>
+                  <a href="profile.jsp">
+                  <i class="fa fa-user fa-fw pull-right"></i>
+                    Hồ sơ
+                  </a>
+                  <a href="settings.jsp">
+                  <i class="fa fa-cog fa-fw pull-right"></i>
+                    Cài đặt
+                  </a>
+                </li>
+                <li class="divider"></li>
+                <li>
+                  <a href="<%=request.getContextPath()%>/logout"><i class="fa fa-ban fa-fw pull-right"></i> Đăng xuất</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </nav>
     </header>
     <div class="wrapper row-offcanvas row-offcanvas-left">
+        <!-- Left side column. contains the logo and sidebar -->
         <aside class="left-side sidebar-offcanvas">
+            <!-- sidebar: style can be found in sidebar.less -->
             <section class="sidebar">
+                <!-- Sidebar user panel -->
                 <div class="user-panel">
                     <div class="pull-left image">
                         <img src="<%=request.getContextPath()%>/img/26115.jpg" class="img-circle" alt="User Image" />
@@ -158,29 +169,55 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
+                <!-- search form -->
                 <form action="#" method="get" class="sidebar-form">
                     <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..." />
+                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
                         <span class="input-group-btn">
                             <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
                         </span>
                     </div>
                 </form>
+                <!-- /.search form -->
+                <!-- sidebar menu: : style can be found in sidebar.less -->
                 <ul class="sidebar-menu">
-                    <li><a href="<%=request.getContextPath()%>/admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a></li>
-                    <li><a href="<%=request.getContextPath()%>/product.jsp"><i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span></a></li>
-                    <li><a href="<%=request.getContextPath()%>/supplier"><i class="fa fa-industry"></i> <span>Nhà cung cấp</span></a></li>
-                    <li><a href="<%=request.getContextPath()%>/inventory.jsp"><i class="fa fa-archive"></i> <span>Quản lý kho</span></a></li>
+                    <li>
+                        <a href="<%=request.getContextPath()%>/admin.jsp">
+                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<%=request.getContextPath()%>/product.jsp">
+                            <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<%=request.getContextPath()%>/supplier">
+                            <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="<%=request.getContextPath()%>/inventory.jsp">
+                            <i class="fa fa-archive"></i> <span>Quản lý kho</span>
+                        </a>
+                    </li>
                 </ul>
             </section>
+            <!-- /.sidebar -->
         </aside>
         <aside class="right-side">
+            <!-- Main content -->
             <section class="content">
                 <div class="row">
                     <div class="col-xs-12">
                         <div class="panel">
                             <header class="panel-heading">
-                                <h3><i class="fa fa-cubes"></i> Tồn kho</h3>
+                                <h3 style="display: inline-block; margin: 0;"><i class="fa fa-cubes"></i> Tồn kho</h3>
+                                <div class="panel-tools" style="float: right;">
+                                    <a class="btn btn-default btn-sm" href="<%=request.getContextPath()%>/inventory.jsp">
+                                        <i class="fa fa-arrow-left"></i> Quay lại
+                                    </a>
+                                </div>
                             </header>
                             <!-- Phần lọc tồn kho -->
                             <div class="panel-body filter-panel">
@@ -247,30 +284,28 @@
                             
                             <div class="panel-body table-responsive">
                                 <table class="table table-hover" id="stockTable">
-                                        <thead>
-                                            <tr>
-                                                <th>ID</th>
-                                                <th>Hình ảnh</th>
-                                                <th>Mã sản phẩm</th>
-                                                <th>Tên sản phẩm</th>
-                                                <th>Danh mục</th>
-                                                <th>Đơn vị</th>
-                                                <th>Tổng tồn kho</th>
-                                                <th>Tối thiểu</th>
-                                                <th>Tối đa</th>
-                                                <th>Giá bán</th>
-                                                <th>Trạng thái</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td colspan="11" class="text-center">
-                                                    <i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Hình ảnh</th>
+                                            <th>Mã sản phẩm</th>
+                                            <th>Tên sản phẩm</th>
+                                            <th>Danh mục</th>
+                                            <th>Đơn vị</th>
+                                            <th>Tổng tồn kho</th>
+                                            <th>Giá bán</th>
+                                            <th>Trạng thái</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="9" class="text-center">
+                                                <i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                                 
                                 <!-- Phân trang -->
                                 <div class="row" style="margin-top: 20px;">
@@ -300,13 +335,21 @@
                         </div>
                     </div>
                 </div>
-            </section>
-        </aside>
-    </div>
+            </section><!-- /.content -->
+        </aside><!-- /.right-side -->
+    </div><!-- ./wrapper -->
 
-    <script src="<%=request.getContextPath()%>/js/jquery.min.js"></script>
-    <script src="<%=request.getContextPath()%>/js/bootstrap.min.js"></script>
-    <script>
+    <!-- jQuery 2.0.2 -->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+    <script src="<%=request.getContextPath()%>/js/jquery.min.js" type="text/javascript"></script>
+    <!-- jQuery UI 1.10.3 -->
+    <script src="<%=request.getContextPath()%>/js/jquery-ui-1.10.3.min.js" type="text/javascript"></script>
+    <!-- Bootstrap -->
+    <script src="<%=request.getContextPath()%>/js/bootstrap.min.js" type="text/javascript"></script>
+    <!-- Director App -->
+    <script src="<%=request.getContextPath()%>/js/Director/app.js" type="text/javascript"></script>
+
+    <script type="text/javascript">
         var currentPage = 1;
         var pageSize = 10;
         var totalItems = 0;
@@ -327,7 +370,7 @@
             var status = $('#filterStatus').val() || '';
             
             // Hiển thị loading - filter được xử lý hoàn toàn bằng query ở backend
-            $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>');
+            $('#stockTable tbody').html('<tr><td colspan="9" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>');
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
@@ -349,12 +392,12 @@
                         displayStockData(response.data || []);
                         updatePagination(response.pagination || {});
                     } else {
-                        $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><div class="alert alert-warning">Không có dữ liệu tồn kho</div></td></tr>');
+                        $('#stockTable tbody').html('<tr><td colspan="9" class="text-center"><div class="alert alert-warning">Không có dữ liệu tồn kho</div></td></tr>');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading stock data:', error);
-                    $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><div class="alert alert-danger">Lỗi khi tải dữ liệu: ' + error + '</div></td></tr>');
+                    $('#stockTable tbody').html('<tr><td colspan="9" class="text-center"><div class="alert alert-danger">Lỗi khi tải dữ liệu: ' + error + '</div></td></tr>');
                 }
             });
         }
@@ -364,55 +407,52 @@
             tbody.empty();
             
             if (!data || data.length === 0) {
-                tbody.html('<tr><td colspan="11" class="text-center"><div class="alert alert-info">Không có dữ liệu tồn kho</div></td></tr>');
+                tbody.html('<tr><td colspan="9" class="text-center"><div class="alert alert-info">Không có dữ liệu tồn kho</div></td></tr>');
                 return;
             }
 
             data.forEach(function(item) {
-                var statusClass = getStatusClass(item.totalStock, item.minStock);
+                var statusLabel = getStatusLabel(item.totalStock, item.minStock);
                 var statusText = getStatusText(item.totalStock, item.minStock);
-                var statusBadge = getStatusBadge(item.totalStock, item.minStock);
                 
                 var row = '<tr>';
                 row += '<td>' + item.productId + '</td>';
                 row += '<td>';
                 if (item.imageUrl) {
-                    row += '<img src="' + escapeHtml(item.imageUrl) + '" style="max-width:50px; max-height:50px; border-radius:4px;" />';
+                    var imgUrl = escapeHtml(item.imageUrl);
+                    if (!imgUrl.startsWith('http') && !imgUrl.startsWith('/')) {
+                        imgUrl = '<%=request.getContextPath()%>/' + imgUrl;
+                    } else if (imgUrl.startsWith('/') && !imgUrl.startsWith('<%=request.getContextPath()%>')) {
+                        imgUrl = '<%=request.getContextPath()%>' + imgUrl;
+                    }
+                    row += '<img src="' + imgUrl + '" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" alt="' + escapeHtml(item.productName || '') + '" />';
                 } else {
-                    row += '<div style="width:50px; height:50px; background:#f0f0f0; display:flex; align-items:center; justify-content:center; border-radius:4px;"><i class="fa fa-image text-muted"></i></div>';
+                    row += '<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZTwvdGV4dD48L3N2Zz4=" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" alt="Default Image" />';
                 }
                 row += '</td>';
                 row += '<td><strong>' + escapeHtml(item.productCode || 'N/A') + '</strong></td>';
                 row += '<td>' + escapeHtml(item.productName || 'N/A') + '</td>';
                 row += '<td>' + escapeHtml(item.category || 'N/A') + '</td>';
                 row += '<td>' + escapeHtml(item.unit || 'N/A') + '</td>';
-                row += '<td><strong class="stock-value ' + statusClass + '">' + item.totalStock + '</strong> ' + escapeHtml(item.unit || '') + '</td>';
-                row += '<td>' + (item.minStock || 0) + '</td>';
-                row += '<td>' + (item.maxStock || '-') + '</td>';
-                row += '<td>' + (item.unitPrice ? formatCurrency(item.unitPrice) : '-') + '</td>';
-                row += '<td><span class="stock-badge ' + statusBadge + '">' + statusText + '</span></td>';
+                row += '<td><strong>' + (item.totalStock || 0) + '</strong></td>';
+                row += '<td>' + (item.unitPrice ? new Intl.NumberFormat('vi-VN').format(item.unitPrice) + ' VNĐ' : '-') + '</td>';
+                row += '<td><span class="label ' + statusLabel + '">' + statusText + '</span></td>';
                 row += '</tr>';
                 
                 tbody.append(row);
             });
         }
 
-        function getStatusClass(totalStock, minStock) {
-            if (totalStock === 0) return 'out';
-            if (minStock && totalStock <= minStock) return 'low';
-            return 'normal';
+        function getStatusLabel(totalStock, minStock) {
+            if (totalStock === 0) return 'label-danger';
+            if (minStock && totalStock <= minStock) return 'label-warning';
+            return 'label-success';
         }
 
         function getStatusText(totalStock, minStock) {
             if (totalStock === 0) return 'Hết hàng';
             if (minStock && totalStock <= minStock) return 'Sắp hết';
             return 'Bình thường';
-        }
-
-        function getStatusBadge(totalStock, minStock) {
-            if (totalStock === 0) return 'badge-out';
-            if (minStock && totalStock <= minStock) return 'badge-low';
-            return 'badge-normal';
         }
 
         function updatePagination(pagination) {
@@ -497,13 +537,6 @@
             return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        function formatCurrency(amount) {
-            if (!amount) return '0 đ';
-            return new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
-            }).format(amount);
-        }
     </script>
 </body>
 </html>

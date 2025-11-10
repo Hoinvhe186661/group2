@@ -514,6 +514,16 @@ public class InventoryDAO {
     public List<StockHistory> getFilteredStockHistory(Integer productId, String movementType,
                                                       String warehouse, String search,
                                                       int page, int pageSize) {
+        return getFilteredStockHistory(productId, movementType, warehouse, search, null, null, page, pageSize);
+    }
+    
+    /**
+     * Lấy lịch sử có lọc và phân trang từ backend (với lọc theo ngày)
+     */
+    public List<StockHistory> getFilteredStockHistory(Integer productId, String movementType,
+                                                      String warehouse, String search,
+                                                      String dateFrom, String dateTo,
+                                                      int page, int pageSize) {
         List<StockHistory> historyList = new ArrayList<>();
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
@@ -534,6 +544,14 @@ public class InventoryDAO {
             sql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ? OR COALESCE(sh.notes,'') LIKE ?) ");
             String like = "%" + search.trim() + "%";
             params.add(like); params.add(like); params.add(like);
+        }
+        if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+            sql.append("AND DATE(sh.created_at) >= ? ");
+            params.add(dateFrom);
+        }
+        if (dateTo != null && !dateTo.trim().isEmpty()) {
+            sql.append("AND DATE(sh.created_at) <= ? ");
+            params.add(dateTo);
         }
 
         sql.append("ORDER BY sh.created_at DESC LIMIT ? OFFSET ?");
@@ -559,6 +577,15 @@ public class InventoryDAO {
      */
     public int getFilteredStockHistoryCount(Integer productId, String movementType,
                                             String warehouse, String search) {
+        return getFilteredStockHistoryCount(productId, movementType, warehouse, search, null, null);
+    }
+    
+    /**
+     * Đếm tổng số lịch sử theo bộ lọc (phục vụ phân trang, với lọc theo ngày)
+     */
+    public int getFilteredStockHistoryCount(Integer productId, String movementType,
+                                            String warehouse, String search,
+                                            String dateFrom, String dateTo) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
             return 0;
@@ -575,6 +602,14 @@ public class InventoryDAO {
             String like = "%" + search.trim() + "%";
             params.add(like); params.add(like); params.add(like);
         }
+        if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+            sql.append("AND DATE(sh.created_at) >= ? ");
+            params.add(dateFrom);
+        }
+        if (dateTo != null && !dateTo.trim().isEmpty()) {
+            sql.append("AND DATE(sh.created_at) <= ? ");
+            params.add(dateTo);
+        }
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) { ps.setObject(i + 1, params.get(i)); }
@@ -582,6 +617,177 @@ public class InventoryDAO {
         } catch (SQLException e) {
             e.printStackTrace();
             lastError = "Lỗi khi đếm lịch sử: " + e.getMessage();
+        }
+        return 0;
+    }
+    
+    /**
+     * Lấy lịch sử tồn kho với tồn kho trước/sau mỗi giao dịch
+     * Tính tồn kho từ đầu (0) cho tất cả giao dịch theo thứ tự thời gian
+     */
+    public List<Map<String, Object>> getStockBalanceHistory(Integer productId, String warehouse, 
+                                                             String search, String dateFrom, String dateTo,
+                                                             int page, int pageSize) {
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return resultList;
+        }
+
+        // Lấy tất cả lịch sử (không lọc ngày) để tính tồn kho từ đầu
+        // Sau đó sẽ lọc theo ngày khi hiển thị
+        StringBuilder allHistorySql = new StringBuilder();
+        allHistorySql.append("SELECT sh.*, p.product_code, p.product_name, u.full_name as created_by_name ");
+        allHistorySql.append("FROM stock_history sh ");
+        allHistorySql.append("INNER JOIN products p ON sh.product_id = p.id ");
+        allHistorySql.append("LEFT JOIN users u ON sh.created_by = u.id WHERE 1=1 ");
+
+        List<Object> allParams = new ArrayList<>();
+        if (productId != null) { allHistorySql.append("AND sh.product_id = ? "); allParams.add(productId); }
+        if (warehouse != null && !warehouse.trim().isEmpty()) { allHistorySql.append("AND sh.warehouse_location = ? "); allParams.add(warehouse.trim()); }
+        if (search != null && !search.trim().isEmpty()) {
+            allHistorySql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ? OR COALESCE(sh.notes,'') LIKE ?) ");
+            String like = "%" + search.trim() + "%";
+            allParams.add(like); allParams.add(like); allParams.add(like);
+        }
+        allHistorySql.append("ORDER BY sh.product_id, sh.warehouse_location, sh.created_at ASC");
+
+        // Map để lưu tồn kho hiện tại theo (productId, warehouse) - bắt đầu từ 0
+        Map<String, Integer> currentStockMap = new HashMap<>();
+        List<Map<String, Object>> allHistory = new ArrayList<>();
+
+        try (PreparedStatement ps = connection.prepareStatement(allHistorySql.toString())) {
+            for (int i = 0; i < allParams.size(); i++) { ps.setObject(i + 1, allParams.get(i)); }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int pId = rs.getInt("product_id");
+                    String wh = rs.getString("warehouse_location");
+                    String key = pId + "_" + wh;
+                    
+                    // Lấy tồn kho trước giao dịch (bắt đầu từ 0)
+                    int stockBefore = currentStockMap.getOrDefault(key, 0);
+                    
+                    // Tính tồn kho sau giao dịch
+                    String movementType = rs.getString("movement_type");
+                    int quantity = rs.getInt("quantity");
+                    int stockAfter = stockBefore;
+                    if ("in".equals(movementType)) {
+                        stockAfter = stockBefore + quantity;
+                    } else if ("out".equals(movementType)) {
+                        stockAfter = stockBefore - quantity;
+                    } else if ("adjustment".equals(movementType)) {
+                        stockAfter = stockBefore + quantity; // adjustment có thể âm hoặc dương
+                    }
+                    
+                    // Cập nhật tồn kho hiện tại
+                    currentStockMap.put(key, stockAfter);
+                    
+                    // Tạo map cho kết quả
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("id", rs.getInt("id"));
+                    item.put("productId", pId);
+                    item.put("productCode", rs.getString("product_code"));
+                    item.put("productName", rs.getString("product_name"));
+                    item.put("warehouseLocation", wh);
+                    item.put("movementType", movementType);
+                    item.put("quantity", quantity);
+                    item.put("stockBefore", stockBefore);
+                    item.put("stockAfter", stockAfter);
+                    item.put("createdAt", rs.getTimestamp("created_at"));
+                    item.put("createdByName", rs.getString("created_by_name"));
+                    
+                    allHistory.add(item);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi lấy lịch sử tồn kho: " + e.getMessage();
+            return resultList;
+        }
+        
+        // Lọc theo ngày nếu có
+        if ((dateFrom != null && !dateFrom.trim().isEmpty()) || (dateTo != null && !dateTo.trim().isEmpty())) {
+            java.util.Iterator<Map<String, Object>> it = allHistory.iterator();
+            while (it.hasNext()) {
+                Map<String, Object> item = it.next();
+                Timestamp createdAt = (Timestamp) item.get("createdAt");
+                if (createdAt == null) {
+                    it.remove();
+                    continue;
+                }
+                java.sql.Date itemDate = new java.sql.Date(createdAt.getTime());
+                
+                if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+                    java.sql.Date fromDate = java.sql.Date.valueOf(dateFrom);
+                    if (itemDate.before(fromDate)) {
+                        it.remove();
+                        continue;
+                    }
+                }
+                if (dateTo != null && !dateTo.trim().isEmpty()) {
+                    java.sql.Date toDate = java.sql.Date.valueOf(dateTo);
+                    if (itemDate.after(toDate)) {
+                        it.remove();
+                        continue;
+                    }
+                }
+            }
+        }
+        
+        // Sắp xếp lại theo thời gian giảm dần
+        allHistory.sort((a, b) -> {
+            Timestamp t1 = (Timestamp) a.get("createdAt");
+            Timestamp t2 = (Timestamp) b.get("createdAt");
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1); // Giảm dần
+        });
+        
+        // Phân trang
+        int start = (page - 1) * pageSize;
+        int end = Math.min(start + pageSize, allHistory.size());
+        if (start < allHistory.size()) {
+            return allHistory.subList(start, end);
+        }
+        return new ArrayList<>();
+    }
+    
+    /**
+     * Đếm tổng số lịch sử tồn kho theo bộ lọc
+     */
+    public int getStockBalanceHistoryCount(Integer productId, String warehouse, 
+                                           String search, String dateFrom, String dateTo) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT COUNT(*) FROM stock_history sh INNER JOIN products p ON sh.product_id = p.id WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+        if (productId != null) { sql.append("AND sh.product_id = ? "); params.add(productId); }
+        if (warehouse != null && !warehouse.trim().isEmpty()) { sql.append("AND sh.warehouse_location = ? "); params.add(warehouse.trim()); }
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append("AND (p.product_name LIKE ? OR p.product_code LIKE ? OR COALESCE(sh.notes,'') LIKE ?) ");
+            String like = "%" + search.trim() + "%";
+            params.add(like); params.add(like); params.add(like);
+        }
+        if (dateFrom != null && !dateFrom.trim().isEmpty()) {
+            sql.append("AND DATE(sh.created_at) >= ? ");
+            params.add(dateFrom);
+        }
+        if (dateTo != null && !dateTo.trim().isEmpty()) {
+            sql.append("AND DATE(sh.created_at) <= ? ");
+            params.add(dateTo);
+        }
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) { ps.setObject(i + 1, params.get(i)); }
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) { return rs.getInt(1); } }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi đếm lịch sử tồn kho: " + e.getMessage();
         }
         return 0;
     }
@@ -696,18 +902,18 @@ public class InventoryDAO {
         if (stockStatus != null && !stockStatus.trim().isEmpty()) {
             switch (stockStatus) {
                 case "out":
-                    sql.append("HAVING total_stock <= 0 ");
+                    sql.append("HAVING COALESCE(total_stock, 0) <= 0 ");
                     break;
                 case "low":
-                    sql.append("HAVING total_stock > 0 AND total_stock <= min_stock ");
+                    sql.append("HAVING COALESCE(total_stock, 0) > 0 AND COALESCE(total_stock, 0) <= COALESCE(min_stock, 0) ");
                     break;
                 case "normal":
-                    sql.append("HAVING total_stock > min_stock ");
+                    sql.append("HAVING COALESCE(total_stock, 0) > COALESCE(min_stock, 0) ");
                     break;
             }
         }
         
-        sql.append("ORDER BY p.product_name ASC ");
+        sql.append("ORDER BY MAX(i.last_updated) IS NULL, MAX(i.last_updated) DESC, p.product_name ASC ");
         
         // Phân trang
         int offset = (page - 1) * pageSize;
@@ -782,10 +988,10 @@ public class InventoryDAO {
                     sql.append("HAVING COALESCE(SUM(i.current_stock), 0) <= 0 ");
                     break;
                 case "low":
-                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > 0 AND COALESCE(SUM(i.current_stock), 0) <= MIN(i.min_stock) ");
+                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > 0 AND COALESCE(SUM(i.current_stock), 0) <= COALESCE(MIN(i.min_stock), 0) ");
                     break;
                 case "normal":
-                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > MIN(i.min_stock) ");
+                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > COALESCE(MIN(i.min_stock), 0) ");
                     break;
             }
         }

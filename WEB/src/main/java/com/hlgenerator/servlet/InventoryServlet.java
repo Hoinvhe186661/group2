@@ -67,6 +67,8 @@ public class InventoryServlet extends HttpServlet {
             getContractsList(request, response);
         } else if ("getStockList".equals(action)) {
             getStockList(request, response);
+        } else if ("getStockBalance".equals(action)) {
+            getStockBalance(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
         }
@@ -522,14 +524,16 @@ public class InventoryServlet extends HttpServlet {
             String movementType = request.getParameter("type");
             String warehouse = request.getParameter("warehouse");
             String search = request.getParameter("q");
+            String dateFrom = request.getParameter("dateFrom");
+            String dateTo = request.getParameter("dateTo");
 
             // Pagination
             int page = 1; int pageSize = 10;
             if (request.getParameter("page") != null) { try { page = Integer.parseInt(request.getParameter("page")); } catch (Exception ignore) {} }
             if (request.getParameter("pageSize") != null) { try { pageSize = Integer.parseInt(request.getParameter("pageSize")); } catch (Exception ignore) {} }
 
-            List<StockHistory> historyList = inventoryDAO.getFilteredStockHistory(productId, movementType, warehouse, search, page, pageSize);
-            int totalCount = inventoryDAO.getFilteredStockHistoryCount(productId, movementType, warehouse, search);
+            List<StockHistory> historyList = inventoryDAO.getFilteredStockHistory(productId, movementType, warehouse, search, dateFrom, dateTo, page, pageSize);
+            int totalCount = inventoryDAO.getFilteredStockHistoryCount(productId, movementType, warehouse, search, dateFrom, dateTo);
 
             StringBuilder json = new StringBuilder();
             json.append("{\"success\":true,\"data\":[");
@@ -741,17 +745,12 @@ public class InventoryServlet extends HttpServlet {
                 
                 inventoryDAO.addStockHistory(history);
 
-                // Nếu sản phẩm chưa có giá bán, tự đặt = unitCost * 1.10 (lợi nhuận 10%)
+                // Ghi chú: Việc cập nhật giá bán là chức năng của module Sale
+                // Module kho chỉ quản lý giá nhập (unit_cost) và ghi vào stock_history
+                // Đã loại bỏ logic tự động đề xuất giá bán để tách biệt trách nhiệm
+                
+                // Ghi lịch sử thay đổi giá mua nếu có thay đổi so với lần gần nhất
                 if (unitCost > 0) {
-                    double suggestedSellingPrice = Math.round(unitCost * 1.10 * 100.0) / 100.0; // làm tròn 2 số lẻ
-                    try {
-                        productDAO.updateUnitPriceIfEmpty(productId, suggestedSellingPrice);
-                    } catch (Exception ex) {
-                        // Không chặn quy trình nhập kho nếu cập nhật giá thất bại
-                        System.err.println("Warn: updateUnitPriceIfEmpty failed for product " + productId + ": " + ex.getMessage());
-                    }
-
-                    // Ghi lịch sử thay đổi giá mua nếu có thay đổi so với lần gần nhất
                     boolean changed;
                     if (lastCostBefore == null) {
                         changed = true; // lần đầu có giá mua
@@ -1034,6 +1033,68 @@ public class InventoryServlet extends HttpServlet {
             json.append("\"to\":").append(to);
             json.append("}}");
             
+            response.getWriter().write(json.toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().write("{\"success\":false,\"message\":\"" + 
+                escapeJson(e.getMessage()) + "\"}");
+        }
+    }
+    
+    /**
+     * Lấy lịch sử tồn kho với tồn kho trước/sau mỗi giao dịch
+     */
+    private void getStockBalance(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        try {
+            Integer productId = null;
+            String productIdParam = request.getParameter("productId");
+            if (productIdParam != null) {
+                productIdParam = productIdParam.trim();
+                if (!productIdParam.isEmpty() && productIdParam.matches("\\d+")) {
+                    productId = Integer.parseInt(productIdParam);
+                }
+            }
+            // Filters
+            String warehouse = request.getParameter("warehouse");
+            String search = request.getParameter("q");
+            String dateFrom = request.getParameter("dateFrom");
+            String dateTo = request.getParameter("dateTo");
+
+            // Pagination
+            int page = 1; int pageSize = 10;
+            if (request.getParameter("page") != null) { try { page = Integer.parseInt(request.getParameter("page")); } catch (Exception ignore) {} }
+            if (request.getParameter("pageSize") != null) { try { pageSize = Integer.parseInt(request.getParameter("pageSize")); } catch (Exception ignore) {} }
+
+            List<Map<String, Object>> balanceList = inventoryDAO.getStockBalanceHistory(productId, warehouse, search, dateFrom, dateTo, page, pageSize);
+            int totalCount = inventoryDAO.getStockBalanceHistoryCount(productId, warehouse, search, dateFrom, dateTo);
+
+            StringBuilder json = new StringBuilder();
+            json.append("{\"success\":true,\"data\":[");
+
+            for (int i = 0; i < balanceList.size(); i++) {
+                if (i > 0) json.append(",");
+                Map<String, Object> h = balanceList.get(i);
+                json.append("{");
+                json.append("\"id\":").append(h.get("id")).append(",");
+                json.append("\"productId\":").append(h.get("productId")).append(",");
+                json.append("\"productCode\":\"").append(escapeJson((String)h.get("productCode"))).append("\",");
+                json.append("\"productName\":\"").append(escapeJson((String)h.get("productName"))).append("\",");
+                json.append("\"movementType\":\"").append(escapeJson((String)h.get("movementType"))).append("\",");
+                json.append("\"quantity\":").append(h.get("quantity")).append(",");
+                json.append("\"stockBefore\":").append(h.get("stockBefore")).append(",");
+                json.append("\"stockAfter\":").append(h.get("stockAfter")).append(",");
+                json.append("\"warehouseLocation\":\"").append(escapeJson((String)h.get("warehouseLocation"))).append("\",");
+                json.append("\"createdAt\":\"").append(h.get("createdAt")).append("\",");
+                json.append("\"createdByName\":\"").append(escapeJson((String)h.get("createdByName"))).append("\"");
+                json.append("}");
+            }
+            json.append("],\"totalCount\":").append(totalCount);
+            json.append(",\"currentPage\":").append(page);
+            json.append(",\"pageSize\":").append(pageSize);
+            json.append(",\"totalPages\":").append((int)Math.ceil((double) totalCount / pageSize));
+            json.append("}");
             response.getWriter().write(json.toString());
             
         } catch (Exception e) {

@@ -432,39 +432,6 @@
         </div>
     </div>
 
-    <!-- Modal Cập nhật giá bán -->
-    <div class="modal fade" id="priceUpdateModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h4 class="modal-title"><i class="fa fa-money"></i> Cập nhật giá bán</h4>
-                </div>
-                <div class="modal-body">
-                    <form id="priceUpdateForm">
-                        <input type="hidden" id="priceUpdateProductId">
-                        <div class="form-group">
-                            <label>Giá hiện tại</label>
-                            <input type="text" id="priceCurrent" class="form-control" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>Giá mới <span class="text-danger">*</span></label>
-                            <input type="number" id="priceNew" class="form-control" step="1000" min="1" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Lý do</label>
-                            <input type="text" id="priceReason" class="form-control" placeholder="Ví dụ: Điều chỉnh theo thị trường">
-                        </div>
-                        <div id="priceUpdateNotice" class="alert alert-warning" style="display:none;"></div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-default" data-dismiss="modal">Hủy</button>
-                    <button class="btn btn-primary" onclick="submitUpdatePrice()"><i class="fa fa-save"></i> Lưu</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal Nhập kho -->
     <div class="modal fade" id="stockInModal" tabindex="-1" role="dialog">
@@ -917,53 +884,6 @@
             return '<%=request.getContextPath()%>/stock_history.jsp?productId=' + encodeURIComponent(productId);
         }
 
-        // Mở modal cập nhật giá bán
-        function openPriceUpdate(productId){
-            if(!productId){ alert('ID sản phẩm không hợp lệ'); return; }
-            $('#priceUpdateProductId').val(productId);
-            // Lấy giá hiện tại
-            $.get('<%=request.getContextPath()%>/product', { action: 'view', id: productId }, function(res){
-                if(res && res.success){
-                    $('#priceCurrent').val((res.product.unitPrice!=null? formatCurrencyVN(res.product.unitPrice):'0') + ' VNĐ');
-                } else {
-                    $('#priceCurrent').val('--');
-                }
-            }, 'json');
-            // Đếm số lần cập nhật giá bán để cảnh báo
-            $.get('<%=request.getContextPath()%>/product', { action: 'priceHistory', productId: productId, type: 'selling', limit: 1 }, function(res){
-                if(res && res.success && typeof res.count === 'number'){
-                    if (res.count >= 3) {
-                        $('#priceUpdateNotice').text('Lưu ý: Giá bán đã được cập nhật ' + res.count + ' lần. Hãy xác nhận kỹ trước khi thay đổi tiếp.').show();
-                    } else {
-                        $('#priceUpdateNotice').hide();
-                    }
-                } else {
-                    $('#priceUpdateNotice').hide();
-                }
-            }, 'json');
-            $('#priceNew').val('');
-            $('#priceReason').val('');
-            $('#priceUpdateModal').modal('show');
-        }
-
-        // Gửi cập nhật giá bán
-        function submitUpdatePrice(){
-            var productId = $('#priceUpdateProductId').val();
-            var newPrice = $('#priceNew').val();
-            var reason = $('#priceReason').val();
-            if(!newPrice || parseFloat(newPrice) <= 0){ alert('Giá mới phải > 0'); return; }
-            $.post('<%=request.getContextPath()%>/product', { action: 'updatePrice', productId: productId, newPrice: newPrice, reason: reason }, function(res){
-                if(res && res.success){
-                    alert(res.message || 'Cập nhật thành công');
-                    $('#priceUpdateModal').modal('hide');
-                    loadInventoryData();
-                } else {
-                    alert(res && res.message ? res.message : 'Cập nhật thất bại');
-                }
-            }, 'json').fail(function(xhr){
-                alert('Lỗi server: ' + (xhr.responseText || ''));
-            });
-        }
 
         // Xem chi tiết sản phẩm (modal)
         function invViewProduct(productId) {
@@ -1120,17 +1040,17 @@
                     '<input type="text" class="form-control stockInProductUnit" readonly style="background-color: #f5f5f5; text-align: center;">' +
                 '</td>' +
                 '<td>' +
-                    '<input type="number" class="form-control stockInQuantity" min="1" value="0" required style="text-align: right;">' +
+                    '<input type="number" class="form-control stockInQuantity" min="1" value="" required placeholder="Nhập số lượng" style="text-align: right;">' +
                 '</td>' +
                 '<td>' +
-                    '<input type="number" class="form-control stockInUnitCost" min="1" step="1000" value="0" required style="text-align: right;">' +
+                    '<input type="number" class="form-control stockInUnitCost" min="1" step="1000" value="" required placeholder="Nhập đơn giá" style="text-align: right;">' +
                 '</td>' +
                 '<td style="text-align: right; vertical-align: middle;">' +
                     '<span class="stockInRowTotal" style="font-weight: bold; color: #d9534f;">0 VNĐ</span>' +
                 '</td>' +
                 '<td style="text-align: center; vertical-align: middle;">' +
                     '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockInRow(\'' + rowId + '\')" title="Xóa dòng">' +
-                        '<i class="fa fa-trash"></i>' +
+                        '<i class="fa fa-trash"></i> Xóa' +
                     '</button>' +
                 '</td>' +
             '</tr>';
@@ -1369,11 +1289,11 @@
                     '<span class="stockOutCurrentStock" style="font-weight: bold; color: #5cb85c;">--</span>' +
                 '</td>' +
                 '<td>' +
-                    '<input type="number" class="form-control stockOutQuantity" min="1" value="0" required style="text-align: right;">' +
+                    '<input type="number" class="form-control stockOutQuantity" min="1" value="" required placeholder="Nhập số lượng" style="text-align: right;">' +
                 '</td>' +
                 '<td style="text-align: center; vertical-align: middle;">' +
                     '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockOutRow(\'' + rowId + '\')" title="Xóa dòng">' +
-                        '<i class="fa fa-trash"></i>' +
+                        '<i class="fa fa-trash"></i> Xóa' +
                     '</button>' +
                 '</td>' +
             '</tr>';
@@ -1783,11 +1703,11 @@
                                         '<span class="stockOutCurrentStock" style="font-weight: bold; color: #5cb85c;">--</span>' +
                                     '</td>' +
                                     '<td>' +
-                                        '<input type="number" class="form-control stockOutQuantity" min="1" value="' + (product.quantity || 0) + '" required style="text-align: right;">' +
+                                        '<input type="number" class="form-control stockOutQuantity" min="1" value="' + (product.quantity && product.quantity > 0 ? product.quantity : '') + '" required placeholder="Nhập số lượng" style="text-align: right;">' +
                                     '</td>' +
                                     '<td style="text-align: center; vertical-align: middle;">' +
                                         '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockOutRow(\'' + rowId + '\')" title="Xóa dòng">' +
-                                            '<i class="fa fa-trash"></i>' +
+                                            '<i class="fa fa-trash"></i> Xóa' +
                                         '</button>' +
                                     '</td>' +
                                 '</tr>';

@@ -63,6 +63,10 @@
         body {
           background: #f5f6f8
         }
+
+      .table-responsive {
+        margin-top: 10px;
+      }
       </style>
     </head>
 
@@ -136,7 +140,6 @@
                   <i class="fa fa-archive"></i> <span>Quản lý kho</span>
                 </a>
               </li>
-              <!-- Không hiển thị link lịch sử trong task bar theo yêu cầu -->
             </ul>
           </section>
           <!-- /.sidebar -->
@@ -147,54 +150,163 @@
               <div class="col-xs-12">
                 <div class="panel">
                    <header class="panel-heading">
-                     <ul class="nav nav-tabs" style="border-bottom:none;">
-                       <li class="active"><a href="#tab-stock" data-toggle="tab"><i class="fa fa-exchange"></i> Xuất/Nhập kho</a></li>
-                       <li><a href="#tab-price" data-toggle="tab"><i class="fa fa-money"></i> Giá mua/bán</a></li>
+                  <h3 style="display: inline-block; margin: 0 0 15px 0;"><i class="fa fa-history"></i> Lịch sử Xuất, Nhập, Tồn</h3>
+                  <div class="panel-tools" style="float: right; margin-bottom: 15px;">
+                    <a class="btn btn-default btn-sm" href="<%=request.getContextPath()%>/inventory.jsp">
+                      <i class="fa fa-arrow-left"></i> Quay lại
+                    </a>
+                  </div>
+                  <ul class="nav nav-tabs" style="border-bottom:none; clear: both;">
+                    <li class="active"><a href="#tab-in" data-toggle="tab"><i class="fa fa-arrow-down"></i> Lịch sử nhập kho</a></li>
+                    <li><a href="#tab-out" data-toggle="tab"><i class="fa fa-arrow-up"></i> Lịch sử xuất kho</a></li>
+                    <li><a href="#tab-balance" data-toggle="tab"><i class="fa fa-cubes"></i> Lịch sử tồn kho</a></li>
                      </ul>
                    </header>
                   <div class="panel-body tab-content">
-                    <div class="tab-pane active" id="tab-stock">
+                  <!-- TAB 1: LỊCH SỬ NHẬP KHO -->
+                  <div class="tab-pane active" id="tab-in">
                     <div class="row filter-bar" style="margin-bottom:10px;">
-                      <div class="col-sm-3"><input id="searchKeyword" class="form-control"
+                      <div class="col-sm-3"><input id="inSearchKeyword" class="form-control"
                           placeholder="Tìm theo tên/mã sản phẩm" /></div>
-                      <div class="col-sm-2"><select id="filterType" class="form-control">
-                          <option value="">Tất cả loại</option>
-                          <option value="in">Nhập</option>
-                          <option value="out">Xuất</option>
-                          <option value="adjustment">Điều chỉnh</option>
-                        </select></div>
-                      <div class="col-sm-3"><select id="filterWarehouse" class="form-control">
+                      <div class="col-sm-3"><select id="inFilterWarehouse" class="form-control">
                           <option value="">Tất cả kho</option>
                           <option value="Main Warehouse">Kho Chính</option>
                           <option value="Warehouse A">Kho A</option>
                           <option value="Warehouse B">Kho B</option>
                         </select></div>
-                      <div class="col-sm-2"><button class="btn btn-primary btn-block" onclick="reloadHistory()"><i
-                            class="fa fa-search"></i> Lọc</button></div>
-                      <div class="col-sm-2"><button class="btn btn-default btn-block" onclick="resetFilters()"><i
-                            class="fa fa-refresh"></i> Reset</button></div>
+                      <div class="col-sm-2"><input type="date" id="inDateFrom" class="form-control" placeholder="Từ ngày" /></div>
+                      <div class="col-sm-2"><input type="date" id="inDateTo" class="form-control" placeholder="Đến ngày" /></div>
+                      <div class="col-sm-1">
+                        <div class="form-group">
+                          <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
+                          <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="reloadInHistory(true)" title="Áp dụng bộ lọc">
+                            <i class="fa fa-search"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="col-sm-1">
+                        <div class="form-group">
+                          <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                          <button type="button" class="btn btn-warning btn-sm" style="width: 100%;" onclick="resetInFilters()" title="Xóa tất cả bộ lọc">
+                            <i class="fa fa-refresh"></i>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div id="historyContainer">
-                      <div class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</div>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-striped">
+                        <thead>
+                          <tr>
+                            <th>Thời gian</th>
+                            <th>Sản phẩm</th>
+                            <th>Số lượng nhập</th>
+                            <th>Đơn giá nhập</th>
+                            <th>Tổng tiền</th>
+                            <th>Kho</th>
+                            <th>Nhà cung cấp</th>
+                            <th>Người thực hiện</th>
+                            <th>Ghi chú</th>
+                          </tr>
+                        </thead>
+                        <tbody id="inHistoryBody">
+                          <tr><td colspan="9" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                        </tbody>
+                      </table>
                     </div>
                     <div class="row" style="margin-top:10px;">
-                      <div class="col-sm-6"><span id="historyInfo" class="muted"></span></div>
+                      <div class="col-sm-6"><span id="inHistoryInfo" class="muted"></span></div>
                       <div class="col-sm-6" style="text-align:right;">
-                        <ul class="pagination" id="historyPagination" style="margin:0;"></ul>
+                        <ul class="pagination" id="inHistoryPagination" style="margin:0;"></ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- TAB 2: LỊCH SỬ XUẤT KHO -->
+                  <div class="tab-pane" id="tab-out">
+                    <div class="row filter-bar" style="margin-bottom:10px;">
+                      <div class="col-sm-3"><input id="outSearchKeyword" class="form-control"
+                          placeholder="Tìm theo tên/mã sản phẩm" /></div>
+                      <div class="col-sm-3"><select id="outFilterWarehouse" class="form-control">
+                          <option value="">Tất cả kho</option>
+                          <option value="Main Warehouse">Kho Chính</option>
+                          <option value="Warehouse A">Kho A</option>
+                          <option value="Warehouse B">Kho B</option>
+                        </select></div>
+                      <div class="col-sm-2"><input type="date" id="outDateFrom" class="form-control" placeholder="Từ ngày" /></div>
+                      <div class="col-sm-2"><input type="date" id="outDateTo" class="form-control" placeholder="Đến ngày" /></div>
+                      <div class="col-sm-1">
+                        <div class="form-group">
+                          <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
+                          <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="reloadOutHistory(true)" title="Áp dụng bộ lọc">
+                            <i class="fa fa-search"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="col-sm-1">
+                        <div class="form-group">
+                          <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                          <button type="button" class="btn btn-warning btn-sm" style="width: 100%;" onclick="resetOutFilters()" title="Xóa tất cả bộ lọc">
+                            <i class="fa fa-refresh"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="table-responsive">
+                      <table class="table table-bordered table-striped">
+                        <thead>
+                          <tr>
+                            <th>Thời gian</th>
+                            <th>Sản phẩm</th>
+                            <th>Số lượng xuất</th>
+                            <th>Giá bán</th>
+                            <th>Kho</th>
+                            <th>Lý do xuất</th>
+                            <th>Người thực hiện</th>
+                            <th>Ghi chú</th>
+                          </tr>
+                        </thead>
+                        <tbody id="outHistoryBody">
+                          <tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="row" style="margin-top:10px;">
+                      <div class="col-sm-6"><span id="outHistoryInfo" class="muted"></span></div>
+                      <div class="col-sm-6" style="text-align:right;">
+                        <ul class="pagination" id="outHistoryPagination" style="margin:0;"></ul>
                       </div>
                     </div>
                     </div>
 
-                    <div class="tab-pane" id="tab-price">
+                  <!-- TAB 3: LỊCH SỬ TỒN KHO -->
+                  <div class="tab-pane" id="tab-balance">
                       <div class="row filter-bar" style="margin-bottom:10px;">
-                        <div class="col-sm-3"><input id="priceSearchKeyword" class="form-control" placeholder="Tìm theo tên/mã sản phẩm" /></div>
-                        <div class="col-sm-2"><select id="priceType" class="form-control">
-                            <option value="">Tất cả loại giá</option>
-                            <option value="purchase">Giá mua</option>
-                            <option value="selling">Giá bán</option>
+                      <div class="col-sm-3"><input id="balanceSearchKeyword" class="form-control"
+                          placeholder="Tìm theo tên/mã sản phẩm" /></div>
+                      <div class="col-sm-3"><select id="balanceFilterWarehouse" class="form-control">
+                          <option value="">Tất cả kho</option>
+                          <option value="Main Warehouse">Kho Chính</option>
+                          <option value="Warehouse A">Kho A</option>
+                          <option value="Warehouse B">Kho B</option>
                           </select></div>
-                        <div class="col-sm-2"><button class="btn btn-primary btn-block" onclick="reloadPriceHistory()"><i class="fa fa-search"></i> Lọc</button></div>
-                        <div class="col-sm-2"><button class="btn btn-default btn-block" onclick="resetPriceFilters()"><i class="fa fa-refresh"></i> Reset</button></div>
+                      <div class="col-sm-2"><input type="date" id="balanceDateFrom" class="form-control" placeholder="Từ ngày" /></div>
+                      <div class="col-sm-2"><input type="date" id="balanceDateTo" class="form-control" placeholder="Đến ngày" /></div>
+                      <div class="col-sm-1">
+                        <div class="form-group">
+                          <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
+                          <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="reloadBalanceHistory(true)" title="Áp dụng bộ lọc">
+                            <i class="fa fa-search"></i>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="col-sm-1">
+                        <div class="form-group">
+                          <label style="color: transparent; margin-bottom: 5px;">Reset</label>
+                          <button type="button" class="btn btn-warning btn-sm" style="width: 100%;" onclick="resetBalanceFilters()" title="Xóa tất cả bộ lọc">
+                            <i class="fa fa-refresh"></i>
+                          </button>
+                        </div>
+                      </div>
                       </div>
                       <div class="table-responsive">
                         <table class="table table-bordered table-striped">
@@ -202,23 +314,24 @@
                             <tr>
                               <th>Thời gian</th>
                               <th>Sản phẩm</th>
-                              <th>Loại</th>
-                              <th>Giá cũ</th>
-                              <th>Giá mới</th>
-                              <th>Người cập nhật</th>
-                              <th>Lý do</th>
+                            <th>Tồn kho trước</th>
+                            <th>Thay đổi</th>
+                            <th>Tồn kho sau</th>
+                            <th>Kho</th>
+                            <th>Loại giao dịch</th>
+                            <th>Người thực hiện</th>
                             </tr>
                           </thead>
-                          <tbody id="priceHistoryBody">
-                            <tr><td colspan="7" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                        <tbody id="balanceHistoryBody">
+                          <tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
                           </tbody>
                         </table>
                       </div>
                       <div class="row" style="margin-top:10px;">
-                        <div class="col-sm-6"><span id="priceHistoryInfo" class="muted"></span></div>
+                      <div class="col-sm-6"><span id="balanceHistoryInfo" class="muted"></span></div>
                         <div class="col-sm-6" style="text-align:right;">
-                          <ul class="pagination" id="priceHistoryPagination" style="margin:0;"></ul>
-                        </div>
+                        <ul class="pagination" id="balanceHistoryPagination" style="margin:0;"></ul>
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -232,221 +345,322 @@
       <script src="<%=request.getContextPath()%>/js/jquery.min.js"></script>
       <script src="<%=request.getContextPath()%>/js/bootstrap.min.js"></script>
       <script>
-        //  Phân trang client-side
-        var histAllItems = [];
-        var histFilteredItems = [];
-        var histPage = 1;
-        var histPageSize = 5;
+      // ================== TAB NHẬP KHO ==================
+      var inPage = 1;
+      var inPageSize = 10;
 
-        //  Hàm fetch và hiển thị lịch sử theo bộ lọc
-         function reloadHistory() {
-           var params = { action: 'getHistory', page: histPage, pageSize: histPageSize };
-           var urlParams = new URLSearchParams(window.location.search);
-           var productIdParam = urlParams.get('productId');
-           var keyword = ($('#searchKeyword').val() || '').trim();
-           var type = $('#filterType').val();
-           var wh = $('#filterWarehouse').val();
-           if (productIdParam) params.productId = productIdParam;
-           if (keyword) params.q = keyword;
-           if (type) params.type = type;
-           if (wh) params.warehouse = wh;
-           $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
-            var wrap = $('#historyContainer'); wrap.empty();
-             if (!res.success) { wrap.html('<div class="alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</div>'); return; }
-             histAllItems = res.data || [];
-             histFilteredItems = histAllItems;
-             // cập nhật info theo backend
-             totalCountFromServer = res.totalCount || histFilteredItems.length;
-             totalPagesFromServer = res.totalPages || Math.ceil(totalCountFromServer / histPageSize);
-             renderHistoryServerPage(totalCountFromServer, totalPagesFromServer);
+      function reloadInHistory(resetPage) {
+        if (resetPage) inPage = 1;
+        var params = { action: 'getHistory', type: 'in', page: inPage, pageSize: inPageSize };
+        var urlParams = new URLSearchParams(window.location.search);
+        var productIdParam = urlParams.get('productId');
+        var keyword = ($('#inSearchKeyword').val() || '').trim();
+        var wh = $('#inFilterWarehouse').val();
+        var dateFrom = $('#inDateFrom').val();
+        var dateTo = $('#inDateTo').val();
+        if (productIdParam) params.productId = productIdParam;
+        if (keyword) params.q = keyword;
+        if (wh) params.warehouse = wh;
+        if (dateFrom) params.dateFrom = dateFrom;
+        if (dateTo) params.dateTo = dateTo;
+        $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
+          if (!res.success) {
+            $('#inHistoryBody').html('<tr><td colspan="9" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
+            return;
+          }
+          renderInHistory(res);
           }).fail(function (xhr) {
-            $('#historyContainer').html('<div class="alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</div>');
-          });
-        }
-
-        //  - Hàm render một thẻ lịch sử
-        function renderCard(h) {
-          var isIn = h.movementType === 'in', isOut = h.movementType === 'out';
-          var badge = isIn ? '<span class="history-badge badge-in">Nhập kho</span>' : (isOut ? '<span class="history-badge badge-out">Xuất kho</span>' : '<span class="history-badge badge-adj">Điều chỉnh</span>');
-          var qtyCls = isIn ? 'qty-pos' : (isOut ? 'qty-neg' : ''); var sign = isIn ? '+' : (isOut ? '-' : '');
-          var priceLabel = (h.movementType === 'in') ? 'Giá nhập' : (h.movementType === 'out' ? 'Giá bán' : 'Đơn giá');
-          var unitVal = (h.movementType === 'in') ? (h.unitCost != null ? h.unitCost : null) : (typeof h.unitPrice === 'number' ? h.unitPrice : null);
-          var priceVal = unitVal != null ? (formatCurrencyVN(unitVal) + ' đ') : '--';
-          var totalVal = (unitVal != null && h.quantity != null) ? (unitVal * h.quantity) : null;
-          var totalText = totalVal != null ? (formatCurrencyVN(totalVal) + ' đ') : '--';
-          var when = new Date(h.createdAt).toLocaleString('vi-VN');
-          var note = h.notes ? ('<div class="muted" style="margin-top:4px;">"' + escapeHtml(h.notes) + '"</div>') : '';
-          return '<div class="history-card">'
-            + '<div class="row">'
-            + '<div class="col-sm-8">'
-            + '<h4 style="margin-top:0">' + escapeHtml(h.productName || '') + ' <small class="muted">' + escapeHtml(h.productCode || '') + '</small> ' + badge + '</h4>'
-            + '<div>Số lượng: <span class="' + qtyCls + '">' + sign + (h.quantity || 0) + '</span></div>'
-            + '<div>' + priceLabel + ': ' + priceVal + '</div>'
-            + '<div><strong>Tổng tiền:</strong> ' + totalText + '</div>'
-            + note
-            + '</div>'
-            + '<div class="col-sm-4">'
-            + '<div>Kho: ' + escapeHtml(h.warehouseLocation || '--') + '</div>'
-            + '<div class="muted">Bởi: ' + escapeHtml(h.createdByName || '--') + ' • ' + when + '</div>'
-            + '</div>'
-            + '</div>'
-            + '</div>';
-        }
-
-        //   - Hàm reset bộ lọc về mặc định
-        function resetFilters() { $('#searchKeyword').val(''); $('#filterType').val(''); $('#filterWarehouse').val(''); reloadHistory(); }
-
-        //  - Helpers định dạng & escape
-        function formatCurrencyVN(n) { try { return Number(n).toLocaleString('vi-VN'); } catch (e) { return n; } }
-        function escapeHtml(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-
-        $(function () {
-          // Auto-open price tab if tab=price in query
-          var qs = new URLSearchParams(window.location.search);
-          if (qs.get('tab') === 'price') {
-            $('a[href="#tab-price"]').tab('show');
-          }
-          reloadHistory();
-          reloadPriceHistory();
+          $('#inHistoryBody').html('<tr><td colspan="9" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
         });
+      }
 
-        //  - Render trang hiện tại
-         function renderHistoryPage() {
-          var wrap = $('#historyContainer'); wrap.empty();
-          if (histFilteredItems.length === 0) { wrap.html('<div class="text-center muted">Không có bản ghi</div>'); updateHistoryPagination(); return; }
-          var start = (histPage - 1) * histPageSize;
-          var end = Math.min(start + histPageSize, histFilteredItems.length);
-          for (var i = start; i < end; i++) { wrap.append(renderCard(histFilteredItems[i])); }
-          $('#historyInfo').text('Hiển thị ' + (histFilteredItems.length > 0 ? (start + 1) : 0) + ' đến ' + end + ' trong tổng số ' + histFilteredItems.length + ' bản ghi');
-          updateHistoryPagination();
+      function renderInHistory(res) {
+        if (res.currentPage) inPage = res.currentPage;
+        var body = $('#inHistoryBody');
+        body.empty();
+        if (!res.data || res.data.length === 0) {
+          body.html('<tr><td colspan="9" class="text-center muted">Không có dữ liệu</td></tr>');
+          updateInPagination(res.totalCount || 0, res.totalPages || 1);
+          $('#inHistoryInfo').text('0 bản ghi');
+          return;
         }
+        res.data.forEach(function(h) {
+          var when = new Date(h.createdAt).toLocaleString('vi-VN');
+          var unitCost = h.unitCost != null ? formatCurrencyVN(h.unitCost) + ' đ' : '--';
+          var total = (h.unitCost != null && h.quantity != null) ? formatCurrencyVN(h.unitCost * h.quantity) + ' đ' : '--';
+          var supplier = extractSupplierFromNotes(h.notes);
+          var row = '<tr>' +
+            '<td>' + when + '</td>' +
+            '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
+            '<td class="qty-pos">+' + (h.quantity || 0) + '</td>' +
+            '<td>' + unitCost + '</td>' +
+            '<td><strong>' + total + '</strong></td>' +
+            '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
+            '<td>' + escapeHtml(supplier) + '</td>' +
+            '<td>' + escapeHtml(h.createdByName || '--') + '</td>' +
+            '<td>' + escapeHtml(h.notes || '') + '</td>' +
+            '</tr>';
+          body.append(row);
+        });
+        var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
+        var end = (res.currentPage - 1) * res.pageSize + res.data.length;
+        $('#inHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
+        updateInPagination(res.totalCount || 0, res.totalPages || 1);
+      }
 
-        // ================== PRICE HISTORY TAB ==================
-        var priceAllItems = [];
-        var pricePage = 1;
-        var pricePageSize = 10;
-        var priceTotal = 0;
-
-        function reloadPriceHistory(){
-          var urlParams = new URLSearchParams(window.location.search);
-          var productId = urlParams.get('productId');
-          var type = $('#priceType').val();
-          var q = ($('#priceSearchKeyword').val()||'').trim();
-          // Backend priceHistory không hỗ trợ q, ta lọc client theo productCode/Name nếu cần sau này
-          var params = { action: 'priceHistory', page: pricePage, pageSize: pricePageSize };
-          if (productId) params.productId = productId;
-          if (type) params.type = type;
-          if (q) params.q = q;
-          $.getJSON('<%=request.getContextPath()%>/product', params, function(res){
-            var body = $('#priceHistoryBody'); body.empty();
-            if (!res || !res.success){ body.html('<tr><td colspan="7" class="text-center">Không tải được dữ liệu</td></tr>'); return; }
-            priceAllItems = res.data || [];
-            priceTotal = res.totalCount || priceAllItems.length;
-            renderPriceHistoryServer(res);
-          }).fail(function(){ $('#priceHistoryBody').html('<tr><td colspan="7" class="text-center">Lỗi kết nối</td></tr>'); });
+      function updateInPagination(totalCount, totalPages) {
+        var ul = $('#inHistoryPagination');
+        ul.empty();
+        var prev = $('<li class="paginate_button ' + (inPage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
+        prev.on('click', function (e) { e.preventDefault(); if (inPage > 1) { inPage--; reloadInHistory(false); } });
+        ul.append(prev);
+        var maxVisible = 5;
+        var start = Math.max(1, inPage - Math.floor(maxVisible / 2));
+        var end = Math.min(totalPages, start + maxVisible - 1);
+        if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+        for (var p = start; p <= end; p++) {
+          (function (page) {
+            var li = $('<li class="paginate_button ' + (page === inPage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
+            li.on('click', function (e) { e.preventDefault(); inPage = page; reloadInHistory(false); });
+            ul.append(li);
+          })(p);
         }
+        var next = $('<li class="paginate_button ' + (inPage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
+        next.on('click', function (e) { e.preventDefault(); if (inPage < totalPages) { inPage++; reloadInHistory(false); } });
+        ul.append(next);
+      }
 
-        function renderPriceHistoryServer(meta){
-          var body = $('#priceHistoryBody'); body.empty();
-          if (priceAllItems.length === 0){ body.html('<tr><td colspan="7" class="text-center">Không có dữ liệu</td></tr>'); updatePricePagination(); $('#priceHistoryInfo').text('0 bản ghi'); return; }
-          priceAllItems.forEach(function(h){ body.append(renderPriceRow(h)); });
-          var start = (meta.currentPage - 1) * meta.pageSize + (priceAllItems.length>0?1:0);
-          var end = (meta.currentPage - 1) * meta.pageSize + priceAllItems.length;
-          $('#priceHistoryInfo').text('Hiển thị ' + (priceTotal>0?start:0) + ' đến ' + end + ' trong tổng số ' + priceTotal + ' bản ghi');
-          updatePricePagination(meta.totalPages);
+      function resetInFilters() {
+        $('#inSearchKeyword').val('');
+        $('#inFilterWarehouse').val('');
+        $('#inDateFrom').val('');
+        $('#inDateTo').val('');
+        inPage = 1;
+        reloadInHistory(false);
+      }
+
+      // ================== TAB XUẤT KHO ==================
+      var outPage = 1;
+      var outPageSize = 10;
+
+      function reloadOutHistory(resetPage) {
+        if (resetPage) outPage = 1;
+        var params = { action: 'getHistory', type: 'out', page: outPage, pageSize: outPageSize };
+        var urlParams = new URLSearchParams(window.location.search);
+        var productIdParam = urlParams.get('productId');
+        var keyword = ($('#outSearchKeyword').val() || '').trim();
+        var wh = $('#outFilterWarehouse').val();
+        var dateFrom = $('#outDateFrom').val();
+        var dateTo = $('#outDateTo').val();
+        if (productIdParam) params.productId = productIdParam;
+        if (keyword) params.q = keyword;
+        if (wh) params.warehouse = wh;
+        if (dateFrom) params.dateFrom = dateFrom;
+        if (dateTo) params.dateTo = dateTo;
+        $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
+          if (!res.success) {
+            $('#outHistoryBody').html('<tr><td colspan="8" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
+            return;
+          }
+          renderOutHistory(res);
+        }).fail(function (xhr) {
+          $('#outHistoryBody').html('<tr><td colspan="8" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
+        });
+      }
+
+      function renderOutHistory(res) {
+        if (res.currentPage) outPage = res.currentPage;
+        var body = $('#outHistoryBody');
+        body.empty();
+        if (!res.data || res.data.length === 0) {
+          body.html('<tr><td colspan="8" class="text-center muted">Không có dữ liệu</td></tr>');
+          updateOutPagination(res.totalCount || 0, res.totalPages || 1);
+          $('#outHistoryInfo').text('0 bản ghi');
+          return;
         }
-
-        function renderPriceRow(h){
-          var when = h.updatedAt ? new Date(h.updatedAt).toLocaleString('vi-VN') : '';
-          var typeText = h.priceType === 'purchase' ? 'Giá mua' : (h.priceType === 'selling' ? 'Giá bán' : h.priceType||'');
-          return '<tr>'+
-            '<td>'+ when +'</td>'+
-            '<td>'+ escapeHtml(h.productName||'') + ' <span class="muted">' + escapeHtml(h.productCode||'') + '</span></td>'+
-            '<td>'+ typeText +'</td>'+
-            '<td>'+ (h.oldPrice==null? '—' : formatCurrencyVN(h.oldPrice)) +'</td>'+
-            '<td>'+ (h.newPrice==null? '—' : formatCurrencyVN(h.newPrice)) +'</td>'+
-            '<td>'+ escapeHtml(h.updatedByName||'') +'</td>'+
-            '<td>'+ escapeHtml(h.reason||'') +'</td>'+
+        res.data.forEach(function(h) {
+          var when = new Date(h.createdAt).toLocaleString('vi-VN');
+          var unitPrice = h.unitPrice != null ? formatCurrencyVN(h.unitPrice) + ' đ' : '--';
+          var reason = extractReasonFromNotes(h.notes);
+          var row = '<tr>' +
+            '<td>' + when + '</td>' +
+            '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
+            '<td class="qty-neg">-' + (h.quantity || 0) + '</td>' +
+            '<td>' + unitPrice + '</td>' +
+            '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
+            '<td>' + escapeHtml(reason) + '</td>' +
+            '<td>' + escapeHtml(h.createdByName || '--') + '</td>' +
+            '<td>' + escapeHtml(h.notes || '') + '</td>' +
           '</tr>';
-        }
+          body.append(row);
+        });
+        var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
+        var end = (res.currentPage - 1) * res.pageSize + res.data.length;
+        $('#outHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
+        updateOutPagination(res.totalCount || 0, res.totalPages || 1);
+      }
 
-        function updatePricePagination(totalPages){
-          var ul = $('#priceHistoryPagination'); ul.empty();
-          var prev = $('<li class="paginate_button ' + (pricePage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
-          prev.on('click', function(e){ e.preventDefault(); if (pricePage > 1) { pricePage--; reloadPriceHistory(); } });
+      function updateOutPagination(totalCount, totalPages) {
+        var ul = $('#outHistoryPagination');
+        ul.empty();
+        var prev = $('<li class="paginate_button ' + (outPage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
+        prev.on('click', function (e) { e.preventDefault(); if (outPage > 1) { outPage--; reloadOutHistory(false); } });
           ul.append(prev);
           var maxVisible = 5;
-          var start = Math.max(1, pricePage - Math.floor(maxVisible/2));
+        var start = Math.max(1, outPage - Math.floor(maxVisible / 2));
           var end = Math.min(totalPages, start + maxVisible - 1);
           if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
           for (var p = start; p <= end; p++) {
-            (function(page){
-              var li = $('<li class="paginate_button ' + (page === pricePage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
-              li.on('click', function(e){ e.preventDefault(); pricePage = page; reloadPriceHistory(); });
+          (function (page) {
+            var li = $('<li class="paginate_button ' + (page === outPage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
+            li.on('click', function (e) { e.preventDefault(); outPage = page; reloadOutHistory(false); });
               ul.append(li);
             })(p);
           }
-          var next = $('<li class="paginate_button ' + (pricePage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
-          next.on('click', function(e){ e.preventDefault(); if (pricePage < totalPages) { pricePage++; reloadPriceHistory(); } });
+        var next = $('<li class="paginate_button ' + (outPage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
+        next.on('click', function (e) { e.preventDefault(); if (outPage < totalPages) { outPage++; reloadOutHistory(false); } });
           ul.append(next);
         }
 
-        function resetPriceFilters(){ $('#priceSearchKeyword').val(''); $('#priceType').val(''); reloadPriceHistory(); }
+      function resetOutFilters() {
+        $('#outSearchKeyword').val('');
+        $('#outFilterWarehouse').val('');
+        $('#outDateFrom').val('');
+        $('#outDateTo').val('');
+        outPage = 1;
+        reloadOutHistory(false);
+      }
 
-         // Render theo dữ liệu phân trang từ server
-         function renderHistoryServerPage(totalCount, totalPages){
-           var wrap = $('#historyContainer'); wrap.empty();
-           if (histFilteredItems.length === 0) { wrap.html('<div class="text-center muted">Không có bản ghi</div>'); updateHistoryPaginationServer(totalCount, totalPages); return; }
-           for (var i = 0; i < histFilteredItems.length; i++) { wrap.append(renderCard(histFilteredItems[i])); }
-           var start = (histPage - 1) * histPageSize + (histFilteredItems.length>0?1:0);
-           var end = (histPage - 1) * histPageSize + histFilteredItems.length;
-           $('#historyInfo').text('Hiển thị ' + (totalCount>0?start:0) + ' đến ' + end + ' trong tổng số ' + totalCount + ' bản ghi');
-           updateHistoryPaginationServer(totalCount, totalPages);
-         }
+      // ================== TAB TỒN KHO ==================
+      var balancePage = 1;
+      var balancePageSize = 10;
 
-        //  - Cập nhật nút phân trang
-         function updateHistoryPagination() {
-          var totalPages = Math.ceil(histFilteredItems.length / histPageSize) || 1;
-          var ul = $('#historyPagination'); ul.empty();
-          var prev = $('<li class="paginate_button ' + (histPage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
-          prev.on('click', function (e) { e.preventDefault(); if (histPage > 1) { histPage--; renderHistoryPage(); } });
-          ul.append(prev);
-          var maxVisible = 5;
-          var start = Math.max(1, histPage - Math.floor(maxVisible / 2));
-          var end = Math.min(totalPages, start + maxVisible - 1);
-          if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
-          for (var p = start; p <= end; p++) {
-            (function (page) {
-              var li = $('<li class="paginate_button ' + (page === histPage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
-              li.on('click', function (e) { e.preventDefault(); histPage = page; renderHistoryPage(); });
-              ul.append(li);
-            })(p);
+      function reloadBalanceHistory(resetPage) {
+        if (resetPage) balancePage = 1;
+        var params = { action: 'getStockBalance', page: balancePage, pageSize: balancePageSize };
+        var urlParams = new URLSearchParams(window.location.search);
+        var productIdParam = urlParams.get('productId');
+        var keyword = ($('#balanceSearchKeyword').val() || '').trim();
+        var wh = $('#balanceFilterWarehouse').val();
+        var dateFrom = $('#balanceDateFrom').val();
+        var dateTo = $('#balanceDateTo').val();
+        if (productIdParam) params.productId = productIdParam;
+        if (keyword) params.q = keyword;
+        if (wh) params.warehouse = wh;
+        if (dateFrom) params.dateFrom = dateFrom;
+        if (dateTo) params.dateTo = dateTo;
+        $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
+          if (!res.success) {
+            $('#balanceHistoryBody').html('<tr><td colspan="8" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
+            return;
           }
-          var next = $('<li class="paginate_button ' + (histPage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
-          next.on('click', function (e) { e.preventDefault(); if (histPage < totalPages) { histPage++; renderHistoryPage(); } });
-          ul.append(next);
-        }
+          renderBalanceHistory(res);
+        }).fail(function (xhr) {
+          $('#balanceHistoryBody').html('<tr><td colspan="8" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
+        });
+      }
 
-         function updateHistoryPaginationServer(totalCount, totalPages){
-           var ul = $('#historyPagination'); ul.empty();
-           var prev = $('<li class="paginate_button ' + (histPage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
-           prev.on('click', function (e) { e.preventDefault(); if (histPage > 1) { histPage--; reloadHistory(); } });
+      function renderBalanceHistory(res) {
+        if (res.currentPage) balancePage = res.currentPage;
+        var body = $('#balanceHistoryBody');
+        body.empty();
+        if (!res.data || res.data.length === 0) {
+          body.html('<tr><td colspan="8" class="text-center muted">Không có dữ liệu</td></tr>');
+          updateBalancePagination(res.totalCount || 0, res.totalPages || 1);
+          $('#balanceHistoryInfo').text('0 bản ghi');
+          return;
+        }
+        res.data.forEach(function(h) {
+          var when = new Date(h.createdAt).toLocaleString('vi-VN');
+          var stockBefore = h.stockBefore != null ? h.stockBefore : 0;
+          var stockAfter = h.stockAfter != null ? h.stockAfter : 0;
+          var change = h.quantity || 0;
+          var changeClass = h.movementType === 'in' ? 'qty-pos' : (h.movementType === 'out' ? 'qty-neg' : '');
+          var changeSign = h.movementType === 'in' ? '+' : (h.movementType === 'out' ? '-' : '');
+          var typeText = h.movementType === 'in' ? '<span class="badge badge-in">Nhập kho</span>' : 
+                        (h.movementType === 'out' ? '<span class="badge badge-out">Xuất kho</span>' : 
+                        '<span class="badge badge-adj">Điều chỉnh</span>');
+          var row = '<tr>' +
+            '<td>' + when + '</td>' +
+            '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
+            '<td>' + stockBefore + '</td>' +
+            '<td class="' + changeClass + '">' + changeSign + change + '</td>' +
+            '<td><strong>' + stockAfter + '</strong></td>' +
+            '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
+            '<td>' + typeText + '</td>' +
+            '<td>' + escapeHtml(h.createdByName || '--') + '</td>' +
+            '</tr>';
+          body.append(row);
+        });
+        var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
+        var end = (res.currentPage - 1) * res.pageSize + res.data.length;
+        $('#balanceHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
+        updateBalancePagination(res.totalCount || 0, res.totalPages || 1);
+      }
+
+      function updateBalancePagination(totalCount, totalPages) {
+        var ul = $('#balanceHistoryPagination');
+        ul.empty();
+        var prev = $('<li class="paginate_button ' + (balancePage <= 1 ? 'disabled' : '') + '"><a href="#">Trước</a></li>');
+        prev.on('click', function (e) { e.preventDefault(); if (balancePage > 1) { balancePage--; reloadBalanceHistory(false); } });
            ul.append(prev);
            var maxVisible = 5;
-           var start = Math.max(1, histPage - Math.floor(maxVisible / 2));
+        var start = Math.max(1, balancePage - Math.floor(maxVisible / 2));
            var end = Math.min(totalPages, start + maxVisible - 1);
            if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
            for (var p = start; p <= end; p++) {
              (function (page) {
-               var li = $('<li class="paginate_button ' + (page === histPage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
-               li.on('click', function (e) { e.preventDefault(); histPage = page; reloadHistory(); });
+            var li = $('<li class="paginate_button ' + (page === balancePage ? 'active' : '') + '"><a href="#">' + page + '</a></li>');
+            li.on('click', function (e) { e.preventDefault(); balancePage = page; reloadBalanceHistory(false); });
                ul.append(li);
              })(p);
            }
-           var next = $('<li class="paginate_button ' + (histPage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
-           next.on('click', function (e) { e.preventDefault(); if (histPage < totalPages) { histPage++; reloadHistory(); } });
+        var next = $('<li class="paginate_button ' + (balancePage >= totalPages ? 'disabled' : '') + '"><a href="#">Tiếp</a></li>');
+        next.on('click', function (e) { e.preventDefault(); if (balancePage < totalPages) { balancePage++; reloadBalanceHistory(false); } });
            ul.append(next);
          }
+
+      function resetBalanceFilters() {
+        $('#balanceSearchKeyword').val('');
+        $('#balanceFilterWarehouse').val('');
+        $('#balanceDateFrom').val('');
+        $('#balanceDateTo').val('');
+        balancePage = 1;
+        reloadBalanceHistory(false);
+      }
+
+      // ================== HELPER FUNCTIONS ==================
+      function formatCurrencyVN(n) {
+        try {
+          return Number(n).toLocaleString('vi-VN');
+        } catch (e) {
+          return n;
+        }
+      }
+
+      function escapeHtml(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+
+      function extractSupplierFromNotes(notes) {
+        if (!notes) return '--';
+        var match = notes.match(/Nhà cung cấp:\s*([^\n|]+)/);
+        return match ? match[1].trim() : '--';
+      }
+
+      function extractReasonFromNotes(notes) {
+        if (!notes) return '--';
+        var match = notes.match(/Lý do:\s*([^\n]+)/);
+        return match ? match[1].trim() : '--';
+      }
+
+      // ================== INITIALIZE ==================
+      $(function () {
+        reloadInHistory(false);
+        reloadOutHistory(false);
+        reloadBalanceHistory(false);
+      });
       </script>
     </body>
 
