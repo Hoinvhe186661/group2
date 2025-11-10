@@ -18,6 +18,7 @@ public class TaskAssignment {
 	private String workOrderNumber;
 	private String workOrderTitle;
 	private Timestamp scheduledDate; // from work_orders
+	private Timestamp acknowledgedAt; // from tasks.acknowledged_at
 	private Timestamp startDate;     // from tasks
 	private Timestamp completionDate; // from tasks
 	private String rejectionReason;  // from tasks
@@ -60,6 +61,9 @@ public class TaskAssignment {
 	public Timestamp getScheduledDate() { return scheduledDate; }
 	public void setScheduledDate(Timestamp scheduledDate) { this.scheduledDate = scheduledDate; }
 
+	public Timestamp getAcknowledgedAt() { return acknowledgedAt; }
+	public void setAcknowledgedAt(Timestamp acknowledgedAt) { this.acknowledgedAt = acknowledgedAt; }
+
 	public Timestamp getStartDate() { return startDate; }
 	public void setStartDate(Timestamp startDate) { this.startDate = startDate; }
 
@@ -89,6 +93,7 @@ public class TaskAssignment {
 		obj.put("workOrderNumber", workOrderNumber);
 		obj.put("workOrderTitle", workOrderTitle);
 		obj.put("scheduledDate", scheduledDate);
+		obj.put("acknowledgedAt", acknowledgedAt);
 		obj.put("startDate", startDate);
 		obj.put("completionDate", completionDate);
 		obj.put("rejectionReason", rejectionReason);

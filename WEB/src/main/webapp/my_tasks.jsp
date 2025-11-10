@@ -604,10 +604,31 @@
             }
             saveMyTaskFilterState(expanded);
         }
-
+        // Chuyển đổi trạng thái và độ ưu tiên sang tiếng Việt (giữ nguyên logic giá trị)
+        function statusToVietnamese(s) {
+            var map = {
+                pending: 'Chờ nhận',
+                in_progress: 'Đang thực hiện',
+                completed: 'Đã hoàn thành',
+                cancelled: 'Đã hủy',
+                rejected: 'Đã từ chối'
+            };
+            return map[s] || (s || '');
+        }
+        function priorityToVietnamese(p) {
+            if (!p) return '';
+            var key = String(p).toLowerCase();
+            var map = {
+                urgent: 'Khẩn cấp',
+                high: 'Cao',
+                medium: 'Trung bình',
+                low: 'Thấp'
+            };
+            return map[key] || p;
+        }
         function badgeForStatus(s){
-            var map = {pending:'label-default', in_progress:'label-warning', completed:'label-success', cancelled:'label-default', rejected:'label-danger'};
-            return '<span class="label ' + (map[s]||'label-default') + '">' + (s||'') + '</span>';
+            var classMap = {pending:'label-default', in_progress:'label-warning', completed:'label-success', cancelled:'label-default', rejected:'label-danger'};
+            return '<span class="label ' + (classMap[s]||'label-default') + '">' + statusToVietnamese(s) + '</span>';
         }
 
         var currentPage = 1;
@@ -716,9 +737,9 @@
                         '<td><div><strong>' + (it.workOrderNumber||'') + '</strong></div><div>' + (it.workOrderTitle||'') + '</div></td>' +
                         '<td><div><strong>' + (it.taskNumber||'') + '</strong></div><div>' + (it.taskDescription||'') + '</div></td>' +
                         '<td>' + badgeForStatus(it.taskStatus) + '</td>' +
-                        '<td>' + (it.taskPriority||'') + '</td>' +
-                        '<td>' + estimatedTimeDisplay + '</td>' +
-                        '<td>' + (fmt(it.startDate) || '<span class="text-muted">-</span>') + '</td>' +
+                        '<td>' + (priorityToVietnamese(it.taskPriority)||'') + '</td>' +
+						'<td>' + estimatedTimeDisplay + '</td>' +
+						'<td>' + (fmt(it.acknowledgedAt) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td class="reason-cell">' + ticketDescDisplay + '</td>' +
                         '<td class="reason-cell">' + (it.rejectionReason ? (function(txt){ var esc = String(txt).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); return '<span class="text-danger reason-ellipsis" title="' + esc + '">' + esc + '</span>'; })(it.rejectionReason) : '<span class="text-muted">-</span>') + '</td>' +
@@ -981,7 +1002,7 @@
                         $('#detailTaskNumber').text(taskData.taskNumber || '-');
                         $('#detailTaskDescription').text(taskData.taskDescription || '-');
                         $('#detailTaskStatus').html(badgeForStatus(taskData.taskStatus));
-                        $('#detailTaskPriority').text(taskData.taskPriority || '-');
+                        $('#detailTaskPriority').text(priorityToVietnamese(taskData.taskPriority) || '-');
                         
                         // Thời gian dự kiến
                         var estimatedDisplay = '-';

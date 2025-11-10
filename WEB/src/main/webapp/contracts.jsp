@@ -74,8 +74,44 @@
             color: #0c5460;
         }
         /* Đảm bảo dropdown khách hàng hiển thị đúng trong modal (fix chồng lấn/z-index) */
-        #contractModal .form-group { overflow: visible; }
-        #contractModal select#customerId { position: relative; z-index: 2051; background-color: #ffffff; color: #333333; }
+        #contractModal { z-index: 1051 !important; }
+        #contractModal .modal-content { overflow: visible !important; }
+        #contractModal .modal-dialog { overflow: visible !important; z-index: 1051 !important; }
+        #contractModal .modal-body { overflow: visible !important; }
+        #contractModal .form-group { overflow: visible !important; position: relative; }
+        /* Fix riêng cho form-group chứa select customerId - target chính xác form-group có label "Khách hàng" */
+        #contractModal .form-group:has(label[for="customerId"]) {
+            overflow: visible !important;
+            position: relative;
+            z-index: 9998;
+        }
+        /* Fallback cho trình duyệt không hỗ trợ :has() - target form-group thứ 2 trong col-md-6 đầu tiên */
+        #contractModal .col-md-6:first-child .form-group:nth-child(2) {
+            overflow: visible !important;
+            position: relative;
+            z-index: 9998;
+        }
+        #contractModal select#customerId { 
+            position: relative; 
+            z-index: 9999 !important; 
+            background-color: #ffffff !important; 
+            color: #333333 !important; 
+        }
+        /* Đảm bảo dropdown options hiển thị trên modal backdrop khi focus */
+        #contractModal select#customerId:focus {
+            z-index: 10000 !important;
+            position: relative;
+        }
+        /* Đảm bảo select không bị che khi đang mở */
+        #contractModal select#customerId option {
+            background-color: #ffffff !important;
+            color: #333333 !important;
+        }
+        /* Khi select được mở, tạm thời làm backdrop trong suốt và không tương tác */
+        body.modal-open.selecting-customer .modal-backdrop {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
         
         /* Styles for filter section */
         .filter-section {
@@ -223,7 +259,7 @@
                         <img src="img/26115.jpg" class="img-circle" alt="User Image" />
                     </div>
                     <div class="pull-left info">
-                        <p>Xin chào, Admin</p>
+                        <p>Xin chào, <%= username %></p>
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
@@ -236,7 +272,6 @@
                     <li>
                         <a href="support-management">
                             <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
-                            <small class="badge pull-right bg-red" id="openTickets">0</small>
                         </a>
                     </li>
                     <li>
@@ -249,15 +284,10 @@
                             <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
                         </a>
                     </li>
-                    <li>
+                    <li class="active">
                         <a href="contact-management">
                             <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
-                            <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="customers">
-                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
+                            <small class="badge pull-right bg-blue" id="unreadContacts">${unreadCount}</small>
                         </a>
                     </li>
                 </ul>
@@ -309,11 +339,11 @@
                                                     <label for="statusFilter">Trạng thái</label>
                                                     <select class="form-control" id="statusFilter" name="status">
                                                         <option value="" <%= request.getParameter("status") == null || "".equals(request.getParameter("status")) ? "selected" : "" %>>Tất cả</option>
-                                                        <option value="draft" <%= "draft".equals(request.getParameter("status")) ? "selected" : "" %>>Bản nháp</option>
-                                                        <option value="active" <%= "active".equals(request.getParameter("status")) ? "selected" : "" %>>Hiệu lực</option>
-                                                        <option value="completed" <%= "completed".equals(request.getParameter("status")) ? "selected" : "" %>>Hoàn thành</option>
-                                                        <option value="terminated" <%= "terminated".equals(request.getParameter("status")) ? "selected" : "" %>>Chấm dứt</option>
-                                                        <option value="expired" <%= "expired".equals(request.getParameter("status")) ? "selected" : "" %>>Hết hạn</option>
+                                                        <option value="draft" <%= "draft".equals(request.getParameter("status")) ? "selected" : "" %>>Nháp</option>
+                                                        <option value="pending_approval" <%= "pending_approval".equals(request.getParameter("status")) ? "selected" : "" %>>Chờ Duyệt</option>
+                                                        <option value="approved" <%= "approved".equals(request.getParameter("status")) ? "selected" : "" %>>Đã Duyệt</option>
+                                                        <option value="active" <%= "active".equals(request.getParameter("status")) ? "selected" : "" %>>Hiệu Lực</option>
+                                                        <option value="terminated" <%= "terminated".equals(request.getParameter("status")) ? "selected" : "" %>>Chấm Dứt</option>
                                                         <option value="deleted" <%= "deleted".equals(request.getParameter("status")) ? "selected" : "" %>>Đã xóa</option>
                                                     </select>
                                                 </div>
@@ -412,7 +442,7 @@
                                             <td><%= c.getContractType() != null ? c.getContractType() : "-" %></td>
                                             <td><%= c.getTitle() != null ? c.getTitle() : "-" %></td>
                                             <td><%= c.getStartDate() != null ? c.getStartDate() : "-" %></td>
-                                            <td><%= c.getEndDate() != null ? c.getEndDate() : "-" %></td>
+                                            <td><%= "terminated".equals(c.getStatus()) ? (c.getEndDate() != null ? c.getEndDate() : "-") : "Vô thời hạn" %></td>
                                             <td><%= c.getContractValue() != null ? c.getContractValue() : "-" %></td>
                                             <td><%= c.getStatus() %></td>
                                             <td>
@@ -555,6 +585,8 @@
                                     <input type="date" class="form-control" id="startDate">
                                     <div class="help-block text-danger" id="startDateError" style="display: none;"></div>
                                 </div>
+                                <!-- endDate ẩn: tự set khi chuyển trạng thái Chấm Dứt -->
+                                <input type="hidden" id="endDate">
                                 <div class="form-group">
                                     <label>Thời hạn</label>
                                     <input type="text" class="form-control" value="Vô thời hạn" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
@@ -579,11 +611,11 @@
                                 <div class="form-group">
                                     <label for="status">Trạng thái</label>
                                     <select id="status" class="form-control">
-                                        <option value="draft">Bản nháp</option>
-                                        <option value="active">Hiệu lực</option>
-                                        <option value="completed">Hoàn thành</option>
-                                        <option value="terminated">Chấm dứt</option>
-                                        <option value="expired">Hết hạn</option>
+                                        <option value="draft">Nháp</option>
+                                        <option value="pending_approval">Chờ Duyệt</option>
+                                        <option value="approved">Đã Duyệt</option>
+                                        <option value="active">Hiệu Lực</option>
+                                        <option value="terminated">Chấm Dứt</option>
                                     </select>
                                 </div>
                             </div>
@@ -661,7 +693,6 @@
                                                 <select class="form-control" id="newProductId" required style="height: 40px; font-size: 14px;">
                                                     <option value="">Chọn sản phẩm...</option>
                                                 </select>
-                                                <small class="text-muted">Tìm kiếm theo tên hoặc mã sản phẩm</small>
                                             </div>
                                             <div class="col-md-3">
                                                 <label><strong>Số lượng <span class="text-danger">*</span></strong></label>
@@ -1041,7 +1072,7 @@
                         '  <div class="col-sm-6">' +
                         '    <p><strong>Loại:</strong> ' + (c.contractType || '-') + '</p>' +
                         '    <p><strong>Ngày bắt đầu:</strong> ' + (c.startDate || '-') + '</p>' +
-                        '    <p><strong>Ngày kết thúc:</strong> ' + (c.endDate || '-') + '</p>' +
+                        (function(){ var endLabel = (c.status === 'terminated') ? 'Ngày chấm dứt' : 'Ngày kết thúc'; var endValue = (c.status === 'terminated') ? (c.endDate || '-') : 'Vô thời hạn'; return '    <p><strong>' + endLabel + ':</strong> ' + endValue + '</p>'; })() +
                         '    <p><strong>Ngày ký:</strong> ' + (c.signedDate || '-') + '</p>' +
                         '  </div>' +
                         '</div>' +
@@ -1125,37 +1156,87 @@
                 return;
             }
             
-            $.get('api/contracts', { action: 'get', id: id }, function(resp) {
-                if (resp.success) {
-                    var c = resp.data;
-                    currentEditingId = c.id;
-                    $('#contractId').val(c.id);
-                    $('#contractNumber').val(c.contractNumber);
-                    $('#customerId').val(c.customerId);
-                    $('#contractType').val('Bán hàng'); // Luôn là 'Bán hàng'
-                    $('#title').val(c.title || '');
-                    $('#startDate').val(formatDateInput(c.startDate));
-                    $('#endDate').val(formatDateInput(c.endDate));
-                    $('#signedDate').val(formatDateInput(c.signedDate));
-                    $('#contractValue').val(c.contractValue || '');
-                    $('#status').val(c.status || 'draft');
-                    $('#terms').val(c.terms || '');
-                    $('#contractModalLabel').text('Chỉnh sửa hợp đồng');
-                    
-                    // Load sản phẩm của hợp đồng
-                    loadContractProducts(id);
-                    
-                    // Ẩn form sản phẩm khi mở modal
-                    hideAddProductForm();
-                    
-                    // Không tự động cập nhật giá trị hợp đồng khi đang sửa
-                    isEditingMode = true;
-                    
-                    $('#contractModal').modal('show');
+            // Load danh sách khách hàng trước, sau đó mới load thông tin hợp đồng
+            // Đảm bảo dropdown có đầy đủ options trước khi set giá trị
+            $.get('api/contracts', { action: 'customers' }, function(customersResp) {
+                // Load danh sách khách hàng vào dropdown
+                if (customersResp.success) {
+                    var options = '<option value="">Chọn khách hàng...</option>';
+                    if (customersResp.data && customersResp.data.length > 0) {
+                        customersResp.data.forEach(function(customer) {
+                            options += '<option value="' + customer.id + '">' + 
+                                      customer.customerCode + ' - ' + customer.companyName + 
+                                      ' (' + customer.contactPerson + ')</option>';
+                        });
+                    } else {
+                        options += '<option value="" disabled>Không có khách hàng nào</option>';
+                    }
+                    $('#customerId').html(options);
                 } else {
-                    showAlert(resp.message, 'danger');
+                    $('#customerId').html('<option value="" disabled>Lỗi tải khách hàng: ' + (customersResp.message || 'Unknown error') + '</option>');
                 }
-            }, 'json');
+                
+                // Sau khi đã load xong danh sách khách hàng, mới load thông tin hợp đồng
+                $.get('api/contracts', { action: 'get', id: id }, function(resp) {
+                    if (resp.success) {
+                        var c = resp.data;
+                        currentEditingId = c.id;
+                        $('#contractId').val(c.id);
+                        $('#contractNumber').val(c.contractNumber);
+                        // Bây giờ mới set giá trị customerId sau khi đã có options
+                        $('#customerId').val(c.customerId);
+                        $('#contractType').val('Bán hàng'); // Luôn là 'Bán hàng'
+                        $('#title').val(c.title || '');
+                        $('#startDate').val(formatDateInput(c.startDate));
+                        $('#endDate').val(formatDateInput(c.endDate));
+                        $('#signedDate').val(formatDateInput(c.signedDate));
+                        $('#contractValue').val(c.contractValue || '');
+                        $('#status').val(c.status || 'draft');
+                        $('#terms').val(c.terms || '');
+                        $('#contractModalLabel').text('Chỉnh sửa hợp đồng');
+                        
+                        // Load sản phẩm của hợp đồng
+                        loadContractProducts(id);
+                        
+                        // Ẩn form sản phẩm khi mở modal
+                        hideAddProductForm();
+                        
+                        // Không tự động cập nhật giá trị hợp đồng khi đang sửa
+                        isEditingMode = true;
+                        
+                        $('#contractModal').modal('show');
+                    } else {
+                        showAlert(resp.message, 'danger');
+                    }
+                }, 'json');
+            }, 'json').fail(function() {
+                // Nếu load customers thất bại, vẫn tiếp tục load hợp đồng
+                $('#customerId').html('<option value="" disabled>Lỗi kết nối khi tải khách hàng</option>');
+                $.get('api/contracts', { action: 'get', id: id }, function(resp) {
+                    if (resp.success) {
+                        var c = resp.data;
+                        currentEditingId = c.id;
+                        $('#contractId').val(c.id);
+                        $('#contractNumber').val(c.contractNumber);
+                        $('#customerId').val(c.customerId);
+                        $('#contractType').val('Bán hàng');
+                        $('#title').val(c.title || '');
+                        $('#startDate').val(formatDateInput(c.startDate));
+                        $('#endDate').val(formatDateInput(c.endDate));
+                        $('#signedDate').val(formatDateInput(c.signedDate));
+                        $('#contractValue').val(c.contractValue || '');
+                        $('#status').val(c.status || 'draft');
+                        $('#terms').val(c.terms || '');
+                        $('#contractModalLabel').text('Chỉnh sửa hợp đồng');
+                        loadContractProducts(id);
+                        hideAddProductForm();
+                        isEditingMode = true;
+                        $('#contractModal').modal('show');
+                    } else {
+                        showAlert(resp.message, 'danger');
+                    }
+                }, 'json');
+            });
         }
 
         function loadContractProducts(contractId) {
@@ -1268,18 +1349,6 @@
 
             if (!productId || !quantity || !unitPrice) {
                 showAlert('Vui lòng chọn sản phẩm và nhập số lượng', 'warning');
-                return;
-            }
-
-            // Kiểm tra tồn kho trước khi thêm vào danh sách tạm
-            var selectedOption = $('#newProductId').find('option:selected');
-            var stock = parseFloat(selectedOption.data('quantity')) || 0;
-            if (stock <= 0) {
-                showAlert('Sản phẩm đã hết hàng. Không thể thêm.', 'danger');
-                return;
-            }
-            if (parseFloat(quantity) > stock) {
-                showAlert('Số lượng vượt quá tồn kho (' + stock + ').', 'danger');
                 return;
             }
 
@@ -1856,6 +1925,46 @@
             }
         });
         
+        // Fix dropdown bị che bởi modal backdrop
+        // Với native select, dropdown options được render bởi browser ở một layer riêng
+        // Cần làm backdrop trong suốt tạm thời khi mở dropdown
+        var customerSelectTimeout;
+        
+        $(document).on('mousedown click', '#contractModal select#customerId', function(e) {
+            // Thêm class để làm backdrop trong suốt
+            $('body').addClass('selecting-customer');
+            // Đảm bảo modal có z-index cao
+            $('#contractModal').css('z-index', '1051');
+            // Clear timeout cũ nếu có
+            clearTimeout(customerSelectTimeout);
+        });
+        
+        // Khôi phục backdrop khi select đóng (blur hoặc change)
+        $(document).on('blur change', '#contractModal select#customerId', function() {
+            // Đợi một chút để đảm bảo dropdown đã đóng hoàn toàn
+            clearTimeout(customerSelectTimeout);
+            customerSelectTimeout = setTimeout(function() {
+                $('body').removeClass('selecting-customer');
+            }, 200);
+        });
+        
+        // Khôi phục backdrop khi click vào modal (nhưng không phải select)
+        $(document).on('click', '#contractModal', function(e) {
+            // Nếu click không phải vào select hoặc option
+            if (!$(e.target).is('select#customerId') && !$(e.target).closest('select#customerId').length) {
+                clearTimeout(customerSelectTimeout);
+                customerSelectTimeout = setTimeout(function() {
+                    $('body').removeClass('selecting-customer');
+                }, 100);
+            }
+        });
+        
+        // Khôi phục backdrop khi modal đóng
+        $('#contractModal').on('hidden.bs.modal', function() {
+            $('body').removeClass('selecting-customer');
+            clearTimeout(customerSelectTimeout);
+        });
+        
         $(document).on('blur', '#contractValue', function() {
             var value = $(this).val();
             if (value !== '') {
@@ -1885,13 +1994,31 @@
             }
         });
 
+        // Tự động set ngày chấm dứt khi chuyển trạng thái sang "Chấm Dứt"
+        $(document).on('change', '#status', function() {
+            var status = $(this).val();
+            if (status === 'terminated') {
+                // Nếu chưa có endDate, set hôm nay
+                var currentEnd = $('#endDate').val();
+                if (!currentEnd) {
+                    var today = new Date();
+                    var m = (today.getMonth() + 1).toString().padStart(2, '0');
+                    var d = today.getDate().toString().padStart(2, '0');
+                    var iso = today.getFullYear() + '-' + m + '-' + d;
+                    $('#endDate').val(iso);
+                }
+            } else {
+                // Các trạng thái khác là vô thời hạn -> clear endDate
+                $('#endDate').val('');
+            }
+        });
+
         // Event handler cho dropdown sản phẩm
         $(document).on('change', '#newProductId', function() {
             var selectedOption = $(this).find('option:selected');
             var description = selectedOption.data('description') || '';
             var unitPrice = selectedOption.data('unitprice') || 0;
             var warranty = selectedOption.data('warranty');
-            var stock = parseFloat(selectedOption.data('quantity')) || 0;
 
             $('#newDescription').val(description);
             $('#newUnitPrice').val(parseFloat(unitPrice).toLocaleString());
@@ -1900,13 +2027,6 @@
             } else {
                 $('#newWarrantyMonths').val('');
             }
-            $('#stockInfo').text('Tồn kho hiện tại: ' + stock);
-
-            // Reset quantity if it exceeds stock
-            var currentQty = parseFloat($('#newQuantity').val());
-            if (!isNaN(currentQty) && currentQty > stock) {
-                $('#newQuantity').val(stock);
-            }
 
             // Tính thành tiền
             calculateLineTotal();
@@ -1914,17 +2034,6 @@
 
         // Event handler cho số lượng
         $(document).on('input', '#newQuantity', function() {
-            var selectedOption = $('#newProductId').find('option:selected');
-            var stock = parseFloat(selectedOption.data('quantity')) || 0;
-            var qty = parseFloat($(this).val()) || 0;
-            if (qty > stock) {
-                $(this).val(stock);
-                showAlert('Số lượng vượt quá tồn kho (' + stock + '). Đã điều chỉnh về mức tối đa.', 'warning');
-            }
-            if (stock <= 0) {
-                $(this).val('');
-                showAlert('Sản phẩm đã hết hàng. Không thể thêm.', 'danger');
-            }
             calculateLineTotal();
         });
 
