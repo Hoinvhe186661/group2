@@ -1198,6 +1198,12 @@
             }
         }
 
+        // Khởi tạo danh sách khách hàng đã chọn (lưu trong sessionStorage để giữ khi reload)
+        if (!window.selectedWaitingCustomers) {
+            var stored = sessionStorage.getItem('selectedWaitingCustomers');
+            window.selectedWaitingCustomers = stored ? JSON.parse(stored) : [];
+        }
+
         // Hiển thị modal chọn khách hàng chờ để thêm
         function showSelectWaitingCustomer() {
             $('#selectWaitingCustomerModal').modal('show');
@@ -1238,6 +1244,9 @@
                             var companyName = String(customer.companyName || '');
                             var taxCode = String(customer.taxCode || '');
                             
+                            // Kiểm tra xem khách hàng đã được chọn chưa
+                            var isSelected = window.selectedWaitingCustomers.indexOf(customer.id) !== -1;
+                            
                             var customerTypeLabel = '';
                             if (customerType && customerType.trim() !== '') {
                                 customerTypeLabel = customerType === 'company' ? '<span class="label label-primary">Doanh nghiệp</span>' : '<span class="label label-default">Cá nhân</span>';
@@ -1255,9 +1264,19 @@
                             html += '<td style="vertical-align: middle; font-size: 12px;">' + (companyName && companyName.trim() !== '' ? '<strong>' + escapeHtml(companyName) + '</strong>' : '<span style="color: #999;">-</span>') + '</td>';
                             html += '<td style="vertical-align: middle; font-size: 12px;">' + (taxCode && taxCode.trim() !== '' ? escapeHtml(taxCode) : '<span style="color: #999;">-</span>') + '</td>';
                             html += '<td style="text-align: center; vertical-align: middle;">';
-                            html += '<button class="btn btn-primary btn-xs" onclick="selectWaitingCustomer(' + i + ')" title="Chọn khách hàng này" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap;">';
-                            html += '<i class="fa fa-check-circle"></i> Chọn';
-                            html += '</button>';
+                            
+                            if (isSelected) {
+                                // Nếu đã chọn, hiển thị nút "Đã chọn" và disable
+                                html += '<button class="btn btn-success btn-xs" disabled title="Đã chọn" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap; cursor: not-allowed;">';
+                                html += '<i class="fa fa-check"></i> Đã chọn';
+                                html += '</button>';
+                            } else {
+                                // Nếu chưa chọn, hiển thị nút "Chọn" bình thường
+                                html += '<button class="btn btn-primary btn-xs" onclick="selectWaitingCustomer(' + i + ')" title="Chọn khách hàng này" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap;">';
+                                html += '<i class="fa fa-check-circle"></i> Chọn';
+                                html += '</button>';
+                            }
+                            
                             html += '</td>';
                             html += '</tr>';
                         }
@@ -1298,6 +1317,12 @@
             
             var customer = window.waitingCustomersData[index];
             
+            // Kiểm tra xem khách hàng đã được chọn chưa
+            if (window.selectedWaitingCustomers.indexOf(customer.id) !== -1) {
+                alert('Khách hàng này đã được chọn rồi!');
+                return;
+            }
+            
             // Điền thông tin vào form
             $('#userContract').val(customer.fullName || '');
             $('#customerEmail').val(customer.email || '');
@@ -1315,6 +1340,19 @@
             
             // Tự động tạo mã khách hàng
             generateCustomerCode();
+            
+            // Đánh dấu khách hàng đã được chọn
+            window.selectedWaitingCustomers.push(customer.id);
+            sessionStorage.setItem('selectedWaitingCustomers', JSON.stringify(window.selectedWaitingCustomers));
+            
+            // Cập nhật nút trong bảng
+            var button = $('#selectWaitingCustomerContent').find('button[onclick="selectWaitingCustomer(' + index + ')"]');
+            if (button.length > 0) {
+                button.removeClass('btn-primary').addClass('btn-success').prop('disabled', true);
+                button.attr('title', 'Đã chọn');
+                button.html('<i class="fa fa-check"></i> Đã chọn');
+                button.removeAttr('onclick');
+            }
             
             // Đóng modal chọn khách hàng
             $('#selectWaitingCustomerModal').modal('hide');

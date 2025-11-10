@@ -302,9 +302,18 @@
                                                                         title="Xem chi tiết">
                                                                     <i class="fa fa-eye"></i> Xem
                                                                 </button>
-                                                                <button class="btn btn-primary btn-xs mark-replied-btn" data-message-id="${message.id}" title="Đánh dấu đã liên hệ">
-                                                                    <i class="fa fa-reply"></i> Đã liên hệ
-                                                                </button>
+                                                                <c:choose>
+                                                                    <c:when test="${message.status == 'replied'}">
+                                                                        <button class="btn btn-success btn-xs" disabled title="Đã liên hệ" style="cursor: not-allowed;">
+                                                                            <i class="fa fa-check"></i> Đã liên hệ
+                                                                        </button>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <button class="btn btn-primary btn-xs mark-replied-btn" data-message-id="${message.id}" title="Đánh dấu đã liên hệ">
+                                                                            <i class="fa fa-reply"></i> Đã liên hệ
+                                                                        </button>
+                                                                    </c:otherwise>
+                                                                </c:choose>
                                                             </td>
                                                         </tr>
                                                     </c:forEach>
