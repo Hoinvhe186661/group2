@@ -225,6 +225,7 @@
                     <li>
                         <a href="support-management">
                             <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
+                            <small class="badge pull-right bg-red" id="openTickets">0</small>
                         </a>
                     </li>
                     <li>
@@ -237,10 +238,15 @@
                             <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
                         </a>
                     </li>
-                    <li class="active">
+                    <li>
                         <a href="contact-management">
                             <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
-                            <small class="badge pull-right bg-blue" id="unreadContacts">${unreadCount}</small>
+                            <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="customers">
+                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
                         </a>
                     </li>
                 </ul>

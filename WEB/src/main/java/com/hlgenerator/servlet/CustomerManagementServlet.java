@@ -2,6 +2,7 @@ package com.hlgenerator.servlet;
 
 import com.google.gson.Gson;
 import com.hlgenerator.dao.CustomerDAO;
+import com.hlgenerator.dao.ContactDAO;
 import com.hlgenerator.model.Customer;
 
 import javax.servlet.ServletException;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -25,12 +27,14 @@ import java.util.TreeSet;
 public class CustomerManagementServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private CustomerDAO customerDAO;
+    private ContactDAO contactDAO;
 
     @Override
     public void init() throws ServletException {
         super.init();
         try {
             customerDAO = new CustomerDAO();
+            contactDAO = new ContactDAO();
             System.out.println("CustomerManagementServlet: Initialized successfully");
         } catch (Exception e) {
             System.err.println("CustomerManagementServlet initialization failed: " + e.getMessage());
@@ -46,10 +50,57 @@ public class CustomerManagementServlet extends HttpServlet {
        
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
+        
+        // Kiểm tra nếu là request lấy danh sách khách hàng chờ (cần kiểm tra session trước)
+        String action = request.getParameter("action");
+        if ("getWaitingCustomers".equals(action)) {
+            HttpSession session = request.getSession(false);
+            if (session == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Chưa đăng nhập\"}");
+                return;
+            }
+            
+            String username = (String) session.getAttribute("username");
+            Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+            String userRole = (String) session.getAttribute("userRole");
+            
+            if (username == null || isLoggedIn == null || !isLoggedIn) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Chưa đăng nhập\"}");
+                return;
+            }
+            
+            boolean canManageCustomers = "admin".equals(userRole) || "customer_support".equals(userRole);
+            if (!canManageCustomers) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Không có quyền truy cập\"}");
+                return;
+            }
+            
+            try {
+                List<Map<String, Object>> waitingCustomers = contactDAO.getContactedCustomers();
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write(new Gson().toJson(waitingCustomers));
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Lỗi server: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
+        
         response.setContentType("text/html; charset=UTF-8");
         
-        
         HttpSession session = request.getSession(false);
+        if (session == null) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp");
+            return;
+        }
+        
         String username = (String) session.getAttribute("username");
         Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
         String userRole = (String) session.getAttribute("userRole");
@@ -207,9 +258,62 @@ public class CustomerManagementServlet extends HttpServlet {
         
         String action = request.getParameter("action");
         String id = request.getParameter("id");
+        String contactId = request.getParameter("contactId");
         
         try {
             JsonResponse jsonResponse = new JsonResponse();
+            
+            // Xử lý các action liên quan đến khách hàng chờ
+            if ("confirmWaitingCustomer".equals(action)) {
+                if (contactId == null || contactId.trim().isEmpty()) {
+                    jsonResponse.setSuccess(false);
+                    jsonResponse.setMessage("Thiếu thông tin contactId");
+                } else {
+                    try {
+                        int contactIdInt = Integer.parseInt(contactId);
+                        // Có thể cập nhật trạng thái contact message hoặc tạo customer mới
+                        // Tạm thời chỉ cập nhật trạng thái thành "confirmed"
+                        boolean success = contactDAO.updateMessageStatus(contactIdInt, "confirmed");
+                        if (success) {
+                            jsonResponse.setSuccess(true);
+                            jsonResponse.setMessage("Đã xác nhận khách hàng thành công");
+                        } else {
+                            jsonResponse.setSuccess(false);
+                            jsonResponse.setMessage("Lỗi khi xác nhận khách hàng");
+                        }
+                    } catch (NumberFormatException e) {
+                        jsonResponse.setSuccess(false);
+                        jsonResponse.setMessage("ID không hợp lệ");
+                    }
+                }
+                response.getWriter().write(new Gson().toJson(jsonResponse));
+                return;
+            }
+            
+            if ("cancelWaitingCustomer".equals(action)) {
+                if (contactId == null || contactId.trim().isEmpty()) {
+                    jsonResponse.setSuccess(false);
+                    jsonResponse.setMessage("Thiếu thông tin contactId");
+                } else {
+                    try {
+                        int contactIdInt = Integer.parseInt(contactId);
+                        // Cập nhật trạng thái thành "cancelled" hoặc xóa
+                        boolean success = contactDAO.updateMessageStatus(contactIdInt, "cancelled");
+                        if (success) {
+                            jsonResponse.setSuccess(true);
+                            jsonResponse.setMessage("Đã hủy bỏ khách hàng thành công");
+                        } else {
+                            jsonResponse.setSuccess(false);
+                            jsonResponse.setMessage("Lỗi khi hủy bỏ khách hàng");
+                        }
+                    } catch (NumberFormatException e) {
+                        jsonResponse.setSuccess(false);
+                        jsonResponse.setMessage("ID không hợp lệ");
+                    }
+                }
+                response.getWriter().write(new Gson().toJson(jsonResponse));
+                return;
+            }
             
             switch (action) {
                 case "get":

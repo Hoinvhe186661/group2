@@ -173,6 +173,114 @@
         input[readonly].bg-gray-light {
             opacity: 0.8;
         }
+        
+        /* Style cho modal khách hàng chờ */
+        #waitingCustomersModal .modal-dialog {
+            width: 95%;
+            max-width: 1400px;
+        }
+        
+        #waitingCustomersModal .table {
+            margin-bottom: 0;
+        }
+        
+        #waitingCustomersModal .table thead th {
+            background-color: #f5f5f5;
+            color: #333;
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+            white-space: nowrap;
+        }
+        
+        #waitingCustomersModal .table tbody tr {
+            transition: background-color 0.2s;
+        }
+        
+        #waitingCustomersModal .table tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        #waitingCustomersModal .table tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        
+        #waitingCustomersModal .table tbody tr:hover {
+            background-color: #e8f4f8;
+        }
+        
+        #waitingCustomersModal .table td {
+            padding: 10px 8px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        #waitingCustomersModal .table td a {
+            color: #337ab7;
+            text-decoration: none;
+        }
+        
+        #waitingCustomersModal .table td a:hover {
+            color: #23527c;
+            text-decoration: underline;
+        }
+        
+        #waitingCustomersModal .label {
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        #waitingCustomersModal .action-buttons .btn {
+            margin: 0 2px;
+            padding: 4px 10px;
+            font-size: 11px;
+            min-width: 80px;
+        }
+        
+        #waitingCustomersModal .action-buttons .btn-success {
+            background-color: #5cb85c;
+            border-color: #4cae4c;
+        }
+        
+        #waitingCustomersModal .action-buttons .btn-success:hover {
+            background-color: #449d44;
+            border-color: #398439;
+        }
+        
+        #waitingCustomersModal .action-buttons .btn-danger {
+            background-color: #d9534f;
+            border-color: #d43f3a;
+        }
+        
+        #waitingCustomersModal .action-buttons .btn-danger:hover {
+            background-color: #c9302c;
+            border-color: #ac2925;
+        }
+        
+        #waitingCustomersModal .alert-info {
+            background-color: #d9edf7;
+            border-color: #bce8f1;
+            color: #31708f;
+            padding: 10px 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+        
+        #waitingCustomersModal .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        #waitingCustomersModal .table td[style*="word-wrap"] {
+            max-width: 300px;
+            word-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+        }
     </style>
 </head>
 
@@ -290,7 +398,10 @@
                             <header class="panel-heading">
                                 <h3>Quản lý khách hàng</h3>
                                 <div class="panel-tools">
-                                        <button class="btn btn-primary btn-sm" data-toggle="modal"
+                                    <button class="btn btn-warning btn-sm" onclick="showWaitingCustomers()" style="margin-right: 5px;">
+                                        <i class="fa fa-clock-o"></i> Khách hàng chờ
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" data-toggle="modal"
                                             data-target="#addCustomerModal">
                                         <i class="fa fa-plus"></i> Thêm khách hàng mới
                                     </button>
@@ -446,7 +557,19 @@
                     <form id="addCustomerForm">
                         <div class="form-group">
                             <label>Mã khách hàng:</label>
-                            <input type="text" class="form-control" id="customerCode" maxlength="50" required>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="customerCode" maxlength="50" required>
+                                <span class="input-group-btn">
+                                    <button type="button" class="btn btn-info" onclick="generateCustomerCode()" title="Tự động tạo mã">
+                                        <i class="fa fa-magic"></i> Tự động
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <button type="button" class="btn btn-warning btn-sm" onclick="showSelectWaitingCustomer()" style="width: 100%;">
+                                <i class="fa fa-clock-o"></i> Chọn từ khách hàng chờ
+                            </button>
                         </div>
                         <div class="form-group">
                             <label>Tên công ty:</label>
@@ -501,6 +624,46 @@
                 </div>
                 <div class="modal-body" id="customerDetailContent">
                     <!-- Nội dung sẽ được load bằng JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal danh sách khách hàng chờ -->
+    <div class="modal fade" id="waitingCustomersModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Danh sách khách hàng chờ</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="waitingCustomersContent">
+                        <p class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal chọn khách hàng chờ để thêm -->
+    <div class="modal fade" id="selectWaitingCustomerModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document" style="width: 95%; max-width: 1400px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Chọn khách hàng từ danh sách chờ</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="selectWaitingCustomerContent">
+                        <p class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
@@ -859,6 +1022,350 @@
                 label.text('Tên công ty:');
             }
         });
+
+        // Hiển thị danh sách khách hàng chờ
+        function showWaitingCustomers() {
+            $('#waitingCustomersModal').modal('show');
+            $('#waitingCustomersContent').html('<p class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</p>');
+            
+            $.ajax({
+                url: 'customers?action=getWaitingCustomers',
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    // Kiểm tra nếu response là error object
+                    if (data && data.error) {
+                        $('#waitingCustomersContent').html('<div class="alert alert-danger text-center">' + escapeHtml(data.error) + '</div>');
+                        return;
+                    }
+                    
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        var html = '<div class="table-responsive">';
+                        html += '<table class="table table-striped table-bordered table-hover">';
+                        html += '<thead>';
+                        html += '<tr>';
+                        html += '<th style="width: 60px; text-align: center;">ID</th>';
+                        html += '<th style="width: 150px;">Họ tên</th>';
+                        html += '<th style="width: 180px;">Email</th>';
+                        html += '<th style="width: 120px;">Số điện thoại</th>';
+                        html += '<th style="width: 150px;">Địa chỉ</th>';
+                        html += '<th style="width: 120px;">Loại KH</th>';
+                        html += '<th style="width: 150px;">Tên công ty</th>';
+                        html += '<th style="width: 120px;">Mã số thuế</th>';
+                        html += '<th style="width: 140px;">Phương thức liên hệ</th>';
+                        html += '<th style="width: 140px;">Ngày gửi</th>';
+                        html += '<th style="width: 140px;">Ngày liên hệ</th>';
+                        html += '<th style="min-width: 200px;">Nội dung tin nhắn</th>';
+                        html += '</tr>';
+                        html += '</thead>';
+                        html += '<tbody>';
+                        
+                        for (var i = 0; i < data.length; i++) {
+                            var customer = data[i];
+                            var createdDate = customer.createdAt ? formatDateTime(customer.createdAt) : '-';
+                            var repliedDate = customer.repliedAt ? formatDateTime(customer.repliedAt) : '-';
+                            var contactMethod = String(customer.contactMethod || '');
+                            var message = String(customer.message || '');
+                            var address = String(customer.address || '');
+                            var customerType = String(customer.customerType || '');
+                            var companyName = String(customer.companyName || '');
+                            var taxCode = String(customer.taxCode || '');
+                            
+                            // Xử lý loại khách hàng
+                            var customerTypeLabel = '';
+                            if (customerType && customerType.trim() !== '') {
+                                customerTypeLabel = customerType === 'company' ? '<span class="label label-primary">Doanh nghiệp</span>' : '<span class="label label-default">Cá nhân</span>';
+                            } else {
+                                customerTypeLabel = '<span style="color: #999;">-</span>';
+                            }
+                            
+                            html += '<tr>';
+                            html += '<td style="text-align: center; font-weight: 600;">' + customer.id + '</td>';
+                            html += '<td><strong style="color: #333;">' + escapeHtml(customer.fullName) + '</strong></td>';
+                            html += '<td><a href="mailto:' + escapeHtml(customer.email) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(customer.email) + '</a></td>';
+                            html += '<td><a href="tel:' + escapeHtml(customer.phone) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(customer.phone) + '</a></td>';
+                            html += '<td style="word-wrap: break-word; max-width: 150px;">' + (address && address.trim() !== '' ? escapeHtml(address) : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td style="text-align: center;">' + customerTypeLabel + '</td>';
+                            html += '<td>' + (companyName && companyName.trim() !== '' ? '<strong>' + escapeHtml(companyName) + '</strong>' : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td>' + (taxCode && taxCode.trim() !== '' ? escapeHtml(taxCode) : '<span style="color: #999;">-</span>') + '</td>';
+                            if (contactMethod && contactMethod.trim() !== '') {
+                                html += '<td><span class="label label-info" style="display: inline-block; padding: 4px 10px;">' + escapeHtml(contactMethod) + '</span></td>';
+                            } else {
+                                html += '<td><span style="color: #999;">-</span></td>';
+                            }
+                            html += '<td style="font-size: 12px; color: #666;">' + createdDate + '</td>';
+                            html += '<td style="font-size: 12px; color: #666;">' + repliedDate + '</td>';
+                            html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + escapeHtml(message) + '</td>';
+                            html += '</tr>';
+                        }
+                        
+                        html += '</tbody>';
+                        html += '</table>';
+                        html += '</div>';
+                        html += '<div class="alert alert-info" style="margin-top: 15px; margin-bottom: 0;">';
+                        html += '<i class="fa fa-info-circle"></i> <strong>Tổng số:</strong> ' + data.length + ' khách hàng đã liên hệ';
+                        html += '</div>';
+                        
+                        $('#waitingCustomersContent').html(html);
+                    } else {
+                        $('#waitingCustomersContent').html('<div class="alert alert-info text-center">Không có khách hàng nào đã liên hệ.</div>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    var errorMsg = 'Lỗi khi tải danh sách khách hàng chờ.';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    } else if (xhr.status === 401) {
+                        errorMsg = 'Bạn cần đăng nhập để xem danh sách này.';
+                    } else if (xhr.status === 403) {
+                        errorMsg = 'Bạn không có quyền truy cập.';
+                    }
+                    $('#waitingCustomersContent').html('<div class="alert alert-danger text-center">' + escapeHtml(errorMsg) + '</div>');
+                }
+            });
+        }
+
+        // Xác nhận khách hàng chờ
+        function confirmWaitingCustomer(contactId) {
+            if (confirm('Bạn có chắc chắn muốn xác nhận khách hàng này?')) {
+                $.ajax({
+                    url: 'customers',
+                    type: 'POST',
+                    data: { action: 'confirmWaitingCustomer', contactId: contactId },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert('✓ ' + response.message);
+                            // Reload danh sách
+                            showWaitingCustomers();
+                        } else {
+                            alert('✗ ' + (response.message || 'Lỗi khi xác nhận'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMsg = 'Lỗi khi xác nhận khách hàng.';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMsg = xhr.responseJSON.error;
+                        }
+                        alert('✗ ' + errorMsg);
+                    }
+                });
+            }
+        }
+
+        // Hủy bỏ khách hàng chờ
+        function cancelWaitingCustomer(contactId) {
+            if (confirm('Bạn có chắc chắn muốn hủy bỏ khách hàng này?')) {
+                $.ajax({
+                    url: 'customers',
+                    type: 'POST',
+                    data: { action: 'cancelWaitingCustomer', contactId: contactId },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            alert('✓ ' + response.message);
+                            // Reload danh sách
+                            showWaitingCustomers();
+                        } else {
+                            alert('✗ ' + (response.message || 'Lỗi khi hủy bỏ'));
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMsg = 'Lỗi khi hủy bỏ khách hàng.';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMsg = xhr.responseJSON.error;
+                        }
+                        alert('✗ ' + errorMsg);
+                    }
+                });
+            }
+        }
+
+        // Format datetime
+        function formatDateTime(dateString) {
+            if (!dateString) return '-';
+            try {
+                var date = new Date(dateString);
+                var day = String(date.getDate()).padStart(2, '0');
+                var month = String(date.getMonth() + 1).padStart(2, '0');
+                var year = date.getFullYear();
+                var hours = String(date.getHours()).padStart(2, '0');
+                var minutes = String(date.getMinutes()).padStart(2, '0');
+                var seconds = String(date.getSeconds()).padStart(2, '0');
+                return hours + ':' + minutes + ':' + seconds + ' ' + day + '/' + month + '/' + year;
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Hiển thị modal chọn khách hàng chờ để thêm
+        function showSelectWaitingCustomer() {
+            $('#selectWaitingCustomerModal').modal('show');
+            $('#selectWaitingCustomerContent').html('<p class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</p>');
+            
+            $.ajax({
+                url: 'customers?action=getWaitingCustomers',
+                type: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    if (data && data.error) {
+                        $('#selectWaitingCustomerContent').html('<div class="alert alert-danger text-center">' + escapeHtml(data.error) + '</div>');
+                        return;
+                    }
+                    
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        var html = '<div class="table-responsive" style="max-height: 600px; overflow-y: auto;">';
+                        html += '<table class="table table-striped table-bordered table-hover" style="margin-bottom: 0;">';
+                        html += '<thead style="position: sticky; top: 0; background-color: #f5f5f5; z-index: 10;">';
+                        html += '<tr>';
+                        html += '<th style="width: 50px; text-align: center; min-width: 50px;">ID</th>';
+                        html += '<th style="width: 140px; min-width: 140px;">Họ tên</th>';
+                        html += '<th style="width: 160px; min-width: 160px;">Email</th>';
+                        html += '<th style="width: 110px; min-width: 110px;">Số điện thoại</th>';
+                        html += '<th style="width: 130px; min-width: 130px;">Địa chỉ</th>';
+                        html += '<th style="width: 100px; text-align: center; min-width: 100px;">Loại KH</th>';
+                        html += '<th style="width: 140px; min-width: 140px;">Tên công ty</th>';
+                        html += '<th style="width: 110px; min-width: 110px;">Mã số thuế</th>';
+                        html += '<th style="width: 100px; text-align: center; min-width: 100px;">Thao tác</th>';
+                        html += '</tr>';
+                        html += '</thead>';
+                        html += '<tbody>';
+                        
+                        for (var i = 0; i < data.length; i++) {
+                            var customer = data[i];
+                            var address = String(customer.address || '');
+                            var customerType = String(customer.customerType || '');
+                            var companyName = String(customer.companyName || '');
+                            var taxCode = String(customer.taxCode || '');
+                            
+                            var customerTypeLabel = '';
+                            if (customerType && customerType.trim() !== '') {
+                                customerTypeLabel = customerType === 'company' ? '<span class="label label-primary">Doanh nghiệp</span>' : '<span class="label label-default">Cá nhân</span>';
+                            } else {
+                                customerTypeLabel = '<span style="color: #999;">-</span>';
+                            }
+                            
+                            html += '<tr>';
+                            html += '<td style="text-align: center; font-weight: 600; vertical-align: middle;">' + customer.id + '</td>';
+                            html += '<td style="vertical-align: middle;"><strong style="color: #333;">' + escapeHtml(customer.fullName) + '</strong></td>';
+                            html += '<td style="vertical-align: middle;"><a href="mailto:' + escapeHtml(customer.email) + '" style="color: #337ab7; text-decoration: none; word-break: break-all;">' + escapeHtml(customer.email) + '</a></td>';
+                            html += '<td style="vertical-align: middle;"><a href="tel:' + escapeHtml(customer.phone) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(customer.phone) + '</a></td>';
+                            html += '<td style="word-wrap: break-word; word-break: break-word; vertical-align: middle; font-size: 12px;">' + (address && address.trim() !== '' ? escapeHtml(address) : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td style="text-align: center; vertical-align: middle;">' + customerTypeLabel + '</td>';
+                            html += '<td style="vertical-align: middle; font-size: 12px;">' + (companyName && companyName.trim() !== '' ? '<strong>' + escapeHtml(companyName) + '</strong>' : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td style="vertical-align: middle; font-size: 12px;">' + (taxCode && taxCode.trim() !== '' ? escapeHtml(taxCode) : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td style="text-align: center; vertical-align: middle;">';
+                            html += '<button class="btn btn-primary btn-xs" onclick="selectWaitingCustomer(' + i + ')" title="Chọn khách hàng này" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap;">';
+                            html += '<i class="fa fa-check-circle"></i> Chọn';
+                            html += '</button>';
+                            html += '</td>';
+                            html += '</tr>';
+                        }
+                        
+                        html += '</tbody>';
+                        html += '</table>';
+                        html += '</div>';
+                        html += '<div class="alert alert-info" style="margin-top: 10px; margin-bottom: 0;">';
+                        html += '<i class="fa fa-info-circle"></i> <strong>Tổng số:</strong> ' + data.length + ' khách hàng đã liên hệ';
+                        html += '</div>';
+                        
+                        // Lưu dữ liệu vào biến global để sử dụng khi chọn
+                        window.waitingCustomersData = data;
+                        
+                        $('#selectWaitingCustomerContent').html(html);
+                    } else {
+                        $('#selectWaitingCustomerContent').html('<div class="alert alert-info text-center">Không có khách hàng nào đã liên hệ.</div>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    var errorMsg = 'Lỗi khi tải danh sách khách hàng chờ.';
+                    if (xhr.status === 401) {
+                        errorMsg = 'Bạn chưa đăng nhập. Vui lòng đăng nhập lại.';
+                    } else if (xhr.status === 403) {
+                        errorMsg = 'Bạn không có quyền truy cập chức năng này.';
+                    }
+                    $('#selectWaitingCustomerContent').html('<div class="alert alert-danger text-center">' + escapeHtml(errorMsg) + '</div>');
+                }
+            });
+        }
+        
+        // Chọn khách hàng từ danh sách chờ và điền vào form
+        function selectWaitingCustomer(index) {
+            if (!window.waitingCustomersData || !window.waitingCustomersData[index]) {
+                alert('Không tìm thấy thông tin khách hàng');
+                return;
+            }
+            
+            var customer = window.waitingCustomersData[index];
+            
+            // Điền thông tin vào form
+            $('#userContract').val(customer.fullName || '');
+            $('#customerEmail').val(customer.email || '');
+            $('#customerPhone').val(customer.phone || '');
+            $('#customerAddress').val(customer.address || '');
+            $('#taxCode').val(customer.taxCode || '');
+            $('#companyName').val(customer.companyName || '');
+            
+            // Điền loại khách hàng
+            if (customer.customerType) {
+                $('#customerType').val(customer.customerType);
+                // Trigger change để hiển thị/ẩn các trường liên quan
+                $('#customerType').trigger('change');
+            }
+            
+            // Tự động tạo mã khách hàng
+            generateCustomerCode();
+            
+            // Đóng modal chọn khách hàng
+            $('#selectWaitingCustomerModal').modal('hide');
+            
+            // Focus vào form thêm khách hàng
+            $('#addCustomerModal').modal('show');
+        }
+        
+        // Tự động tạo mã khách hàng
+        function generateCustomerCode() {
+            var customerType = $('#customerType').val();
+            var companyName = $('#companyName').val();
+            var userContract = $('#userContract').val();
+            
+            var prefix = '';
+            if (customerType === 'company') {
+                prefix = 'DN'; // Doanh nghiệp
+            } else if (customerType === 'individual') {
+                prefix = 'CN'; // Cá nhân
+            } else {
+                prefix = 'KH'; // Mặc định
+            }
+            
+            // Lấy 3-4 ký tự đầu từ tên công ty hoặc tên người liên hệ
+            var namePart = '';
+            if (customerType === 'company' && companyName) {
+                namePart = companyName.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase();
+            } else if (userContract) {
+                namePart = userContract.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase();
+            }
+            
+            // Thêm số ngẫu nhiên 4 chữ số
+            var randomNum = Math.floor(1000 + Math.random() * 9000);
+            
+            // Tạo mã: Prefix + NamePart + RandomNum
+            var code = prefix + namePart + randomNum;
+            
+            $('#customerCode').val(code);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
     </script>
 </body>
 

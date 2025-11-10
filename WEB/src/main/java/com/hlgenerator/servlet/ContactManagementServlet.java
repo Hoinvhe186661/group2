@@ -150,6 +150,11 @@ public class ContactManagementServlet extends HttpServlet {
                 // Cập nhật trạng thái tin nhắn
                 String idParam = request.getParameter("id");
                 String status = request.getParameter("status");
+                String contactMethod = request.getParameter("contactMethod");
+                String address = request.getParameter("address");
+                String customerType = request.getParameter("customerType");
+                String companyName = request.getParameter("companyName");
+                String taxCode = request.getParameter("taxCode");
                 
                 if (idParam == null || idParam.trim().isEmpty() || status == null || status.trim().isEmpty()) {
                     jsonResponse.addProperty("success", false);
@@ -157,7 +162,22 @@ public class ContactManagementServlet extends HttpServlet {
                 } else {
                     try {
                         int messageId = Integer.parseInt(idParam);
-                        boolean success = contactDAO.updateMessageStatus(messageId, status.trim());
+                        boolean success;
+                        
+                        // Nếu có các thông tin bổ sung, sử dụng method mở rộng
+                        if (contactMethod != null && !contactMethod.trim().isEmpty()) {
+                            success = contactDAO.updateMessageStatusWithDetails(
+                                messageId, 
+                                status.trim(), 
+                                contactMethod.trim(),
+                                address != null ? address.trim() : null,
+                                customerType != null ? customerType.trim() : null,
+                                companyName != null ? companyName.trim() : null,
+                                taxCode != null ? taxCode.trim() : null
+                            );
+                        } else {
+                            success = contactDAO.updateMessageStatus(messageId, status.trim());
+                        }
                         
                         if (success) {
                             jsonResponse.addProperty("success", true);
