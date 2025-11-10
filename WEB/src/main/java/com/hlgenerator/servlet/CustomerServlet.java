@@ -2,6 +2,8 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.CustomerDAO;
 import com.hlgenerator.model.Customer;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
@@ -10,7 +12,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-// import javax.servlet.http.HttpSession; // Tạm thời comment vì không sử dụng
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -41,9 +42,14 @@ public class CustomerServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        // Check authentication
-        if (!isAuthenticated(request)) {
-            sendErrorResponse(response, "Không có quyền truy cập", 401);
+        // Check authentication and authorization
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            sendErrorResponse(response, "Chưa đăng nhập", 401);
+            return;
+        }
+        
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CUSTOMERS)) {
+            sendErrorResponse(response, "Không có quyền truy cập", 403);
             return;
         }
 
@@ -82,9 +88,14 @@ public class CustomerServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        // Check authentication
-        if (!isAuthenticated(request)) {
-            sendErrorResponse(response, "Không có quyền truy cập", 401);
+        // Check authentication and authorization
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            sendErrorResponse(response, "Chưa đăng nhập", 401);
+            return;
+        }
+        
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CUSTOMERS)) {
+            sendErrorResponse(response, "Không có quyền truy cập", 403);
             return;
         }
 
@@ -444,21 +455,6 @@ public class CustomerServlet extends HttpServlet {
         }
     }
 
-    private boolean isAuthenticated(HttpServletRequest request) {
-        javax.servlet.http.HttpSession session = request.getSession(false);
-        if (session == null) {
-            return false;
-        }
-        
-        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-        if (isLoggedIn == null || !isLoggedIn) {
-            return false;
-        }
-        
-        // Kiểm tra quyền: chỉ admin và customer_support mới có thể quản lý khách hàng
-        String userRole = (String) session.getAttribute("userRole");
-        return "admin".equals(userRole) || "customer_support".equals(userRole);
-    }
 
     private void sendErrorResponse(HttpServletResponse response, String message, int statusCode) 
             throws IOException {

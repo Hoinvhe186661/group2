@@ -2,13 +2,14 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.User;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -48,18 +49,12 @@ public class UserManagementServlet extends HttpServlet {
         response.setContentType("text/html; charset=UTF-8");
         
         
-        HttpSession session = request.getSession(false);
-        String username = (String) session.getAttribute("username");
-        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-        String userRole = (String) session.getAttribute("userRole");
-        
-        if (username == null || isLoggedIn == null || !isLoggedIn) {
+        if (!AuthorizationUtil.isLoggedIn(request)) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
         
-        
-        if (!"admin".equals(userRole)) {
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_USERS)) {
             response.sendRedirect(request.getContextPath() + "/403.jsp");
             return;
         }

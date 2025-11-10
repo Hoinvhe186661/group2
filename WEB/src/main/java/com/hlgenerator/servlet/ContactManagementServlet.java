@@ -2,13 +2,14 @@ package com.hlgenerator.servlet;
 
 import com.google.gson.JsonObject;
 import com.hlgenerator.dao.ContactDAO;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -40,19 +41,15 @@ public class ContactManagementServlet extends HttpServlet {
         
         response.setContentType("text/html; charset=UTF-8");
         
-        // Kiểm tra đăng nhập
-        HttpSession session = request.getSession(false);
-        if (session == null || session.getAttribute("isLoggedIn") == null) {
+        if (!AuthorizationUtil.isLoggedIn(request)) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
-        
-        String userRole = (String) session.getAttribute("userRole");
-        
-        if (!"customer_support".equals(userRole) && !"admin".equals(userRole)) {
-            response.sendRedirect(request.getContextPath() + "/index.jsp");
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTACTS)) {
+            response.sendRedirect(request.getContextPath() + "/403.jsp");
             return;
         }
+        
         
         // Lấy filter parameters
         String filterStatus = request.getParameter("status");
@@ -127,24 +124,22 @@ public class ContactManagementServlet extends HttpServlet {
                 return;
             }
             
-            // Các action khác cần đăng nhập
-            HttpSession session = request.getSession(false);
-            if (session == null || session.getAttribute("isLoggedIn") == null) {
+            if (!AuthorizationUtil.isLoggedIn(request)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
                 out.print(jsonResponse.toString());
                 return;
             }
             
-            String userRole = (String) session.getAttribute("userRole");
-            
-            // Kiểm tra quyền
-            if (!"customer_support".equals(userRole) && !"admin".equals(userRole)) {
+            if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTACTS)) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Không có quyền truy cập");
                 out.print(jsonResponse.toString());
                 return;
             }
+            
             
             if ("updateStatus".equals(action)) {
                 // Cập nhật trạng thái tin nhắn
@@ -317,13 +312,21 @@ public class ContactManagementServlet extends HttpServlet {
         JsonObject jsonResponse = new JsonObject();
         
         try {
-            HttpSession session = request.getSession(false);
-            if (session == null || session.getAttribute("isLoggedIn") == null) {
+            if (!AuthorizationUtil.isLoggedIn(request)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
                 out.print(jsonResponse.toString());
                 return;
             }
+            if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTACTS)) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Không có quyền truy cập");
+                out.print(jsonResponse.toString());
+                return;
+            }
+            
             
             String action = request.getParameter("action");
             

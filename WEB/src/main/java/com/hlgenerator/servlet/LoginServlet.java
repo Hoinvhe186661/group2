@@ -11,6 +11,8 @@ import javax.servlet.http.HttpSession;
 
 import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.User;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
@@ -88,6 +90,7 @@ public class LoginServlet extends HttpServlet {
         String userRole = "customer";
         String fullName = "";
         String email = "";
+        java.util.Set<String> permissions = java.util.Collections.emptySet();
         
         // Debug logging
         if (user == null) {
@@ -103,6 +106,7 @@ public class LoginServlet extends HttpServlet {
                 userRole = user.getRole(); // Sử dụng role từ database
                 fullName = user.getFullName();
                 email = user.getEmail();
+                permissions = AuthorizationUtil.resolveEffectivePermissions(userRole, user.getPermissions());
                 System.out.println("DEBUG: User " + username + " logged in with role: " + userRole);
             }
         }
@@ -118,6 +122,7 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("email", email);
             session.setAttribute("isLoggedIn", true);
             session.setAttribute("loginTime", System.currentTimeMillis());
+            AuthorizationUtil.storePermissions(session, permissions);
             
             // Set customerId nếu là customer
             if ("customer".equals(userRole) && email != null && !email.trim().isEmpty()) {

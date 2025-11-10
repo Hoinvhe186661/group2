@@ -10,6 +10,8 @@ import com.hlgenerator.model.StockHistory;
 import com.hlgenerator.model.Product;
 import com.hlgenerator.model.Supplier;
 import com.hlgenerator.model.Contract;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -42,6 +44,21 @@ public class InventoryServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+        // Check authentication and authorization for view operations
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
+            return;
+        }
+        
+        if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_INVENTORY, Permission.VIEW_INVENTORY)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền truy cập\"}");
+            return;
+        }
+        
         String action = request.getParameter("action");
         
         response.setContentType("application/json");
@@ -142,6 +159,19 @@ public class InventoryServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        
+        // Check authentication and authorization for management operations
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
+            return;
+        }
+        
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_INVENTORY)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền thực hiện\"}");
+            return;
+        }
         
         String action = request.getParameter("action");
         

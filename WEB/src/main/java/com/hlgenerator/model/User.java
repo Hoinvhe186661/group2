@@ -120,6 +120,10 @@ public class User {
         this.permissions = permissions;
     }
 
+    public java.util.Set<String> getPermissionSet() {
+        return com.hlgenerator.util.AuthorizationUtil.parsePermissions(permissions);
+    }
+
     public boolean isActive() {
         return isActive;
     }

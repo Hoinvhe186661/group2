@@ -7,6 +7,8 @@ import com.hlgenerator.dao.WorkOrderDAO;
 import com.hlgenerator.model.WorkOrderTask;
 import com.hlgenerator.model.WorkOrderTaskAssignment;
 import com.hlgenerator.model.WorkOrder;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -57,6 +59,17 @@ public class WorkOrderTaskServlet extends HttpServlet {
         
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            sendError(response, "Unauthorized: Please login");
+            return;
+        }
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_WORK_ORDERS)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            sendError(response, "Unauthorized: Không có quyền quản lý lệnh công việc");
+            return;
+        }
         
             String action = request.getParameter("action");
             
@@ -82,6 +95,17 @@ public class WorkOrderTaskServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            sendError(response, "Unauthorized: Please login");
+            return;
+        }
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_WORK_ORDERS)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            sendError(response, "Unauthorized: Không có quyền quản lý lệnh công việc");
+            return;
+        }
         
         String action = request.getParameter("action");
         
@@ -830,13 +854,6 @@ public class WorkOrderTaskServlet extends HttpServlet {
             HttpSession session = request.getSession(false);
             if (session == null || session.getAttribute("userId") == null) {
                 sendError(response, "Unauthorized: Please login");
-                return;
-            }
-            
-            // Check if user is admin or head_technician
-            String userRole = (String) session.getAttribute("userRole");
-            if (!"admin".equals(userRole) && !"head_technician".equals(userRole)) {
-                sendError(response, "Unauthorized: Only admin or head_technician can fix assignments");
                 return;
             }
             

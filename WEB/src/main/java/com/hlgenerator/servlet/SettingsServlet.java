@@ -1,6 +1,8 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.SettingsDAO;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 import org.json.JSONObject;
 
 import javax.servlet.ServletException;
@@ -38,8 +40,13 @@ public class SettingsServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        // Check authentication
-        if (!isAuthenticated(request)) {
+        // Check authentication and authorization
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            sendJsonResponse(response, false, "Chưa đăng nhập", null);
+            return;
+        }
+        
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SETTINGS)) {
             sendJsonResponse(response, false, "Không có quyền truy cập", null);
             return;
         }
@@ -74,8 +81,13 @@ public class SettingsServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        // Check authentication
-        if (!isAuthenticated(request)) {
+        // Check authentication and authorization
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            sendJsonResponse(response, false, "Chưa đăng nhập", null);
+            return;
+        }
+        
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SETTINGS)) {
             sendJsonResponse(response, false, "Không có quyền truy cập", null);
             return;
         }
@@ -290,45 +302,6 @@ public class SettingsServlet extends HttpServlet {
         }
     }
 
-    private boolean isAuthenticated(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            System.out.println("SettingsServlet: Session is null");
-            return false;
-        }
-        
-        // Log tất cả session attributes để debug
-        System.out.println("SettingsServlet: Session ID = " + session.getId());
-        System.out.println("SettingsServlet: All session attributes:");
-        java.util.Enumeration<String> attrNames = session.getAttributeNames();
-        while (attrNames.hasMoreElements()) {
-            String attrName = attrNames.nextElement();
-            Object attrValue = session.getAttribute(attrName);
-            System.out.println("  " + attrName + " = " + attrValue + " (type: " + (attrValue != null ? attrValue.getClass().getName() : "null") + ")");
-        }
-        
-        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-        String username = (String) session.getAttribute("username");
-        String userRole = (String) session.getAttribute("userRole");
-        
-        System.out.println("SettingsServlet: isLoggedIn = " + isLoggedIn + ", username = " + username + ", userRole = " + userRole);
-        
-        if (username == null || isLoggedIn == null || !isLoggedIn) {
-            System.out.println("SettingsServlet: User not logged in");
-            return false;
-        }
-        
-       
-        // Nếu cần chỉ admin mới truy cập được, giữ nguyên logic này
-        boolean isAdmin = "admin".equalsIgnoreCase(userRole);
-        System.out.println("SettingsServlet: Is admin = " + isAdmin);
-        
-        if (!isAdmin) {
-            System.out.println("SettingsServlet: Access denied - User role '" + userRole + "' is not admin");
-        }
-        
-        return isAdmin;
-    }
 
     private void sendJsonResponse(HttpServletResponse response, boolean success, String message, Object data) 
             throws IOException {

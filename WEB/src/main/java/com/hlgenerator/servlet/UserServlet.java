@@ -2,6 +2,8 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.User;
+import com.hlgenerator.util.AuthorizationUtil;
+import com.hlgenerator.util.Permission;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
@@ -43,9 +45,12 @@ public class UserServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        // Check authentication
-        if (!isAuthenticated(request)) {
-            sendErrorResponse(response, "Không có quyền truy cập", 401);
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            sendErrorResponse(response, "Vui lòng đăng nhập lại", 401);
+            return;
+        }
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_USERS)) {
+            sendErrorResponse(response, "Không có quyền truy cập chức năng quản lý người dùng", 403);
             return;
         }
 
@@ -94,9 +99,12 @@ public class UserServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        // Check authentication
-        if (!isAuthenticated(request)) {
-            sendErrorResponse(response, "Không có quyền truy cập", 401);
+        if (!AuthorizationUtil.isLoggedIn(request)) {
+            sendErrorResponse(response, "Vui lòng đăng nhập lại", 401);
+            return;
+        }
+        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_USERS)) {
+            sendErrorResponse(response, "Không có quyền truy cập chức năng quản lý người dùng", 403);
             return;
         }
 
@@ -624,13 +632,6 @@ public class UserServlet extends HttpServlet {
         } catch (Exception e) {
             sendErrorResponse(out, "Lỗi khi xóa người dùng theo vai trò: " + e.getMessage(), 500);
         }
-    }
-
-    private boolean isAuthenticated(HttpServletRequest request) {
-        // Tạm thời bỏ qua xác thực để test
-        return true;
-        // HttpSession session = request.getSession(false);
-        // return session != null && Boolean.TRUE.equals(session.getAttribute("isLoggedIn"));
     }
 
     private void sendErrorResponse(HttpServletResponse response, String message, int statusCode) 
