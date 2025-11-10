@@ -281,33 +281,84 @@
               <input type="email" class="form-control" id="email" readonly>
             </div>
           </div>
-          <div class="row mb-2">
-            <div class="col-12">
-              <label>Hợp đồng</label>
-              <select class="form-control" id="contractSelect">
-                <option value="">-- Chọn hợp đồng --</option>
+          
+          <!-- Radio buttons để chọn loại yêu cầu -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">Trường hợp :</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="requestType" id="requestTypeContract" value="contract" checked>
+                <label class="form-check-label" for="requestTypeContract">
+                  Có hợp đồng
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="requestType" id="requestTypeExternal" value="external">
+                <label class="form-check-label" for="requestTypeExternal">
+                  Sản phẩm ngoài
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Form 1: Có hợp đồng -->
+          <div id="formWithContract">
+            <div class="row mb-2">
+              <div class="col-12">
+                <label>Hợp đồng <span class="text-danger">*</span></label>
+                <select class="form-control" id="contractSelect">
+                  <option value="">-- Chọn hợp đồng --</option>
+                </select>
+              </div>
+            </div>
+            <div class="row mb-2">
+              <div class="col-12">
+                <label>Sản phẩm trong hợp đồng <span class="text-danger">*</span></label>
+                <select class="form-control" id="contractProductSelect" disabled>
+                  <option value="">-- Chọn sản phẩm --</option>
+                </select>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label>Loại yêu cầu :</label>
+              <select class="form-control" id="category">
+                  <option value="technical">Kỹ thuật</option>
+                  <option value="billing">Thanh toán</option>
+                  <option value="general" selected>Chung</option>
+                  <option value="complaint">Khiếu nại</option>
               </select>
             </div>
           </div>
-          <div class="row mb-2">
-            <div class="col-12">
-              <label>Sản phẩm trong hợp đồng</label>
-              <select class="form-control" id="contractProductSelect" disabled>
-                <option value="">-- Chọn sản phẩm --</option>
+          
+          <!-- Form 2: Sản phẩm ngoài -->
+          <div id="formExternal" style="display: none;">
+            <div class="row mb-2">
+              <div class="col-12">
+                <label>Tên sản phẩm muốn sửa chữa <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="externalProductName" placeholder="Nhập tên sản phẩm">
+              </div>
+            </div>
+            <div class="mb-2">
+              <label>Loại kỹ thuật <span class="text-danger">*</span>:</label>
+              <select class="form-control" id="categoryExternal">
+                  <option value="technical" selected>Kỹ thuật</option>
+                  <option value="general">Chung</option>
               </select>
             </div>
           </div>
+          
+          <!-- Các trường chung -->
           <div class="mb-2">
-            <label>Tiêu đề:</label>
+            <label>Tiêu đề <span class="text-danger">*</span>:</label>
             <input type="text" class="form-control" id="subject" placeholder="Nhập tiêu đề">
           </div>
           <div class="mb-2">
-            <label>Loại yêu cầu :</label>
-            <select class="form-control" id="category">
-                <option value="technical">Kỹ thuật</option>
-                <option value="billing">Thanh toán</option>
-                <option value="general" selected>Chung</option>
-                <option value="complaint">Khiếu nại</option>
+            <label>Độ ưu tiên:</label>
+            <select class="form-control" id="priority">
+                <option value="low">Thấp</option>
+                <option value="medium" selected>Trung bình</option>
+                <option value="high">Cao</option>
+                <option value="urgent">Khẩn cấp</option>
             </select>
           </div>
           <div class="mb-2">
@@ -317,11 +368,11 @@
           </div>
           <div class="mb-2">
             <label>Ngày mong muốn công việc hoàn thành :</label>
-            <input type="text" class="form-control" id="deadline" placeholder="dd/MM/yyyy" maxlength="10">
+            <input type="date" class="form-control" id="deadline" min="">
             
           </div>
           <div class="mb-2">
-            <label>Chi tiết vấn đề :</label>
+            <label>Chi tiết vấn đề <span class="text-danger">*</span>:</label>
             <textarea class="form-control" id="description"></textarea>
           </div>
           <div class="text-end mt-3">
@@ -375,11 +426,15 @@
               <option value="">-- Chọn sản phẩm --</option>
             </select>
           </div>
+          <div class="col-12">
+            <label>Sản phẩm ngoài</label>
+            <input type="text" id="v_external_product" class="form-control" placeholder="Nhập tên sản phẩm ngoài" disabled/>
+          </div>
           <div class="col-12"><label>Tiêu đề</label><input id="v_subject_inp" class="form-control" disabled/></div>
           <div class="col-12"><label>Chi tiết vấn đề</label><textarea id="v_description_inp" class="form-control" rows="4" disabled></textarea></div>
           <div class="col-md-6"><label>Ngày tạo</label><div id="v_created" class="form-control-plaintext"></div></div>
           <div class="col-md-6"><label>Ngày xử lý xong</label><div id="v_resolved" class="form-control-plaintext"></div></div>
-          <div class="col-md-6"><label>Ngày mong muốn công việc hoàn thành</label><input type="text" id="v_deadline" class="form-control" placeholder="dd/MM/yyyy" disabled></div>
+          <div class="col-md-6"><label>Ngày mong muốn công việc hoàn thành</label><input type="date" id="v_deadline" class="form-control" min="" disabled></div>
           <div class="col-md-6"><label>Người được phân công</label><div id="v_assigned_to" class="form-control-plaintext"></div></div>
           <div class="col-12"><label>Giải pháp</label><textarea id="v_resolution" class="form-control" rows="3" readonly></textarea></div>
           <div class="col-12 d-flex align-items-center justify-content-between">
@@ -904,57 +959,23 @@
         console.error('Error setting created date:', e);
       }
     }
-    // Format deadline input với dd/MM/yyyy và set mặc định là ngày hiện tại
+    // Set min date và giá trị mặc định cho deadline input (date picker)
     if (deadlineInput) {
-      // Set giá trị mặc định là ngày hiện tại
       try {
-        var d = new Date();
-        var dd = String(d.getDate()).padStart(2, '0');
-        var mm = String(d.getMonth() + 1).padStart(2, '0');
-        var yyyy = d.getFullYear();
-        var formattedDeadline = dd + '/' + mm + '/' + yyyy;
-        deadlineInput.value = formattedDeadline;
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        var todayStr = yyyy + '-' + mm + '-' + dd;
+        
+        // Set min attribute để không cho chọn ngày quá khứ
+        deadlineInput.setAttribute('min', todayStr);
+        
+        // Set giá trị mặc định là ngày hiện tại
+        deadlineInput.value = todayStr;
       } catch(e) {
-        console.error('Error setting default deadline:', e);
+        console.error('Error setting deadline date picker:', e);
       }
-      
-      // Thêm event listener để format tự động
-      deadlineInput.addEventListener('input', function(e) {
-        var value = e.target.value.replace(/\D/g, ''); // Chỉ giữ số
-        if (value.length >= 2) {
-          value = value.substring(0, 2) + '/' + value.substring(2);
-        }
-        if (value.length >= 5) {
-          value = value.substring(0, 5) + '/' + value.substring(5, 9);
-        }
-        e.target.value = value;
-      });
-      
-      // Validate format khi blur
-      deadlineInput.addEventListener('blur', function(e) {
-        var value = e.target.value;
-        if (value && value.length === 10) {
-          var parts = value.split('/');
-          if (parts.length === 3) {
-            var day = parseInt(parts[0], 10);
-            var month = parseInt(parts[1], 10);
-            var year = parseInt(parts[2], 10);
-            var date = new Date(year, month - 1, day);
-            if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-              alert('Ngày không hợp lệ! Vui lòng nhập đúng định dạng dd/MM/yyyy');
-              e.target.value = '';
-            } else {
-              // Kiểm tra không được là ngày quá khứ
-              var today = new Date();
-              today.setHours(0, 0, 0, 0);
-              if (date < today) {
-                alert('Ngày deadline không được là ngày quá khứ!');
-                e.target.value = '';
-              }
-            }
-          }
-        }
-      });
     }
     try {
       var d = new Date();
@@ -1073,16 +1094,21 @@
                 console.error('Error setting created date:', e);
               }
             }
-            // Set deadline field mặc định là ngày hiện tại khi mở modal
+            // Set deadline field mặc định là ngày hiện tại khi mở modal (date picker format: yyyy-MM-dd)
             const deadlineInp = document.getElementById('deadline');
             if (deadlineInp) {
               try {
-                var d = new Date();
-                var dd = String(d.getDate()).padStart(2, '0');
-                var mm = String(d.getMonth() + 1).padStart(2, '0');
-                var yyyy = d.getFullYear();
-                var formattedDeadline = dd + '/' + mm + '/' + yyyy;
-                deadlineInp.value = formattedDeadline;
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                var todayStr = yyyy + '-' + mm + '-' + dd;
+                
+                // Set min attribute để không cho chọn ngày quá khứ
+                deadlineInp.setAttribute('min', todayStr);
+                
+                // Set giá trị mặc định là ngày hiện tại
+                deadlineInp.value = todayStr;
               } catch(e) {
                 console.error('Error setting deadline:', e);
                 deadlineInp.value = '';
@@ -1113,6 +1139,49 @@
             });
           });
       });
+      
+      // Xử lý chuyển đổi giữa 2 loại form
+      const requestTypeContract = document.getElementById('requestTypeContract');
+      const requestTypeExternal = document.getElementById('requestTypeExternal');
+      const formWithContract = document.getElementById('formWithContract');
+      const formExternal = document.getElementById('formExternal');
+      
+      function switchFormType() {
+        const isContract = requestTypeContract.checked;
+        if (isContract) {
+          formWithContract.style.display = 'block';
+          formExternal.style.display = 'none';
+        } else {
+          formWithContract.style.display = 'none';
+          formExternal.style.display = 'block';
+        }
+      }
+      
+      if (requestTypeContract) {
+        requestTypeContract.addEventListener('change', switchFormType);
+      }
+      if (requestTypeExternal) {
+        requestTypeExternal.addEventListener('change', switchFormType);
+      }
+      
+      // Reset form khi mở modal
+      const modalEl = document.getElementById('supportModal');
+      if (modalEl) {
+        modalEl.addEventListener('show.bs.modal', function(){
+          // Reset về form có hợp đồng
+          if (requestTypeContract) requestTypeContract.checked = true;
+          if (requestTypeExternal) requestTypeExternal.checked = false;
+          switchFormType();
+          
+          // Reset các trường
+          if (document.getElementById('externalProductName')) {
+            document.getElementById('externalProductName').value = '';
+          }
+          if (document.getElementById('categoryExternal')) {
+            document.getElementById('categoryExternal').value = 'technical';
+          }
+        });
+      }
     } catch (e) {}
     const tbody = document.getElementById('supportRows');
     const pagerContainer = document.querySelector('.pagination.custom-pagination');
@@ -1412,23 +1481,38 @@
       e.preventDefault();
       const form = e.target;
       
-      // Validation: Kiểm tra hợp đồng và sản phẩm
-      const cSel = document.getElementById('contractSelect');
-      const pSel = document.getElementById('contractProductSelect');
+      // Xác định loại form được chọn
+      const requestTypeContract = document.getElementById('requestTypeContract');
+      const isContractType = requestTypeContract && requestTypeContract.checked;
+      
       const subject = document.getElementById('subject').value || '';
       const description = document.getElementById('description').value || '';
       
-      // Kiểm tra các trường bắt buộc
-      if (!cSel || !cSel.value || cSel.value.trim() === '') {
-        showSuccessModal('Lỗi', 'Vui lòng chọn hợp đồng trước khi tạo yêu cầu hỗ trợ!');
-        return;
+      // Validation theo loại form
+      if (isContractType) {
+        // Form có hợp đồng
+        const cSel = document.getElementById('contractSelect');
+        const pSel = document.getElementById('contractProductSelect');
+        
+        if (!cSel || !cSel.value || cSel.value.trim() === '') {
+          showSuccessModal('Lỗi', 'Vui lòng chọn hợp đồng trước khi tạo yêu cầu hỗ trợ!');
+          return;
+        }
+        
+        if (!pSel || !pSel.value || pSel.value.trim() === '') {
+          showSuccessModal('Lỗi', 'Vui lòng chọn sản phẩm trong hợp đồng trước khi tạo yêu cầu hỗ trợ!');
+          return;
+        }
+      } else {
+        // Form sản phẩm ngoài
+        const externalProductName = document.getElementById('externalProductName');
+        if (!externalProductName || !externalProductName.value || externalProductName.value.trim() === '') {
+          showSuccessModal('Lỗi', 'Vui lòng nhập tên sản phẩm muốn sửa chữa!');
+          return;
+        }
       }
       
-      if (!pSel || !pSel.value || pSel.value.trim() === '') {
-        showSuccessModal('Lỗi', 'Vui lòng chọn sản phẩm trong hợp đồng trước khi tạo yêu cầu hỗ trợ!');
-        return;
-      }
-      
+      // Kiểm tra các trường chung
       if (!subject || subject.trim() === '') {
         showSuccessModal('Lỗi', 'Vui lòng nhập tiêu đề yêu cầu hỗ trợ!');
         return;
@@ -1440,38 +1524,49 @@
       }
       
       const data = new URLSearchParams();
-      const baseDesc = description;
-      // Lưu hợp đồng/sản phẩm vào mô tả để hiển thị lại ở chi tiết (danh sách sẽ ẩn các tiền tố này)
-      const cHas = cSel && cSel.value;
-      const pHas = pSel && pSel.value;
-      let composed = baseDesc;
-      if (cHas) {
-        const cText = cSel.options[cSel.selectedIndex].textContent;
-        composed = '[Hợp đồng: ' + cText + '] ' + composed;
+      let composed = description;
+      let category = 'general';
+      
+      if (isContractType) {
+        // Form có hợp đồng
+        const cSel = document.getElementById('contractSelect');
+        const pSel = document.getElementById('contractProductSelect');
+        
+        // Lưu hợp đồng/sản phẩm vào mô tả để hiển thị lại ở chi tiết
+        if (cSel && cSel.value) {
+          const cText = cSel.options[cSel.selectedIndex].textContent;
+          composed = '[Hợp đồng: ' + cText + '] ' + composed;
+        }
+        if (pSel && pSel.value) {
+          const pText = pSel.options[pSel.selectedIndex].textContent;
+          composed = '[Sản phẩm: ' + pText + '] ' + composed;
+        }
+        
+        category = document.getElementById('category').value || 'general';
+      } else {
+        // Form sản phẩm ngoài
+        const externalProductName = document.getElementById('externalProductName');
+        if (externalProductName && externalProductName.value) {
+          const productName = externalProductName.value.trim();
+          composed = '[Sản phẩm ngoài: ' + productName + '] ' + composed;
+        }
+        
+        category = document.getElementById('categoryExternal').value || 'technical';
       }
-      if (pHas) {
-        const pText = pSel.options[pSel.selectedIndex].textContent;
-        composed = '[Sản phẩm: ' + pText + '] ' + composed;
-      }
+      
       data.append('action', 'createSupportRequest');
       data.append('subject', subject);
       data.append('description', composed);
-      data.append('category', document.getElementById('category').value || 'general');
-      data.append('priority', 'medium'); // Set priority mặc định
-      // Thêm deadline nếu có - convert từ dd/MM/yyyy sang yyyy-MM-dd
+      data.append('category', category);
+      
+      // Lấy priority từ form
+      const prioritySelect = document.getElementById('priority');
+      const priority = prioritySelect ? (prioritySelect.value || 'medium') : 'medium';
+      data.append('priority', priority);
+      // Thêm deadline nếu có - date input trả về yyyy-MM-dd rồi, không cần convert
       const deadlineInp = document.getElementById('deadline');
       if (deadlineInp && deadlineInp.value && deadlineInp.value.trim() !== '') {
         var deadlineValue = deadlineInp.value.trim();
-        // Convert từ dd/MM/yyyy sang yyyy-MM-dd
-        if (deadlineValue.includes('/')) {
-          var parts = deadlineValue.split('/');
-          if (parts.length === 3) {
-            var day = parts[0].padStart(2, '0');
-            var month = parts[1].padStart(2, '0');
-            var year = parts[2];
-            deadlineValue = year + '-' + month + '-' + day;
-          }
-        }
         console.log('DEBUG: Sending deadline:', deadlineValue);
         data.append('deadline', deadlineValue);
       } else {
@@ -1507,21 +1602,42 @@
             const catSel = document.getElementById('category');
             const cSel2 = document.getElementById('contractSelect');
             const pSel2 = document.getElementById('contractProductSelect');
+            const externalProductName = document.getElementById('externalProductName');
+            const categoryExternal = document.getElementById('categoryExternal');
+            
             if (subjInp) subjInp.value = '';
             if (descInp) descInp.value = '';
             if (catSel) catSel.value = 'general';
             if (cSel2) cSel2.selectedIndex = 0;
             if (pSel2) { pSel2.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; pSel2.disabled = true; }
-            // Reset deadline field về ngày hiện tại sau khi tạo thành công
+            if (externalProductName) externalProductName.value = '';
+            if (categoryExternal) categoryExternal.value = 'technical';
+            
+            // Reset priority về medium
+            const prioritySelect = document.getElementById('priority');
+            if (prioritySelect) prioritySelect.value = 'medium';
+            
+            // Reset về form có hợp đồng
+            const requestTypeContract = document.getElementById('requestTypeContract');
+            const requestTypeExternal = document.getElementById('requestTypeExternal');
+            if (requestTypeContract) requestTypeContract.checked = true;
+            if (requestTypeExternal) requestTypeExternal.checked = false;
+            
+            // Gọi lại hàm switchFormType nếu có
+            const formWithContract = document.getElementById('formWithContract');
+            const formExternal = document.getElementById('formExternal');
+            if (formWithContract) formWithContract.style.display = 'block';
+            if (formExternal) formExternal.style.display = 'none';
+            // Reset deadline field về ngày hiện tại sau khi tạo thành công (date picker format: yyyy-MM-dd)
             const deadlineInp = document.getElementById('deadline');
             if (deadlineInp) {
               try {
-                var d = new Date();
-                var dd = String(d.getDate()).padStart(2, '0');
-                var mm = String(d.getMonth() + 1).padStart(2, '0');
-                var yyyy = d.getFullYear();
-                var formattedDeadline = dd + '/' + mm + '/' + yyyy;
-                deadlineInp.value = formattedDeadline;
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                var todayStr = yyyy + '-' + mm + '-' + dd;
+                deadlineInp.value = todayStr;
               } catch(e) {
                 deadlineInp.value = '';
               }
@@ -1595,7 +1711,9 @@
       
       function displayTicketDetail(ticketData) {
       document.getElementById('v_ticket').textContent = ticketData.ticketNumber || '';
-      document.getElementById('v_status').textContent = ticketData.status || '';
+      // Hiển thị trạng thái bằng tiếng Việt
+      const statusText = getStatusText(ticketData.status || 'pending');
+      document.getElementById('v_status').textContent = statusText;
       // fill editable inputs
       var catInp = document.getElementById('v_category_inp');
       var priInp = document.getElementById('v_priority_inp');
@@ -1603,33 +1721,60 @@
       var desInp = document.getElementById('v_description_inp');
       var vContract = document.getElementById('v_contract_select');
       var vProduct = document.getElementById('v_product_select');
+      var vExternalProduct = document.getElementById('v_external_product');
       var vDeadline = document.getElementById('v_deadline');
       if (catInp) catInp.value = (ticketData.category||'general');
       if (priInp) priInp.value = (ticketData.priority ? ticketData.priority : '');
       if (subInp) subInp.value = (ticketData.subject||'');
-      if (desInp) desInp.value = (ticketData.description||'');
-      // Hiển thị deadline - convert từ yyyy-MM-dd sang dd/MM/yyyy
+      
+      // Lưu description gốc (có prefix) để parse hợp đồng/sản phẩm
+      var originalDescription = ticketData.description || '';
+      
+      // Loại bỏ các prefix [Sản phẩm: ...], [Hợp đồng: ...], [Sản phẩm ngoài: ...] khi hiển thị
+      let cleanDescription = originalDescription;
+      if (cleanDescription) {
+        // Loại bỏ [Sản phẩm: ...]
+        cleanDescription = cleanDescription.replace(/\[Sản phẩm:[^\]]+\]\s*/g, '');
+        // Loại bỏ [Hợp đồng: ...]
+        cleanDescription = cleanDescription.replace(/\[Hợp đồng:[^\]]+\]\s*/g, '');
+        // Loại bỏ [Sản phẩm ngoài: ...]
+        cleanDescription = cleanDescription.replace(/\[Sản phẩm ngoài:[^\]]+\]\s*/g, '');
+        // Loại bỏ khoảng trắng thừa ở đầu và cuối
+        cleanDescription = cleanDescription.trim();
+      }
+      
+      // Hiển thị description đã làm sạch trong textarea
+      if (desInp) desInp.value = cleanDescription;
+      // Hiển thị deadline - date input cần format yyyy-MM-dd
       if (vDeadline) {
         console.log('DEBUG: ticketData.deadline =', ticketData.deadline);
+        
+        // Set min attribute để không cho chọn ngày quá khứ
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        var todayStr = yyyy + '-' + mm + '-' + dd;
+        vDeadline.setAttribute('min', todayStr);
+        
         if (ticketData.deadline) {
           var deadlineValue = ticketData.deadline;
-          // Convert từ yyyy-MM-dd sang dd/MM/yyyy
+          // Convert sang yyyy-MM-dd nếu cần
           if (typeof deadlineValue === 'string') {
-            if (deadlineValue.includes('-')) {
-              // Format yyyy-MM-dd
-              var parts = deadlineValue.split('-');
+            if (deadlineValue.includes('/')) {
+              // Convert từ dd/MM/yyyy hoặc yyyy/MM/dd sang yyyy-MM-dd
+              var parts = deadlineValue.split('/');
               if (parts.length === 3) {
-                deadlineValue = parts[2] + '/' + parts[1] + '/' + parts[0];
-              }
-            } else if (deadlineValue.includes('/')) {
-              // Đã là dd/MM/yyyy, giữ nguyên
-              // Nhưng kiểm tra xem có phải yyyy/MM/dd không
-              var testParts = deadlineValue.split('/');
-              if (testParts.length === 3 && testParts[0].length === 4) {
-                // Là yyyy/MM/dd, convert sang dd/MM/yyyy
-                deadlineValue = testParts[2] + '/' + testParts[1] + '/' + testParts[0];
+                if (parts[0].length === 4) {
+                  // yyyy/MM/dd
+                  deadlineValue = parts[0] + '-' + parts[1].padStart(2, '0') + '-' + parts[2].padStart(2, '0');
+                } else {
+                  // dd/MM/yyyy
+                  deadlineValue = parts[2] + '-' + parts[1].padStart(2, '0') + '-' + parts[0].padStart(2, '0');
+                }
               }
             }
+            // Nếu đã là yyyy-MM-dd thì giữ nguyên
             vDeadline.value = deadlineValue;
           } else {
             vDeadline.value = deadlineValue;
@@ -1711,7 +1856,7 @@
       // reset edit state
       const enable = document.getElementById('v_enable_edit');
       const saveBtn = document.getElementById('v_save_btn');
-      [catInp, priInp, subInp, desInp, vDeadline].forEach(function(el){ if(el){ el.disabled = true; }});
+      [catInp, priInp, subInp, desInp, vDeadline, vExternalProduct].forEach(function(el){ if(el){ el.disabled = true; }});
       if (enable) enable.checked = false;
       if (saveBtn) saveBtn.disabled = true;
       
@@ -1746,10 +1891,17 @@
               opt.textContent = (c.contractNumber ? (c.contractNumber + ' - ') : '') + (c.title || ('HĐ #' + c.id));
               vContract.appendChild(opt);
             });
-            // Try detect from description pattern [Hợp đồng: ...] [Sản phẩm: ...]
-            var desc = desInp ? desInp.value : '';
+            // Try detect from description pattern [Hợp đồng: ...] [Sản phẩm: ...] [Sản phẩm ngoài: ...]
+            // Sử dụng originalDescription (có prefix) thay vì desInp.value (đã bị làm sạch)
+            var desc = originalDescription || '';
             var contractLabel = (desc.match(/\[Hợp đồng:([^\]]+)\]/) || [])[1];
             var productLabel = (desc.match(/\[Sản phẩm:([^\]]+)\]/) || [])[1];
+            var externalProductLabel = (desc.match(/\[Sản phẩm ngoài:([^\]]+)\]/) || [])[1];
+            
+            // Hiển thị sản phẩm ngoài nếu có
+            if (vExternalProduct && externalProductLabel) {
+              vExternalProduct.value = externalProductLabel.trim();
+            }
             if (contractLabel) {
               for (var i=0;i<vContract.options.length;i++) {
                 if (vContract.options[i].textContent.indexOf(contractLabel.trim()) !== -1) {
@@ -1782,54 +1934,23 @@
       } catch(e) {}
       
       // Attach handlers for edit functionality
-      attachEditHandlers(ticketData.id, ticketData.status, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn, vm);
+      attachEditHandlers(ticketData.id, ticketData.status, catInp, priInp, subInp, desInp, vContract, vProduct, vExternalProduct, enable, saveBtn, vm);
       }
       
-      function attachEditHandlers(ticketId, ticketStatus, catInp, priInp, subInp, desInp, vContract, vProduct, enable, saveBtn, vm) {
+      function attachEditHandlers(ticketId, ticketStatus, catInp, priInp, subInp, desInp, vContract, vProduct, vExternalProduct, enable, saveBtn, vm) {
       // Kiểm tra trạng thái để quyết định có cho phép chỉnh sửa không
       const finalStatus = cancelledItems.has(String(ticketId)) ? 'cancelled' : (ticketStatus || 'pending');
       const canEdit = finalStatus === 'pending' || finalStatus === 'open';
       const vDeadline = document.getElementById('v_deadline');
       
-      // Thêm event listener cho deadline format tự động
+      // Set min attribute cho deadline date picker để không cho chọn ngày quá khứ
       if (vDeadline) {
-        // Format tự động khi nhập
-        vDeadline.addEventListener('input', function(e) {
-          var value = e.target.value.replace(/\D/g, ''); // Chỉ giữ số
-          if (value.length >= 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2);
-          }
-          if (value.length >= 5) {
-            value = value.substring(0, 5) + '/' + value.substring(5, 9);
-          }
-          e.target.value = value;
-        });
-        
-        // Validate format khi blur
-        vDeadline.addEventListener('blur', function(e) {
-          var value = e.target.value;
-          if (value && value.length === 10) {
-            var parts = value.split('/');
-            if (parts.length === 3) {
-              var day = parseInt(parts[0], 10);
-              var month = parseInt(parts[1], 10);
-              var year = parseInt(parts[2], 10);
-              var date = new Date(year, month - 1, day);
-              if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-                alert('Ngày không hợp lệ! Vui lòng nhập đúng định dạng dd/MM/yyyy');
-                e.target.value = '';
-              } else {
-                // Kiểm tra không được là ngày quá khứ
-                var today = new Date();
-                today.setHours(0, 0, 0, 0);
-                if (date < today) {
-                  alert('Ngày deadline không được là ngày quá khứ!');
-                  e.target.value = '';
-                }
-              }
-            }
-          }
-        });
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        var todayStr = yyyy + '-' + mm + '-' + dd;
+        vDeadline.setAttribute('min', todayStr);
       }
       
       // attach handlers
@@ -1841,9 +1962,8 @@
             return;
           }
           var on = !!enable.checked;
-          // chỉnh sửa loại yêu cầu, tiêu đề, mô tả, deadline
-          [catInp, subInp, desInp, vDeadline].forEach(function(el){ if(el){ el.disabled = !on; }});
-          if (priInp) priInp.disabled = true;
+          // chỉnh sửa loại yêu cầu, tiêu đề, mô tả, deadline, priority, sản phẩm ngoài
+          [catInp, subInp, desInp, vDeadline, priInp, vExternalProduct].forEach(function(el){ if(el){ el.disabled = !on; }});
           if (saveBtn) saveBtn.disabled = !on;
           // Cho phép chọn hợp đồng/sản phẩm khi bật chỉnh sửa
           if (vContract) vContract.disabled = !on;
@@ -1874,48 +1994,76 @@
       }
       if (saveBtn) {
         saveBtn.onclick = function(){
-          // Validate: require both contract and product selections when editing
-          if (!vContract || !vProduct) return;
-          var hasContract = vContract.value && vContract.value.trim() !== '';
-          var hasProduct = vProduct.value && vProduct.value.trim() !== '';
-          if (!hasContract || !hasProduct) {
-            alert('Vui lòng chọn Hợp đồng và Sản phẩm trong hợp đồng trước khi lưu.');
+          // Validate: phải thỏa mãn CHỈ 1 trong 2 điều kiện (không được cả hai):
+          // 1. Có chọn Hợp đồng VÀ Sản phẩm trong hợp đồng
+          // 2. HOẶC có nhập Sản phẩm ngoài
+          var hasContract = vContract && vContract.value && vContract.value.trim() !== '';
+          var hasProduct = vProduct && vProduct.value && vProduct.value.trim() !== '';
+          var hasExternalProduct = vExternalProduct && vExternalProduct.value && vExternalProduct.value.trim() !== '';
+          
+          var condition1 = hasContract && hasProduct; // Có hợp đồng và sản phẩm
+          var condition2 = hasExternalProduct; // Có sản phẩm ngoài
+          
+          // Kiểm tra: Nếu có chọn hợp đồng nhưng không chọn sản phẩm
+          if (hasContract && !hasProduct) {
+            alert('Vui lòng chọn Sản phẩm trong hợp đồng hoặc bỏ chọn Hợp đồng và chỉ nhập Sản phẩm ngoài.');
+            return;
+          }
+          
+          // Kiểm tra: Nếu có chọn hợp đồng (dù có sản phẩm hay không) VÀ có sản phẩm ngoài
+          if (hasContract && hasExternalProduct) {
+            alert('Vui lòng chỉ chọn một trong hai: (Hợp đồng và Sản phẩm trong hợp đồng) HOẶC (Sản phẩm ngoài). Không được chọn cả hai!');
+            return;
+          }
+          
+          // Kiểm tra không có điều kiện nào
+          if (!condition1 && !condition2) {
+            alert('Vui lòng chọn Hợp đồng và Sản phẩm trong hợp đồng hoặc thêm Sản phẩm ngoài trước khi lưu.');
             return;
           }
           const data = new URLSearchParams();
-          // Ghép thông tin hợp đồng/sản phẩm vào mô tả giống form tạo mới
+          // Ghép thông tin hợp đồng/sản phẩm HOẶC sản phẩm ngoài vào mô tả (chỉ một trong hai)
           var baseDesc = desInp.value || '';
           try {
-            baseDesc = baseDesc.replace(/\[Hợp đồng:[^\]]+\]\s*/,'').replace(/\[Sản phẩm:[^\]]+\]\s*/,'').trim();
+            // Loại bỏ tất cả các prefix cũ
+            baseDesc = baseDesc.replace(/\[Hợp đồng:[^\]]+\]\s*/g,'')
+                               .replace(/\[Sản phẩm:[^\]]+\]\s*/g,'')
+                               .replace(/\[Sản phẩm ngoài:[^\]]+\]\s*/g,'')
+                               .trim();
           } catch(e) {}
           var composed = baseDesc;
-          if (vContract && vContract.value) {
-            var cText = vContract.options[vContract.selectedIndex].textContent;
-            composed = '[Hợp đồng: ' + cText + '] ' + composed;
-          }
-          if (vProduct && vProduct.value) {
-            var pText = vProduct.options[vProduct.selectedIndex].textContent;
-            composed = '[Sản phẩm: ' + pText + '] ' + composed;
+          
+          // Chỉ lưu một trong hai: hợp đồng+sản phẩm HOẶC sản phẩm ngoài
+          if (condition1) {
+            // Có hợp đồng và sản phẩm - lưu hợp đồng và sản phẩm
+            if (vContract && vContract.value) {
+              var cText = vContract.options[vContract.selectedIndex].textContent;
+              composed = '[Hợp đồng: ' + cText + '] ' + composed;
+            }
+            if (vProduct && vProduct.value) {
+              var pText = vProduct.options[vProduct.selectedIndex].textContent;
+              composed = '[Sản phẩm: ' + pText + '] ' + composed;
+            }
+          } else if (condition2) {
+            // Có sản phẩm ngoài - chỉ lưu sản phẩm ngoài
+            if (vExternalProduct && vExternalProduct.value && vExternalProduct.value.trim() !== '') {
+              var externalProductName = vExternalProduct.value.trim();
+              composed = '[Sản phẩm ngoài: ' + externalProductName + '] ' + composed;
+            }
           }
           data.append('action', 'createSupportRequest');
           data.append('subject', subInp.value || '');
           data.append('description', composed);
           data.append('category', catInp.value || 'general');
-          data.append('priority', 'medium');
+          
+          // Lấy priority từ form
+          const priority = priInp ? (priInp.value || 'medium') : 'medium';
+          data.append('priority', priority);
+          
           data.append('delete_old_id', ticketId); // thêm ID để xóa bản cũ
-          // Thêm deadline nếu có - convert từ dd/MM/yyyy sang yyyy-MM-dd
+          // Thêm deadline nếu có - date input trả về yyyy-MM-dd rồi, không cần convert
           if (vDeadline && vDeadline.value && vDeadline.value.trim() !== '') {
             var deadlineValue = vDeadline.value.trim();
-            // Convert từ dd/MM/yyyy sang yyyy-MM-dd
-            if (deadlineValue.includes('/')) {
-              var parts = deadlineValue.split('/');
-              if (parts.length === 3) {
-                var day = parts[0].padStart(2, '0');
-                var month = parts[1].padStart(2, '0');
-                var year = parts[2];
-                deadlineValue = year + '-' + month + '-' + day;
-              }
-            }
             data.append('deadline', deadlineValue);
           }
           fetch(ctx + '/api/support-customer', {
