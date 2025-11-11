@@ -673,6 +673,31 @@ public class ContractDAO extends DBConnect {
         
         return contractProducts;
     }
+    
+    /**
+     * Cập nhật trạng thái hợp đồng
+     * Tác giả: Sơn Lê
+     * @param contractId ID của hợp đồng
+     * @param status Trạng thái mới
+     * @return true nếu cập nhật thành công, false nếu có lỗi
+     */
+    public boolean updateContractStatus(int contractId, String status) {
+        if (!checkConnection()) {
+            return false;
+        }
+        
+        String sql = "UPDATE contracts SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, contractId);
+            int rowsAffected = ps.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error updating contract status for contract ID: " + contractId, e);
+            return false;
+        }
+    }
 }
 
 

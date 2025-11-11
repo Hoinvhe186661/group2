@@ -285,11 +285,8 @@
                                                     <label for="filterContractStatus">Trạng thái:</label>
                                                     <select class="form-control" id="filterContractStatus">
                                                         <option value="">Tất cả trạng thái</option>
-                                                        <option value="draft">Nháp</option>
-                                                        <option value="active">Đang hoạt động</option>
-                                                        <option value="completed">Hoàn thành</option>
-                                                        <option value="terminated">Chấm dứt</option>
-                                                        <option value="expired">Hết hạn</option>
+                                                        <option value="pending_approval">Chờ duyệt</option>
+                                                        <option value="approved">Đã duyệt</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -407,6 +404,27 @@
                         <i class="fa fa-history"></i> Xem lịch sử
                     </a>
                     <button class="btn btn-primary" data-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal xem chi tiết hợp đồng -->
+    <div class="modal fade" id="viewContractModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Chi tiết hợp đồng</h4>
+                </div>
+                <div class="modal-body" id="viewContractContent">
+                    <div class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="approveContractBtn" style="display:none;" onclick="approveContract($('#viewContractModal').data('contract-id'))">
+                        <i class="fa fa-check"></i> Duyệt hợp đồng
+                    </button>
+                    <button type="button" class="btn btn-primary" data-dismiss="modal">Đóng</button>
                 </div>
             </div>
         </div>
@@ -666,6 +684,8 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
+                        console.log('Contracts loaded:', response.data);
+                        console.log('Total contracts:', response.totalCount);
                         updateContractsTable(response.data);
                         updatePaginationInfo(response);
                     } else {
@@ -747,15 +767,44 @@
             tbody.empty();
             
             if (data.length === 0) {
-                tbody.append('<tr><td colspan="11" class="text-center">Không có dữ liệu</td></tr>');
+                tbody.append('<tr><td colspan="11" class="text-center text-muted">' +
+                    '<i class="fa fa-info-circle"></i> Không có hợp đồng chờ duyệt hoặc đã duyệt nào</td></tr>');
                 return;
             }
             
             data.forEach(function(contract) {
+                // Debug: log trạng thái của từng hợp đồng
+                console.log('Contract ID:', contract.id, 'Status:', contract.status);
+                
                 var statusBadge = getStatusBadge(contract.status);
                 var contractValue = contract.contractValue != null && contract.contractValue !== 'null' 
                     ? formatCurrencyVN(contract.contractValue) + ' VNĐ' 
                     : '--';
+                
+                // Tạo nút thao tác dựa vào trạng thái
+                var actionButtons = '';
+                var contractStatus = contract.status || '';
+                
+                if (contractStatus === 'pending_approval') {
+                    // Hợp đồng chờ duyệt: chỉ có nút Xem
+                    actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
+                        '<i class="fa fa-eye"></i> Xem' +
+                    '</button>';
+                } else if (contractStatus === 'approved') {
+                    // Hợp đồng đã duyệt: có nút Xem và nút Xuất kho
+                    actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
+                        '<i class="fa fa-eye"></i> Xem' +
+                    '</button> ' +
+                    '<button class="btn btn-danger btn-xs" onclick="exportStockForContract(' + contract.id + ')" title="Xuất kho">' +
+                        '<i class="fa fa-arrow-up"></i> Xuất kho' +
+                    '</button>';
+                } else {
+                    // Các trạng thái khác: chỉ có nút Xem (fallback)
+                    console.warn('Unknown contract status:', contractStatus, 'for contract ID:', contract.id);
+                    actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
+                        '<i class="fa fa-eye"></i> Xem' +
+                    '</button>';
+                }
                 
                 var row = '<tr>' +
                     '<td>' + contract.id + '</td>' +
@@ -768,11 +817,7 @@
                     '<td>' + (contract.endDate || '--') + '</td>' +
                     '<td>' + contractValue + '</td>' +
                     '<td>' + statusBadge + '</td>' +
-                    '<td>' +
-                        '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
-                            '<i class="fa fa-eye"></i> Xem' +
-                        '</button>' +
-                    '</td>' +
+                    '<td>' + actionButtons + '</td>' +
                 '</tr>';
                 tbody.append(row);
             });
@@ -784,12 +829,20 @@
             var statusText = status;
             
             switch(status) {
+                case 'pending_approval':
+                    badgeClass = 'label-warning';
+                    statusText = 'Chờ duyệt';
+                    break;
+                case 'approved':
+                    badgeClass = 'label-success';
+                    statusText = 'Đã duyệt';
+                    break;
                 case 'draft':
                     badgeClass = 'label-default';
                     statusText = 'Nháp';
                     break;
                 case 'active':
-                    badgeClass = 'label-success';
+                    badgeClass = 'label-info';
                     statusText = 'Đang hoạt động';
                     break;
                 case 'completed':
@@ -809,9 +862,406 @@
             return '<span class="label ' + badgeClass + '">' + statusText + '</span>';
         }
         
-        // Xem chi tiết hợp đồng
+        // Xem chi tiết hợp đồng - hiển thị modal với danh sách sản phẩm và kiểm tra kho
         function viewContract(contractId) {
-            window.location.href = '<%=request.getContextPath()%>/contracts.jsp?id=' + contractId;
+            if (!contractId || contractId <= 0) {
+                alert('ID hợp đồng không hợp lệ');
+                return;
+            }
+            
+            // Load chi tiết hợp đồng
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { action: 'getContractDetails', contractId: contractId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var data = response.data;
+                        var products = data.products || [];
+                        
+                        // Tạo HTML cho bảng sản phẩm
+                        var productsHtml = '';
+                        var insufficientProducts = [];
+                        
+                        if (products.length === 0) {
+                            productsHtml = '<tr><td colspan="7" class="text-center text-muted">Hợp đồng chưa có sản phẩm</td></tr>';
+                        } else {
+                            products.forEach(function(product, index) {
+                                var isAvailable = product.available === true;
+                                var requiredQty = product.quantity || 0;
+                                var availableQty = product.totalStock || 0;
+                                var shortage = requiredQty - availableQty;
+                                
+                                // Lưu danh sách sản phẩm không đủ
+                                if (!isAvailable) {
+                                    insufficientProducts.push({
+                                        name: product.productName || '',
+                                        required: requiredQty,
+                                        available: availableQty,
+                                        shortage: shortage
+                                    });
+                                }
+                                
+                                // Tạo badge và màu nền cho hàng
+                                var availableBadge = isAvailable 
+                                    ? '<span class="label label-success"><i class="fa fa-check"></i> Đủ</span>' 
+                                    : '<span class="label label-danger"><i class="fa fa-times"></i> Thiếu</span>';
+                                
+                                // Màu nền cho hàng không đủ
+                                var rowClass = isAvailable ? '' : 'danger';
+                                var rowStyle = isAvailable ? '' : 'background-color: #f2dede;';
+                                
+                                productsHtml += '<tr class="' + rowClass + '" style="' + rowStyle + '">' +
+                                    '<td>' + (index + 1) + '</td>' +
+                                    '<td><strong>' + escapeHtml(product.productCode || '') + '</strong></td>' +
+                                    '<td><strong>' + escapeHtml(product.productName || '') + '</strong></td>' +
+                                    '<td>' + escapeHtml(product.unit || '') + '</td>' +
+                                    '<td style="text-align: right;"><strong>' + requiredQty + '</strong></td>' +
+                                    '<td style="text-align: right;">' + availableQty + '</td>' +
+                                    '<td style="text-align: center;">' + availableBadge;
+                                
+                                // Hiển thị số lượng thiếu nếu không đủ
+                                if (!isAvailable) {
+                                    productsHtml += '<br/><small class="text-danger">Thiếu: <strong>' + shortage + '</strong></small>';
+                                }
+                                
+                                productsHtml += '</td></tr>';
+                            });
+                        }
+                        
+                        // Tạo nội dung modal
+                        var modalContent = '<div class="row">' +
+                            '<div class="col-md-12">' +
+                                '<h4>Hợp đồng: ' + escapeHtml(data.contractNumber || '') + '</h4>' +
+                                '<p><strong>Khách hàng:</strong> ' + escapeHtml(data.customerName || '') + '</p>' +
+                                '<p><strong>Trạng thái:</strong> ' + getStatusBadge(data.status) + '</p>' +
+                            '</div>' +
+                        '</div>' +
+                        '<hr/>' +
+                        '<h5>Danh sách sản phẩm</h5>' +
+                        '<div class="table-responsive">' +
+                            '<table class="table table-bordered table-hover">' +
+                                '<thead>' +
+                                    '<tr>' +
+                                        '<th style="width: 50px;">STT</th>' +
+                                        '<th>Mã sản phẩm</th>' +
+                                        '<th>Tên sản phẩm</th>' +
+                                        '<th>Đơn vị</th>' +
+                                        '<th style="text-align: right;">Số lượng cần</th>' +
+                                        '<th style="text-align: right;">Tồn kho</th>' +
+                                        '<th style="text-align: center;">Trạng thái</th>' +
+                                    '</tr>' +
+                                '</thead>' +
+                                '<tbody>' + productsHtml + '</tbody>' +
+                            '</table>' +
+                        '</div>';
+                        
+                        // Hiển thị thông báo validation
+                        if (data.status === 'pending_approval') {
+                            if (data.allProductsAvailable) {
+                                // Tất cả sản phẩm đều đủ
+                                modalContent += '<div class="alert alert-success" style="margin-top: 15px;">' +
+                                    '<i class="fa fa-check-circle"></i> <strong>✓ Validation thành công!</strong><br/>' +
+                                    'Tất cả sản phẩm đều đủ trong kho. Bạn có thể duyệt hợp đồng.' +
+                                '</div>';
+                            } else {
+                                // Có sản phẩm không đủ - hiển thị chi tiết
+                                var insufficientList = '';
+                                insufficientProducts.forEach(function(p) {
+                                    insufficientList += '<li><strong>' + escapeHtml(p.name) + '</strong>: ' +
+                                        'Cần <span class="text-danger"><strong>' + p.required + '</strong></span>, ' +
+                                        'Có <span class="text-warning"><strong>' + p.available + '</strong></span>, ' +
+                                        'Thiếu <span class="text-danger"><strong>' + p.shortage + '</strong></span></li>';
+                                });
+                                
+                                modalContent += '<div class="alert alert-danger" style="margin-top: 15px;">' +
+                                    '<i class="fa fa-exclamation-triangle"></i> <strong>✗ Validation thất bại!</strong><br/>' +
+                                    '<strong>Không thể duyệt hợp đồng vì có sản phẩm không đủ trong kho:</strong>' +
+                                    '<ul style="margin-top: 10px; margin-bottom: 0;">' + insufficientList + '</ul>' +
+                                    '<p style="margin-top: 10px; margin-bottom: 0;"><strong>Vui lòng nhập thêm hàng vào kho trước khi duyệt hợp đồng.</strong></p>' +
+                                '</div>';
+                            }
+                        }
+                        
+                        $('#viewContractContent').html(modalContent);
+                        $('#viewContractModal').data('contract-id', contractId);
+                        $('#viewContractModal').data('contract-status', data.status);
+                        $('#viewContractModal').data('all-products-available', data.allProductsAvailable);
+                        
+                        // Hiển thị nút duyệt hợp đồng CHỈ KHI hợp đồng chờ duyệt và TẤT CẢ sản phẩm đều đủ
+                        if (data.status === 'pending_approval' && data.allProductsAvailable === true) {
+                            $('#approveContractBtn').show();
+                        } else {
+                            $('#approveContractBtn').hide();
+                            // Nếu không đủ hàng, hiển thị thông báo rõ ràng
+                            if (data.status === 'pending_approval' && data.allProductsAvailable === false) {
+                                console.warn('Cannot approve contract: insufficient stock');
+                            }
+                        }
+                        
+                        $('#viewContractModal').modal('show');
+                    } else {
+                        alert('Không thể tải thông tin hợp đồng: ' + (response.message || 'Lỗi không xác định'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    alert('Lỗi kết nối đến server: ' + error);
+                }
+            });
+        }
+        
+        // Duyệt hợp đồng
+        // Chỉ cho phép duyệt khi validation đã kiểm tra và đủ hàng
+        function approveContract(contractId) {
+            if (!contractId || contractId <= 0) {
+                alert('ID hợp đồng không hợp lệ');
+                return;
+            }
+            
+            // Kiểm tra lại validation trước khi duyệt
+            var contractStatus = $('#viewContractModal').data('contract-status');
+            var allProductsAvailable = $('#viewContractModal').data('all-products-available');
+            
+            if (contractStatus !== 'pending_approval') {
+                alert('Chỉ có thể duyệt hợp đồng ở trạng thái "Chờ duyệt"');
+                return;
+            }
+            
+            if (allProductsAvailable !== true) {
+                alert('Không thể duyệt hợp đồng vì có sản phẩm không đủ trong kho. Vui lòng kiểm tra lại danh sách sản phẩm.');
+                return;
+            }
+            
+            if (!confirm('Bạn có chắc chắn muốn duyệt hợp đồng này?\n\nSau khi duyệt, hợp đồng sẽ chuyển sang trạng thái "Đã duyệt" và có thể xuất kho.')) {
+                return;
+            }
+            
+            // Hiển thị loading
+            var approveBtn = $('#approveContractBtn');
+            var originalText = approveBtn.html();
+            approveBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang duyệt...');
+            
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'POST',
+                data: { action: 'approveContract', contractId: contractId },
+                dataType: 'json',
+                success: function(response) {
+                    approveBtn.prop('disabled', false).html(originalText);
+                    
+                    if (response.success) {
+                        alert('✓ ' + (response.message || 'Duyệt hợp đồng thành công!'));
+                        $('#viewContractModal').modal('hide');
+                        // Reload danh sách hợp đồng để cập nhật trạng thái
+                        loadContractsData();
+                    } else {
+                        alert('✗ Lỗi: ' + (response.message || 'Không thể duyệt hợp đồng'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    approveBtn.prop('disabled', false).html(originalText);
+                    console.error('AJAX Error:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('✗ Lỗi kết nối đến server: ' + error);
+                }
+            });
+        }
+        
+        // Biến flag để tránh reset form khi đang load từ exportStockForContract
+        var isExportingFromContract = false;
+        
+        // Xuất kho cho hợp đồng đã duyệt
+        // Tự động mở form xuất kho và load dữ liệu từ hợp đồng
+        function exportStockForContract(contractId) {
+            if (!contractId || contractId <= 0) {
+                alert('ID hợp đồng không hợp lệ');
+                return;
+            }
+            
+            console.log('Export stock for contract ID:', contractId);
+            
+            // Set flag để tránh reset form
+            isExportingFromContract = true;
+            
+            // Kiểm tra xem modal đã mở chưa
+            var modal = $('#stockOutModal');
+            var isModalVisible = modal.is(':visible') || modal.hasClass('in');
+            
+            if (isModalVisible) {
+                // Nếu modal đã mở, load trực tiếp
+                loadContractsForDropdown(function() {
+                    setContractAndLoadInfo(contractId);
+                });
+            } else {
+                // Mở modal xuất kho
+                modal.modal('show');
+                
+                // Đợi modal mở xong rồi load dữ liệu hợp đồng
+                modal.one('shown.bs.modal', function() {
+                    // Load danh sách hợp đồng vào dropdown trước (luôn load để đảm bảo có đầy đủ options)
+                    loadContractsForDropdown(function() {
+                        setContractAndLoadInfo(contractId);
+                    });
+                });
+            }
+        }
+        
+        // Helper function để set contract và load info từ backend
+        function setContractAndLoadInfo(contractId) {
+            console.log('Setting contract ID and loading info from backend:', contractId);
+            
+            // Lấy warehouse được chọn (nếu có)
+            var warehouse = $('#stockOutWarehouse').val() || 'Main Warehouse';
+            
+            // Gọi backend để lấy đầy đủ thông tin hợp đồng, sản phẩm và tồn kho
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { 
+                    action: 'getContractInfoForStockOut', 
+                    contractId: contractId,
+                    warehouse: warehouse
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Contract info from backend:', response);
+                    if (response.success && response.data) {
+                        var data = response.data;
+                        
+                        // Set contract ID trong dropdown
+                        var contractSelect = $('#stockOutContractId');
+                        contractSelect.val(contractId);
+                        
+                        // Hiển thị tên khách hàng từ backend
+                        $('#stockOutCustomerName').val(data.customerName || '');
+                        
+                        // Set ngày mặc định từ backend (hôm nay) và có thể chỉnh sửa
+                        if (data.defaultDate) {
+                            $('#stockOutDate').val(data.defaultDate);
+                        }
+                        
+                        // Xóa tất cả sản phẩm hiện tại trong bảng
+                        $('#stockOutProductsBody').empty();
+                        stockOutRowCounter = 0;
+                        
+                        // Thêm sản phẩm từ backend vào bảng
+                        if (data.products && data.products.length > 0) {
+                            data.products.forEach(function(product) {
+                                addProductRowFromBackend(product, warehouse);
+                            });
+                        }
+                        
+                        console.log('Successfully loaded contract info from backend');
+                    } else {
+                        console.error('Failed to load contract info:', response.message);
+                        alert('Lỗi khi tải thông tin hợp đồng: ' + (response.message || 'Unknown error'));
+                    }
+                    
+                    // Reset flag sau khi load xong
+                    setTimeout(function() {
+                        isExportingFromContract = false;
+                    }, 500);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contract info from backend:', error);
+                    alert('Lỗi khi tải thông tin hợp đồng: ' + error);
+                    isExportingFromContract = false;
+                }
+            });
+        }
+        
+        // Helper function để thêm dòng sản phẩm từ dữ liệu backend
+        function addProductRowFromBackend(product, warehouse) {
+            stockOutRowCounter++;
+            var rowId = 'stockOutRow_' + stockOutRowCounter;
+            var tbody = $('#stockOutProductsBody');
+            
+            // Tìm tồn kho tại warehouse được chọn
+            var currentStock = 0;
+            if (product.stocks && product.stocks.length > 0) {
+                var stockAtWarehouse = product.stocks.find(function(s) {
+                    return s.warehouse === warehouse;
+                });
+                if (stockAtWarehouse) {
+                    currentStock = stockAtWarehouse.stock || 0;
+                }
+            }
+            
+            var row = '<tr id="' + rowId + '">' +
+                '<td style="text-align: center; vertical-align: middle;">' + stockOutRowCounter + '</td>' +
+                '<td>' +
+                    '<select class="form-control stockOutProductSelect" data-row-id="' + rowId + '" required>' +
+                    '</select>' +
+                '</td>' +
+                '<td style="vertical-align: middle;">' +
+                    '<input type="text" class="form-control stockOutProductName" readonly style="background-color: #f5f5f5;">' +
+                '</td>' +
+                '<td style="text-align: center; vertical-align: middle;">' +
+                    '<input type="text" class="form-control stockOutProductUnit" readonly style="background-color: #f5f5f5; text-align: center;">' +
+                '</td>' +
+                '<td style="text-align: center; vertical-align: middle;">' +
+                    '<span class="stockOutCurrentStock" style="font-weight: bold; color: #5cb85c;">' + currentStock + '</span>' +
+                '</td>' +
+                '<td>' +
+                    '<input type="number" class="form-control stockOutQuantity" min="1" max="' + currentStock + '" value="' + (product.quantity && product.quantity > 0 ? product.quantity : '') + '" required placeholder="Nhập số lượng" style="text-align: right;">' +
+                '</td>' +
+                '<td style="text-align: center; vertical-align: middle;">' +
+                    '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockOutRow(\'' + rowId + '\')" title="Xóa dòng">' +
+                        '<i class="fa fa-trash"></i> Xóa' +
+                    '</button>' +
+                '</td>' +
+            '</tr>';
+            
+            tbody.append(row);
+            
+            // Render options cho dropdown sản phẩm
+            var selectEl = $('#' + rowId + ' .stockOutProductSelect');
+            renderStockOutProductOptions(selectEl);
+            
+            // Set sản phẩm được chọn và cập nhật thông tin
+            setTimeout(function() {
+                selectEl.val(product.productId);
+                var selectedOption = selectEl.find('option:selected');
+                if (selectedOption.length > 0) {
+                    $('#' + rowId + ' .stockOutProductName').val(selectedOption.data('name') || product.productName || '');
+                    $('#' + rowId + ' .stockOutProductUnit').val(selectedOption.data('unit') || product.unit || '');
+                } else {
+                    $('#' + rowId + ' .stockOutProductName').val(product.productName || '');
+                    $('#' + rowId + ' .stockOutProductUnit').val(product.unit || '');
+                }
+                
+                // Gán sự kiện change cho dropdown sản phẩm
+                selectEl.off('change').on('change', function() {
+                    var row = $(this).closest('tr');
+                    var selectedOption = $(this).find('option:selected');
+                    var productId = $(this).val();
+                    var warehouse = $('#stockOutWarehouse').val();
+                    
+                    if (productId) {
+                        row.find('.stockOutProductName').val(selectedOption.data('name') || '');
+                        row.find('.stockOutProductUnit').val(selectedOption.data('unit') || '');
+                        loadCurrentStock(productId, warehouse, row);
+                    } else {
+                        row.find('.stockOutProductName').val('');
+                        row.find('.stockOutProductUnit').val('');
+                        row.find('.stockOutCurrentStock').text('--');
+                    }
+                });
+                
+                // Gán sự kiện input cho số lượng
+                $('#' + rowId + ' .stockOutQuantity').off('input').on('input', function() {
+                    var row = $(this).closest('tr');
+                    var quantity = parseInt($(this).val()) || 0;
+                    var currentStock = parseInt(row.find('.stockOutCurrentStock').text()) || 0;
+                    
+                    if (quantity > currentStock) {
+                        $(this).val(currentStock);
+                        alert('Số lượng xuất không được vượt quá tồn kho hiện tại (' + currentStock + ')');
+                    }
+                });
+            }, 100);
         }
         
         // Xác định trạng thái tồn kho
@@ -1473,10 +1923,18 @@
                 return;
             }
 
+            // Lấy contractId từ form (nếu có)
+            var contractId = $('#stockOutContractId').val();
+            
             // Tạo notes với lý do xuất kho
             var fullNotes = 'Lý do: ' + reason;
             if (notes && notes.trim() !== '') {
                 fullNotes += '\n' + notes;
+            }
+            
+            // Nếu có contractId, thêm thông tin hợp đồng vào notes
+            if (contractId && contractId !== '') {
+                fullNotes = 'Xuất kho cho hợp đồng ID: ' + contractId + '\n' + fullNotes;
             }
 
             // Gửi dữ liệu lên backend - backend sẽ xử lý validation tồn kho và trừ kho
@@ -1486,6 +1944,16 @@
                 referenceType: reason,
                 products: JSON.stringify(products)
             };
+            
+            // Thêm contractId nếu có (để cập nhật trạng thái sau khi xuất kho)
+            if (contractId && contractId !== '') {
+                formData.contractId = contractId;
+            }
+
+            // Hiển thị loading
+            var submitBtn = $('button[onclick="submitStockOut()"]');
+            var originalText = submitBtn.html();
+            submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xuất kho...');
 
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
@@ -1493,17 +1961,22 @@
                 data: formData,
                 dataType: 'json',
                 success: function(response) {
+                    submitBtn.prop('disabled', false).html(originalText);
+                    
                     if (response.success) {
-                        alert('Xuất kho thành công!');
+                        alert('✓ Xuất kho thành công!' + (response.message ? '\n' + response.message : ''));
                         $('#stockOutModal').modal('hide');
-                        loadInventoryData();
+                        // Reload danh sách hợp đồng để cập nhật trạng thái
+                        loadContractsData();
                     } else {
-                        alert('Lỗi: ' + response.message);
+                        alert('✗ Lỗi: ' + (response.message || 'Không thể xuất kho'));
                     }
                 },
                 error: function(xhr, status, error) {
+                    submitBtn.prop('disabled', false).html(originalText);
                     console.error('AJAX Error:', error);
-                    alert('Lỗi kết nối server: ' + error);
+                    console.error('Response:', xhr.responseText);
+                    alert('✗ Lỗi kết nối server: ' + error);
                 }
             });
         }
@@ -1576,6 +2049,9 @@
         
         // Reset form khi đóng modal xuất kho
         $('#stockOutModal').on('hidden.bs.modal', function() {
+            // Reset flag
+            isExportingFromContract = false;
+            
             $('#stockOutForm')[0].reset();
             $('#stockOutContractId').val('');
             $('#stockOutCustomerName').val('');
@@ -1584,12 +2060,15 @@
         });
         
         // Load danh sách hợp đồng cho dropdown
-        function loadContractsForDropdown() {
+        function loadContractsForDropdown(callback) {
             var selectEl = $('#stockOutContractId');
             if (selectEl.length === 0) {
                 console.error('Element #stockOutContractId not found');
+                if (callback) callback();
                 return;
             }
+            
+            console.log('Loading contracts for dropdown...');
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
@@ -1609,11 +2088,15 @@
                                     if (contract.customerName) {
                                         displayText += ' - ' + escapeHtml(contract.customerName);
                                     }
-                                    selectEl.append('<option value="' + contract.id + '" data-customer-name="' + escapeHtml(contract.customerName || '') + '">' + 
-                                                  displayText + '</option>');
+                                    var option = $('<option></option>')
+                                        .attr('value', contract.id)
+                                        .attr('data-customer-name', escapeHtml(contract.customerName || ''))
+                                        .text(displayText);
+                                    selectEl.append(option);
+                                    console.log('Added contract option:', contract.id, contract.contractNumber);
                                 }
                             });
-                            console.log('Loaded ' + response.data.length + ' contracts');
+                            console.log('Successfully loaded ' + response.data.length + ' contracts into dropdown');
                         } else {
                             console.warn('No contracts found in response data');
                             selectEl.append('<option value="" disabled>Không có hợp đồng nào</option>');
@@ -1623,6 +2106,11 @@
                         selectEl.empty();
                         selectEl.append('<option value="">-- Lỗi tải dữ liệu --</option>');
                     }
+                    // Gọi callback sau khi hoàn thành
+                    if (callback) {
+                        console.log('Calling callback after loading contracts');
+                        callback();
+                    }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading contracts:', error);
@@ -1630,6 +2118,8 @@
                     console.error('Response:', xhr.responseText);
                     selectEl.empty();
                     selectEl.append('<option value="">-- Lỗi: ' + error + ' --</option>');
+                    // Gọi callback ngay cả khi có lỗi
+                    if (callback) callback();
                 }
             });
         }
@@ -1644,14 +2134,38 @@
                 return;
             }
             
+            console.log('Loading contract info for ID:', contractId);
+            
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
                 type: 'GET',
                 data: { action: 'getContractInfo', contractId: contractId },
                 dataType: 'json',
                 success: function(response) {
+                    console.log('Contract info response:', response);
                     if (response.success && response.data) {
                         var data = response.data;
+                        
+                        // Đảm bảo contract number được hiển thị trong dropdown
+                        var contractSelect = $('#stockOutContractId');
+                        if (contractSelect.val() != contractId) {
+                            contractSelect.val(contractId);
+                        }
+                        
+                        // Đảm bảo dropdown hiển thị đúng contract number
+                        var selectedOption = contractSelect.find('option:selected');
+                        if (selectedOption.length === 0 || selectedOption.val() != contractId) {
+                            // Nếu không tìm thấy option, thử tìm lại
+                            var option = contractSelect.find('option[value="' + contractId + '"]');
+                            if (option.length > 0) {
+                                contractSelect.val(contractId);
+                                console.log('Contract number displayed:', option.text());
+                            } else {
+                                console.warn('Contract option not found in dropdown for ID:', contractId);
+                            }
+                        } else {
+                            console.log('Contract number displayed:', selectedOption.text());
+                        }
                         
                         // Hiển thị tên khách hàng
                         $('#stockOutCustomerName').val(data.customerName || '');
@@ -1767,12 +2281,21 @@
         
         // Thiết lập mặc định khi mở modal xuất kho
         $('#stockOutModal').on('shown.bs.modal', function() {
-            // Set ngày hiện tại
-            var today = new Date();
-            var yyyy = today.getFullYear();
-            var mm = ('0' + (today.getMonth() + 1)).slice(-2);
-            var dd = ('0' + today.getDate()).slice(-2);
-            $('#stockOutDate').val(yyyy + '-' + mm + '-' + dd);
+            // Nếu đang load từ exportStockForContract, không reset form
+            if (isExportingFromContract) {
+                console.log('Skipping form reset - loading from contract export');
+                return;
+            }
+            
+            // Lấy ngày hiện tại từ server (backend sẽ set mặc định)
+            // Frontend chỉ set nếu chưa có giá trị
+            if (!$('#stockOutDate').val()) {
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = ('0' + (today.getMonth() + 1)).slice(-2);
+                var dd = ('0' + today.getDate()).slice(-2);
+                $('#stockOutDate').val(yyyy + '-' + mm + '-' + dd);
+            }
             
             // Load danh sách hợp đồng
             loadContractsForDropdown();
@@ -1787,10 +2310,66 @@
             addStockOutRow();
         });
         
-        // Xử lý khi chọn hợp đồng
+        // Xử lý khi chọn hợp đồng - gọi backend để load thông tin
         $('#stockOutContractId').on('change', function() {
             var contractId = $(this).val();
-            loadContractInfo(contractId);
+            if (!contractId || contractId === '') {
+                $('#stockOutCustomerName').val('');
+                $('#stockOutProductsBody').empty();
+                stockOutRowCounter = 0;
+                return;
+            }
+            
+            var selectedOption = $(this).find('option:selected');
+            var customerName = selectedOption.data('customer-name') || '';
+            
+            // Cập nhật tên khách hàng tạm thời từ dropdown (sẽ được cập nhật từ backend)
+            if (customerName) {
+                $('#stockOutCustomerName').val(customerName);
+            }
+            
+            // Gọi backend để load thông tin đầy đủ (sản phẩm, tồn kho, ngày mặc định)
+            var warehouse = $('#stockOutWarehouse').val() || 'Main Warehouse';
+            $.ajax({
+                url: '<%=request.getContextPath()%>/inventory',
+                type: 'GET',
+                data: { 
+                    action: 'getContractInfoForStockOut', 
+                    contractId: contractId,
+                    warehouse: warehouse
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        var data = response.data;
+                        
+                        // Cập nhật tên khách hàng từ backend
+                        $('#stockOutCustomerName').val(data.customerName || '');
+                        
+                        // Set ngày mặc định từ backend (nếu chưa có giá trị)
+                        if (data.defaultDate && !$('#stockOutDate').val()) {
+                            $('#stockOutDate').val(data.defaultDate);
+                        }
+                        
+                        // Xóa tất cả sản phẩm hiện tại
+                        $('#stockOutProductsBody').empty();
+                        stockOutRowCounter = 0;
+                        
+                        // Thêm sản phẩm từ backend
+                        if (data.products && data.products.length > 0) {
+                            data.products.forEach(function(product) {
+                                addProductRowFromBackend(product, warehouse);
+                            });
+                        }
+                    } else {
+                        alert('Lỗi khi tải thông tin hợp đồng: ' + (response.message || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error loading contract info:', error);
+                    alert('Lỗi khi tải thông tin hợp đồng: ' + error);
+                }
+            });
         });
 
         // Cập nhật nút phân trang (backend-driven)
