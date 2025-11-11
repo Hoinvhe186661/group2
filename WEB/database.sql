@@ -1,4 +1,3 @@
-CREATE DATABASE IF NOT EXISTS hlelectric;
 USE hlelectric;
 
 -- 1. USERS
@@ -22,6 +21,12 @@ CREATE TABLE users (
 -- Add index for faster joins on customer_id
 CREATE INDEX idx_users_customer_id ON users(customer_id);
 
+-- Add foreign key constraint for customer_id
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    ON DELETE SET NULL;
+
 -- 2. CUSTOMERS
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -37,13 +42,6 @@ CREATE TABLE customers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
-
--- Add foreign key constraint for customer_id in users table
--- (Must be after customers table is created)
-ALTER TABLE users
-    ADD CONSTRAINT fk_users_customer
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
-    ON DELETE SET NULL;
 
 -- 3. CONTRACTS
 CREATE TABLE contracts (
@@ -307,3 +305,118 @@ INSERT INTO users (username, email, password_hash, full_name, phone, role, permi
 ('customer1', 'customer1@gmail.com', '123abc',
  'Nguyễn Văn Khách', '0909123456', 'customer',
  '["view_products", "view_orders", "submit_support_request"]');
+
+-- 17. RBAC: ROLES
+CREATE TABLE IF NOT EXISTS roles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    role_key VARCHAR(50) UNIQUE NOT NULL,
+    role_name VARCHAR(100) NOT NULL,
+    is_system BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 18. RBAC: PERMISSIONS
+CREATE TABLE IF NOT EXISTS permissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    perm_key VARCHAR(100) UNIQUE NOT NULL,
+    perm_name VARCHAR(200) NOT NULL,
+    group_name VARCHAR(100) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 19. RBAC: ROLE_PERMISSIONS
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id INT NOT NULL,
+    permission_id INT NOT NULL,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+);
+
+
+-- Seed default roles
+INSERT INTO roles (role_key, role_name, is_system) VALUES
+('admin', 'Quản trị viên', TRUE),
+('customer_support', 'Hỗ trợ khách hàng', FALSE),
+('technical_staff', 'Nhân viên kỹ thuật', FALSE),
+('head_technician', 'Trưởng phòng kỹ thuật', FALSE),
+('storekeeper', 'Thủ kho', FALSE),
+('customer', 'Khách hàng', FALSE),
+('guest', 'Khách', FALSE)
+ON DUPLICATE KEY UPDATE role_name = VALUES(role_name);
+
+-- Seed default permissions
+INSERT INTO permissions (perm_key, perm_name, group_name) VALUES
+-- Nhóm: Quản trị
+('manage_permissions', 'Phân quyền', 'Quản trị'),
+('manage_users', 'Quản lý người dùng', 'Quản trị'),
+('manage_settings', 'Cài đặt hệ thống', 'Quản trị'),
+('manage_email', 'Quản lý email', 'Quản trị'),
+-- Nhóm: Hỗ trợ khách hàng
+('manage_support_requests', 'Quản lý yêu cầu hỗ trợ', 'Hỗ trợ khách hàng'),
+('manage_feedback', 'Quản lý feedback', 'Hỗ trợ khách hàng'),
+('manage_contracts', 'Quản lý hợp đồng', 'Hỗ trợ khách hàng'),
+('manage_contacts', 'Quản lý liên hệ', 'Hỗ trợ khách hàng'),
+('manage_customers', 'Quản lý khách hàng', 'Hỗ trợ khách hàng'),
+-- Nhóm: Nhân viên kỹ thuật
+('view_my_tasks', 'Nhiệm vụ của tôi', 'Kỹ thuật'),
+-- Nhóm: Trưởng phòng kỹ thuật
+('manage_tech_support_requests', 'Yêu cầu hỗ trợ kỹ thuật', 'Trưởng phòng kỹ thuật'),
+('manage_work_orders', 'Đơn hàng công việc', 'Trưởng phòng kỹ thuật'),
+('manage_technical_staff', 'Quản lý nhân viên kỹ thuật', 'Trưởng phòng kỹ thuật'),
+-- Nhóm: Kho
+('manage_products', 'Quản lý sản phẩm', 'Kho'),
+('manage_suppliers', 'Nhà cung cấp', 'Kho'),
+('manage_inventory', 'Quản lý kho', 'Kho'),
+-- Nhóm: Khách hàng/Guest
+('submit_support_request', 'Gửi yêu cầu hỗ trợ', 'Khách hàng'),
+('submit_contact', 'Gửi liên hệ', 'Khách')
+ON DUPLICATE KEY UPDATE perm_name = VALUES(perm_name), group_name = VALUES(group_name);
+
+-- Map default role-permissions
+-- Admin: giữ mặc định và không thể xóa các quyền cốt lõi
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r, permissions p
+WHERE r.role_key = 'admin' AND p.perm_key IN (
+  'manage_permissions','manage_users','manage_settings','manage_email'
+)
+ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+-- Customer Support
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN (
+  'manage_support_requests','manage_feedback','manage_contracts','manage_contacts','manage_customers'
+) WHERE r.role_key = 'customer_support'
+ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+-- Technical Staff
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN ('view_my_tasks')
+WHERE r.role_key = 'technical_staff'
+ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+-- Head Technician
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN (
+  'manage_tech_support_requests','manage_work_orders','manage_technical_staff'
+) WHERE r.role_key = 'head_technician'
+ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+-- Storekeeper
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN (
+  'manage_products','manage_suppliers','manage_inventory'
+) WHERE r.role_key = 'storekeeper'
+ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+-- Customer
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN ('submit_support_request')
+WHERE r.role_key = 'customer'
+ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+-- Guest
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN ('submit_contact')
+WHERE r.role_key = 'guest'
+ON DUPLICATE KEY UPDATE permission_id = permission_id;

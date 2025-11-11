@@ -1,18 +1,17 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền sử dụng permission - cần có quyền xem dashboard hoặc quản lý tech support
-    if (!AuthorizationUtil.hasPermission(request, Permission.VIEW_DASHBOARD) && 
-        !AuthorizationUtil.hasPermission(request, Permission.MANAGE_TECH_SUPPORT)) {
+    // CHỈ CHO PHÉP HEAD_TECHNICIAN (không cho admin vào)
+    if (!"head_technician".equals(userRole)) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
@@ -134,34 +133,7 @@
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Left side column -->
-        <aside class="left-side sidebar-offcanvas">
-            <!-- sidebar -->
-            <section class="sidebar">
-                <!-- Sidebar user panel -->
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="img/26115.jpg" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
-                </div>
-                <!-- search form -->
-                <form action="#" method="get" class="sidebar-form">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
-                        <span class="input-group-btn">
-                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
-                        </span>
-                    </div>
-                </form>
-                <!-- /.search form -->
-                <!-- sidebar menu -->
-                <%@ include file="includes/sidebar-menu.jsp" %>
-            </section>
-            <!-- /.sidebar -->
-        </aside>
+		<jsp:include page="partials/sidebar.jsp"/>
 
         <aside class="right-side">
             <!-- Main content -->

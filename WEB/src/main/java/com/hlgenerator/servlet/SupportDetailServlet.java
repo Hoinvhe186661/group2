@@ -1,8 +1,6 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.SupportRequestDAO;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 import org.json.JSONObject;
 
 import javax.servlet.ServletException;
@@ -10,6 +8,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
@@ -29,14 +28,17 @@ public class SupportDetailServlet extends HttpServlet {
         
         PrintWriter out = response.getWriter();
         
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        // Kiểm tra đăng nhập
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("isLoggedIn") == null) {
             out.print("{\"success\": false, \"message\": \"Chưa đăng nhập\"}");
             return;
         }
         
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SUPPORT)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        String userRole = (String) session.getAttribute("userRole");
+        
+        // Kiểm tra quyền
+        if (!"customer_support".equals(userRole) && !"admin".equals(userRole)) {
             out.print("{\"success\": false, \"message\": \"Không có quyền truy cập\"}");
             return;
         }

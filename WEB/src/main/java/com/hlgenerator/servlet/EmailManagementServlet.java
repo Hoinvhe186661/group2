@@ -5,8 +5,6 @@ import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.EmailNotification;
 import com.hlgenerator.model.User;
 import com.hlgenerator.service.EmailService;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -52,17 +50,20 @@ public class EmailManagementServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
         
-        if (!AuthorizationUtil.isLoggedIn(request)) {
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("isLoggedIn") == null) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_EMAIL)) {
-            response.sendRedirect(request.getContextPath() + "/403.jsp");
+        
+        String username = (String) session.getAttribute("username");
+        String userRole = (String) session.getAttribute("userRole");
+        
+        // Only admin can access
+        if (!"admin".equals(userRole)) {
+            response.sendRedirect(request.getContextPath() + "/admin.jsp");
             return;
         }
-        
-        HttpSession session = request.getSession(false);
-        String username = (String) session.getAttribute("username");
         
         String action = request.getParameter("action");
         
@@ -87,19 +88,17 @@ public class EmailManagementServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
         
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("isLoggedIn") == null) {
             sendJsonResponse(response, false, "Phiên đăng nhập đã hết hạn", null);
             return;
         }
         
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_EMAIL)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        String userRole = (String) session.getAttribute("userRole");
+        if (!"admin".equals(userRole)) {
             sendJsonResponse(response, false, "Không có quyền truy cập", null);
             return;
         }
-        
-        HttpSession session = request.getSession(false);
         
         String action = request.getParameter("action");
         

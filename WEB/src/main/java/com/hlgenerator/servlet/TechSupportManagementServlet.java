@@ -3,8 +3,6 @@ package com.hlgenerator.servlet;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hlgenerator.dao.SupportRequestDAO;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -43,23 +41,24 @@ public class TechSupportManagementServlet extends HttpServlet {
         JsonObject jsonResponse = new JsonObject();
         
         try {
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            // Kiểm tra đăng nhập
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
                 out.print(jsonResponse.toString());
                 return;
             }
-            if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_TECH_SUPPORT, Permission.MANAGE_WORK_ORDERS)) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            
+            String userRole = (String) session.getAttribute("userRole");
+            
+            // Kiểm tra quyền: chỉ head_technician và admin mới xem được
+            if (!"head_technician".equals(userRole) && !"admin".equals(userRole)) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Không có quyền truy cập");
                 out.print(jsonResponse.toString());
                 return;
             }
-
-            HttpSession session = request.getSession(false);
-            boolean isAdmin = AuthorizationUtil.hasPermission(request, Permission.MANAGE_USERS);
             
             String action = request.getParameter("action");
             System.out.println("TechSupport GET Action: " + action);
@@ -70,6 +69,7 @@ public class TechSupportManagementServlet extends HttpServlet {
                 
                 // Lấy userId của user đang đăng nhập
                 Integer currentUserId = (Integer) session.getAttribute("userId");
+                boolean isAdmin = "admin".equals(userRole);
                 
                 // Lọc chỉ lấy ticket technical
                 List<Map<String, Object>> technicalTickets = new ArrayList<>();
@@ -164,6 +164,7 @@ public class TechSupportManagementServlet extends HttpServlet {
                             } else {
                                 // Kiểm tra quyền xem ticket
                                 Integer currentUserId = (Integer) session.getAttribute("userId");
+                                boolean isAdmin = "admin".equals(userRole);
                                 
                                 // Nếu không phải admin, kiểm tra ticket có được assign cho user này không
                                 if (!isAdmin) {
@@ -218,6 +219,7 @@ public class TechSupportManagementServlet extends HttpServlet {
                 
                 // Lấy userId của user đang đăng nhập
                 Integer currentUserId = (Integer) session.getAttribute("userId");
+                boolean isAdmin = "admin".equals(userRole);
                 
                 int total = 0;
                 int open = 0;
@@ -308,23 +310,24 @@ public class TechSupportManagementServlet extends HttpServlet {
         JsonObject jsonResponse = new JsonObject();
         
         try {
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            // Kiểm tra đăng nhập
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
                 out.print(jsonResponse.toString());
                 return;
             }
-            if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_TECH_SUPPORT, Permission.MANAGE_WORK_ORDERS)) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            
+            String userRole = (String) session.getAttribute("userRole");
+            
+            // Kiểm tra quyền
+            if (!"head_technician".equals(userRole) && !"admin".equals(userRole)) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Không có quyền thực hiện");
                 out.print(jsonResponse.toString());
                 return;
             }
-
-            HttpSession session = request.getSession(false);
-            boolean isAdmin = AuthorizationUtil.hasPermission(request, Permission.MANAGE_USERS);
             
             String action = request.getParameter("action");
             System.out.println("TechSupport POST Action: " + action);
@@ -348,6 +351,7 @@ public class TechSupportManagementServlet extends HttpServlet {
                         
                         // Kiểm tra quyền: trưởng phòng kỹ thuật chỉ có thể update ticket được forward cho mình
                         Integer currentUserId = (Integer) session.getAttribute("userId");
+                        boolean isAdmin = "admin".equals(userRole);
                         
                         if (!isAdmin) {
                             // Lấy ticket để kiểm tra quyền
@@ -445,6 +449,7 @@ public class TechSupportManagementServlet extends HttpServlet {
                         
                         // Kiểm tra quyền: trưởng phòng kỹ thuật chỉ có thể assign ticket được forward cho mình
                         Integer currentUserId = (Integer) session.getAttribute("userId");
+                        boolean isAdmin = "admin".equals(userRole);
                         
                         if (!isAdmin) {
                             // Lấy ticket để kiểm tra quyền

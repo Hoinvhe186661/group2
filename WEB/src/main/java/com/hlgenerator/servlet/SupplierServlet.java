@@ -2,8 +2,6 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.SupplierDAO;
 import com.hlgenerator.model.Supplier;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -32,19 +30,7 @@ public class SupplierServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         
-        // Check authentication and authorization for view operations
         String action = request.getParameter("action");
-        if (action != null && !"view".equals(action)) {
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.sendRedirect(request.getContextPath() + "/login.jsp");
-                return;
-            }
-            if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_SUPPLIERS, Permission.VIEW_SUPPLIERS)) {
-                response.sendRedirect(request.getContextPath() + "/403.jsp");
-                return;
-            }
-        }
-        
         
         if ("view".equals(action)) {
             viewSupplier(request, response);
@@ -404,20 +390,6 @@ public class SupplierServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // Check authentication and authorization for management operations
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": false, \"message\": \"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SUPPLIERS)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\": false, \"message\": \"Không có quyền thực hiện\"}");
-            return;
-        }
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 

@@ -21,7 +21,6 @@ public class TaskAssignment {
 	private Timestamp acknowledgedAt; // from tasks.acknowledged_at
 	private Timestamp startDate;     // from tasks
 	private Timestamp completionDate; // from tasks
-	private Timestamp deadline; // from tasks.deadline
 	private String rejectionReason;  // from tasks
 	private BigDecimal estimatedHours; // from tasks.estimated_hours
 	private String ticketDescription;  // from support_requests.description
@@ -71,9 +70,6 @@ public class TaskAssignment {
 	public Timestamp getCompletionDate() { return completionDate; }
 	public void setCompletionDate(Timestamp completionDate) { this.completionDate = completionDate; }
 
-	public Timestamp getDeadline() { return deadline; }
-	public void setDeadline(Timestamp deadline) { this.deadline = deadline; }
-
 	public String getRejectionReason() { return rejectionReason; }
 	public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
@@ -100,7 +96,6 @@ public class TaskAssignment {
 		obj.put("acknowledgedAt", acknowledgedAt);
 		obj.put("startDate", startDate);
 		obj.put("completionDate", completionDate);
-		obj.put("deadline", deadline);
 		obj.put("rejectionReason", rejectionReason);
 		obj.put("estimatedHours", estimatedHours);
 		obj.put("ticketDescription", ticketDescription);

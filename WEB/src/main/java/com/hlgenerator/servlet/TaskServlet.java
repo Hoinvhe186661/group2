@@ -3,8 +3,6 @@ package com.hlgenerator.servlet;
 import com.hlgenerator.dao.TaskDAO;
 import com.hlgenerator.model.Task;
 import com.hlgenerator.model.TaskAssignment;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -44,19 +42,6 @@ public class TaskServlet extends HttpServlet {
 		request.setCharacterEncoding("UTF-8");
 		response.setCharacterEncoding("UTF-8");
 		response.setContentType("application/json; charset=UTF-8");
-
-		// Check authentication and authorization
-		if (!AuthorizationUtil.isLoggedIn(request)) {
-			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-			return;
-		}
-		
-		if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_TASKS, Permission.VIEW_TASKS)) {
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền truy cập\"}");
-			return;
-		}
 
 		String action = request.getParameter("action");
 		PrintWriter out = response.getWriter();
@@ -131,19 +116,6 @@ public class TaskServlet extends HttpServlet {
 		request.setCharacterEncoding("UTF-8");
 		response.setCharacterEncoding("UTF-8");
 		response.setContentType("application/json; charset=UTF-8");
-
-		// Check authentication and authorization
-		if (!AuthorizationUtil.isLoggedIn(request)) {
-			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-			return;
-		}
-		
-		if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_TASKS)) {
-			response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-			response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền thực hiện\"}");
-			return;
-		}
 
 		String action = request.getParameter("action");
 		PrintWriter out = response.getWriter();

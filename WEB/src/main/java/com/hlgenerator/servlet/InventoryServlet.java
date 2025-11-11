@@ -10,8 +10,6 @@ import com.hlgenerator.model.StockHistory;
 import com.hlgenerator.model.Product;
 import com.hlgenerator.model.Supplier;
 import com.hlgenerator.model.Contract;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -44,21 +42,6 @@ public class InventoryServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        // Check authentication and authorization for view operations
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_INVENTORY, Permission.VIEW_INVENTORY)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền truy cập\"}");
-            return;
-        }
-        
         String action = request.getParameter("action");
         
         response.setContentType("application/json");
@@ -80,14 +63,8 @@ public class InventoryServlet extends HttpServlet {
             getContractsForDropdown(request, response);
         } else if ("getContractInfo".equals(action)) {
             getContractInfo(request, response);
-        } else if ("getContractInfoForStockOut".equals(action)) {
-            getContractInfoForStockOut(request, response);
         } else if ("getContractsList".equals(action)) {
             getContractsList(request, response);
-        } else if ("getContractDetails".equals(action)) {
-            getContractDetails(request, response);
-        } else if ("approveContract".equals(action)) {
-            approveContract(request, response);
         } else if ("getStockList".equals(action)) {
             getStockList(request, response);
         } else if ("getStockBalance".equals(action)) {
@@ -166,27 +143,12 @@ public class InventoryServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         
-        // Check authentication and authorization for management operations
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_INVENTORY)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền thực hiện\"}");
-            return;
-        }
-        
         String action = request.getParameter("action");
         
         if ("stockIn".equals(action)) {
             handleStockIn(request, response);
         } else if ("stockOut".equals(action)) {
             handleStockOut(request, response);
-        } else if ("approveContract".equals(action)) {
-            approveContract(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
         }
@@ -194,8 +156,6 @@ public class InventoryServlet extends HttpServlet {
     
     /**
      * Lấy danh sách hợp đồng với lọc và phân trang
-     * Chỉ lấy hợp đồng có trạng thái 'pending_approval' (chờ duyệt) và 'approved' (đã duyệt)
-     * Tác giả: Sơn Lê
      */
     private void getContractsList(HttpServletRequest request, HttpServletResponse response) 
             throws IOException {
@@ -220,35 +180,11 @@ public class InventoryServlet extends HttpServlet {
             List<Contract> allContracts = contractDAO.getAllContracts();
             
             // Lọc theo trạng thái và tìm kiếm
-            // CHỈ LẤY hợp đồng có trạng thái 'pending_approval' hoặc 'approved'
             List<Contract> filteredContracts = new java.util.ArrayList<>();
-            
-            // Debug: đếm số hợp đồng theo trạng thái
-            int pendingCount = 0;
-            int approvedCount = 0;
-            int otherCount = 0;
-            
             for (Contract c : allContracts) {
-                // Chỉ lấy hợp đồng chờ duyệt hoặc đã duyệt
-                String contractStatus = c.getStatus();
-                if (contractStatus == null) {
-                    contractStatus = "";
-                }
-                
-                // Đếm số lượng theo trạng thái để debug
-                if ("pending_approval".equals(contractStatus)) {
-                    pendingCount++;
-                } else if ("approved".equals(contractStatus)) {
-                    approvedCount++;
-                } else {
-                    otherCount++;
-                    // Bỏ qua các trạng thái khác
-                    continue;
-                }
-                
-                // Lọc theo trạng thái nếu có filter
+                // Lọc theo trạng thái
                 if (status != null && !status.trim().isEmpty()) {
-                    if (!status.equals(contractStatus)) {
+                    if (!status.equals(c.getStatus())) {
                         continue;
                     }
                 }
@@ -265,11 +201,6 @@ public class InventoryServlet extends HttpServlet {
                 
                 filteredContracts.add(c);
             }
-            
-            // Log để debug
-            System.out.println("InventoryServlet.getContractsList - Total contracts: " + allContracts.size() + 
-                ", Pending: " + pendingCount + ", Approved: " + approvedCount + ", Other: " + otherCount + 
-                ", Filtered: " + filteredContracts.size());
             
             int totalCount = filteredContracts.size();
             
@@ -562,99 +493,6 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"productCode\":\"").append(escapeJson((String)p.get("productCode"))).append("\",");
                 json.append("\"productName\":\"").append(escapeJson((String)p.get("productName"))).append("\",");
                 json.append("\"unit\":\"").append(escapeJson((String)p.get("unit"))).append("\"");
-                json.append("}");
-            }
-            
-            json.append("]}}");
-            response.getWriter().write(json.toString());
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.getWriter().write("{\"success\":false,\"message\":\"" + 
-                escapeJson(e.getMessage()) + "\"}");
-        }
-    }
-    
-    /**
-     * Lấy thông tin hợp đồng và sản phẩm cho form xuất kho
-     * Backend xử lý toàn bộ: query hợp đồng, sản phẩm, và tồn kho theo từng warehouse
-     * Trả về đầy đủ thông tin để frontend chỉ cần hiển thị
-     */
-    private void getContractInfoForStockOut(HttpServletRequest request, HttpServletResponse response) 
-            throws IOException {
-        try {
-            String contractIdParam = request.getParameter("contractId");
-            String warehouseParam = request.getParameter("warehouse"); // Warehouse để lấy tồn kho
-            
-            if (contractIdParam == null || contractIdParam.trim().isEmpty()) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Thiếu contractId\"}");
-                return;
-            }
-            
-            int contractId = Integer.parseInt(contractIdParam);
-            Contract contract = contractDAO.getContractById(contractId);
-            
-            if (contract == null) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy hợp đồng\"}");
-                return;
-            }
-            
-            // Lấy danh sách sản phẩm trong hợp đồng từ database
-            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProducts(contractId);
-            
-            // Lấy ngày hiện tại từ database (hoặc server)
-            java.util.Date today = new java.util.Date();
-            java.text.SimpleDateFormat dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd");
-            String todayStr = dateFormat.format(today);
-            
-            // Build JSON response với đầy đủ thông tin
-            StringBuilder json = new StringBuilder();
-            json.append("{\"success\":true,\"data\":{");
-            json.append("\"contractId\":").append(contract.getId()).append(",");
-            json.append("\"contractNumber\":\"").append(escapeJson(contract.getContractNumber())).append("\",");
-            json.append("\"customerId\":").append(contract.getCustomerId()).append(",");
-            json.append("\"customerName\":\"").append(escapeJson(contract.getCustomerName() != null ? contract.getCustomerName() : "")).append("\",");
-            json.append("\"defaultDate\":\"").append(todayStr).append("\","); // Ngày mặc định là hôm nay
-            json.append("\"products\":[");
-            
-            // Với mỗi sản phẩm, query tồn kho từ database
-            for (int i = 0; i < contractProducts.size(); i++) {
-                if (i > 0) json.append(",");
-                java.util.Map<String, Object> p = contractProducts.get(i);
-                int productId = (Integer) p.get("productId");
-                
-                // Query tồn kho theo từng warehouse từ database
-                java.util.List<java.util.Map<String, Object>> warehouseStocks = inventoryDAO.getWarehouseStocks(productId);
-                
-                json.append("{");
-                json.append("\"productId\":").append(productId).append(",");
-                json.append("\"quantity\":").append(p.get("quantity")).append(",");
-                json.append("\"productCode\":\"").append(escapeJson((String)p.get("productCode"))).append("\",");
-                json.append("\"productName\":\"").append(escapeJson((String)p.get("productName"))).append("\",");
-                json.append("\"unit\":\"").append(escapeJson((String)p.get("unit"))).append("\",");
-                
-                // Thêm thông tin tồn kho theo từng warehouse
-                json.append("\"stocks\":[");
-                for (int j = 0; j < warehouseStocks.size(); j++) {
-                    if (j > 0) json.append(",");
-                    java.util.Map<String, Object> ws = warehouseStocks.get(j);
-                    json.append("{");
-                    json.append("\"warehouse\":\"").append(escapeJson((String)ws.get("warehouse"))).append("\",");
-                    json.append("\"stock\":").append(ws.get("stock"));
-                    json.append("}");
-                }
-                json.append("],");
-                
-                // Tồn kho tại warehouse được chọn (nếu có)
-                int stockAtWarehouse = 0;
-                if (warehouseParam != null && !warehouseParam.trim().isEmpty()) {
-                    Inventory inv = inventoryDAO.getInventoryByProductAndWarehouse(productId, warehouseParam);
-                    if (inv != null) {
-                        stockAtWarehouse = inv.getCurrentStock();
-                    }
-                }
-                json.append("\"stockAtSelectedWarehouse\":").append(stockAtWarehouse);
-                
                 json.append("}");
             }
             
@@ -971,7 +809,6 @@ public class InventoryServlet extends HttpServlet {
             String referenceType = request.getParameter("referenceType");
             String referenceId = request.getParameter("referenceId");
             String notes = request.getParameter("notes");
-            String contractIdParam = request.getParameter("contractId"); // Lấy contractId nếu có
             
             // Lấy danh sách sản phẩm (JSON array từ frontend)
             String productsJson = request.getParameter("products");
@@ -1104,58 +941,7 @@ public class InventoryServlet extends HttpServlet {
             }
             
             if (allSuccess) {
-                // Nếu có contractId, cập nhật trạng thái hợp đồng thành "active" (hiệu lực)
-                String updateMessage = "Xuất kho thành công";
-                if (contractIdParam != null && !contractIdParam.trim().isEmpty()) {
-                    try {
-                        int contractId = Integer.parseInt(contractIdParam.trim());
-                        System.out.println("Attempting to update contract status for contract ID: " + contractId);
-                        
-                        // Kiểm tra hợp đồng có tồn tại không
-                        Contract contract = contractDAO.getContractById(contractId);
-                        if (contract != null) {
-                            String currentStatus = contract.getStatus();
-                            System.out.println("Contract ID " + contractId + " current status: " + currentStatus);
-                            
-                            // Chỉ cập nhật nếu hợp đồng đang ở trạng thái "approved" (đã duyệt)
-                            // và chuyển sang "active" (hiệu lực) sau khi xuất kho
-                            if ("approved".equals(currentStatus)) {
-                                // Cập nhật trạng thái hợp đồng thành "active" (hiệu lực)
-                                boolean updated = contractDAO.updateContractStatus(contractId, "active");
-                                if (updated) {
-                                    // Verify the update
-                                    Contract updatedContract = contractDAO.getContractById(contractId);
-                                    if (updatedContract != null && "active".equals(updatedContract.getStatus())) {
-                                        updateMessage = "Xuất kho thành công. Hợp đồng đã được chuyển sang trạng thái hiệu lực.";
-                                        System.out.println("Contract ID " + contractId + " status successfully updated to 'active'");
-                                    } else {
-                                        System.out.println("Warning: Update returned true but verification failed for contract ID " + contractId);
-                                        updateMessage = "Xuất kho thành công. Cảnh báo: Không thể xác minh cập nhật trạng thái hợp đồng.";
-                                    }
-                                } else {
-                                    System.out.println("Error: Failed to update contract ID " + contractId + " status to 'active'");
-                                    updateMessage = "Xuất kho thành công. Cảnh báo: Không thể cập nhật trạng thái hợp đồng.";
-                                }
-                            } else {
-                                System.out.println("Contract ID " + contractId + " status is '" + currentStatus + "', not 'approved'. Status update skipped.");
-                                // Không cập nhật nếu không phải trạng thái "approved"
-                            }
-                        } else {
-                            System.out.println("Error: Contract ID " + contractId + " not found in database");
-                            updateMessage = "Xuất kho thành công. Cảnh báo: Không tìm thấy hợp đồng với ID " + contractId;
-                        }
-                    } catch (NumberFormatException e) {
-                        System.out.println("Error: Invalid contractId format: " + contractIdParam);
-                        updateMessage = "Xuất kho thành công. Cảnh báo: Mã hợp đồng không hợp lệ.";
-                    } catch (Exception e) {
-                        System.out.println("Error updating contract status: " + e.getMessage());
-                        e.printStackTrace();
-                        updateMessage = "Xuất kho thành công. Cảnh báo: Lỗi khi cập nhật trạng thái hợp đồng: " + e.getMessage();
-                    }
-                }
-                
-                response.getWriter().write("{\"success\":true,\"message\":\"" + 
-                    escapeJson(updateMessage) + "\"}");
+                response.getWriter().write("{\"success\":true,\"message\":\"Xuất kho thành công\"}");
             } else {
                 response.getWriter().write("{\"success\":false,\"message\":\"" + 
                     escapeJson(errorMsg.toString()) + "\"}");
@@ -1310,185 +1096,6 @@ public class InventoryServlet extends HttpServlet {
             json.append(",\"totalPages\":").append((int)Math.ceil((double) totalCount / pageSize));
             json.append("}");
             response.getWriter().write(json.toString());
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.getWriter().write("{\"success\":false,\"message\":\"" + 
-                escapeJson(e.getMessage()) + "\"}");
-        }
-    }
-    
-    /**
-     * Lấy chi tiết hợp đồng với danh sách sản phẩm và kiểm tra số lượng trong kho
-     * Tác giả: Sơn Lê
-     */
-    private void getContractDetails(HttpServletRequest request, HttpServletResponse response) 
-            throws IOException {
-        try {
-            String contractIdParam = request.getParameter("contractId");
-            if (contractIdParam == null || contractIdParam.trim().isEmpty()) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Thiếu contractId\"}");
-                return;
-            }
-            
-            int contractId = Integer.parseInt(contractIdParam);
-            Contract contract = contractDAO.getContractById(contractId);
-            
-            if (contract == null) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy hợp đồng\"}");
-                return;
-            }
-            
-            // Lấy danh sách sản phẩm trong hợp đồng
-            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProducts(contractId);
-            
-            // Kiểm tra số lượng trong kho cho từng sản phẩm
-            java.util.List<java.util.Map<String, Object>> productsWithStock = new java.util.ArrayList<>();
-            boolean allProductsAvailable = true;
-            
-            for (java.util.Map<String, Object> product : contractProducts) {
-                int productId = (Integer) product.get("productId");
-                java.math.BigDecimal requiredQuantity = (java.math.BigDecimal) product.get("quantity");
-                int requiredQty = requiredQuantity.intValue();
-                
-                // Lấy tổng số lượng tồn kho của sản phẩm
-                int totalStock = inventoryDAO.getTotalStock(productId);
-                
-                java.util.Map<String, Object> productWithStock = new java.util.HashMap<>(product);
-                productWithStock.put("totalStock", totalStock);
-                productWithStock.put("available", totalStock >= requiredQty);
-                
-                if (totalStock < requiredQty) {
-                    allProductsAvailable = false;
-                }
-                
-                productsWithStock.add(productWithStock);
-            }
-            
-            // Build JSON response
-            StringBuilder json = new StringBuilder();
-            json.append("{\"success\":true,\"data\":{");
-            json.append("\"contractId\":").append(contract.getId()).append(",");
-            json.append("\"contractNumber\":\"").append(escapeJson(contract.getContractNumber())).append("\",");
-            json.append("\"customerName\":\"").append(escapeJson(contract.getCustomerName() != null ? contract.getCustomerName() : "")).append("\",");
-            json.append("\"status\":\"").append(escapeJson(contract.getStatus() != null ? contract.getStatus() : "")).append("\",");
-            json.append("\"allProductsAvailable\":").append(allProductsAvailable).append(",");
-            json.append("\"products\":[");
-            
-            for (int i = 0; i < productsWithStock.size(); i++) {
-                if (i > 0) json.append(",");
-                java.util.Map<String, Object> p = productsWithStock.get(i);
-                json.append("{");
-                json.append("\"productId\":").append(p.get("productId")).append(",");
-                json.append("\"productCode\":\"").append(escapeJson((String)p.get("productCode"))).append("\",");
-                json.append("\"productName\":\"").append(escapeJson((String)p.get("productName"))).append("\",");
-                json.append("\"unit\":\"").append(escapeJson((String)p.get("unit"))).append("\",");
-                json.append("\"quantity\":").append(p.get("quantity")).append(",");
-                json.append("\"totalStock\":").append(p.get("totalStock")).append(",");
-                json.append("\"available\":").append(p.get("available"));
-                json.append("}");
-            }
-            
-            json.append("]}}");
-            response.getWriter().write(json.toString());
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.getWriter().write("{\"success\":false,\"message\":\"" + 
-                escapeJson(e.getMessage()) + "\"}");
-        }
-    }
-    
-    /**
-     * Duyệt hợp đồng sau khi kiểm tra kho
-     * Nếu đủ hàng: đổi trạng thái thành 'approved' (đã duyệt)
-     * Nếu không đủ: không được duyệt
-     * Tác giả: Sơn Lê
-     */
-    private void approveContract(HttpServletRequest request, HttpServletResponse response) 
-            throws IOException {
-        try {
-            String contractIdParam = request.getParameter("contractId");
-            if (contractIdParam == null || contractIdParam.trim().isEmpty()) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Thiếu contractId\"}");
-                return;
-            }
-            
-            int contractId = Integer.parseInt(contractIdParam);
-            System.out.println("InventoryServlet.approveContract - Contract ID: " + contractId);
-            
-            Contract contract = contractDAO.getContractById(contractId);
-            
-            if (contract == null) {
-                System.out.println("InventoryServlet.approveContract - Contract not found: " + contractId);
-                response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy hợp đồng\"}");
-                return;
-            }
-            
-            String currentStatus = contract.getStatus();
-            System.out.println("InventoryServlet.approveContract - Current status: " + currentStatus);
-            
-            // Kiểm tra trạng thái hợp đồng - chỉ duyệt hợp đồng chờ duyệt
-            if (!"pending_approval".equals(currentStatus)) {
-                System.out.println("InventoryServlet.approveContract - Invalid status: " + currentStatus);
-                response.getWriter().write("{\"success\":false,\"message\":\"Hợp đồng này không ở trạng thái chờ duyệt (hiện tại: " + 
-                    escapeJson(currentStatus != null ? currentStatus : "null") + ")\"}");
-                return;
-            }
-            
-            // Lấy danh sách sản phẩm trong hợp đồng
-            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProducts(contractId);
-            
-            if (contractProducts.isEmpty()) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Hợp đồng không có sản phẩm\"}");
-                return;
-            }
-            
-            // Kiểm tra số lượng trong kho cho từng sản phẩm
-            java.util.List<String> insufficientProducts = new java.util.ArrayList<>();
-            
-            for (java.util.Map<String, Object> product : contractProducts) {
-                int productId = (Integer) product.get("productId");
-                java.math.BigDecimal requiredQuantity = (java.math.BigDecimal) product.get("quantity");
-                int requiredQty = requiredQuantity.intValue();
-                String productName = (String) product.get("productName");
-                
-                // Lấy tổng số lượng tồn kho của sản phẩm
-                int totalStock = inventoryDAO.getTotalStock(productId);
-                
-                if (totalStock < requiredQty) {
-                    insufficientProducts.add(productName + " (cần: " + requiredQty + ", có: " + totalStock + ")");
-                }
-            }
-            
-            // Nếu có sản phẩm không đủ, không được duyệt
-            if (!insufficientProducts.isEmpty()) {
-                String message = "Không thể duyệt hợp đồng. Sản phẩm không đủ: " + 
-                    String.join(", ", insufficientProducts);
-                response.getWriter().write("{\"success\":false,\"message\":\"" + 
-                    escapeJson(message) + "\"}");
-                return;
-            }
-            
-            // Tất cả sản phẩm đều đủ - duyệt hợp đồng
-            System.out.println("InventoryServlet.approveContract - All products available, updating status to 'approved'");
-            boolean updated = contractDAO.updateContractStatus(contractId, "approved");
-            
-            if (updated) {
-                System.out.println("InventoryServlet.approveContract - Status updated successfully");
-                // Verify the update
-                Contract updatedContract = contractDAO.getContractById(contractId);
-                if (updatedContract != null && "approved".equals(updatedContract.getStatus())) {
-                    System.out.println("InventoryServlet.approveContract - Verified: Contract status is now 'approved'");
-                    response.getWriter().write("{\"success\":true,\"message\":\"Duyệt hợp đồng thành công. Trạng thái đã chuyển sang 'Đã duyệt'\"}");
-                } else {
-                    System.out.println("InventoryServlet.approveContract - Warning: Update returned true but status verification failed");
-                    response.getWriter().write("{\"success\":true,\"message\":\"Duyệt hợp đồng thành công\"}");
-                }
-            } else {
-                System.out.println("InventoryServlet.approveContract - Failed to update contract status");
-                response.getWriter().write("{\"success\":false,\"message\":\"Lỗi khi cập nhật trạng thái hợp đồng\"}");
-            }
             
         } catch (Exception e) {
             e.printStackTrace();

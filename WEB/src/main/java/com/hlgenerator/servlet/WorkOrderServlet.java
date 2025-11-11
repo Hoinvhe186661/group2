@@ -6,8 +6,6 @@ import com.hlgenerator.dao.WorkOrderDAO;
 import com.hlgenerator.dao.WorkOrderTaskDAO;
 import com.hlgenerator.dao.SupportRequestDAO;
 import com.hlgenerator.model.WorkOrder;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -52,17 +50,11 @@ public class WorkOrderServlet extends HttpServlet {
         JsonObject jsonResponse = new JsonObject();
         
         try {
-            // Kiểm tra đăng nhập và quyền
-            if (!AuthorizationUtil.isLoggedIn(request)) {
+            // Kiểm tra đăng nhập
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
-                out.print(jsonResponse.toString());
-                return;
-            }
-            
-            if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_WORK_ORDERS, Permission.VIEW_TASKS)) {
-                jsonResponse.addProperty("success", false);
-                jsonResponse.addProperty("message", "Không có quyền truy cập");
                 out.print(jsonResponse.toString());
                 return;
             }
@@ -177,26 +169,20 @@ public class WorkOrderServlet extends HttpServlet {
         response.setContentType("application/json; charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
         
-        // Check authentication and authorization
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_WORK_ORDERS)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền thực hiện\"}");
-            return;
-        }
-        
         PrintWriter out = response.getWriter();
         JsonObject jsonResponse = new JsonObject();
         
         try {
-            // Get userId from session (already authenticated above)
+            // Kiểm tra đăng nhập
             HttpSession session = request.getSession(false);
-            Integer userId = (Integer) (session != null ? session.getAttribute("userId") : null);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
+                jsonResponse.addProperty("success", false);
+                jsonResponse.addProperty("message", "Chưa đăng nhập");
+                out.print(jsonResponse.toString());
+                return;
+            }
+            
+            Integer userId = (Integer) session.getAttribute("userId");
             if (userId == null) {
                 // Try to get from username if userId not available
                 String username = (String) session.getAttribute("username");

@@ -2,8 +2,6 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.ContractDAO;
 import com.hlgenerator.model.Contract;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -35,24 +33,7 @@ public class ContractServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
 
-        // Check authentication and authorization
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        // Allow customers to view their own contracts, admins to view all
         String action = request.getParameter("action");
-        if (action != null && !"customers".equalsIgnoreCase(action) && !"products".equalsIgnoreCase(action)) {
-            // For contract management operations, require permission
-            if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_CONTRACTS, Permission.VIEW_CUSTOMER_PROFILE)) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền truy cập\"}");
-                return;
-            }
-        }
-
         PrintWriter out = response.getWriter();
 
         if ("get".equalsIgnoreCase(action)) {
@@ -219,20 +200,6 @@ public class ContractServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // Check authentication and authorization
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTRACTS)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền thực hiện\"}");
-            return;
-        }
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");

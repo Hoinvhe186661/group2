@@ -17,7 +17,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
 		sql.append("wo.customer_id, wo.description AS work_order_description, ");
-		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.deadline, t.rejection_reason AS rejection_reason, ");
+		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
 		sql.append("(SELECT sr.description FROM support_requests sr ");
 		sql.append(" WHERE sr.customer_id = wo.customer_id ");
 		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
@@ -54,7 +54,6 @@ public class TaskDAO extends DBConnect {
 					a.setAcknowledgedAt(rs.getTimestamp("acknowledged_at"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
-					a.setDeadline(rs.getTimestamp("deadline"));
 					a.setRejectionReason(rs.getString("rejection_reason"));
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));
@@ -213,7 +212,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
 		sql.append("wo.customer_id, wo.description AS work_order_description, ");
-		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.deadline, t.rejection_reason AS rejection_reason, ");
+		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
 		sql.append("(SELECT sr.description FROM support_requests sr ");
 		sql.append(" WHERE sr.customer_id = wo.customer_id ");
 		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
@@ -265,7 +264,6 @@ public class TaskDAO extends DBConnect {
 					a.setAcknowledgedAt(rs.getTimestamp("acknowledged_at"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
-					a.setDeadline(rs.getTimestamp("deadline"));
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));
 					results.add(a);
@@ -299,7 +297,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
 		sql.append("wo.customer_id, wo.description AS work_order_description, ");
-		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.deadline, t.rejection_reason AS rejection_reason, ");
+		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
 		sql.append("(SELECT sr.description FROM support_requests sr ");
 		sql.append(" WHERE sr.customer_id = wo.customer_id ");
 		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
@@ -331,7 +329,6 @@ public class TaskDAO extends DBConnect {
 					a.setAcknowledgedAt(rs.getTimestamp("acknowledged_at"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
-					a.setDeadline(rs.getTimestamp("deadline"));
 					a.setRejectionReason(rs.getString("rejection_reason"));
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));

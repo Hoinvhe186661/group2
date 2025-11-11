@@ -3,8 +3,6 @@ package com.hlgenerator.servlet;
 import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.dao.CustomerDAO;
 import com.hlgenerator.model.User;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -26,15 +24,14 @@ public class AdminDashboardServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
-        if (!AuthorizationUtil.isLoggedIn(request)) {
+        HttpSession session = request.getSession(false);
+        String username = session != null ? (String) session.getAttribute("username") : null;
+        Boolean isLoggedIn = session != null ? (Boolean) session.getAttribute("isLoggedIn") : null;
+
+        if (username == null || isLoggedIn == null || !isLoggedIn) {
             response.sendRedirect(request.getContextPath() + "/admin/login.jsp");
             return;
         }
-        if (!AuthorizationUtil.hasPermission(request, Permission.VIEW_DASHBOARD)) {
-            response.sendRedirect(request.getContextPath() + "/403.jsp");
-            return;
-        }
-        HttpSession session = request.getSession(false);
 
         UserDAO userDAO = new UserDAO();
         CustomerDAO customerDAO = new CustomerDAO();

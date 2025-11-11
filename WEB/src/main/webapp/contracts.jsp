@@ -1,9 +1,10 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
+<%@ page import="java.util.Set" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
     String currentStatus = request.getParameter("status");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
@@ -11,10 +12,25 @@
         return;
     }
     
-    // Kiểm tra quyền truy cập - sử dụng permission
-    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTRACTS)) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
+    // Kiểm tra quyền: chỉ người có quyền manage_contracts mới truy cập được
+    @SuppressWarnings("unchecked")
+    Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+    if (userPermissions == null || !userPermissions.contains("manage_contracts")) {
+        response.sendRedirect(request.getContextPath() + "/error/403.jsp");
         return;
+    }
+%>
+<%!
+    // Hàm dịch trạng thái sang tiếng Việt
+    String translateStatus(String status) {
+        if (status == null) return "-";
+        if ("draft".equals(status)) return "Nháp";
+        if ("pending_approval".equals(status)) return "Chờ Duyệt";
+        if ("approved".equals(status)) return "Đã Duyệt";
+        if ("active".equals(status)) return "Hiệu Lực";
+        if ("terminated".equals(status)) return "Chấm Dứt";
+        if ("deleted".equals(status)) return "Đã xóa";
+        return status;
     }
 %>
 <!DOCTYPE html>
@@ -251,20 +267,7 @@
     </header>
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
-        <aside class="left-side sidebar-offcanvas">
-            <section class="sidebar">
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="img/26115.jpg" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
-                </div>
-                <%@ include file="includes/sidebar-menu.jsp" %>
-            </section>
-        </aside>
+		<jsp:include page="partials/sidebar.jsp"/>
 
         <aside class="right-side">
             <section class="content">
@@ -416,7 +419,7 @@
                                             <td><%= c.getStartDate() != null ? c.getStartDate() : "-" %></td>
                                             <td><%= "terminated".equals(c.getStatus()) ? (c.getEndDate() != null ? c.getEndDate() : "-") : "Vô thời hạn" %></td>
                                             <td><%= c.getContractValue() != null ? c.getContractValue() : "-" %></td>
-                                            <td><%= c.getStatus() %></td>
+                                            <td><%= translateStatus(c.getStatus()) %></td>
                                             <td>
                                                 <button class="btn btn-info btn-xs" onclick="viewContract('<%= c.getId() %>')"><i class="fa fa-eye"></i> Xem</button>
                                                 <% if (!"deleted".equals(c.getStatus())) { %>
@@ -907,6 +910,20 @@
 
         var contractProducts = []; // Mảng lưu sản phẩm tạm thời
         
+        // Hàm dịch trạng thái sang tiếng Việt
+        function translateStatus(status) {
+            if (!status) return '-';
+            var statusMap = {
+                'draft': 'Nháp',
+                'pending_approval': 'Chờ Duyệt',
+                'approved': 'Đã Duyệt',
+                'active': 'Hiệu Lực',
+                'terminated': 'Chấm Dứt',
+                'deleted': 'Đã xóa'
+            };
+            return statusMap[status] || status;
+        }
+        
         // --- ĐOẠN MỚI: Lưu và khôi phục trạng thái bộ lọc ---
         function saveFilterState(isExpanded) {
             localStorage.setItem('contractsFilterExpanded', isExpanded ? '1' : '0');
@@ -1059,7 +1076,7 @@
                         '<div class="well" style="padding: 10px;">' +
                         '  <p style="margin-bottom: 6px;"><strong>Giá trị:</strong></p>' +
                         '  <div>' + (c.contractValue || '-') + '</div>' +
-                        '  <p style="margin-top:10px;"><strong>Trạng thái:</strong> ' + (c.status || '-') + '</p>' +
+                        '  <p style="margin-top:10px;"><strong>Trạng thái:</strong> ' + translateStatus(c.status) + '</p>' +
                         '</div>' +
                         '<h5><i class="fa fa-list"></i> Sản phẩm gắn với hợp đồng</h5>' +
                         '<div class="table-responsive">' +

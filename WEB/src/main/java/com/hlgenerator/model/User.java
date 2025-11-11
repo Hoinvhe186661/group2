@@ -11,7 +11,7 @@ public class User {
     private String phone;
     private Integer customerId; // nullable, only for role 'customer'
     private String role;
-    private String permissions;
+	private String permissions;
     private boolean isActive;
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -19,20 +19,31 @@ public class User {
     // Constructors
     public User() {}
 
-    public User(String username, String email, String passwordHash, String fullName, 
-                String phone, String role, String permissions, boolean isActive) {
+	public User(String username, String email, String passwordHash, String fullName, 
+	            String phone, String role, boolean isActive) {
         this.username = username;
         this.email = email;
         this.passwordHash = passwordHash;
         this.fullName = fullName;
         this.phone = phone;
         this.role = role;
-        this.permissions = permissions;
         this.isActive = isActive;
     }
 
+	public User(String username, String email, String passwordHash, String fullName,
+				String phone, String role, String permissions, boolean isActive) {
+		this.username = username;
+		this.email = email;
+		this.passwordHash = passwordHash;
+		this.fullName = fullName;
+		this.phone = phone;
+		this.role = role;
+		this.permissions = permissions;
+		this.isActive = isActive;
+	}
+
     public User(int id, String username, String email, String passwordHash, String fullName, 
-                String phone, String role, String permissions, boolean isActive, 
+	            String phone, String role, boolean isActive, 
                 Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.username = username;
@@ -41,11 +52,26 @@ public class User {
         this.fullName = fullName;
         this.phone = phone;
         this.role = role;
-        this.permissions = permissions;
         this.isActive = isActive;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
+
+	public User(int id, String username, String email, String passwordHash, String fullName,
+				String phone, String role, String permissions, boolean isActive,
+				Timestamp createdAt, Timestamp updatedAt) {
+		this.id = id;
+		this.username = username;
+		this.email = email;
+		this.passwordHash = passwordHash;
+		this.fullName = fullName;
+		this.phone = phone;
+		this.role = role;
+		this.permissions = permissions;
+		this.isActive = isActive;
+		this.createdAt = createdAt;
+		this.updatedAt = updatedAt;
+	}
 
     // Getters and Setters
     public int getId() {
@@ -112,17 +138,13 @@ public class User {
         this.role = role;
     }
 
-    public String getPermissions() {
-        return permissions;
-    }
+	public String getPermissions() {
+		return permissions;
+	}
 
-    public void setPermissions(String permissions) {
-        this.permissions = permissions;
-    }
-
-    public java.util.Set<String> getPermissionSet() {
-        return com.hlgenerator.util.AuthorizationUtil.parsePermissions(permissions);
-    }
+	public void setPermissions(String permissions) {
+		this.permissions = permissions;
+	}
 
     public boolean isActive() {
         return isActive;

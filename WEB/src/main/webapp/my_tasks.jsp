@@ -1,20 +1,21 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
+<%@ page import="java.util.Set" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền truy cập - cần có quyền xem hoặc quản lý công việc
-    boolean canManage = AuthorizationUtil.hasPermission(request, Permission.MANAGE_TASKS);
-    boolean canView = AuthorizationUtil.hasPermission(request, Permission.VIEW_TASKS);
-    if (!canManage && !canView) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
+    // Kiểm tra quyền: chỉ người có quyền view_my_tasks mới truy cập được
+    @SuppressWarnings("unchecked")
+    Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+    if (userPermissions == null || !userPermissions.contains("view_my_tasks")) {
+        response.sendRedirect(request.getContextPath() + "/error/403.jsp");
         return;
     }
 %>
@@ -193,20 +194,7 @@
     </header>
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
-        <aside class="left-side sidebar-offcanvas">
-            <section class="sidebar">
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="img/26115.jpg" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Xin chào, <%= session.getAttribute("username") != null ? session.getAttribute("username") : "User" %></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
-                </div>
-                <%@ include file="includes/sidebar-menu.jsp" %>
-            </section>
-        </aside>
+		<jsp:include page="partials/sidebar.jsp"/>
 
         <aside class="right-side">
             <section class="content">
@@ -291,8 +279,8 @@
                                             <th>Trạng thái</th>
                                             <th>Ưu tiên</th>
                                             <th>Thời gian dự kiến</th>
-                                            <th>Ngày nhận</th>
                                             <th>Deadline</th>
+                                            <th>Ngày nhận</th>
                                             <th>Ngày hoàn thành</th>
                                             <th>Mô tả từ ticket</th>
                                             <th>Lý do từ chối</th>
@@ -496,6 +484,10 @@
                                 <tr>
                                     <th>Thời gian dự kiến:</th>
                                     <td id="detailEstimatedHours">-</td>
+                                </tr>
+                                <tr>
+                                    <th>Deadline:</th>
+                                    <td id="detailDeadline">-</td>
                                 </tr>
                             </table>
                         </div>
@@ -748,28 +740,21 @@
                         }
                     }
                     
-                    // Format deadline với màu đỏ nếu quá hạn
+                    // Format deadline với màu sắc cảnh báo nếu quá hạn
                     var deadlineDisplay = '<span class="text-muted">-</span>';
                     if(it.deadline) {
-                        try {
-                            var deadline = new Date(it.deadline);
-                            if(!isNaN(deadline.getTime())) {
-                                var dd = String(deadline.getDate()).padStart(2,'0');
-                                var mm = String(deadline.getMonth()+1).padStart(2,'0');
-                                var yyyy = deadline.getFullYear();
-                                var deadlineStr = dd + '/' + mm + '/' + yyyy;
-                                
-                                // Kiểm tra nếu deadline đã qua (màu đỏ nếu quá hạn và chưa hoàn thành)
-                                var today = new Date();
-                                today.setHours(0, 0, 0, 0);
-                                deadline.setHours(0, 0, 0, 0);
-                                if(deadline < today && it.taskStatus !== 'completed') {
-                                    deadlineDisplay = '<span class="text-danger" style="font-weight: bold;" title="Đã quá hạn">' + deadlineStr + ' ⚠</span>';
-                                } else {
-                                    deadlineDisplay = deadlineStr;
-                                }
+                        var deadlineDate = new Date(it.deadline);
+                        if(!isNaN(deadlineDate.getTime())) {
+                            var deadlineFormatted = fmt(it.deadline);
+                            var now = new Date();
+                            var deadlineClass = '';
+                            if(deadlineDate < now && it.taskStatus !== 'completed' && it.taskStatus !== 'cancelled') {
+                                deadlineClass = 'text-danger';
+                            } else if(deadlineDate < new Date(now.getTime() + 24*60*60*1000) && it.taskStatus !== 'completed' && it.taskStatus !== 'cancelled') {
+                                deadlineClass = 'text-warning';
                             }
-                        } catch(e) {}
+                            deadlineDisplay = '<span class="' + deadlineClass + '">' + deadlineFormatted + '</span>';
+                        }
                     }
                     
                     var tr = document.createElement('tr');
@@ -779,8 +764,8 @@
                         '<td>' + badgeForStatus(it.taskStatus) + '</td>' +
                         '<td>' + (priorityToVietnamese(it.taskPriority)||'') + '</td>' +
 						'<td>' + estimatedTimeDisplay + '</td>' +
+						'<td>' + deadlineDisplay + '</td>' +
 						'<td>' + (fmt(it.acknowledgedAt) || '<span class="text-muted">-</span>') + '</td>' +
-                        '<td>' + deadlineDisplay + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td class="reason-cell">' + ticketDescDisplay + '</td>' +
                         '<td class="reason-cell">' + (it.rejectionReason ? (function(txt){ var esc = String(txt).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); return '<span class="text-danger reason-ellipsis" title="' + esc + '">' + esc + '</span>'; })(it.rejectionReason) : '<span class="text-muted">-</span>') + '</td>' +
@@ -1051,6 +1036,24 @@
                             estimatedDisplay = '<strong>' + parseFloat(taskData.estimatedHours).toFixed(1) + ' giờ</strong>';
                         }
                         $('#detailEstimatedHours').html(estimatedDisplay);
+                        
+                        // Deadline với màu sắc cảnh báo
+                        var deadlineDisplay = '-';
+                        if(taskData.deadline) {
+                            var deadlineDate = new Date(taskData.deadline);
+                            if(!isNaN(deadlineDate.getTime())) {
+                                var deadlineFormatted = formatDateTime(taskData.deadline);
+                                var now = new Date();
+                                var deadlineClass = '';
+                                if(deadlineDate < now && taskData.taskStatus !== 'completed' && taskData.taskStatus !== 'cancelled') {
+                                    deadlineClass = 'text-danger';
+                                } else if(deadlineDate < new Date(now.getTime() + 24*60*60*1000) && taskData.taskStatus !== 'completed' && taskData.taskStatus !== 'cancelled') {
+                                    deadlineClass = 'text-warning';
+                                }
+                                deadlineDisplay = '<span class="' + deadlineClass + '"><strong>' + deadlineFormatted + '</strong></span>';
+                            }
+                        }
+                        $('#detailDeadline').html(deadlineDisplay);
                         
                         // Thời gian
                         $('#detailAssignedAt').text(taskData.assignedAt ? formatDateTime(taskData.assignedAt) : '-');

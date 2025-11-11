@@ -44,7 +44,7 @@ public class UserDAO extends DBConnect {
         if (!checkConnection()) {
             return false;
         }
-        String sql = "INSERT INTO users (username, email, password_hash, full_name, phone, customer_id, role, permissions, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+		String sql = "INSERT INTO users (username, email, password_hash, full_name, phone, customer_id, role, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
@@ -56,9 +56,8 @@ public class UserDAO extends DBConnect {
             } else {
                 ps.setInt(6, user.getCustomerId());
             }
-            ps.setString(7, user.getRole());
-            ps.setString(8, user.getPermissions());
-            ps.setBoolean(9, user.isActive());
+			ps.setString(7, user.getRole());
+			ps.setBoolean(8, user.isActive());
             int result = ps.executeUpdate();
             return result > 0;
         } catch (SQLException e) {
@@ -74,7 +73,7 @@ public class UserDAO extends DBConnect {
             logger.severe("getAllUsers: Database connection is not available");
             return users;
         }
-        String sql = "SELECT * FROM users ORDER BY created_at DESC";
+		String sql = "SELECT * FROM users ORDER BY created_at DESC";
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
             boolean hasData = false;
@@ -87,8 +86,7 @@ public class UserDAO extends DBConnect {
                     rs.getString("password_hash"),
                     rs.getString("full_name"),
                     rs.getString("phone"),
-                    rs.getString("role"),
-                    rs.getString("permissions"),
+					rs.getString("role"),
                     rs.getBoolean("is_active"),
                     rs.getTimestamp("created_at"),
                     rs.getTimestamp("updated_at")
@@ -115,7 +113,7 @@ public class UserDAO extends DBConnect {
             logger.severe("getUserById: Database connection is not available");
             return null;
         }
-        String sql = "SELECT * FROM users WHERE id = ?";
+		String sql = "SELECT * FROM users WHERE id = ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -129,8 +127,7 @@ public class UserDAO extends DBConnect {
                         rs.getString("password_hash"),
                         rs.getString("full_name"),
                         rs.getString("phone"),
-                        rs.getString("role"),
-                        rs.getString("permissions"),
+						rs.getString("role"),
                         rs.getBoolean("is_active"),
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
@@ -155,7 +152,7 @@ public class UserDAO extends DBConnect {
             logger.severe("getUserByUsername: Database connection is not available");
             return null;
         }
-        String sql = "SELECT * FROM users WHERE username = ?";
+		String sql = "SELECT * FROM users WHERE username = ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, username);
@@ -169,8 +166,7 @@ public class UserDAO extends DBConnect {
                         rs.getString("password_hash"),
                         rs.getString("full_name"),
                         rs.getString("phone"),
-                        rs.getString("role"),
-                        rs.getString("permissions"),
+						rs.getString("role"),
                         rs.getBoolean("is_active"),
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
@@ -195,7 +191,7 @@ public class UserDAO extends DBConnect {
             logger.severe("getUserByEmail: Database connection is not available");
             return null;
         }
-        String sql = "SELECT * FROM users WHERE email = ?";
+		String sql = "SELECT * FROM users WHERE email = ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, email);
@@ -209,8 +205,7 @@ public class UserDAO extends DBConnect {
                         rs.getString("password_hash"),
                         rs.getString("full_name"),
                         rs.getString("phone"),
-                        rs.getString("role"),
-                        rs.getString("permissions"),
+						rs.getString("role"),
                         rs.getBoolean("is_active"),
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
@@ -234,7 +229,7 @@ public class UserDAO extends DBConnect {
         if (!checkConnection()) {
             return false;
         }
-        String sql = "UPDATE users SET username=?, email=?, password_hash=?, full_name=?, phone=?, customer_id=?, role=?, permissions=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?";
+		String sql = "UPDATE users SET username=?, email=?, password_hash=?, full_name=?, phone=?, customer_id=?, role=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
@@ -246,10 +241,9 @@ public class UserDAO extends DBConnect {
             } else {
                 ps.setInt(6, user.getCustomerId());
             }
-            ps.setString(7, user.getRole());
-            ps.setString(8, user.getPermissions());
-            ps.setBoolean(9, user.isActive());
-            ps.setInt(10, user.getId());
+			ps.setString(7, user.getRole());
+			ps.setBoolean(8, user.isActive());
+			ps.setInt(9, user.getId());
             int result = ps.executeUpdate();
             return result > 0;
         } catch (SQLException e) {

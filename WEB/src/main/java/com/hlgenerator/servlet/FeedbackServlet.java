@@ -4,8 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hlgenerator.dao.FeedbackDAO;
 import com.hlgenerator.dao.SupportRequestDAO;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -54,8 +52,7 @@ public class FeedbackServlet extends HttpServlet {
         
         try {
             HttpSession session = request.getSession(false);
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
                 out.print(jsonResponse.toString());
@@ -65,13 +62,6 @@ public class FeedbackServlet extends HttpServlet {
             String action = request.getParameter("action");
             
             if ("getByTicketId".equals(action)) {
-                if (!AuthorizationUtil.hasAnyPermission(request, Permission.VIEW_SUPPORT, Permission.MANAGE_FEEDBACK)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền truy cập");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
                 // Lấy feedback theo ticket ID
                 String ticketIdParam = request.getParameter("ticketId");
                 if (ticketIdParam == null || ticketIdParam.trim().isEmpty()) {
@@ -96,7 +86,7 @@ public class FeedbackServlet extends HttpServlet {
                             Object ticketCustomerId = ticket.get("customerId");
                             if (ticketCustomerId != null && customerId != null) {
                                 int ticketCustId = ((Number) ticketCustomerId).intValue();
-                                if (ticketCustId != customerId.intValue() && !AuthorizationUtil.hasPermission(request, Permission.MANAGE_FEEDBACK)) {
+                                if (ticketCustId != customerId.intValue()) {
                                     jsonResponse.addProperty("success", false);
                                     jsonResponse.addProperty("message", "Không có quyền xem feedback của ticket này");
                                 } else {
@@ -122,45 +112,44 @@ public class FeedbackServlet extends HttpServlet {
                 }
                 
             } else if ("getStats".equals(action)) {
-                if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_FEEDBACK)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                // Lấy thống kê rating (admin và customer_support có thể xem)
+                String userRole = (String) session.getAttribute("userRole");
+                if ("admin".equals(userRole) || "customer_support".equals(userRole)) {
+                    Map<String, Object> stats = feedbackDAO.getRatingStats();
+                    jsonResponse.addProperty("success", true);
+                    jsonResponse.add("data", gson.toJsonTree(stats));
+                } else {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Không có quyền xem thống kê");
-                    out.print(jsonResponse.toString());
-                    return;
                 }
-                Map<String, Object> stats = feedbackDAO.getRatingStats();
-                jsonResponse.addProperty("success", true);
-                jsonResponse.add("data", gson.toJsonTree(stats));
             } else if ("list".equals(action)) {
-                if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_FEEDBACK)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                // Lấy danh sách tất cả feedback (admin và customer_support)
+                String userRole = (String) session.getAttribute("userRole");
+                if ("admin".equals(userRole) || "customer_support".equals(userRole)) {
+                    // Lấy filter parameters
+                    String customerName = request.getParameter("customerName");
+                    String ticketNumber = request.getParameter("ticketNumber");
+                    String ratingParam = request.getParameter("rating");
+                    String category = request.getParameter("category");
+                    
+                    Integer rating = null;
+                    if (ratingParam != null && !ratingParam.trim().isEmpty()) {
+                        try {
+                            rating = Integer.parseInt(ratingParam);
+                        } catch (NumberFormatException e) {
+                            // Ignore invalid rating
+                        }
+                    }
+                    
+                    List<Map<String, Object>> feedbacks = feedbackDAO.getAllFeedbacksWithDetails(
+                        customerName, ticketNumber, rating, category
+                    );
+                    jsonResponse.addProperty("success", true);
+                    jsonResponse.add("data", gson.toJsonTree(feedbacks));
+                } else {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Không có quyền xem danh sách feedback");
-                    out.print(jsonResponse.toString());
-                    return;
                 }
-                // Lấy danh sách tất cả feedback (admin và customer_support)
-                String customerName = request.getParameter("customerName");
-                String ticketNumber = request.getParameter("ticketNumber");
-                String ratingParam = request.getParameter("rating");
-                String category = request.getParameter("category");
-                
-                Integer rating = null;
-                if (ratingParam != null && !ratingParam.trim().isEmpty()) {
-                    try {
-                        rating = Integer.parseInt(ratingParam);
-                    } catch (NumberFormatException e) {
-                        // Ignore invalid rating
-                    }
-                }
-                
-                List<Map<String, Object>> feedbacks = feedbackDAO.getAllFeedbacksWithDetails(
-                    customerName, ticketNumber, rating, category
-                );
-                jsonResponse.addProperty("success", true);
-                jsonResponse.add("data", gson.toJsonTree(feedbacks));
-                
             } else {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Action không hợp lệ");
@@ -189,8 +178,7 @@ public class FeedbackServlet extends HttpServlet {
         
         try {
             HttpSession session = request.getSession(false);
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            if (session == null || session.getAttribute("isLoggedIn") == null) {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Chưa đăng nhập");
                 out.print(jsonResponse.toString());
@@ -246,13 +234,6 @@ public class FeedbackServlet extends HttpServlet {
             }
             
             if ("create".equals(action)) {
-                if (!AuthorizationUtil.hasAnyPermission(request, Permission.VIEW_SUPPORT, Permission.MANAGE_FEEDBACK)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền gửi feedback");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
                 // Tạo feedback mới
                 
                 if (ticketIdParam == null || ticketIdParam.trim().isEmpty() ||
@@ -347,13 +328,6 @@ public class FeedbackServlet extends HttpServlet {
                 }
                 
             } else if ("update".equals(action)) {
-                if (!AuthorizationUtil.hasAnyPermission(request, Permission.VIEW_SUPPORT, Permission.MANAGE_FEEDBACK)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền cập nhật feedback");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
                 // Cập nhật feedback
                 if (feedbackIdParam == null || feedbackIdParam.trim().isEmpty() ||
                     ratingParam == null || ratingParam.trim().isEmpty()) {

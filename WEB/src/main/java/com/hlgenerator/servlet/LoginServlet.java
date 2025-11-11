@@ -11,8 +11,7 @@ import javax.servlet.http.HttpSession;
 
 import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.User;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
+import com.hlgenerator.dao.RbacDAO;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
@@ -90,7 +89,6 @@ public class LoginServlet extends HttpServlet {
         String userRole = "customer";
         String fullName = "";
         String email = "";
-        java.util.Set<String> permissions = java.util.Collections.emptySet();
         
         // Debug logging
         if (user == null) {
@@ -106,7 +104,6 @@ public class LoginServlet extends HttpServlet {
                 userRole = user.getRole(); // Sử dụng role từ database
                 fullName = user.getFullName();
                 email = user.getEmail();
-                permissions = AuthorizationUtil.resolveEffectivePermissions(userRole, user.getPermissions());
                 System.out.println("DEBUG: User " + username + " logged in with role: " + userRole);
             }
         }
@@ -122,7 +119,37 @@ public class LoginServlet extends HttpServlet {
             session.setAttribute("email", email);
             session.setAttribute("isLoggedIn", true);
             session.setAttribute("loginTime", System.currentTimeMillis());
-            AuthorizationUtil.storePermissions(session, permissions);
+
+            // Load permissions theo role và set vào session
+            try {
+                java.util.Set<String> permSet = new java.util.HashSet<String>();
+                RbacDAO rbacDAO = new RbacDAO();
+                if ("admin".equals(userRole)) {
+                    // Admin: load permissions từ database (như các role khác)
+                    permSet.addAll(rbacDAO.getPermissionKeysByRoleKey(userRole));
+                    // Luôn thêm 4 quyền mặc định không thể xóa
+                    permSet.add("manage_permissions");
+                    permSet.add("manage_users");
+                    permSet.add("manage_settings");
+                    permSet.add("manage_email");
+                } else {
+                    permSet.addAll(rbacDAO.getPermissionKeysByRoleKey(userRole));
+                }
+                session.setAttribute("userPermissions", permSet);
+            } catch (Exception e) {
+                System.out.println("DEBUG: Error loading permissions for user " + username + ": " + e.getMessage());
+                // Nếu là admin, vẫn đảm bảo có 4 quyền mặc định
+                if ("admin".equals(userRole)) {
+                    java.util.Set<String> defaultPerms = new java.util.HashSet<String>();
+                    defaultPerms.add("manage_permissions");
+                    defaultPerms.add("manage_users");
+                    defaultPerms.add("manage_settings");
+                    defaultPerms.add("manage_email");
+                    session.setAttribute("userPermissions", defaultPerms);
+                } else {
+                    session.setAttribute("userPermissions", new java.util.HashSet<String>());
+                }
+            }
             
             // Set customerId nếu là customer
             if ("customer".equals(userRole) && email != null && !email.trim().isEmpty()) {

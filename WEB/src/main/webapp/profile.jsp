@@ -317,7 +317,6 @@
         data.append('companyName', companyName);
         data.append('address', address);
         data.append('role', userData.role || 'customer');
-        if (userData.permissions != null) data.append('permissions', String(userData.permissions));
         if (typeof userData.isActive !== 'undefined') data.append('isActive', String(!!userData.isActive));
         
         // Thêm customerId nếu có (từ session hoặc customerData)

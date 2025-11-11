@@ -6,8 +6,6 @@ import com.hlgenerator.model.PriceHistory;
 import com.hlgenerator.dao.SupplierDAO;
 import com.hlgenerator.model.Product;
 import com.hlgenerator.model.Supplier;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -44,19 +42,7 @@ public class ProductServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         
-        // Check authentication and authorization for view operations
         String action = request.getParameter("action");
-        if (action != null && !"view".equals(action) && !"priceHistory".equals(action)) {
-            // For management operations, require login and view permission at minimum
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.sendRedirect(request.getContextPath() + "/login.jsp");
-                return;
-            }
-            if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_PRODUCTS, Permission.VIEW_PRODUCTS)) {
-                response.sendRedirect(request.getContextPath() + "/403.jsp");
-                return;
-            }
-        }
         
         if ("view".equals(action)) {
             viewProduct(request, response);
@@ -185,19 +171,6 @@ public class ProductServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
-        
-        // Check authentication and authorization for management operations
-        if (!AuthorizationUtil.isLoggedIn(request)) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"success\": false, \"message\": \"Chưa đăng nhập\"}");
-            return;
-        }
-        
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_PRODUCTS)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"success\": false, \"message\": \"Không có quyền thực hiện\"}");
-            return;
-        }
         
         // Kiểm tra xem request có phải là multipart form data không
         if (ServletFileUpload.isMultipartContent(request)) {

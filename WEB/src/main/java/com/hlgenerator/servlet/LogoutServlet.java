@@ -44,7 +44,6 @@ public class LogoutServlet extends HttpServlet {
             session.removeAttribute("fullName");
             session.removeAttribute("email");
             session.removeAttribute("loginTime");
-            session.removeAttribute(com.hlgenerator.util.AuthorizationUtil.SESSION_PERMISSIONS);
             
             // Hủy session hoàn toàn
             session.invalidate();

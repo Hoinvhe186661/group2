@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
+<%@ page import="java.util.Set" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
@@ -7,27 +7,18 @@
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền sử dụng permission
-    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTACTS)) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
-        return;
-    }
-    
-    // Nếu truy cập trực tiếp JSP (không qua servlet), redirect về servlet
-    if (request.getAttribute("messages") == null) {
-        // Giữ nguyên query string nếu có
-        String queryString = request.getQueryString();
-        String redirectUrl = request.getContextPath() + "/contact-management";
-        if (queryString != null && !queryString.isEmpty()) {
-            redirectUrl += "?" + queryString;
-        }
-        response.sendRedirect(redirectUrl);
+    // Kiểm tra quyền: chỉ người có quyền manage_contacts mới truy cập được
+    @SuppressWarnings("unchecked")
+    Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+    if (userPermissions == null || !userPermissions.contains("manage_contacts")) {
+        response.sendRedirect(request.getContextPath() + "/error/403.jsp");
         return;
     }
 %>
@@ -116,24 +107,7 @@
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Left side column. contains the logo and sidebar -->
-        <aside class="left-side sidebar-offcanvas">
-            <!-- sidebar: style can be found in sidebar.less -->
-            <section class="sidebar">
-                <!-- Sidebar user panel -->
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="img/26115.jpg" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
-                </div>
-                <!-- sidebar menu: : style can be found in sidebar.less -->
-                <%@ include file="includes/sidebar-menu.jsp" %>
-            </section>
-            <!-- /.sidebar -->
-        </aside>
+		<jsp:include page="partials/sidebar.jsp"/>
 
         <aside class="right-side">
             <!-- Main content -->
@@ -314,15 +288,9 @@
                                     <div class="col-md-6">
                                         <div class="text-muted" style="line-height: 34px;">
                                             <%
-                                                // Kiểm tra và lấy giá trị với giá trị mặc định
-                                                Object currentPageObj = request.getAttribute("currentPage");
-                                                Object pageSizeObj = request.getAttribute("pageSize");
-                                                Object totalObj = request.getAttribute("totalMessages");
-                                                
-                                                int _currentPage = (currentPageObj != null) ? (Integer) currentPageObj : 1;
-                                                int _pageSize = (pageSizeObj != null) ? (Integer) pageSizeObj : 10;
-                                                int _total = (totalObj != null) ? (Integer) totalObj : 0;
-                                                
+                                                int _currentPage = (Integer) request.getAttribute("currentPage");
+                                                int _pageSize = (Integer) request.getAttribute("pageSize");
+                                                int _total = (Integer) request.getAttribute("totalMessages");
                                                 int _startIdx = (_currentPage - 1) * _pageSize + 1;
                                                 int _endIdx = Math.min(_currentPage * _pageSize, _total);
                                                 if (_total == 0) { 
@@ -362,10 +330,7 @@
                                                     _p.add("size=" + _pageSize);
                                                     String _base = "contact-management" + (_p.isEmpty() ? "" : ("?" + String.join("&", _p)));
                                                     
-                                                    // Kiểm tra và lấy totalPages với giá trị mặc định
-                                                    Object totalPagesObj = request.getAttribute("totalPages");
-                                                    int _totalPages = (totalPagesObj != null) ? (Integer) totalPagesObj : 1;
-                                                    if (_totalPages < 1) _totalPages = 1;
+                                                    int _totalPages = (Integer) request.getAttribute("totalPages");
                                                     
                                                     // Nút prev
                                                     int _prev = Math.max(1, _currentPage - 1);

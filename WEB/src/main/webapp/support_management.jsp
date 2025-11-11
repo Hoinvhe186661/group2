@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
+<%@ page import="java.util.Set" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn" %>
@@ -7,16 +7,18 @@
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền sử dụng permission
-    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SUPPORT) && 
-        !AuthorizationUtil.hasPermission(request, Permission.VIEW_SUPPORT)) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
+    // Kiểm tra quyền: chỉ người có quyền manage_support_requests mới truy cập được
+    @SuppressWarnings("unchecked")
+    Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+    if (userPermissions == null || !userPermissions.contains("manage_support_requests")) {
+        response.sendRedirect(request.getContextPath() + "/error/403.jsp");
         return;
     }
 %>
@@ -203,24 +205,7 @@
     
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Left side column. contains the logo and sidebar -->
-        <aside class="left-side sidebar-offcanvas">
-            <!-- sidebar: style can be found in sidebar.less -->
-            <section class="sidebar">
-                <!-- Sidebar user panel -->
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="img/26115.jpg" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
-                </div>
-                <!-- sidebar menu: : style can be found in sidebar.less -->
-                <%@ include file="includes/sidebar-menu.jsp" %>
-            </section>
-            <!-- /.sidebar -->
-        </aside>
+		<jsp:include page="partials/sidebar.jsp"/>
 
         <aside class="right-side">
             <!-- Main content -->

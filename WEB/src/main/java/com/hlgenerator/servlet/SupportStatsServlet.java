@@ -1,8 +1,6 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.SupportRequestDAO;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -42,40 +40,6 @@ public class SupportStatsServlet extends HttpServlet {
         try {
             String action = request.getParameter("action");
             System.out.println("GET Action received: " + action);
-
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                jsonResponse.addProperty("success", false);
-                jsonResponse.addProperty("message", "Chưa đăng nhập");
-                out.print(jsonResponse.toString());
-                return;
-            }
-
-            boolean requiresManage = "getStats".equals(action)
-                || "getRecentTickets".equals(action)
-                || "getTechnicalStaff".equals(action);
-            boolean requiresView = requiresManage
-                || "getAllTickets".equals(action)
-                || "list".equals(action)
-                || "getById".equals(action);
-
-            if (requiresManage) {
-                if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SUPPORT)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền truy cập");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
-            } else if (requiresView) {
-                if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_SUPPORT, Permission.VIEW_SUPPORT)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền truy cập");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
-            }
             
             if ("getStats".equals(action)) {
                 // Lấy thống kê tổng quan
@@ -213,38 +177,6 @@ public class SupportStatsServlet extends HttpServlet {
             System.out.println("Request method: " + request.getMethod());
             System.out.println("Content type: " + request.getContentType());
             
-            if (!AuthorizationUtil.isLoggedIn(request)) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                jsonResponse.addProperty("success", false);
-                jsonResponse.addProperty("message", "Chưa đăng nhập");
-                out.print(jsonResponse.toString());
-                return;
-            }
-
-            boolean requiresManage = "update".equals(action)
-                || "forward".equals(action);
-            boolean requiresView = requiresManage
-                || "createSupportRequest".equals(action)
-                || "cancel".equals(action);
-
-            if (requiresManage) {
-                if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_SUPPORT)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền thao tác");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
-            } else if (requiresView) {
-                if (!AuthorizationUtil.hasAnyPermission(request, Permission.MANAGE_SUPPORT, Permission.VIEW_SUPPORT)) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    jsonResponse.addProperty("success", false);
-                    jsonResponse.addProperty("message", "Không có quyền thao tác");
-                    out.print(jsonResponse.toString());
-                    return;
-                }
-            }
-
             if ("createSupportRequest".equals(action)) {
                 // Tạo yêu cầu hỗ trợ mới
                 String subject = request.getParameter("subject");

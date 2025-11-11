@@ -24,6 +24,11 @@
     <error-code>500</error-code>
     <location>/error/500.jsp</location>
   </error-page>
+
+  <error-page>
+    <error-code>403</error-code>
+    <location>/error/403.jsp</location>
+  </error-page>
   
   <!-- Session timeout (30 minutes) -->
   <session-config>
@@ -43,6 +48,17 @@
   <filter-mapping>
     <filter-name>CharacterEncodingFilter</filter-name>
     <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <!-- Authorization Filter -->
+  <filter>
+    <filter-name>AuthorizationFilter</filter-name>
+    <filter-class>com.hlgenerator.servlet.AuthorizationFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>AuthorizationFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+    <dispatcher>REQUEST</dispatcher>
   </filter-mapping>
   
   <!-- Request Character Encoding -->

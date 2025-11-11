@@ -4,8 +4,6 @@ import com.google.gson.Gson;
 import com.hlgenerator.dao.CustomerDAO;
 import com.hlgenerator.dao.ContactDAO;
 import com.hlgenerator.model.Customer;
-import com.hlgenerator.util.AuthorizationUtil;
-import com.hlgenerator.util.Permission;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -56,14 +54,27 @@ public class CustomerManagementServlet extends HttpServlet {
         // Kiểm tra nếu là request lấy danh sách khách hàng chờ (cần kiểm tra session trước)
         String action = request.getParameter("action");
         if ("getWaitingCustomers".equals(action)) {
-            if (!AuthorizationUtil.isLoggedIn(request)) {
+            HttpSession session = request.getSession(false);
+            if (session == null) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json; charset=UTF-8");
                 response.getWriter().write("{\"error\":\"Chưa đăng nhập\"}");
                 return;
             }
             
-            if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CUSTOMERS)) {
+            String username = (String) session.getAttribute("username");
+            Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+            String userRole = (String) session.getAttribute("userRole");
+            
+            if (username == null || isLoggedIn == null || !isLoggedIn) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Chưa đăng nhập\"}");
+                return;
+            }
+            
+            boolean canManageCustomers = "admin".equals(userRole) || "customer_support".equals(userRole);
+            if (!canManageCustomers) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json; charset=UTF-8");
                 response.getWriter().write("{\"error\":\"Không có quyền truy cập\"}");
@@ -84,12 +95,24 @@ public class CustomerManagementServlet extends HttpServlet {
         
         response.setContentType("text/html; charset=UTF-8");
         
-        if (!AuthorizationUtil.isLoggedIn(request)) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
             response.sendRedirect(request.getContextPath() + "/login.jsp");
             return;
         }
         
-        if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CUSTOMERS)) {
+        String username = (String) session.getAttribute("username");
+        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+        String userRole = (String) session.getAttribute("userRole");
+        
+        if (username == null || isLoggedIn == null || !isLoggedIn) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp");
+            return;
+        }
+        
+       
+        boolean canManageCustomers = "admin".equals(userRole) || "customer_support".equals(userRole);
+        if (!canManageCustomers) {
             response.sendRedirect(request.getContextPath() + "/403.jsp");
             return;
         }
