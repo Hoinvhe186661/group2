@@ -18,6 +18,18 @@
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
+    
+    // Nếu truy cập trực tiếp JSP (không qua servlet), redirect về servlet
+    if (request.getAttribute("messages") == null) {
+        // Giữ nguyên query string nếu có
+        String queryString = request.getQueryString();
+        String redirectUrl = request.getContextPath() + "/contact-management";
+        if (queryString != null && !queryString.isEmpty()) {
+            redirectUrl += "?" + queryString;
+        }
+        response.sendRedirect(redirectUrl);
+        return;
+    }
 %>
 <!DOCTYPE html>
 <html>
@@ -302,9 +314,15 @@
                                     <div class="col-md-6">
                                         <div class="text-muted" style="line-height: 34px;">
                                             <%
-                                                int _currentPage = (Integer) request.getAttribute("currentPage");
-                                                int _pageSize = (Integer) request.getAttribute("pageSize");
-                                                int _total = (Integer) request.getAttribute("totalMessages");
+                                                // Kiểm tra và lấy giá trị với giá trị mặc định
+                                                Object currentPageObj = request.getAttribute("currentPage");
+                                                Object pageSizeObj = request.getAttribute("pageSize");
+                                                Object totalObj = request.getAttribute("totalMessages");
+                                                
+                                                int _currentPage = (currentPageObj != null) ? (Integer) currentPageObj : 1;
+                                                int _pageSize = (pageSizeObj != null) ? (Integer) pageSizeObj : 10;
+                                                int _total = (totalObj != null) ? (Integer) totalObj : 0;
+                                                
                                                 int _startIdx = (_currentPage - 1) * _pageSize + 1;
                                                 int _endIdx = Math.min(_currentPage * _pageSize, _total);
                                                 if (_total == 0) { 
@@ -344,7 +362,10 @@
                                                     _p.add("size=" + _pageSize);
                                                     String _base = "contact-management" + (_p.isEmpty() ? "" : ("?" + String.join("&", _p)));
                                                     
-                                                    int _totalPages = (Integer) request.getAttribute("totalPages");
+                                                    // Kiểm tra và lấy totalPages với giá trị mặc định
+                                                    Object totalPagesObj = request.getAttribute("totalPages");
+                                                    int _totalPages = (totalPagesObj != null) ? (Integer) totalPagesObj : 1;
+                                                    if (_totalPages < 1) _totalPages = 1;
                                                     
                                                     // Nút prev
                                                     int _prev = Math.max(1, _currentPage - 1);

@@ -284,6 +284,12 @@ public class UserServlet extends HttpServlet {
             String passwordHash = hashPassword(password.trim());
 
             // Create user object
+            // If permissions is null (not provided), set to null to use default role permissions
+            // If permissions is provided (even if "[]"), use it as-is
+            String userPermissions = (permissions != null && !permissions.trim().isEmpty()) 
+                ? permissions.trim() 
+                : null;
+            
             User user = new User(
                 username.trim(),
                 email.trim(),
@@ -291,7 +297,7 @@ public class UserServlet extends HttpServlet {
                 fullName.trim(),
                 phone != null ? phone.trim() : null,
                 role.trim(),
-                permissions != null ? permissions.trim() : "[]",
+                userPermissions,
                 isActiveStr != null ? Boolean.parseBoolean(isActiveStr) : true
             );
 
@@ -388,7 +394,11 @@ public class UserServlet extends HttpServlet {
             existingUser.setFullName(fullName.trim());
             existingUser.setPhone(phone != null ? phone.trim() : null);
             existingUser.setRole(role.trim());
-            existingUser.setPermissions(permissions != null ? permissions.trim() : "[]");
+            // When updating, always set permissions (even if "[]" to remove all)
+            // If permissions is not provided, keep existing permissions
+            if (permissions != null) {
+                existingUser.setPermissions(permissions.trim());
+            }
             if (isActiveStr != null) {
                 existingUser.setActive(Boolean.parseBoolean(isActiveStr));
             }

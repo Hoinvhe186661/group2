@@ -292,6 +292,7 @@
                                             <th>Ưu tiên</th>
                                             <th>Thời gian dự kiến</th>
                                             <th>Ngày nhận</th>
+                                            <th>Deadline</th>
                                             <th>Ngày hoàn thành</th>
                                             <th>Mô tả từ ticket</th>
                                             <th>Lý do từ chối</th>
@@ -299,7 +300,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="taskBody">
-                                        <tr><td colspan="10" class="text-center text-muted">Đang tải...</td></tr>
+                                        <tr><td colspan="11" class="text-center text-muted">Đang tải...</td></tr>
                                     </tbody>
                                 </table>
                                 <nav aria-label="Task pagination">
@@ -669,8 +670,8 @@
             $.getJSON('api/tasks', { action:'listAssigned', userId: currentUserId, status: status, priority: priority, scheduledFrom: scheduledFrom, scheduledTo: scheduledTo, q: q, page: currentPage, size: size }, function(res){
                 var tbody = document.getElementById('taskBody');
                 tbody.innerHTML = '';
-                if(!res.success){ tbody.innerHTML = '<tr><td colspan="10">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
-                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); currentTasksData = []; return; }
+                if(!res.success){ tbody.innerHTML = '<tr><td colspan="11">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
+                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); currentTasksData = []; return; }
                 renderPagination(res.meta);
                 // Lưu dữ liệu để sử dụng cho modal chi tiết
                 currentTasksData = res.data;
@@ -747,6 +748,30 @@
                         }
                     }
                     
+                    // Format deadline với màu đỏ nếu quá hạn
+                    var deadlineDisplay = '<span class="text-muted">-</span>';
+                    if(it.deadline) {
+                        try {
+                            var deadline = new Date(it.deadline);
+                            if(!isNaN(deadline.getTime())) {
+                                var dd = String(deadline.getDate()).padStart(2,'0');
+                                var mm = String(deadline.getMonth()+1).padStart(2,'0');
+                                var yyyy = deadline.getFullYear();
+                                var deadlineStr = dd + '/' + mm + '/' + yyyy;
+                                
+                                // Kiểm tra nếu deadline đã qua (màu đỏ nếu quá hạn và chưa hoàn thành)
+                                var today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                deadline.setHours(0, 0, 0, 0);
+                                if(deadline < today && it.taskStatus !== 'completed') {
+                                    deadlineDisplay = '<span class="text-danger" style="font-weight: bold;" title="Đã quá hạn">' + deadlineStr + ' ⚠</span>';
+                                } else {
+                                    deadlineDisplay = deadlineStr;
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                    
                     var tr = document.createElement('tr');
                     tr.innerHTML = 
                         '<td><div><strong>' + (it.workOrderNumber||'') + '</strong></div><div>' + (it.workOrderTitle||'') + '</div></td>' +
@@ -755,6 +780,7 @@
                         '<td>' + (priorityToVietnamese(it.taskPriority)||'') + '</td>' +
 						'<td>' + estimatedTimeDisplay + '</td>' +
 						'<td>' + (fmt(it.acknowledgedAt) || '<span class="text-muted">-</span>') + '</td>' +
+                        '<td>' + deadlineDisplay + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td class="reason-cell">' + ticketDescDisplay + '</td>' +
                         '<td class="reason-cell">' + (it.rejectionReason ? (function(txt){ var esc = String(txt).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); return '<span class="text-danger reason-ellipsis" title="' + esc + '">' + esc + '</span>'; })(it.rejectionReason) : '<span class="text-muted">-</span>') + '</td>' +

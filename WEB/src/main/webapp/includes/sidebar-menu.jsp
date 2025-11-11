@@ -97,34 +97,30 @@
     </li>
     <% } %>
     
-    <!-- Hỗ trợ -->
-    <% if (permissions.contains(Permission.MANAGE_SUPPORT.getCode()) || permissions.contains(Permission.VIEW_SUPPORT.getCode()) || permissions.contains(Permission.MANAGE_TECH_SUPPORT.getCode())) { %>
-    <li <%= currentPageUri.contains("support") ? "class=\"active treeview\"" : "class=\"treeview\"" %>>
-        <a href="#">
-            <i class="fa fa-life-ring"></i> <span>Hỗ trợ</span>
-            <i class="fa fa-angle-left pull-right"></i>
+    <!-- Quản lý hỗ trợ -->
+    <% if (permissions.contains(Permission.MANAGE_SUPPORT.getCode()) || permissions.contains(Permission.VIEW_SUPPORT.getCode())) { %>
+    <li <%= currentPageUri.contains("support_management") ? "class=\"active\"" : "" %>>
+        <a href="<%= contextPath %>/support_management.jsp">
+            <i class="fa fa-life-ring"></i> <span>Quản lý hỗ trợ</span>
         </a>
-        <ul class="treeview-menu">
-            <% if (permissions.contains(Permission.MANAGE_SUPPORT.getCode()) || permissions.contains(Permission.VIEW_SUPPORT.getCode())) { %>
-            <li <%= currentPageUri.contains("support_management") ? "class=\"active\"" : "" %>>
-                <a href="<%= contextPath %>/support_management.jsp">
-                    <i class="fa fa-circle-o"></i> Quản lý hỗ trợ
-                </a>
-            </li>
-            <% } %>
-            <% if (permissions.contains(Permission.MANAGE_TECH_SUPPORT.getCode())) { %>
-            <li <%= currentPageUri.contains("tech_support") && !currentPageUri.contains("technical_staff") ? "class=\"active\"" : "" %>>
-                <a href="<%= contextPath %>/tech_support_management.jsp">
-                    <i class="fa fa-circle-o"></i> Hỗ trợ kỹ thuật
-                </a>
-            </li>
-            <li <%= currentPageUri.contains("technical_staff") ? "class=\"active\"" : "" %>>
-                <a href="<%= contextPath %>/technical_staff_management.jsp">
-                    <i class="fa fa-circle-o"></i> Quản lý nhân viên kỹ thuật
-                </a>
-            </li>
-            <% } %>
-        </ul>
+    </li>
+    <% } %>
+    
+    <!-- Hỗ trợ kỹ thuật -->
+    <% if (permissions.contains(Permission.MANAGE_TECH_SUPPORT.getCode())) { %>
+    <li <%= currentPageUri.contains("tech_support") && !currentPageUri.contains("technical_staff") ? "class=\"active\"" : "" %>>
+        <a href="<%= contextPath %>/tech_support_management.jsp">
+            <i class="fa fa-wrench"></i> <span>Hỗ trợ kỹ thuật</span>
+        </a>
+    </li>
+    <% } %>
+    
+    <!-- Quản lý nhân viên kỹ thuật -->
+    <% if (permissions.contains(Permission.MANAGE_TECH_SUPPORT.getCode())) { %>
+    <li <%= currentPageUri.contains("technical_staff") ? "class=\"active\"" : "" %>>
+        <a href="<%= contextPath %>/technical_staff_management.jsp">
+            <i class="fa fa-users"></i> <span>Quản lý nhân viên kỹ thuật</span>
+        </a>
     </li>
     <% } %>
     

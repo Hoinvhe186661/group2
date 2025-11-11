@@ -120,10 +120,57 @@ public final class AuthorizationUtil {
             : Collections.emptySet());
     }
 
+    /**
+     * Special marker to indicate that permissions should use role defaults.
+     * This is used to distinguish between "not set" (use defaults) and "explicitly set to empty" (no permissions).
+     */
+    private static final String USE_DEFAULTS_MARKER = "__USE_DEFAULTS__";
+    
+    /**
+     * Resolves effective permissions for a user.
+     * Logic:
+     * - If customPermissionsJson is null or empty string → use default role permissions (not set yet)
+     * - If customPermissionsJson is "[]" → use empty permissions (explicitly set to empty, remove all)
+     * - If customPermissionsJson contains "__USE_DEFAULTS__" → use default role permissions (explicit marker)
+     * - If customPermissionsJson contains "all_permissions" → use default role permissions (legacy)
+     * - If customPermissionsJson has values → use them as the full permission set (allows removing default permissions)
+     * 
+     * Note: Each role only has the default permissions set in RolePermissionConfig.
+     */
     public static Set<String> resolveEffectivePermissions(String role, String customPermissionsJson) {
-        Set<String> effective = new HashSet<>(RolePermissionConfig.getDefaultPermissions(role));
-        effective.addAll(parsePermissions(customPermissionsJson));
-        return effective;
+        Set<String> defaultPerms = RolePermissionConfig.getDefaultPermissions(role);
+        
+        // If permissions is null or empty string, use defaults (not set yet - backward compatibility)
+        if (customPermissionsJson == null || customPermissionsJson.trim().isEmpty()) {
+            return new HashSet<>(defaultPerms);
+        }
+        
+        // Check for explicit "use defaults" marker
+        if (USE_DEFAULTS_MARKER.equals(customPermissionsJson.trim())) {
+            return new HashSet<>(defaultPerms);
+        }
+        
+        Set<String> customPerms = parsePermissions(customPermissionsJson);
+        
+        // Special handling: if permissions contain "all_permissions" (legacy), use default role permissions
+        if (customPerms != null && customPerms.contains("all_permissions")) {
+            return new HashSet<>(defaultPerms);
+        }
+        
+        // Check for "use defaults" marker in the array
+        if (customPerms != null && customPerms.contains(USE_DEFAULTS_MARKER)) {
+            return new HashSet<>(defaultPerms);
+        }
+        
+        // If permissions is empty array "[]", it means explicitly set to empty (remove all permissions)
+        // This allows admin to remove all permissions from a user
+        if (customPerms == null || customPerms.isEmpty()) {
+            return Collections.emptySet();
+        }
+        
+        // If custom permissions are explicitly set with values, use them as the full permission set
+        // This allows removing default role permissions by not including them in the custom permissions
+        return new HashSet<>(customPerms);
     }
 
     public static Set<String> parsePermissions(String permissionsJson) {
