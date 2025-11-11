@@ -112,6 +112,9 @@
           <port>8080</port>
           <path>/demo</path>
           <uriEncoding>UTF-8</uriEncoding>
+          <systemProperties>
+            <org.apache.jasper.compiler.TldLocationsCache.level>FINE</org.apache.jasper.compiler.TldLocationsCache.level>
+          </systemProperties>
         </configuration>
       </plugin>
     </plugins>
@@ -163,6 +166,9 @@
             <port>8080</port>
             <path>/demo</path>
             <uriEncoding>UTF-8</uriEncoding>
+            <systemProperties>
+              <org.apache.jasper.compiler.TldLocationsCache.level>FINE</org.apache.jasper.compiler.TldLocationsCache.level>
+            </systemProperties>
           </configuration>
         </plugin>
         

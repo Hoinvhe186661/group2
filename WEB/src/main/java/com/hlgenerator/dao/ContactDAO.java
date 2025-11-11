@@ -72,7 +72,7 @@ public class ContactDAO extends DBConnect {
 
         StringBuilder sql = new StringBuilder(
             "SELECT id, full_name, email, phone, message, status, created_at, replied_at, contact_method, " +
-            "address, customer_type, company_name, tax_code " +
+            "address, customer_type, company_name, tax_code, contact_content " +
             "FROM contact_messages WHERE 1=1"
         );
         
@@ -150,6 +150,13 @@ public class ContactDAO extends DBConnect {
                         message.put("taxCode", null);
                     }
                     
+                    try {
+                        String contactContent = rs.getString("contact_content");
+                        message.put("contactContent", contactContent);
+                    } catch (Exception e) {
+                        message.put("contactContent", null);
+                    }
+                    
                     messages.add(message);
                 }
             }
@@ -224,7 +231,7 @@ public class ContactDAO extends DBConnect {
      * Cập nhật trạng thái tin nhắn với đầy đủ thông tin
      */
     public boolean updateMessageStatusWithDetails(int messageId, String status, String contactMethod, 
-                                                   String address, String customerType, String companyName, String taxCode) {
+                                                   String address, String customerType, String companyName, String taxCode, String contactContent) {
         if (connection == null) {
             logger.severe("Database connection is not available");
             return false;
@@ -270,6 +277,12 @@ public class ContactDAO extends DBConnect {
             params.add(taxCode.trim());
         }
         
+        // Thêm contact_content
+        if (contactContent != null && !contactContent.trim().isEmpty()) {
+            sql.append(", contact_content = ?");
+            params.add(contactContent.trim());
+        }
+        
         sql.append(" WHERE id = ?");
         params.add(messageId);
         
@@ -286,7 +299,7 @@ public class ContactDAO extends DBConnect {
                 try {
                     createContactMessageColumns();
                     // Thử lại update
-                    return updateMessageStatusWithDetails(messageId, status, contactMethod, address, customerType, companyName, taxCode);
+                    return updateMessageStatusWithDetails(messageId, status, contactMethod, address, customerType, companyName, taxCode, contactContent);
                 } catch (SQLException alterE) {
                     logger.log(Level.SEVERE, "Error creating columns or updating", alterE);
                     // Nếu không tạo được cột, vẫn cập nhật status và replied_at
@@ -321,7 +334,8 @@ public class ContactDAO extends DBConnect {
             "ADD COLUMN IF NOT EXISTS address VARCHAR(500) NULL, " +
             "ADD COLUMN IF NOT EXISTS customer_type VARCHAR(50) NULL, " +
             "ADD COLUMN IF NOT EXISTS company_name VARCHAR(255) NULL, " +
-            "ADD COLUMN IF NOT EXISTS tax_code VARCHAR(50) NULL")) {
+            "ADD COLUMN IF NOT EXISTS tax_code VARCHAR(50) NULL, " +
+            "ADD COLUMN IF NOT EXISTS contact_content TEXT NULL")) {
             ps.executeUpdate();
         } catch (SQLException e) {
             // Nếu không hỗ trợ IF NOT EXISTS, thử từng cột một
@@ -330,7 +344,8 @@ public class ContactDAO extends DBConnect {
                 "address VARCHAR(500) NULL",
                 "customer_type VARCHAR(50) NULL",
                 "company_name VARCHAR(255) NULL",
-                "tax_code VARCHAR(50) NULL"
+                "tax_code VARCHAR(50) NULL",
+                "contact_content TEXT NULL"
             };
             
             for (String column : columns) {
@@ -355,8 +370,11 @@ public class ContactDAO extends DBConnect {
     public boolean updateMessageStatusWithMethod(int messageId, String status, String contactMethod) {
         if (connection == null) {
             logger.severe("Database connection is not available");
+            System.err.println("ContactDAO.updateMessageStatusWithMethod: Connection is null");
             return false;
         }
+
+        System.out.println("ContactDAO.updateMessageStatusWithMethod: Updating message ID " + messageId + " to status '" + status + "'");
 
         String sql;
         if (contactMethod != null && !contactMethod.trim().isEmpty()) {
@@ -366,6 +384,8 @@ public class ContactDAO extends DBConnect {
         } else {
             sql = "UPDATE contact_messages SET status = ?, replied_at = ? WHERE id = ?";
         }
+        
+        System.out.println("ContactDAO.updateMessageStatusWithMethod: SQL = " + sql);
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, status);
@@ -383,8 +403,43 @@ public class ContactDAO extends DBConnect {
             }
             
             int result = ps.executeUpdate();
+            System.out.println("ContactDAO.updateMessageStatusWithMethod: Updated " + result + " row(s) for message ID " + messageId);
             return result > 0;
         } catch (SQLException e) {
+            // Nếu lỗi do status không có trong ENUM (ví dụ: 'converted' chưa được thêm vào ENUM)
+            if (e.getMessage().contains("Data truncated") || e.getMessage().contains("Incorrect enum value") || 
+                (e.getMessage().contains("status") && e.getMessage().contains("converted"))) {
+                System.err.println("ContactDAO.updateMessageStatusWithMethod: Status '" + status + "' not in ENUM. Attempting to add it...");
+                try {
+                    // Thử thêm 'converted' vào ENUM
+                    try (PreparedStatement alterPs = connection.prepareStatement(
+                        "ALTER TABLE contact_messages MODIFY COLUMN status ENUM('new', 'read', 'replied', 'archived', 'converted') DEFAULT 'new'")) {
+                        alterPs.executeUpdate();
+                        System.out.println("ContactDAO.updateMessageStatusWithMethod: Successfully added 'converted' to status ENUM");
+                    }
+                    // Thử lại update
+                    return updateMessageStatusWithMethod(messageId, status, contactMethod);
+                } catch (SQLException alterE) {
+                    System.err.println("ContactDAO.updateMessageStatusWithMethod: Error adding 'converted' to ENUM: " + alterE.getMessage());
+                    logger.log(Level.SEVERE, "Error adding 'converted' to status ENUM or updating", alterE);
+                    // Nếu không thêm được, thử dùng 'archived' thay thế
+                    if ("converted".equals(status)) {
+                        System.out.println("ContactDAO.updateMessageStatusWithMethod: Falling back to 'archived' status");
+                        try (PreparedStatement fallbackPs = connection.prepareStatement(
+                            "UPDATE contact_messages SET status = 'archived', replied_at = ? WHERE id = ?")) {
+                            fallbackPs.setTimestamp(1, null);
+                            fallbackPs.setInt(2, messageId);
+                            int fallbackResult = fallbackPs.executeUpdate();
+                            System.out.println("ContactDAO.updateMessageStatusWithMethod: Fallback update result: " + fallbackResult);
+                            return fallbackResult > 0;
+                        } catch (SQLException fallbackE) {
+                            logger.log(Level.SEVERE, "Error in fallback update with 'archived'", fallbackE);
+                            return false;
+                        }
+                    }
+                    return false;
+                }
+            }
             // Nếu lỗi do không có cột contact_method, thử tạo cột và update lại
             if (e.getMessage().contains("Unknown column 'contact_method'")) {
                 try {
@@ -510,7 +565,7 @@ public class ContactDAO extends DBConnect {
 
         StringBuilder sql = new StringBuilder(
             "SELECT id, full_name, email, phone, message, status, created_at, replied_at, contact_method, " +
-            "address, customer_type, company_name, tax_code " +
+            "address, customer_type, company_name, tax_code, contact_content " +
             "FROM contact_messages WHERE 1=1"
         );
         
@@ -595,6 +650,13 @@ public class ContactDAO extends DBConnect {
                         message.put("taxCode", null);
                     }
                     
+                    try {
+                        String contactContent = rs.getString("contact_content");
+                        message.put("contactContent", contactContent);
+                    } catch (Exception e) {
+                        message.put("contactContent", null);
+                    }
+                    
                     messages.add(message);
                 }
             }
@@ -664,10 +726,91 @@ public class ContactDAO extends DBConnect {
     }
 
     /**
-     * Lấy danh sách khách hàng đã liên hệ (trạng thái replied)
+     * Lấy danh sách khách hàng đã liên hệ (trạng thái replied, loại trừ những contact đã được chuyển thành khách hàng - converted)
      */
     public List<Map<String, Object>> getContactedCustomers() {
-        return getContactMessagesWithFilters("replied", null, null);
+        List<Map<String, Object>> messages = new ArrayList<>();
+        
+        if (connection == null) {
+            logger.severe("Database connection is not available");
+            return messages;
+        }
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT id, full_name, email, phone, message, status, created_at, replied_at, contact_method, " +
+            "address, customer_type, company_name, tax_code, contact_content " +
+            "FROM contact_messages WHERE status = 'replied'"
+        );
+        
+        sql.append(" ORDER BY created_at DESC");
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString());
+             ResultSet rs = ps.executeQuery()) {
+            
+            while (rs.next()) {
+                Map<String, Object> message = new HashMap<>();
+                message.put("id", rs.getInt("id"));
+                message.put("fullName", rs.getString("full_name"));
+                message.put("email", rs.getString("email"));
+                message.put("phone", rs.getString("phone"));
+                message.put("message", rs.getString("message"));
+                message.put("status", rs.getString("status"));
+                message.put("createdAt", rs.getTimestamp("created_at"));
+                Timestamp repliedAt = rs.getTimestamp("replied_at");
+                message.put("repliedAt", repliedAt != null ? repliedAt : null);
+                
+                // Lấy contact_method, có thể null nếu cột chưa tồn tại hoặc giá trị null
+                try {
+                    String contactMethod = rs.getString("contact_method");
+                    message.put("contactMethod", contactMethod);
+                } catch (Exception e) {
+                    // Cột contact_method có thể chưa tồn tại
+                    message.put("contactMethod", null);
+                }
+                
+                // Lấy các thông tin bổ sung
+                try {
+                    String address = rs.getString("address");
+                    message.put("address", address);
+                } catch (Exception e) {
+                    message.put("address", null);
+                }
+                
+                try {
+                    String customerType = rs.getString("customer_type");
+                    message.put("customerType", customerType);
+                } catch (Exception e) {
+                    message.put("customerType", null);
+                }
+                
+                try {
+                    String companyName = rs.getString("company_name");
+                    message.put("companyName", companyName);
+                } catch (Exception e) {
+                    message.put("companyName", null);
+                }
+                
+                try {
+                    String taxCode = rs.getString("tax_code");
+                    message.put("taxCode", taxCode);
+                } catch (Exception e) {
+                    message.put("taxCode", null);
+                }
+                
+                try {
+                    String contactContent = rs.getString("contact_content");
+                    message.put("contactContent", contactContent);
+                } catch (Exception e) {
+                    message.put("contactContent", null);
+                }
+                
+                messages.add(message);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting contacted customers", e);
+        }
+        
+        return messages;
     }
 
     /**

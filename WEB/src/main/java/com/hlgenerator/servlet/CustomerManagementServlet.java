@@ -93,6 +93,47 @@ public class CustomerManagementServlet extends HttpServlet {
             return;
         }
         
+        // Sinh mã khách hàng tự động
+        if ("generateCustomerCode".equals(action)) {
+            HttpSession session = request.getSession(false);
+            if (session == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Chưa đăng nhập\"}");
+                return;
+            }
+            
+            String username = (String) session.getAttribute("username");
+            Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+            String userRole = (String) session.getAttribute("userRole");
+            
+            if (username == null || isLoggedIn == null || !isLoggedIn) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Chưa đăng nhập\"}");
+                return;
+            }
+            
+            boolean canManageCustomers = "admin".equals(userRole) || "customer_support".equals(userRole);
+            if (!canManageCustomers) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Không có quyền truy cập\"}");
+                return;
+            }
+            
+            try {
+                String generatedCode = customerDAO.generateNextCustomerCode();
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"success\":true,\"data\":{\"customerCode\":\"" + generatedCode + "\"}}");
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"error\":\"Lỗi server: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
+        
         response.setContentType("text/html; charset=UTF-8");
         
         HttpSession session = request.getSession(false);
@@ -121,7 +162,13 @@ public class CustomerManagementServlet extends HttpServlet {
             
             List<Customer> allCustomers = customerDAO.getAllCustomers();
             
+            // Đảm bảo allCustomers không null
+            if (allCustomers == null) {
+                allCustomers = new ArrayList<>();
+                System.err.println("Warning: getAllCustomers() returned null, using empty list");
+            }
             
+            System.out.println("CustomerManagementServlet: Loaded " + allCustomers.size() + " customers");
         
             String pType = decodeParam(request.getParameter("customerType"));
             String pStatus = decodeParam(request.getParameter("status"));
@@ -130,6 +177,7 @@ public class CustomerManagementServlet extends HttpServlet {
             
             List<Customer> filteredCustomers = filterCustomers(allCustomers,  pType, pStatus);
             
+            System.out.println("CustomerManagementServlet: Filtered to " + filteredCustomers.size() + " customers");
             
             Set<String> customerTypes = extractCustomerTypes(allCustomers);
             Set<String> statuses = extractStatuses(allCustomers);
@@ -149,7 +197,17 @@ public class CustomerManagementServlet extends HttpServlet {
         } catch (Exception e) {
             System.err.println("Error in CustomerManagementServlet: " + e.getMessage());
             e.printStackTrace();
-            throw new ServletException("Error processing customer management request", e);
+            // Thay vì throw exception, hiển thị trang với danh sách rỗng
+            try {
+                request.setAttribute("filteredCustomers", new ArrayList<Customer>());
+                request.setAttribute("customerTypes", new TreeSet<String>());
+                request.setAttribute("statuses", new TreeSet<String>());
+                request.setAttribute("filterType", "");
+                request.setAttribute("filterStatus", "");
+                request.getRequestDispatcher("/customers.jsp").forward(request, response);
+            } catch (Exception e2) {
+                throw new ServletException("Error processing customer management request", e);
+            }
         }
     }
     
@@ -158,20 +216,37 @@ public class CustomerManagementServlet extends HttpServlet {
                                           String type, String status) {
         List<Customer> filtered = new ArrayList<>();
         
+        if (allCustomers == null) {
+            System.err.println("filterCustomers: allCustomers is null");
+            return filtered;
+        }
+        
+        System.out.println("filterCustomers: Total customers: " + allCustomers.size() + ", Filter type: " + type + ", Filter status: " + status);
+        
         for (Customer c : allCustomers) {
-           
+            if (c == null) {
+                System.err.println("filterCustomers: Found null customer, skipping");
+                continue;
+            }
             
+            // Debug log cho từng customer
+            System.out.println("Checking customer ID: " + c.getId() + ", Type: " + c.getCustomerType() + ", Status: " + c.getStatus());
             
-            if (!equalsParam(type, c.getCustomerType())) continue;
+            if (!equalsParam(type, c.getCustomerType())) {
+                System.out.println("  -> Filtered out by type");
+                continue;
+            }
             
-            
-            if (!equalsParam(status, c.getStatus())) continue;
-            
+            if (!equalsParam(status, c.getStatus())) {
+                System.out.println("  -> Filtered out by status");
+                continue;
+            }
     
-            
+            System.out.println("  -> Customer passed filter, adding to list");
             filtered.add(c);
         }
         
+        System.out.println("filterCustomers: Result: " + filtered.size() + " customers");
         return filtered;
     }
     
@@ -180,9 +255,11 @@ public class CustomerManagementServlet extends HttpServlet {
      */
     private Set<String> extractCustomerTypes(List<Customer> customers) {
         Set<String> types = new TreeSet<>();
-        for (Customer c : customers) {
-            if (c.getCustomerType() != null && !c.getCustomerType().trim().isEmpty()) {
-                types.add(c.getCustomerType().trim());
+        if (customers != null) {
+            for (Customer c : customers) {
+                if (c != null && c.getCustomerType() != null && !c.getCustomerType().trim().isEmpty()) {
+                    types.add(c.getCustomerType().trim());
+                }
             }
         }
         return types;
@@ -193,9 +270,11 @@ public class CustomerManagementServlet extends HttpServlet {
      */
     private Set<String> extractStatuses(List<Customer> customers) {
         Set<String> statuses = new TreeSet<>();
-        for (Customer c : customers) {
-            if (c.getStatus() != null && !c.getStatus().trim().isEmpty()) {
-                statuses.add(c.getStatus().trim());
+        if (customers != null) {
+            for (Customer c : customers) {
+                if (c != null && c.getStatus() != null && !c.getStatus().trim().isEmpty()) {
+                    statuses.add(c.getStatus().trim());
+                }
             }
         }
         return statuses;
@@ -203,9 +282,16 @@ public class CustomerManagementServlet extends HttpServlet {
     
     
     private boolean equalsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) return true;
+        if (param == null || param.trim().isEmpty()) {
+            // Không có filter, chấp nhận tất cả
+            return true;
+        }
         String val = actual == null ? "" : actual.trim();
-        return param.trim().equalsIgnoreCase(val);
+        boolean matches = param.trim().equalsIgnoreCase(val);
+        if (!matches) {
+            System.out.println("equalsParam: param='" + param + "' != actual='" + val + "'");
+        }
+        return matches;
     }
     
     
@@ -364,7 +450,7 @@ public class CustomerManagementServlet extends HttpServlet {
                     
                 case "update":
                     // Xử lý cập nhật thông tin khách hàng
-                    // ... code cập nhật ...
+                    // ... code cập nhật ... 
                     break;
                     
                 case "add":
@@ -412,4 +498,3 @@ public class CustomerManagementServlet extends HttpServlet {
         }
     }
 }
-

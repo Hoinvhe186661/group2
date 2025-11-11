@@ -27,6 +27,8 @@ public class CustomerDAO extends DBConnect {
             return true;
         } catch (SQLException e) {
             logger.severe("Error checking database connection: " + e.getMessage());
+            System.err.println("CustomerDAO.checkConnection(): SQLException: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
@@ -68,39 +70,71 @@ public class CustomerDAO extends DBConnect {
     // Get all customers
     public List<Customer> getAllCustomers() {
         List<Customer> customers = new ArrayList<>();
+        
+        System.out.println("CustomerDAO.getAllCustomers(): Starting...");
+        
         if (!checkConnection()) {
             logger.severe("getAllCustomers: Database connection is not available");
+            System.err.println("CustomerDAO.getAllCustomers(): Connection check failed");
             return customers;
         }
+        
+        System.out.println("CustomerDAO.getAllCustomers(): Connection OK, executing query...");
+        
         String sql = "SELECT * FROM customers ORDER BY created_at DESC";
+        System.out.println("CustomerDAO.getAllCustomers(): SQL = " + sql);
+        
         try (PreparedStatement ps = connection.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
+            
+            System.out.println("CustomerDAO.getAllCustomers(): Query executed successfully");
+            
             boolean hasData = false;
+            int count = 0;
             while (rs.next()) {
                 hasData = true;
-                Customer customer = new Customer(
-                    rs.getInt("id"),
-                    rs.getString("customer_code"),
-                    rs.getString("company_name"),
-                    rs.getString("contact_person"),
-                    rs.getString("email"),
-                    rs.getString("phone"),
-                    rs.getString("address"),
-                    rs.getString("tax_code"),
-                    rs.getString("customer_type"),
-                    rs.getString("status"),
-                    rs.getTimestamp("created_at"),
-                    rs.getTimestamp("updated_at")
-                );
-                customers.add(customer);
+                count++;
+                try {
+                    Customer customer = new Customer(
+                        rs.getInt("id"),
+                        rs.getString("customer_code"),
+                        rs.getString("company_name"),
+                        rs.getString("contact_person"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getString("tax_code"),
+                        rs.getString("customer_type"),
+                        rs.getString("status"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                    );
+                    customers.add(customer);
+                    System.out.println("CustomerDAO.getAllCustomers(): Added customer ID=" + customer.getId() + ", Code=" + customer.getCustomerCode());
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error creating Customer object from ResultSet", e);
+                    System.err.println("CustomerDAO.getAllCustomers(): Error creating customer: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
+            
+            System.out.println("CustomerDAO.getAllCustomers(): Processed " + count + " rows, added " + customers.size() + " customers");
+            
             if (!hasData) {
                 logger.warning("getAllCustomers: No data found in customers table");
+                System.out.println("CustomerDAO.getAllCustomers(): WARNING - No data found in customers table");
             }
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error getting all customers", e);
+            System.err.println("CustomerDAO.getAllCustomers(): SQLException: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Unexpected error getting all customers", e);
+            System.err.println("CustomerDAO.getAllCustomers(): Unexpected error: " + e.getMessage());
+            e.printStackTrace();
         }
         
+        System.out.println("CustomerDAO.getAllCustomers(): Returning " + customers.size() + " customers");
         return customers;
     }
 

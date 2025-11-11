@@ -50,6 +50,7 @@
         .message-status-new { border-left: 4px solid #d9534f; }
         .message-status-replied { border-left: 4px solid #5cb85c; }
         .message-status-read { border-left: 4px solid #5bc0de; }
+        .message-status-converted { border-left: 4px solid #9c27b0; }
         
         .message-detail {
             white-space: pre-wrap;
@@ -122,7 +123,8 @@
                                     <option value="">Tất cả</option>
                                     <option value="new" ${param.status == 'new' ? 'selected' : ''}>Mới</option>
                                     <option value="read" ${param.status == 'read' ? 'selected' : ''}>Đã đọc</option>
-                                    <option value="replied" ${param.status == 'replied' ? 'selected' : ''}>Đã liên hệ </option>
+                                    <option value="replied" ${param.status == 'replied' ? 'selected' : ''}>Đã liên hệ</option>
+                                    <option value="converted" ${param.status == 'converted' ? 'selected' : ''}>Đã chuyển đổi</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -224,7 +226,10 @@
                                                                         <span class="label label-info">Đã đọc</span>
                                                                     </c:when>
                                                                     <c:when test="${message.status == 'replied'}">
-                                                                        <span class="label label-success">Đã liên hệ </span>
+                                                                        <span class="label label-success">Đã liên hệ</span>
+                                                                    </c:when>
+                                                                    <c:when test="${message.status == 'converted'}">
+                                                                        <span class="label label-primary">Đã chuyển đổi</span>
                                                                     </c:when>
                                                                     <c:otherwise>
                                                                         <span class="label label-default">${message.status}</span>
@@ -252,6 +257,7 @@
                                                                         data-customer-type="${message.customerType != null ? message.customerType : ''}"
                                                                         data-company-name="${message.companyName != null ? message.companyName : ''}"
                                                                         data-tax-code="${message.taxCode != null ? message.taxCode : ''}"
+                                                                        data-contact-content="${message.contactContent != null ? message.contactContent : ''}"
                                                                         title="Xem chi tiết">
                                                                     <i class="fa fa-eye"></i> Xem
                                                                 </button>
@@ -260,6 +266,9 @@
                                                                         <button class="btn btn-success btn-xs" disabled title="Đã liên hệ" style="cursor: not-allowed;">
                                                                             <i class="fa fa-check"></i> Đã liên hệ
                                                                         </button>
+                                                                    </c:when>
+                                                                    <c:when test="${message.status == 'converted'}">
+                                                                        <!-- Không hiển thị nút "Đã liên hệ" khi trạng thái là "converted" -->
                                                                     </c:when>
                                                                     <c:otherwise>
                                                                         <button class="btn btn-primary btn-xs mark-replied-btn" data-message-id="${message.id}" title="Đánh dấu đã liên hệ">
@@ -388,14 +397,14 @@
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
-                    <h4 class="modal-title">Chi tiết tin nhắn liên hệ</h4>
+                    <h4 class="modal-title">Chi tiết  liên hệ</h4>
                 </div>
                 <div class="modal-body" id="messageDetailContent">
                     <!-- Nội dung sẽ được load bằng JavaScript -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary" id="btnMarkAsReplied">Đánh dấu đã liên hệ </button>
+                    <button type="button" class="btn btn-primary" id="btnMarkAsReplied">Đánh dấu đã liên hệ</button>
                 </div>
             </div>
         </div>
@@ -489,6 +498,7 @@
                 var address = $('#address').val();
                 var companyName = $('#companyName').val();
                 var taxCode = $('#taxCode').val();
+                var contactContent = $('#contactContent').val();
                 
                 // Validation: Kiểm tra phương thức liên hệ
                 if (!contactMethod || contactMethod.trim() === '') {
@@ -534,7 +544,8 @@
                         address: address ? address.trim() : '',
                         customerType: customerType,
                         companyName: companyName ? companyName.trim() : '',
-                        taxCode: taxCode ? taxCode.trim() : ''
+                        taxCode: taxCode ? taxCode.trim() : '',
+                        contactContent: contactContent ? contactContent.trim() : ''
                     },
                     dataType: 'json',
                     success: function(response) {
@@ -615,83 +626,143 @@
             var customerType = String($viewBtn.data('customer-type') || '');
             var companyName = String($viewBtn.data('company-name') || '');
             var taxCode = String($viewBtn.data('tax-code') || '');
+            var contactContent = String($viewBtn.data('contact-content') || '');
             
             // Lấy toàn bộ nội dung tin nhắn (có thể cần gọi API)
             // Tạm thời dùng nội dung từ bảng
             var html = '<div class="row">';
             html += '<div class="col-md-12">';
             html += '<h5 style="margin-top: 0; margin-bottom: 20px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Thông tin liên hệ</h5>';
-            html += '<div class="form-group">';
-            html += '<label>Họ tên:</label>';
-            html += '<p class="form-control-static"><strong>' + escapeHtml(fullName) + '</strong></p>';
+            html += '<div class="row">';
+            // Họ tên - cột 1
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Họ tên:</strong> ' + escapeHtml(fullName) + '</p>';
             html += '</div>';
-            html += '<div class="form-group">';
-            html += '<label>Email:</label>';
-            html += '<p class="form-control-static"><a href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + '</a></p>';
             html += '</div>';
-            html += '<div class="form-group">';
-            html += '<label>Số điện thoại:</label>';
-            html += '<p class="form-control-static"><a href="tel:' + escapeHtml(phone) + '">' + escapeHtml(phone) + '</a></p>';
+            // Email - cột 2
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Email:</strong> <a href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + '</a></p>';
             html += '</div>';
-            if (address && String(address).trim() !== '') {
-                html += '<div class="form-group">';
-                html += '<label>Địa chỉ:</label>';
-                html += '<p class="form-control-static">' + escapeHtml(String(address)) + '</p>';
-                html += '</div>';
-            }
-            html += '<div class="form-group">';
-            html += '<label>Trạng thái:</label>';
-            html += '<p class="form-control-static"><span class="label label-' + (status === 'Mới' ? 'danger' : status === 'Đã liên hệ ' ? 'success' : 'info') + '">' + escapeHtml(status) + '</span></p>';
             html += '</div>';
-            html += '<div class="form-group">';
-            html += '<label>Ngày gửi:</label>';
-            html += '<p class="form-control-static">' + escapeHtml(createdAt) + '</p>';
             html += '</div>';
-            if (repliedAt && repliedAt !== '-') {
-                html += '<div class="form-group">';
-                html += '<label>Ngày phản hồi:</label>';
-                html += '<p class="form-control-static">' + escapeHtml(repliedAt) + '</p>';
-                html += '</div>';
-            }
-            if (contactMethod && String(contactMethod).trim() !== '') {
-                html += '<div class="form-group">';
-                html += '<label>Phương thức liên hệ:</label>';
-                html += '<p class="form-control-static"><span class="label label-info">' + escapeHtml(String(contactMethod)) + '</span></p>';
-                html += '</div>';
-            }
-            html += '<hr>';
-            html += '<h5 style="margin-top: 0; margin-bottom: 20px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Thông tin khách hàng</h5>';
-            if (customerType && String(customerType).trim() !== '') {
-                html += '<div class="form-group">';
-                html += '<label>Loại khách hàng:</label>';
-                var customerTypeLabel = String(customerType) === 'company' ? 'Doanh nghiệp' : 'Cá nhân';
-                html += '<p class="form-control-static"><span class="label label-primary">' + escapeHtml(customerTypeLabel) + '</span></p>';
-                html += '</div>';
-            }
-            if (companyName && String(companyName).trim() !== '') {
-                html += '<div class="form-group">';
-                html += '<label>Tên công ty:</label>';
-                html += '<p class="form-control-static"><strong>' + escapeHtml(String(companyName)) + '</strong></p>';
-                html += '</div>';
-            }
-            if (taxCode && String(taxCode).trim() !== '') {
-                html += '<div class="form-group">';
-                html += '<label>Mã số thuế:</label>';
-                html += '<p class="form-control-static">' + escapeHtml(String(taxCode)) + '</p>';
-                html += '</div>';
-            }
-            html += '<hr>';
-            html += '<div class="form-group">';
-            html += '<label>Nội dung tin nhắn:</label>';
-            html += '<div class="message-detail" style="background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">';
+            html += '<div class="row">';
+            // Số điện thoại - cột 1
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Số điện thoại:</strong> <a href="tel:' + escapeHtml(phone) + '">' + escapeHtml(phone) + '</a></p>';
+            html += '</div>';
+            html += '</div>';
+            // Ngày gửi - cột 2
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Ngày gửi:</strong> ' + escapeHtml(createdAt) + '</p>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            // Nội dung tin nhắn - full width (sau số điện thoại)
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<label><strong>Nội dung tin nhắn:</strong></label>';
+            html += '<div class="message-detail" style="background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; white-space: pre-wrap; word-wrap: break-word;">';
             html += escapeHtml(message);
             html += '</div>';
             html += '</div>';
+            // Địa chỉ (nếu có) - full width
+            if (address && String(address).trim() !== '') {
+                html += '<div class="form-group" style="margin-bottom: 15px;">';
+                html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Địa chỉ:</strong> ' + escapeHtml(String(address)) + '</p>';
+                html += '</div>';
+            }
+            // Trạng thái và Ngày phản hồi - hàng ngang
+            html += '<div class="row">';
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Trạng thái:</strong> ';
+            var statusLabelClass = 'info';
+            if (status === 'Mới') {
+                statusLabelClass = 'danger';
+            } else if (status === 'Đã liên hệ') {
+                statusLabelClass = 'success';
+            } else if (status === 'Đã chuyển đổi') {
+                statusLabelClass = 'primary';
+            }
+            html += '<span class="label label-' + statusLabelClass + '">' + escapeHtml(status) + '</span></p>';
+            html += '</div>';
+            html += '</div>';
+            // Ngày phản hồi - cột 2
+            if (repliedAt && repliedAt !== '-') {
+                html += '<div class="col-md-6 col-sm-6">';
+                html += '<div class="form-group" style="margin-bottom: 15px;">';
+                html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Ngày phản hồi:</strong> ' + escapeHtml(repliedAt) + '</p>';
+                html += '</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+            // Phương thức liên hệ (nếu có) - full width
+            if (contactMethod && String(contactMethod).trim() !== '') {
+                html += '<div class="form-group" style="margin-bottom: 15px;">';
+                html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Phương thức liên hệ:</strong> <span class="label label-info">' + escapeHtml(String(contactMethod)) + '</span></p>';
+                html += '</div>';
+            }
+            html += '<hr>';
+           // html += '<h5 style="margin-top: 0; margin-bottom: 20px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Thông tin khách hàng</h5>';
+            // Sắp xếp thông tin khách hàng theo dạng ngang
+            if (customerType && String(customerType).trim() !== '') {
+                var customerTypeLabel = String(customerType) === 'company' ? 'Doanh nghiệp' : 'Cá nhân';
+                if (companyName && String(companyName).trim() !== '') {
+                    // Loại khách hàng và Tên công ty - hàng ngang
+                    html += '<div class="row">';
+                    html += '<div class="col-md-6 col-sm-6">';
+                    html += '<div class="form-group" style="margin-bottom: 15px;">';
+                    html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Loại khách hàng:</strong> <span class="label label-primary">' + escapeHtml(customerTypeLabel) + '</span></p>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div class="col-md-6 col-sm-6">';
+                    html += '<div class="form-group" style="margin-bottom: 15px;">';
+                    html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Tên công ty:</strong> ' + escapeHtml(String(companyName)) + '</p>';
+                    html += '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                } else {
+                    // Chỉ có Loại khách hàng
+                    html += '<div class="form-group" style="margin-bottom: 15px;">';
+                    html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Loại khách hàng:</strong> <span class="label label-primary">' + escapeHtml(customerTypeLabel) + '</span></p>';
+                    html += '</div>';
+                }
+            } else if (companyName && String(companyName).trim() !== '') {
+                // Chỉ có Tên công ty
+                html += '<div class="form-group" style="margin-bottom: 15px;">';
+                html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Tên công ty:</strong> ' + escapeHtml(String(companyName)) + '</p>';
+                html += '</div>';
+            }
+            // Mã số thuế (nếu có) - full width
+            if (taxCode && String(taxCode).trim() !== '') {
+                html += '<div class="form-group" style="margin-bottom: 15px;">';
+                html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Mã số thuế:</strong> ' + escapeHtml(String(taxCode)) + '</p>';
+                html += '</div>';
+            }
+            // Nội dung liên hệ (nếu có) - full width (sau mã số thuế)
+            if (contactContent && String(contactContent).trim() !== '') {
+                html += '<div class="form-group" style="margin-bottom: 15px;">';
+                html += '<label><strong>Nội dung liên hệ:</strong></label>';
+                html += '<div class="message-detail" style="background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; white-space: pre-wrap; word-wrap: break-word;">';
+                html += escapeHtml(String(contactContent));
+                html += '</div>';
+                html += '</div>';
+            }
             html += '</div>';
             html += '</div>';
             html += '</div>';
             
             $('#messageDetailContent').html(html);
+            
+            // Ẩn nút "Đánh dấu đã liên hệ" nếu trạng thái là "Đã liên hệ" hoặc "Đã chuyển đổi"
+            if (status === 'Đã liên hệ' || status === 'Đã chuyển đổi') {
+                $('#btnMarkAsReplied').hide();
+            } else {
+                $('#btnMarkAsReplied').show();
+            }
             
             // Nếu chưa đọc, tự động đánh dấu đã đọc sau khi modal hiển thị
             var isNewMessage = (status === 'Mới');
@@ -784,28 +855,41 @@
             // Tạo HTML với thông tin đầy đủ và form
             var html = '<div class="row">';
             html += '<div class="col-md-12">';
-            html += '<h5 style="margin-top: 0; margin-bottom: 20px; color: #333;">Thông tin liên hệ</h5>';
-            html += '<div class="form-group">';
-            html += '<label>Họ tên:</label>';
-            html += '<p class="form-control-static"><strong>' + escapeHtml(fullName) + '</strong></p>';
+            html += '<h5 style="margin-top: 0; margin-bottom: 20px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Thông tin liên hệ</h5>';
+            html += '<div class="row">';
+            // Họ tên - cột 1
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Họ tên:</strong> ' + escapeHtml(fullName) + '</p>';
             html += '</div>';
-            html += '<div class="form-group">';
-            html += '<label>Email:</label>';
-            html += '<p class="form-control-static"><a href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + '</a></p>';
             html += '</div>';
-            html += '<div class="form-group">';
-            html += '<label>Số điện thoại:</label>';
-            html += '<p class="form-control-static"><a href="tel:' + escapeHtml(phone) + '">' + escapeHtml(phone) + '</a></p>';
+            // Email - cột 2
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Email:</strong> <a href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + '</a></p>';
             html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="row">';
+            // Số điện thoại - cột 1
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Số điện thoại:</strong> <a href="tel:' + escapeHtml(phone) + '">' + escapeHtml(phone) + '</a></p>';
+            html += '</div>';
+            html += '</div>';
+            // Ngày gửi - cột 2
+            html += '<div class="col-md-6 col-sm-6">';
+            html += '<div class="form-group" style="margin-bottom: 15px;">';
+            html += '<p class="form-control-static" style="margin-bottom: 0;"><strong>Ngày gửi:</strong> ' + escapeHtml(createdAt) + '</p>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            // Nội dung tin nhắn - full width
             html += '<div class="form-group">';
             html += '<label>Nội dung tin nhắn:</label>';
             html += '<div class="message-detail" style="background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #ddd; max-height: 150px; overflow-y: auto;">';
             html += escapeHtml(message);
             html += '</div>';
-            html += '</div>';
-            html += '<div class="form-group">';
-            html += '<label>Ngày gửi:</label>';
-            html += '<p class="form-control-static">' + escapeHtml(createdAt) + '</p>';
             html += '</div>';
             html += '<hr>';
             html += '<h5 style="margin-top: 0; margin-bottom: 20px; color: #333;">Thông tin bổ sung</h5>';
@@ -845,6 +929,11 @@
             html += '<label for="otherMethod">Mô tả phương thức khác:</label>';
             html += '<input type="text" class="form-control" id="otherMethod" placeholder="Nhập phương thức liên hệ">';
             html += '</div>';
+            html += '<div class="form-group">';
+            html += '<label for="contactContent">Nội dung liên hệ:</label>';
+            html += '<textarea class="form-control" id="contactContent" rows="4" placeholder="Nhập nội dung liên hệ" maxlength="1000"></textarea>';
+            html += '<small class="help-block text-muted">Tối đa 1000 ký tự. Đã nhập: <span id="contactContentCount">0</span>/1000</small>';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             
@@ -878,6 +967,20 @@
                     $('#otherMethod').val('');
                 }
             });
+            
+            // Đếm số ký tự trong textarea nội dung liên hệ
+            $('#contactContent').off('input keyup').on('input keyup', function() {
+                var length = $(this).val().length;
+                $('#contactContentCount').text(length);
+                if (length > 1000) {
+                    $('#contactContentCount').css('color', 'red');
+                } else {
+                    $('#contactContentCount').css('color', '');
+                }
+            });
+            
+            // Khởi tạo counter khi modal mở
+            $('#contactContentCount').text($('#contactContent').val().length);
             
             // Hiển thị modal
             $('#markContactedModal').modal('show');

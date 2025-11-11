@@ -75,14 +75,14 @@
 			<% } %>
 			<% if ( __perms.contains("manage_contacts") ) { %>
 			<li>
-				<a href="contact_management.jsp">
+				<a href="contact-management">
 					<i class="fa fa-address-book"></i> <span>Quản lý liên hệ</span>
 				</a>
 			</li>
 			<% } %>
 			<% if ( __perms.contains("manage_customers") ) { %>
 			<li>
-				<a href="customers.jsp">
+				<a href="customers">
 					<i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
 				</a>
 			</li>

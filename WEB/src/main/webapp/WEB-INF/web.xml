@@ -73,6 +73,12 @@
     </jsp-property-group>
   </jsp-config>
   
+  <!-- Tối ưu hóa quét JAR cho TLDs -->
+  <context-param>
+    <param-name>org.apache.jasper.compiler.TldLocationsCache.level</param-name>
+    <param-value>WARNING</param-value>
+  </context-param>
+  
   <!-- Servlets are configured using @WebServlet annotations -->
   
 </web-app>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+    <!-- Tối ưu hóa quét JAR cho TLDs -->
+    <JarScanner scanAllDirectories="false" scanAllFiles="false" scanClassPath="false">
+        <JarScanFilter 
+            defaultPluggabilityScan="false"
+            defaultTldScan="true"/>
+    </JarScanner>
+</Context>
+

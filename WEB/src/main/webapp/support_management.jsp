@@ -535,27 +535,44 @@
         }
         
         $(document).ready(function() {
-            // Khởi tạo DataTable với dữ liệu đã có sẵn trong HTML
-            $('#ticketsTable').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
-                },
-                "pageLength": 10, // Hiển thị 10 bản ghi mỗi trang
-                "lengthChange": false, // Ẩn dropdown "records per page"
-                "paging": true, // Bật phân trang
-                "pagingType": "full_numbers", // Hiển thị số trang đầy đủ
-                "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần
-                "columnDefs": [
-                    { 
-                        "targets": 0, // Cột ID (cột đầu tiên)
-                        "render": function (data, type, row, meta) {
-                            // Hiển thị số thứ tự bắt đầu từ 1, tính cả pagination
-                            return meta.settings._iDisplayStart + meta.row + 1;
-                        }
+            // Kiểm tra xem có dữ liệu không trước khi khởi tạo DataTable
+            var table = $('#ticketsTable');
+            var hasData = table.find('tbody tr').length > 0 && 
+                         !table.find('tbody tr:first td[colspan]').length;
+            
+            if (hasData) {
+                // Khởi tạo DataTable với dữ liệu đã có sẵn trong HTML
+                table.DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
                     },
-                    { "orderable": false, "targets": 8 } // Không sort cột Thao tác
-                ]
-            });
+                    "pageLength": 10, // Hiển thị 10 bản ghi mỗi trang
+                    "lengthChange": false, // Ẩn dropdown "records per page"
+                    "paging": true, // Bật phân trang
+                    "pagingType": "full_numbers", // Hiển thị số trang đầy đủ
+                    "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần
+                    "columnDefs": [
+                        { "orderable": false, "targets": 8 } // Không sort cột Thao tác
+                    ],
+                    "autoWidth": false,
+                    "responsive": false,
+                    "processing": false,
+                    "serverSide": false,
+                    "deferRender": false,
+                    "info": true,
+                    "searching": true
+                });
+            } else {
+                // Nếu không có dữ liệu, vẫn khởi tạo DataTable để hiển thị thông báo
+                table.DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+                    },
+                    "paging": false,
+                    "searching": false,
+                    "info": false
+                });
+            }
 
             // Xử lý click nút Xem
             $(document).on('click', '.view-ticket-btn', function() {

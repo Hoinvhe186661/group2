@@ -432,20 +432,23 @@
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="customersTableBody">
                                         <% 
-                                        if (filteredCustomers != null) {
+                                        if (filteredCustomers != null && !filteredCustomers.isEmpty()) {
+                                            int rowCount = 0;
                                             for (Customer customer : filteredCustomers) { 
+                                                if (customer == null) continue;
+                                                rowCount++;
                                         %>
-                                        <tr>
+                                        <tr data-customer-id="<%= customer.getId() %>">
                                             <td><%= customer.getId() %></td>
-                                            <td><%= customer.getCustomerCode() %></td>
-                                            <td><%= customer.getCompanyName() %></td>
-                                            <td><%= customer.getContactPerson() %></td>
-                                            <td><%= customer.getEmail() %></td>
-                                            <td><%= customer.getPhone() %></td>
-                                            <td><%= customer.getAddress() %></td>
-                                            <td><%= customer.getTaxCode() %></td>
+                                            <td><%= customer.getCustomerCode() != null ? customer.getCustomerCode() : "" %></td>
+                                            <td><%= customer.getCompanyName() != null ? customer.getCompanyName() : "" %></td>
+                                            <td><%= customer.getContactPerson() != null ? customer.getContactPerson() : "" %></td>
+                                            <td><%= customer.getEmail() != null ? customer.getEmail() : "" %></td>
+                                            <td><%= customer.getPhone() != null ? customer.getPhone() : "" %></td>
+                                            <td><%= customer.getAddress() != null ? customer.getAddress() : "" %></td>
+                                            <td><%= customer.getTaxCode() != null ? customer.getTaxCode() : "" %></td>
                                             <td><%= CustomerHelper.typeLabel(customer.getCustomerType()) %></td>
                                             <td><%= CustomerHelper.statusLabel(customer.getStatus()) %></td>
                                             <td>
@@ -481,8 +484,11 @@
                                         </tr>
                                         <% 
                                             }
+                                        } else {
+                                            // Không có dữ liệu - DataTables sẽ tự hiển thị "No data available"
                                         }
                                         %>
+                                        <!-- DEBUG: filteredCustomers size = <%= filteredCustomers != null ? filteredCustomers.size() : "NULL" %> -->
                                     </tbody>
                                 </table>
                             </div>
@@ -505,14 +511,8 @@
                     <form id="addCustomerForm">
                         <div class="form-group">
                             <label>Mã khách hàng:</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="customerCode" maxlength="50" required>
-                                <span class="input-group-btn">
-                                    <button type="button" class="btn btn-info" onclick="generateCustomerCode()" title="Tự động tạo mã">
-                                        <i class="fa fa-magic"></i> Tự động
-                                    </button>
-                                </span>
-                            </div>
+                            <input type="text" class="form-control" id="customerCode" maxlength="50" required readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                            <small class="text-muted">Mã khách hàng sẽ được hệ thống sinh tự động</small>
                         </div>
                         <div class="form-group">
                             <button type="button" class="btn btn-warning btn-sm" onclick="showSelectWaitingCustomer()" style="width: 100%;">
@@ -629,24 +629,38 @@
     <script type="text/javascript">
         var customersTable;
         var currentEditingCustomer = null;
+        var selectedContactId = null; // Lưu contactId khi chọn từ khách hàng chờ
 
-            $(document).ready(function () {
+        $(document).ready(function() {
+            // Initialize DataTable with pagination - sử dụng dữ liệu tĩnh từ JSP (giống users.jsp)
             customersTable = $('#customersTable').DataTable({
-                "language": { "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json" },
-                    "processing": false,
-                    "serverSide": false,
-                    "paging": true,
-                    "searching": false,
-                    "dom": 'lrtip',
-                    "ordering": true,
-                    "info": true,
-                    "autoWidth": false,
-                    "responsive": true,
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
+                },
+                "processing": false,
+                "serverSide": false,
+                "paging": true,
+                "pageLength": 10,
+                "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tất cả"]],
+                "searching": true,
+                "ordering": true,
+                "info": true,
+                "autoWidth": false,
+                "responsive": true,
+                "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>' +
+                       '<"row"<"col-sm-12"tr>>' +
+                       '<"row"<"col-sm-5"i><"col-sm-7"p>>',
                 "order": [[0, "desc"]],
-                "columnDefs": [{ "targets": [10], "orderable": false, "searchable": false }]
+                "columnDefs": [
+                    {
+                        "targets": [10], // Cột thao tác
+                        "orderable": false,
+                        "searchable": false
+                    }
+                ]
             });
 
-                // Hiển thị tóm tắt lựa chọn hiện tại (đọc từ tham số GET đã bind sẵn vào selected)
+            // Hiển thị tóm tắt lựa chọn hiện tại (đọc từ tham số GET đã bind sẵn vào selected)
                 function renderFilterSummary() {
                     var params = new URLSearchParams(window.location.search);
                     var items = [];
@@ -709,6 +723,9 @@
                     if (response.success) {
                         var customer = response.data;
                         $('#customerCode').val(customer.customerCode);
+                        // Đảm bảo trường mã khách hàng luôn readonly khi edit
+                        $('#customerCode').prop('readonly', true);
+                        $('#customerCode').css({'background-color': '#f5f5f5', 'cursor': 'not-allowed'});
                         $('#companyName').val(customer.companyName);
                         $('#userContract').val(customer.contactPerson);
                         $('#customerEmail').val(customer.email);
@@ -891,6 +908,11 @@
             if (currentEditingCustomer) {
                 formData.id = currentEditingCustomer.id;
             }
+            
+            // Gửi contactId nếu có (khi chọn từ khách hàng chờ)
+            if (selectedContactId) {
+                formData.contactId = selectedContactId;
+            }
 
             $.ajax({
                 url: 'api/customers',
@@ -903,8 +925,10 @@
                         $('#addCustomerModal').modal('hide');
                         $('#addCustomerForm')[0].reset();
                         currentEditingCustomer = null;
+                        selectedContactId = null; // Reset contactId
                         $('#addCustomerModal .modal-title').text('Thêm khách hàng mới');
-                        location.reload();
+                        // Reload trang để hiển thị khách hàng mới (xóa tất cả filter)
+                        window.location.href = window.location.pathname;
                     } else {
                         alert('Lỗi: ' + response.message);
                     }
@@ -950,11 +974,40 @@
             $('#addCustomerModal').on('hidden.bs.modal', function () {
             $('#addCustomerForm')[0].reset();
             currentEditingCustomer = null;
+            selectedContactId = null; // Reset contactId khi đóng modal
             $('#addCustomerModal .modal-title').text('Thêm khách hàng mới');
             // Reset label về mặc định
             $('label[for="companyName"]').text('Tên công ty:');
             // Hide permanent delete button
             $('.btn-danger', '#addCustomerModal').hide();
+            // Đảm bảo trường mã khách hàng luôn readonly
+            $('#customerCode').prop('readonly', true);
+            $('#customerCode').css({'background-color': '#f5f5f5', 'cursor': 'not-allowed'});
+        });
+        
+        // Tự động sinh mã khách hàng khi mở modal thêm mới
+        $('#addCustomerModal').on('show.bs.modal', function() {
+            // Chỉ sinh mã khi thêm mới (không phải edit)
+            if (!currentEditingCustomer) {
+                $.get('customers', { action: 'generateCustomerCode' }, function(resp) {
+                    try {
+                        var data = typeof resp === 'string' ? JSON.parse(resp) : resp;
+                        if (data && data.success && data.data && data.data.customerCode) {
+                            $('#customerCode').val(data.data.customerCode);
+                        } else if (data && data.data && data.data.customerCode) {
+                            // Nếu response không có success field
+                            $('#customerCode').val(data.data.customerCode);
+                        } else if (data && data.customerCode) {
+                            // Nếu response trực tiếp có customerCode
+                            $('#customerCode').val(data.customerCode);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing response:', e);
+                    }
+                }, 'json').fail(function() {
+                    console.error('Failed to generate customer code');
+                });
+            }
         });
 
         // Cập nhật label khi thay đổi loại khách hàng
@@ -1004,6 +1057,7 @@
                         html += '<th style="width: 140px;">Ngày gửi</th>';
                         html += '<th style="width: 140px;">Ngày liên hệ</th>';
                         html += '<th style="min-width: 200px;">Nội dung tin nhắn</th>';
+                        html += '<th style="min-width: 200px;">Nội dung liên hệ</th>';
                         html += '</tr>';
                         html += '</thead>';
                         html += '<tbody>';
@@ -1018,6 +1072,7 @@
                             var customerType = String(customer.customerType || '');
                             var companyName = String(customer.companyName || '');
                             var taxCode = String(customer.taxCode || '');
+                            var contactContent = String(customer.contactContent || '');
                             
                             // Xử lý loại khách hàng
                             var customerTypeLabel = '';
@@ -1044,6 +1099,7 @@
                             html += '<td style="font-size: 12px; color: #666;">' + createdDate + '</td>';
                             html += '<td style="font-size: 12px; color: #666;">' + repliedDate + '</td>';
                             html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + escapeHtml(message) + '</td>';
+                            html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + (contactContent && contactContent.trim() !== '' ? escapeHtml(contactContent) : '<span style="color: #999;">-</span>') + '</td>';
                             html += '</tr>';
                         }
                         
@@ -1271,6 +1327,9 @@
                 return;
             }
             
+            // Lưu contactId (customer.id là ID của contact request)
+            selectedContactId = customer.id;
+            
             // Điền thông tin vào form
             $('#userContract').val(customer.fullName || '');
             $('#customerEmail').val(customer.email || '');
@@ -1309,37 +1368,6 @@
             $('#addCustomerModal').modal('show');
         }
         
-        // Tự động tạo mã khách hàng
-        function generateCustomerCode() {
-            var customerType = $('#customerType').val();
-            var companyName = $('#companyName').val();
-            var userContract = $('#userContract').val();
-            
-            var prefix = '';
-            if (customerType === 'company') {
-                prefix = 'DN'; // Doanh nghiệp
-            } else if (customerType === 'individual') {
-                prefix = 'CN'; // Cá nhân
-            } else {
-                prefix = 'KH'; // Mặc định
-            }
-            
-            // Lấy 3-4 ký tự đầu từ tên công ty hoặc tên người liên hệ
-            var namePart = '';
-            if (customerType === 'company' && companyName) {
-                namePart = companyName.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase();
-            } else if (userContract) {
-                namePart = userContract.replace(/[^A-Za-z0-9]/g, '').substring(0, 4).toUpperCase();
-            }
-            
-            // Thêm số ngẫu nhiên 4 chữ số
-            var randomNum = Math.floor(1000 + Math.random() * 9000);
-            
-            // Tạo mã: Prefix + NamePart + RandomNum
-            var code = prefix + namePart + randomNum;
-            
-            $('#customerCode').val(code);
-        }
 
         function escapeHtml(text) {
             if (!text) return '';

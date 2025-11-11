@@ -420,3 +420,17 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN ('submit_contact')
 WHERE r.role_key = 'guest'
 ON DUPLICATE KEY UPDATE permission_id = permission_id;
+
+CREATE TABLE contact_messages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('new', 'read', 'replied', 'archived') DEFAULT 'new',
+    replied_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at),
+    INDEX idx_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -155,6 +155,7 @@ public class ContactManagementServlet extends HttpServlet {
                 String customerType = request.getParameter("customerType");
                 String companyName = request.getParameter("companyName");
                 String taxCode = request.getParameter("taxCode");
+                String contactContent = request.getParameter("contactContent");
                 
                 if (idParam == null || idParam.trim().isEmpty() || status == null || status.trim().isEmpty()) {
                     jsonResponse.addProperty("success", false);
@@ -173,7 +174,8 @@ public class ContactManagementServlet extends HttpServlet {
                                 address != null ? address.trim() : null,
                                 customerType != null ? customerType.trim() : null,
                                 companyName != null ? companyName.trim() : null,
-                                taxCode != null ? taxCode.trim() : null
+                                taxCode != null ? taxCode.trim() : null,
+                                contactContent != null ? contactContent.trim() : null
                             );
                         } else {
                             success = contactDAO.updateMessageStatus(messageId, status.trim());

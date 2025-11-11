@@ -1,6 +1,7 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.CustomerDAO;
+import com.hlgenerator.dao.ContactDAO;
 import com.hlgenerator.model.Customer;
 import org.json.JSONObject;
 import org.json.JSONArray;
@@ -19,12 +20,14 @@ import java.util.List;
 public class CustomerServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private CustomerDAO customerDAO;
+    private ContactDAO contactDAO;
 
     @Override
     public void init() throws ServletException {
         super.init();
         try {
             customerDAO = new CustomerDAO();
+            contactDAO = new ContactDAO();
             System.out.println("CustomerServlet: Initialized successfully");
         } catch (Exception e) {
             System.err.println("CustomerServlet initialization failed: " + e.getMessage());
@@ -193,6 +196,7 @@ public class CustomerServlet extends HttpServlet {
             String address = request.getParameter("customerAddress");
             String taxCode = request.getParameter("taxCode");
             String customerType = request.getParameter("customerType");
+            String contactIdParam = request.getParameter("contactId"); // Lấy contactId nếu có
 
             // Validate required fields
             if (customerCode == null || customerCode.trim().isEmpty() ||
@@ -235,6 +239,31 @@ public class CustomerServlet extends HttpServlet {
             
             JSONObject result = new JSONObject();
             if (success) {
+                // Nếu có contactId, đánh dấu contact request đã được chuyển thành khách hàng
+                if (contactIdParam != null && !contactIdParam.trim().isEmpty()) {
+                    try {
+                        int contactId = Integer.parseInt(contactIdParam.trim());
+                        System.out.println("CustomerServlet: Updating contact ID " + contactId + " status to 'converted'");
+                        // Cập nhật status của contact request thành "converted"
+                        boolean updateSuccess = contactDAO.updateMessageStatus(contactId, "converted");
+                        if (updateSuccess) {
+                            System.out.println("CustomerServlet: Successfully updated contact ID " + contactId + " to 'converted'");
+                        } else {
+                            System.err.println("CustomerServlet: Failed to update contact ID " + contactId + " status");
+                        }
+                    } catch (NumberFormatException e) {
+                        // Ignore invalid contactId
+                        System.err.println("CustomerServlet: Invalid contactId: " + contactIdParam);
+                        e.printStackTrace();
+                    } catch (Exception e) {
+                        // Log error nhưng không fail việc thêm khách hàng
+                        System.err.println("CustomerServlet: Error updating contact status: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("CustomerServlet: No contactId provided, skipping contact status update");
+                }
+                
                 // Thêm activity log
                 com.hlgenerator.util.ActionLogUtil.addAction(request, "Thêm khách hàng mới", "customers", 
                     null, "Đã thêm khách hàng: " + customerCode, "success");
