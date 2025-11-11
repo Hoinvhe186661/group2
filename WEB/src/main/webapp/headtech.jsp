@@ -1,17 +1,18 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // CHỈ CHO PHÉP HEAD_TECHNICIAN (không cho admin vào)
-    if (!"head_technician".equals(userRole)) {
+    // Kiểm tra quyền sử dụng permission - cần có quyền xem dashboard hoặc quản lý tech support
+    if (!AuthorizationUtil.hasPermission(request, Permission.VIEW_DASHBOARD) && 
+        !AuthorizationUtil.hasPermission(request, Permission.MANAGE_TECH_SUPPORT)) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
@@ -157,28 +158,7 @@
                 </form>
                 <!-- /.search form -->
                 <!-- sidebar menu -->
-                <ul class="sidebar-menu">
-                    <li class="active">
-                        <a href="headtech.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="tech_support_management.jsp">
-                            <i class="fa fa-ticket"></i> <span>Yêu cầu hỗ trợ kỹ thuật</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="work_orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Đơn hàng công việc</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="technical_staff_management.jsp">
-                            <i class="fa fa-users"></i> <span>Quản lý nhân viên kỹ thuật</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

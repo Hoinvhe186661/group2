@@ -1,20 +1,23 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền head_technician hoặc admin
-    if (!"head_technician".equals(userRole) && !"admin".equals(userRole)) {
-        response.sendRedirect(request.getContextPath() + "/index.jsp");
+    // Kiểm tra quyền sử dụng permission
+    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_TECH_SUPPORT)) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
+    
+    // Lưu thông tin permission để dùng trong JavaScript
+    boolean canManageWorkOrders = AuthorizationUtil.hasPermission(request, Permission.MANAGE_WORK_ORDERS);
 %>
 <!DOCTYPE html>
 <html>
@@ -214,28 +217,7 @@
                 </form>
                 <!-- /.search form -->
                 <!-- sidebar menu -->
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="headtech.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="tech_support_management.jsp">
-                            <i class="fa fa-ticket"></i> <span>Yêu cầu hỗ trợ kỹ thuật</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="work_orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Đơn hàng công việc</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="technical_staff_management.jsp">
-                            <i class="fa fa-users"></i> <span>Quản lý nhân viên kỹ thuật</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
         </aside>
 
@@ -710,11 +692,11 @@
             }
             
              filteredTickets.forEach(function(ticket) {
-                 var userRole = '<%= userRole %>';
+                 var canManageWO = <%= canManageWorkOrders %>;
                  var actionButtons = '<button class="btn btn-info btn-view" data-id="' + ticket.id + '"><i class="fa fa-eye"></i> Xem</button>';
                  
-                 // Chỉ hiển thị nút "Tạo WO" cho head_technician và admin
-                 if (userRole === 'head_technician' || userRole === 'admin') {
+                 // Chỉ hiển thị nút "Tạo WO" cho user có quyền quản lý work orders
+                 if (canManageWO) {
                      // Check if ticket has work order (async check, will update button later)
                      var hasWorkOrder = false;
                      if (ticket.customerId && ticket.subject) {

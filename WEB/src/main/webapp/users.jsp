@@ -123,6 +123,56 @@
         input[readonly].bg-gray-light {
             opacity: 0.8;
         }
+        
+        /* Permissions styling */
+        .permissions-container {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        
+        .permission-group {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            transition: box-shadow 0.2s;
+        }
+        
+        .permission-group:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .permission-group h5 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            padding-bottom: 5px;
+        }
+        
+        .permission-group .checkbox {
+            margin: 8px 0;
+        }
+        
+        .permission-group .checkbox label {
+            font-weight: normal;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+        }
+        
+        .permission-group .checkbox input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        .permission-group .checkbox label:hover {
+            color: #3498db;
+        }
     </style>
 </head>
 <body class="skin-black">
@@ -188,34 +238,7 @@
                 </div>
                 
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    
-                    <li class="active">
-                        <a href="users">
-                            <i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="email-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="reports.jsp">
-                            <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="settings.jsp">
-                            <i class="fa fa-cog"></i> <span>Cài đặt</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>
@@ -415,6 +438,298 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Phần quản lý phân quyền -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Phân quyền:</label>
+                                    <div class="permissions-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 15px; border-radius: 4px; background-color: #f9f9f9;">
+                                        <div class="row">
+                                            <!-- Dashboard -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                                                        <i class="fa fa-dashboard"></i> Dashboard
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="dashboard:view">
+                                                            Xem bảng điều khiển
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Users -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #e74c3c; padding-bottom: 5px;">
+                                                        <i class="fa fa-users"></i> Người dùng
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="users:manage">
+                                                            Quản lý người dùng
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Customers -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #27ae60; padding-bottom: 5px;">
+                                                        <i class="fa fa-user-circle"></i> Khách hàng
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="customers:manage">
+                                                            Quản lý khách hàng
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="customers:view_profile">
+                                                            Xem hồ sơ khách hàng
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Support -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #f39c12; padding-bottom: 5px;">
+                                                        <i class="fa fa-life-ring"></i> Hỗ trợ
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="support:manage">
+                                                            Quản lý hỗ trợ
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="support:view">
+                                                            Xem hỗ trợ
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="support:tech_manage">
+                                                            Quản lý hỗ trợ kỹ thuật
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Tasks -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #9b59b6; padding-bottom: 5px;">
+                                                        <i class="fa fa-tasks"></i> Công việc
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="tasks:manage">
+                                                            Quản lý công việc
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="tasks:view">
+                                                            Xem công việc
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Work Orders -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #16a085; padding-bottom: 5px;">
+                                                        <i class="fa fa-file-text"></i> Đơn hàng
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="workorders:manage">
+                                                            Quản lý đơn hàng
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Products -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #e67e22; padding-bottom: 5px;">
+                                                        <i class="fa fa-cube"></i> Sản phẩm
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="products:manage">
+                                                            Quản lý sản phẩm
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="products:view">
+                                                            Xem sản phẩm
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Inventory -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #1abc9c; padding-bottom: 5px;">
+                                                        <i class="fa fa-archive"></i> Kho hàng
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="inventory:manage">
+                                                            Quản lý kho hàng
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="inventory:view">
+                                                            Xem kho hàng
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Suppliers -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #34495e; padding-bottom: 5px;">
+                                                        <i class="fa fa-truck"></i> Nhà cung cấp
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="suppliers:manage">
+                                                            Quản lý nhà cung cấp
+                                                        </label>
+                                                    </div>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="suppliers:view">
+                                                            Xem nhà cung cấp
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Email -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                                                        <i class="fa fa-envelope"></i> Email
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="email:manage">
+                                                            Quản lý email
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Settings -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #95a5a6; padding-bottom: 5px;">
+                                                        <i class="fa fa-cog"></i> Cài đặt
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="settings:manage">
+                                                            Quản lý cài đặt
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Reports -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #d35400; padding-bottom: 5px;">
+                                                        <i class="fa fa-bar-chart"></i> Báo cáo
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="reports:view">
+                                                            Xem báo cáo
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Contacts -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #8e44ad; padding-bottom: 5px;">
+                                                        <i class="fa fa-address-book"></i> Liên hệ
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="contacts:manage">
+                                                            Quản lý liên hệ
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Contracts -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #c0392b; padding-bottom: 5px;">
+                                                        <i class="fa fa-file-contract"></i> Hợp đồng
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="contracts:manage">
+                                                            Quản lý hợp đồng
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Feedback -->
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="permission-group">
+                                                    <h5 style="margin-top: 0; color: #333; font-weight: 600; border-bottom: 2px solid #f1c40f; padding-bottom: 5px;">
+                                                        <i class="fa fa-comments"></i> Phản hồi
+                                                    </h5>
+                                                    <div class="checkbox">
+                                                        <label>
+                                                            <input type="checkbox" class="permission-checkbox" value="feedback:manage">
+                                                            Quản lý phản hồi
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Nút chọn tất cả / Bỏ chọn tất cả -->
+                                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="selectAllPermissions()">
+                                                <i class="fa fa-check-square"></i> Chọn tất cả
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-default" onclick="deselectAllPermissions()">
+                                                <i class="fa fa-square"></i> Bỏ chọn tất cả
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Chọn các quyền mà người dùng này có thể thực hiện</small>
+                                    <!-- Hidden input để lưu permissions dạng JSON -->
+                                    <input type="hidden" id="permissions" name="permissions" value="[]">
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -457,6 +772,14 @@
                             <p><strong>Trạng thái:</strong> <span id="detailStatus"></span></p>
                             <p><strong>Ngày tạo:</strong> <span id="detailCreatedAt"></span></p>
                             <p><strong>Cập nhật lần cuối:</strong> <span id="detailUpdatedAt"></span></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h5>Phân quyền:</h5>
+                            <div id="detailPermissions" style="max-height: 200px; overflow-y: auto; padding: 10px; background-color: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;">
+                                <span class="text-muted">Đang tải...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -571,6 +894,11 @@
             syncHideRoleToggle();
             $('#hideRoleDashboardToggle').on('change', function(){
                 toggleHideCurrentFilterRole(this.checked);
+            });
+            
+            // Xử lý khi checkbox permissions thay đổi
+            $('.permission-checkbox').on('change', function() {
+                updatePermissionsHiddenField();
             });
         });
 
@@ -754,10 +1082,62 @@
             $('#detailFullName').text(user.fullName);
             $('#detailPhone').text(user.phone || '-');
             $('#detailRole').html(getRoleLabel(user.role));
-            $('#detailPermissions').text(user.permissions || '[]');
+            displayPermissionsInDetail(user.permissions);
             $('#detailStatus').html(getStatusLabel(user.isActive));
             $('#detailCreatedAt').text(formatDate(user.createdAt));
             $('#detailUpdatedAt').text(formatDate(user.updatedAt));
+        }
+        
+        // Hiển thị permissions trong modal chi tiết
+        function displayPermissionsInDetail(permissionsStr) {
+            var $container = $('#detailPermissions');
+            try {
+                var permissions = typeof permissionsStr === 'string' ? JSON.parse(permissionsStr) : permissionsStr;
+                if (!Array.isArray(permissions) || permissions.length === 0) {
+                    $container.html('<span class="text-muted">Không có quyền nào được cấp</span>');
+                    return;
+                }
+                
+                // Mapping permission codes to labels
+                var permissionLabels = {
+                    'dashboard:view': 'Xem bảng điều khiển',
+                    'users:manage': 'Quản lý người dùng',
+                    'customers:manage': 'Quản lý khách hàng',
+                    'customers:view_profile': 'Xem hồ sơ khách hàng',
+                    'support:manage': 'Quản lý hỗ trợ',
+                    'support:view': 'Xem hỗ trợ',
+                    'support:tech_manage': 'Quản lý hỗ trợ kỹ thuật',
+                    'tasks:manage': 'Quản lý công việc',
+                    'tasks:view': 'Xem công việc',
+                    'workorders:manage': 'Quản lý đơn hàng',
+                    'products:manage': 'Quản lý sản phẩm',
+                    'products:view': 'Xem sản phẩm',
+                    'inventory:manage': 'Quản lý kho hàng',
+                    'inventory:view': 'Xem kho hàng',
+                    'suppliers:manage': 'Quản lý nhà cung cấp',
+                    'suppliers:view': 'Xem nhà cung cấp',
+                    'email:manage': 'Quản lý email',
+                    'settings:manage': 'Quản lý cài đặt',
+                    'reports:view': 'Xem báo cáo',
+                    'contacts:manage': 'Quản lý liên hệ',
+                    'contracts:manage': 'Quản lý hợp đồng',
+                    'feedback:manage': 'Quản lý phản hồi'
+                };
+                
+                var html = '<div class="row">';
+                permissions.forEach(function(perm) {
+                    var label = permissionLabels[perm] || perm;
+                    html += '<div class="col-md-4 col-sm-6" style="margin-bottom: 8px;">';
+                    html += '<span class="label label-info" style="display: inline-block; padding: 5px 10px; font-size: 12px;">';
+                    html += '<i class="fa fa-check"></i> ' + label;
+                    html += '</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                $container.html(html);
+            } catch (e) {
+                $container.html('<span class="text-danger">Lỗi khi hiển thị quyền: ' + e.message + '</span>');
+            }
         }
 
         // Chỉnh sửa người dùng
@@ -792,9 +1172,11 @@
             $('#fullName').val(user.fullName);
             $('#phone').val(user.phone || '');
             $('#role').val(user.role);
-            $('#permissions').val(user.permissions || '[]');
             $('#isActive').prop('checked', user.isActive);
             $('#passwordGroup').hide();
+            
+            // Load permissions vào checkbox
+            loadPermissionsToCheckboxes(user.permissions);
             
             // Xử lý khi vai trò là khách hàng
             if (user.role === 'customer') {
@@ -811,6 +1193,47 @@
                 $('#customerId').val('');
                 unlockCustomerFields();
             }
+        }
+        
+        // Load permissions từ JSON string vào checkbox
+        function loadPermissionsToCheckboxes(permissionsStr) {
+            // Bỏ chọn tất cả trước
+            $('.permission-checkbox').prop('checked', false);
+            
+            try {
+                var permissions = typeof permissionsStr === 'string' ? JSON.parse(permissionsStr) : permissionsStr;
+                if (Array.isArray(permissions)) {
+                    permissions.forEach(function(perm) {
+                        $('.permission-checkbox[value="' + perm + '"]').prop('checked', true);
+                    });
+                }
+            } catch (e) {
+                console.error('Lỗi khi load permissions:', e);
+            }
+            
+            // Cập nhật hidden field
+            updatePermissionsHiddenField();
+        }
+        
+        // Cập nhật hidden field permissions từ checkbox
+        function updatePermissionsHiddenField() {
+            var selectedPermissions = [];
+            $('.permission-checkbox:checked').each(function() {
+                selectedPermissions.push($(this).val());
+            });
+            $('#permissions').val(JSON.stringify(selectedPermissions));
+        }
+        
+        // Chọn tất cả permissions
+        function selectAllPermissions() {
+            $('.permission-checkbox').prop('checked', true);
+            updatePermissionsHiddenField();
+        }
+        
+        // Bỏ chọn tất cả permissions
+        function deselectAllPermissions() {
+            $('.permission-checkbox').prop('checked', false);
+            updatePermissionsHiddenField();
         }
 
         // Mở modal đổi mật khẩu
@@ -984,6 +1407,9 @@
 
         // Lưu người dùng (thêm mới hoặc cập nhật)
         function saveUser() {
+            // Cập nhật permissions từ checkbox trước khi submit
+            updatePermissionsHiddenField();
+            
             var username = $('#username').val();
             var email = $('#email').val();
             var password = $('#password').val();
@@ -991,7 +1417,8 @@
             var phone = $('#phone').val();
             var role = $('#role').val();
             var customerId = $('#customerId').val();
-            var permissions = $('#permissions').val();
+            // Lấy permissions từ hidden field (đã được cập nhật bởi updatePermissionsHiddenField)
+            var permissions = $('#permissions').val() || '[]';
             var isActive = $('#isActive').is(':checked');
 
             if (!username || !email || !fullName || !role) {
@@ -1131,6 +1558,9 @@
             $('#customerId').val('');
             unlockCustomerFields();
             $('#passwordGroup').show();
+            // Reset permissions
+            $('.permission-checkbox').prop('checked', false);
+            $('#permissions').val('[]');
         });
 
         // Hiển thị/ẩn nhóm mật khẩu khi mở modal theo trạng thái thêm mới/chỉnh sửa
@@ -1138,6 +1568,9 @@
             if (!currentEditingUser) {
                 $('#passwordGroup').show();
                 $('#password').prop('required', true).val('');
+                // Reset permissions khi thêm mới
+                $('.permission-checkbox').prop('checked', false);
+                $('#permissions').val('[]');
             } else {
                 $('#passwordGroup').hide();
                 $('#password').prop('required', false).val('');

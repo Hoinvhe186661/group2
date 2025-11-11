@@ -1,17 +1,18 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền technical_staff
-    if (!"technical_staff".equals(userRole) && !"admin".equals(userRole)) {
+    // Kiểm tra quyền sử dụng permission
+    if (!AuthorizationUtil.hasPermission(request, Permission.VIEW_TASKS) && 
+        !AuthorizationUtil.hasPermission(request, Permission.MANAGE_TASKS)) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
@@ -172,13 +173,7 @@
                 </form>
                 <!-- /.search form -->
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li class="active">
-                        <a href="my_tasks.jsp">
-                            <i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

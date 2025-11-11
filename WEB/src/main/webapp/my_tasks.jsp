@@ -1,4 +1,23 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
+<%
+    // Kiểm tra đăng nhập
+    String username = (String) session.getAttribute("username");
+    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+    
+    if (username == null || isLoggedIn == null || !isLoggedIn) {
+        response.sendRedirect(request.getContextPath() + "/login.jsp");
+        return;
+    }
+    
+    // Kiểm tra quyền truy cập - cần có quyền xem hoặc quản lý công việc
+    boolean canManage = AuthorizationUtil.hasPermission(request, Permission.MANAGE_TASKS);
+    boolean canView = AuthorizationUtil.hasPermission(request, Permission.VIEW_TASKS);
+    if (!canManage && !canView) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
+        return;
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -185,11 +204,7 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                <ul class="sidebar-menu">
-                    <li class="active">
-                        <a href="my_tasks.jsp"><i class="fa fa-wrench"></i> <span>Nhiệm vụ của tôi</span></a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
         </aside>
 

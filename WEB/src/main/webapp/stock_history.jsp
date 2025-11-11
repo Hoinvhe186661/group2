@@ -119,28 +119,7 @@
             </form>
             <!-- /.search form -->
             <!-- sidebar menu: : style can be found in sidebar.less -->
-            <ul class="sidebar-menu">
-              <li>
-                <a href="<%=request.getContextPath()%>/admin.jsp">
-                  <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                </a>
-              </li>
-              <li>
-                <a href="<%=request.getContextPath()%>/product.jsp">
-                  <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
-                </a>
-              </li>
-              <li>
-                <a href="<%=request.getContextPath()%>/supplier">
-                  <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
-                </a>
-              </li>
-              <li>
-                <a href="<%=request.getContextPath()%>/inventory.jsp">
-                  <i class="fa fa-archive"></i> <span>Quản lý kho</span>
-                </a>
-              </li>
-            </ul>
+            <%@ include file="includes/sidebar-menu.jsp" %>
           </section>
           <!-- /.sidebar -->
         </aside>

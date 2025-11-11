@@ -10,14 +10,10 @@
         return;
     }
     
-    // Kiểm tra quyền truy cập - tất cả role đều có thể gửi yêu cầu hỗ trợ
-    // Nhưng chỉ customer, customer_support, admin mới có thể xem trang này
-    boolean canAccessSupport = "admin".equals(userRole) || "customer_support".equals(userRole) || 
-                              "customer".equals(userRole) || "guest".equals(userRole);
-    if (!canAccessSupport) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
-        return;
-    }
+    // Kiểm tra quyền truy cập - sử dụng permission
+    // Cho phép tất cả user đã đăng nhập hoặc có quyền xem/quản lý hỗ trợ
+    // Nếu không có quyền gì, vẫn cho phép truy cập (để gửi yêu cầu hỗ trợ)
+    // Không cần kiểm tra permission ở đây vì đây là trang công khai cho user gửi yêu cầu
 %>
 <!DOCTYPE html>
 <html lang="vi">

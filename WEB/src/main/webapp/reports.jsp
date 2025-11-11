@@ -81,29 +81,7 @@
                 </div>
                 
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                   
-                    <li class="active"><a href="customers"><i class="fa fa-users"></i> <span>Quản lý khách
-                        hàng</span></a></li>
-            <li><a href="users"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a>
-            </li>
-                    <li><a href="email-management"><i class="fa fa-envelope"></i> <span>Quản lý Email</span></a></li>
-                    <li class="active">
-                        <a href="reports.jsp">
-                            <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="settings.jsp">
-                            <i class="fa fa-cog"></i> <span>Cài đặt</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

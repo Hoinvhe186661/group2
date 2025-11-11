@@ -1,18 +1,17 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền truy cập - admin, customer_support, customer có thể xem đơn hàng
-    boolean canViewOrders = "admin".equals(userRole) || "customer_support".equals(userRole) || "customer".equals(userRole);
-    if (!canViewOrders) {
+    // Kiểm tra quyền truy cập - sử dụng permission
+    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_WORK_ORDERS)) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
@@ -98,38 +97,7 @@
                     </div>
                 </div>
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="product">
-                            <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="orders.jsp">
-                            <i class="fa fa-file-text-o"></i> <span>Quản lý đơn hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="email-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý Email</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="reports.jsp">
-                            <i class="fa fa-bar-chart"></i> <span>Báo cáo</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="settings.jsp">
-                            <i class="fa fa-cog"></i> <span>Cài đặt</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

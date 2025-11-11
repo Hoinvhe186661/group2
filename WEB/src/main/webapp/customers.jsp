@@ -351,40 +351,7 @@
                 </form>
                 <!-- /.search form -->
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="customersupport.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="support-management">
-                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
-                            <small class="badge pull-right bg-red" id="openTickets">0</small>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="feedback_management.jsp">
-                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="contracts.jsp">
-                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="contact-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
-                            <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="customers">
-                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

@@ -2,7 +2,6 @@ package com.hlgenerator.util;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,39 +15,48 @@ public final class RolePermissionConfig {
     static {
         Map<String, Set<String>> map = new HashMap<>();
 
-        map.put("admin", collectAllPermissions());
-
-        map.put("customer_support", Permission.set(
+        // ADMIN: Dashboard, Quản lý người dùng, Setting, Quản lý email
+        map.put("admin", Permission.set(
             Permission.VIEW_DASHBOARD,
-            Permission.MANAGE_CUSTOMERS,
-            Permission.MANAGE_SUPPORT,
-            Permission.VIEW_SUPPORT,
-            Permission.MANAGE_CONTACTS,
-            Permission.MANAGE_FEEDBACK,
-            Permission.VIEW_REPORTS
+            Permission.MANAGE_USERS,
+            Permission.MANAGE_SETTINGS,
+            Permission.MANAGE_EMAIL
         ));
 
+        // Hỗ Trợ Khách Hàng: Dashboard, Quản lý yêu cầu hỗ trợ, Quản lý feedback, 
+        // Quản lý Hợp đồng, Quản lý liên hệ, Quản lý khách hàng
+        map.put("customer_support", Permission.set(
+            Permission.VIEW_DASHBOARD,
+            Permission.MANAGE_SUPPORT,
+            Permission.VIEW_SUPPORT,
+            Permission.MANAGE_FEEDBACK,
+            Permission.MANAGE_CONTRACTS,
+            Permission.MANAGE_CONTACTS,
+            Permission.MANAGE_CUSTOMERS
+        ));
+
+        // Trưởng phòng: Dashboard, Yêu cầu hỗ trợ kỹ thuật, Đơn hàng công việc, Quản lý nhân viên kỹ thuật
         map.put("head_technician", Permission.set(
             Permission.VIEW_DASHBOARD,
             Permission.MANAGE_TECH_SUPPORT,
-            Permission.MANAGE_TASKS,
             Permission.MANAGE_WORK_ORDERS,
-            Permission.VIEW_SUPPORT,
-            Permission.VIEW_REPORTS
+            Permission.MANAGE_TASKS,
+            Permission.VIEW_TASKS
         ));
 
+        // Nhân viên kỹ thuật: Chỉ có quyền xem công việc
         map.put("technical_staff", Permission.set(
-            Permission.VIEW_TASKS,
-            Permission.VIEW_SUPPORT,
-            Permission.VIEW_PRODUCTS,
-            Permission.VIEW_INVENTORY
+            Permission.VIEW_TASKS
         ));
 
+        // Quản lý kho: Quản lý sản phẩm, Nhà cung cấp, Quản lý kho
         map.put("storekeeper", Permission.set(
             Permission.MANAGE_PRODUCTS,
-            Permission.MANAGE_INVENTORY,
+            Permission.VIEW_PRODUCTS,
             Permission.MANAGE_SUPPLIERS,
-            Permission.VIEW_REPORTS
+            Permission.VIEW_SUPPLIERS,
+            Permission.MANAGE_INVENTORY,
+            Permission.VIEW_INVENTORY
         ));
 
         map.put("customer", Permission.set(
@@ -70,14 +78,6 @@ public final class RolePermissionConfig {
             return Collections.emptySet();
         }
         return ROLE_PERMISSIONS.getOrDefault(role, Collections.emptySet());
-    }
-
-    private static Set<String> collectAllPermissions() {
-        Set<String> all = new HashSet<>();
-        for (Permission permission : Permission.values()) {
-            all.add(permission.getCode());
-        }
-        return Collections.unmodifiableSet(all);
     }
 }
 

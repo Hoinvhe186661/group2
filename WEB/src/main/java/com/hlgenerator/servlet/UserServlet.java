@@ -431,6 +431,10 @@ public class UserServlet extends HttpServlet {
                             session.setAttribute("fullName", existingUser.getFullName());
                             session.setAttribute("phone", existingUser.getPhone());
                             session.setAttribute("userRole", existingUser.getRole());
+                            // Cập nhật permissions trong session
+                            java.util.Set<String> effectivePermissions = AuthorizationUtil.resolveEffectivePermissions(
+                                existingUser.getRole(), existingUser.getPermissions());
+                            AuthorizationUtil.storePermissions(session, effectivePermissions);
                         }
                     }
                 } catch (Exception ignore) {}

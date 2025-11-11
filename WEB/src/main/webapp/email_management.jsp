@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="java.util.List, java.text.SimpleDateFormat, com.hlgenerator.model.EmailNotification" %>
+<%@ page import="java.util.List, java.text.SimpleDateFormat, com.hlgenerator.model.EmailNotification, com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -9,9 +9,9 @@
         return;
     }
     
-    String userRole = (String) session.getAttribute("userRole");
-    if (!"admin".equals(userRole)) {
-        response.sendRedirect(request.getContextPath() + "/admin.jsp");
+    // Kiểm tra quyền thay vì role cứng
+    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_EMAIL)) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
     
@@ -122,13 +122,7 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                <ul class="sidebar-menu">
-                    <li><a href="admin.jsp"><i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span></a></li>
-                    <li><a href="users"><i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span></a></li>
-                    <li class="active"><a href="email-management"><i class="fa fa-envelope"></i> <span>Quản lý Email</span></a></li>
-                    <li><a href="reports.jsp"><i class="fa fa-bar-chart"></i> <span>Báo cáo</span></a></li>
-                    <li><a href="settings.jsp"><i class="fa fa-cog"></i> <span>Cài đặt</span></a></li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
         </aside>
 

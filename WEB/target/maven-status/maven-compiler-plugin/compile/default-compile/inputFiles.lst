@@ -1,67 +1,71 @@
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\GuestProductServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\SettingsDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportCustomerServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTaskAssignment.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\EmailNotification.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\service\EmailService.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Feedback.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\TechnicalStaffManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\PriceHistory.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\ContactDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\FeedbackDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\ActivityLogDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\EmailManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\FeedbackServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderTaskServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\util\ActionLogUtil.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\PriceHistoryDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTask.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactManagementServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\AdminDashboardServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\EmailNotificationDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderTaskDAO.java
-C:\Users\META COM\Downloads\Upcode\group2\WEB\src\main\java\com\hlgenerator\servlet\SettingsServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\ContactDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\AdminDashboardServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\service\EmailService.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderTaskDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\util\AuthorizationUtil.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\SettingsServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\ActivityLogDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\util\RolePermissionConfig.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\PriceHistoryDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Feedback.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\util\ActionLogUtil.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\util\Permission.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTaskAssignment.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportCustomerServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\PriceHistory.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\EmailNotification.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\EmailNotificationDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\EmailManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\GuestProductServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\TechnicalStaffManagementServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerContractsServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderTaskServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\SettingsDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\servlet\FeedbackServlet.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTask.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\FeedbackDAO.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
+D:\phan quyen 2\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java

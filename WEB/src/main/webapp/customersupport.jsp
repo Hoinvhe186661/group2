@@ -1,18 +1,20 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền customer_support
-    if (!"customer_support".equals(userRole) && !"admin".equals(userRole)) {
-        response.sendRedirect(request.getContextPath() + "/index.jsp");
+    // Kiểm tra quyền sử dụng permission - cần có quyền xem dashboard hoặc quản lý hỗ trợ
+    if (!AuthorizationUtil.hasPermission(request, Permission.VIEW_DASHBOARD) && 
+        !AuthorizationUtil.hasPermission(request, Permission.MANAGE_SUPPORT) &&
+        !AuthorizationUtil.hasPermission(request, Permission.VIEW_SUPPORT)) {
+        response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
 %>
@@ -185,40 +187,7 @@
                 </div>
                
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li class="active">
-                        <a href="customersupport.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="support-management">
-                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
-                            <small class="badge pull-right bg-red" id="openTickets">0</small>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="feedback_management.jsp">
-                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="contracts.jsp">
-                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="contact-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
-                            <small class="badge pull-right bg-blue" id="unreadContacts">0</small>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="customers">
-                            <i class="fa fa-users"></i> <span>Quản lý khách hàng</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

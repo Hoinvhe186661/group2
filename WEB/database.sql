@@ -1,3 +1,4 @@
+CREATE DATABASE IF NOT EXISTS hlelectric;
 USE hlelectric;
 
 -- 1. USERS
@@ -21,12 +22,6 @@ CREATE TABLE users (
 -- Add index for faster joins on customer_id
 CREATE INDEX idx_users_customer_id ON users(customer_id);
 
--- Add foreign key constraint for customer_id
-ALTER TABLE users
-    ADD CONSTRAINT fk_users_customer
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
-    ON DELETE SET NULL;
-
 -- 2. CUSTOMERS
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -42,6 +37,13 @@ CREATE TABLE customers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Add foreign key constraint for customer_id in users table
+-- (Must be after customers table is created)
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    ON DELETE SET NULL;
 
 -- 3. CONTRACTS
 CREATE TABLE contracts (

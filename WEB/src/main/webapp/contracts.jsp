@@ -1,9 +1,9 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     String currentStatus = request.getParameter("status");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
@@ -11,9 +11,8 @@
         return;
     }
     
-    // Kiểm tra quyền truy cập - admin, customer_support, customer có thể xem hợp đồng
-    boolean canViewContracts = "admin".equals(userRole) || "customer_support".equals(userRole) || "customer".equals(userRole);
-    if (!canViewContracts) {
+    // Kiểm tra quyền truy cập - sử dụng permission
+    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_CONTRACTS)) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
@@ -263,34 +262,7 @@
                         <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
                     </div>
                 </div>
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="customersupport.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="support-management">
-                            <i class="fa fa-ticket"></i> <span>Quản lý yêu cầu hỗ trợ</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="feedback_management.jsp">
-                            <i class="fa fa-star"></i> <span>Quản lý Feedback</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="contracts.jsp">
-                            <i class="fa fa-file-text"></i> <span>Hợp đồng khách hàng</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="contact-management">
-                            <i class="fa fa-envelope"></i> <span>Quản lý liên hệ</span>
-                            <small class="badge pull-right bg-blue" id="unreadContacts">${unreadCount}</small>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
         </aside>
 

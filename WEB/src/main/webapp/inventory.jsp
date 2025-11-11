@@ -1,20 +1,21 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền truy cập - chỉ admin và storekeeper được vào
-    boolean canManage = "admin".equals(userRole) || "storekeeper".equals(userRole);
-    if (!canManage) {
+    // Kiểm tra quyền truy cập - sử dụng permission
+    boolean canManage = AuthorizationUtil.hasPermission(request, Permission.MANAGE_INVENTORY);
+    boolean canView = AuthorizationUtil.hasPermission(request, Permission.VIEW_INVENTORY);
+    if (!canManage && !canView) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
@@ -244,28 +245,7 @@
                 </form>
                 <!-- /.search form -->
                 <!-- sidebar menu: : style can be found in sidebar.less -->
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="<%=request.getContextPath()%>/admin.jsp">
-                            <i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/product.jsp">
-                            <i class="fa fa-shopping-cart"></i> <span>Quản lý sản phẩm</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="<%=request.getContextPath()%>/supplier">
-                            <i class="fa fa-industry"></i> <span>Nhà cung cấp</span>
-                        </a>
-                    </li>
-                    <li class="active">
-                        <a href="<%=request.getContextPath()%>/inventory.jsp">
-                            <i class="fa fa-archive"></i> <span>Quản lý kho</span>
-                        </a>
-                    </li>
-                </ul>
+                <%@ include file="includes/sidebar-menu.jsp" %>
             </section>
             <!-- /.sidebar -->
         </aside>

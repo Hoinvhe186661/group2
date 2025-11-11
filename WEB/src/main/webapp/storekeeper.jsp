@@ -1,17 +1,18 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
 <%
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    String userRole = (String) session.getAttribute("userRole");
     
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền storekeeper
-    if (!"storekeeper".equals(userRole) && !"admin".equals(userRole)) {
+    // Kiểm tra quyền sử dụng permission - cần có quyền quản lý kho hoặc sản phẩm
+    if (!AuthorizationUtil.hasPermission(request, Permission.MANAGE_INVENTORY) && 
+        !AuthorizationUtil.hasPermission(request, Permission.MANAGE_PRODUCTS)) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
     }
