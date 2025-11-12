@@ -223,28 +223,22 @@
         if (document.getElementById('address')) document.getElementById('address').value = (data.address || '');
       } catch(e) {}
     }
-    if (sessionUserId && sessionUserId !== 'null') {
-      fetch('<%=request.getContextPath()%>/api/users?action=get&id=' + encodeURIComponent(sessionUserId), {headers:{'Accept':'application/json'}})
-        .then(function(r){return r.json();})
-        .then(function(j){ if (j && j.success && j.data){ userData = j.data; fillForm(userData); } })
-        .catch(function(){});
-    }
-
-    // Try load customer info by email to fill company/address
-    var sessionEmail = '<%= String.valueOf(session.getAttribute("email")) %>';
-    if (sessionEmail && sessionEmail !== 'null') {
-      fetch('<%=request.getContextPath()%>/api/customers?action=search&search=' + encodeURIComponent(sessionEmail), {headers:{'Accept':'application/json'}})
-        .then(function(r){return r.json();})
-        .then(function(j){
-          if (j && j.success && Array.isArray(j.data) && j.data.length) {
-            // pick the first matching customer
-            customerData = j.data[0];
-            if (document.getElementById('companyName')) document.getElementById('companyName').value = customerData.companyName || '';
-            if (document.getElementById('address')) document.getElementById('address').value = customerData.address || '';
+    // Load profile data (includes user and customer info if available)
+    fetch('<%=request.getContextPath()%>/api/profile', {headers:{'Accept':'application/json'}})
+      .then(function(r){return r.json();})
+      .then(function(j){ 
+        if (j && j.success && j.data){ 
+          userData = j.data; 
+          fillForm(userData);
+          // Store customer data if available
+          if (j.data.customerId) {
+            customerData = { id: j.data.customerId };
           }
-        })
-        .catch(function(){});
-    }
+        } 
+      })
+      .catch(function(err){
+        console.error('Error loading profile:', err);
+      });
 
     // Open modal and prefill
     var openBtn = document.getElementById('openUpdateModalBtn');
@@ -309,24 +303,12 @@
         }
         if (!userData) return;
         var data = new URLSearchParams();
-        data.append('id', userData.id);
-        data.append('username', userData.username || '');
         data.append('email', email);
         data.append('fullName', fullName);
         data.append('phone', phone);
         data.append('companyName', companyName);
         data.append('address', address);
-        data.append('role', userData.role || 'customer');
-        if (typeof userData.isActive !== 'undefined') data.append('isActive', String(!!userData.isActive));
-        
-        // Thêm customerId nếu có (từ session hoặc customerData)
-        var customerId = '<%= String.valueOf(session.getAttribute("customerId")) %>';
-        if (customerId && customerId !== 'null') {
-          data.append('customerId', customerId);
-        } else if (customerData && customerData.id) {
-          data.append('customerId', customerData.id);
-        }
-        fetch('<%=request.getContextPath()%>/api/users?action=update', {
+        fetch('<%=request.getContextPath()%>/api/profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
           body: data.toString()
@@ -341,12 +323,14 @@
               document.getElementById('email').value = email;
               if (document.getElementById('phone')) document.getElementById('phone').value = phone;
               if (document.getElementById('companyName')) document.getElementById('companyName').value = companyName;
-              var addrParts = splitAddress(address);
-              if (document.getElementById('addrStreet')) document.getElementById('addrStreet').value = addrParts.street;
-              if (document.getElementById('addrDistrict')) document.getElementById('addrDistrict').value = addrParts.district;
-              if (document.getElementById('addrCity')) document.getElementById('addrCity').value = addrParts.city;
               if (document.getElementById('address')) document.getElementById('address').value = address;
-              if (userData){ userData.fullName = fullName; userData.email = email; userData.phone = phone; }
+              if (userData){ 
+                userData.fullName = fullName; 
+                userData.email = email; 
+                userData.phone = phone;
+                userData.companyName = companyName;
+                userData.address = address;
+              }
               var m = bootstrap.Modal.getInstance(document.getElementById('updateUserModal'));
               if (m) m.hide();
               // Cập nhật tên hiển thị ở header mà không cần reload
@@ -356,40 +340,10 @@
                   headerUser.innerHTML = '<i class="fas fa-user"></i> ' + (fullName || (userData.username || ''));
                 }
               } catch(e) {}
-              // Additionally update customer info if we have it
-              if (customerData && customerData.id) {
-                var cdata = new URLSearchParams();
-                cdata.append('id', customerData.id);
-                cdata.append('customerCode', customerData.customerCode || '');
-                cdata.append('companyName', companyName || customerData.companyName || '');
-                cdata.append('userContract', customerData.contactPerson || (fullName || ''));
-                cdata.append('customerEmail', email || customerData.email || '');
-                cdata.append('customerPhone', phone || customerData.phone || '');
-                cdata.append('customerAddress', address || customerData.address || '');
-                cdata.append('taxCode', customerData.taxCode || '');
-                cdata.append('customerType', customerData.customerType || 'individual');
-                fetch('<%=request.getContextPath()%>/api/customers?action=update', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-                  body: cdata.toString()
-                }).then(function(rr){ return rr.json(); }).then(function(j){
-                  if (j && j.success) {
-                    alert('Cập nhật thành công');
-                  } else {
-                    alert('Cập nhật tài khoản thành công, nhưng cập nhật thông tin khách hàng thất bại: ' + (j && j.message ? j.message : 'Lỗi không xác định'));
-                  }
-                }).catch(function(){ 
-                  alert('Cập nhật tài khoản thành công, nhưng cập nhật thông tin khách hàng thất bại. Vui lòng thử lại sau.'); 
-                });
-              } else {
-                alert('Cập nhật tài khoản thành công');
-              }
+              alert(j.message || 'Cập nhật thành công');
             } else {
               // Hiển thị thông báo lỗi chi tiết hơn
               var errorMsg = (j && j.message) ? j.message : 'Không thể cập nhật';
-              if (errorMsg.includes('Vui lòng chọn khách hàng')) {
-                errorMsg = 'Lỗi: Không tìm thấy thông tin khách hàng. Vui lòng liên hệ quản trị viên để được hỗ trợ.';
-              }
               alert(errorMsg);
             }
           })
