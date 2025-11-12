@@ -115,6 +115,15 @@
 				.replace(/'/g, "&#039;");
 		}
 
+		function translateStatus(status) {
+			if (!status) return '-';
+			var statusMap = {
+				'active': 'Hiệu Lực',
+				'terminated': 'Chấm Dứt'
+			};
+			return statusMap[status] || status;
+		}
+
 		function loadContracts() {
 			// API đã lọc theo customerId từ session nếu user là customer
 			$.getJSON("<c:url value='/api/contracts'/>", function(resp) {
@@ -122,7 +131,10 @@
 					$contractsList.html('<div class="p-3 text-danger">Không tải được danh sách hợp đồng.</div>');
 					return;
 				}
-				contracts = resp.data || [];
+				// Lọc chỉ lấy hợp đồng có trạng thái 'active' hoặc 'terminated'
+				contracts = (resp.data || []).filter(c => {
+					return c.status === 'active' || c.status === 'terminated';
+				});
 				filteredContracts = contracts.slice();
 				renderContracts();
 				// Tự chọn hợp đồng đầu tiên nếu có
@@ -151,7 +163,7 @@
 						'<div><strong>' + htmlEscape(c.contractNumber) + '</strong></div>' +
 						'<div class="meta">' + htmlEscape(c.title || '') + '</div>' +
 						'<div class="meta">Từ ' + htmlEscape(c.startDate || '') + ' đến ' + htmlEscape(c.endDate || '') + '</div>' +
-						'<div class="meta">Trạng thái: <code class="badge">' + htmlEscape(c.status || '') + '</code></div>' +
+						'<div class="meta">Trạng thái: <code class="badge">' + htmlEscape(translateStatus(c.status)) + '</code></div>' +
 					'</div>'
 				);
 			}).join("");

@@ -1071,7 +1071,8 @@
         .then(r => r.json())
         .then(j => {
           if (!j || !j.success) return;
-          const list = Array.isArray(j.data) ? j.data : [];
+          // Lọc chỉ lấy hợp đồng có trạng thái 'active' hoặc 'terminated'
+          const list = Array.isArray(j.data) ? j.data.filter(c => c.status === 'active' || c.status === 'terminated') : [];
           list.forEach(it => {
             const opt = document.createElement('option');
             opt.value = it.id;
@@ -1733,6 +1734,8 @@
       var vProduct = document.getElementById('v_product_select');
       var vExternalProduct = document.getElementById('v_external_product');
       var vDeadline = document.getElementById('v_deadline');
+      // Reset trường sản phẩm ngoài về rỗng trước khi điền dữ liệu
+      if (vExternalProduct) vExternalProduct.value = '';
       if (catInp) catInp.value = (ticketData.category||'general');
       if (priInp) priInp.value = (ticketData.priority ? ticketData.priority : '');
       if (subInp) subInp.value = (ticketData.subject||'');
@@ -1880,7 +1883,7 @@
         if (!canEdit) {
           enable.title = 'Yêu cầu đang được thực hiện - không thể chỉnh sửa';
           enable.parentElement.style.color = '#dc3545';
-          enable.parentElement.innerHTML = '<input class="form-check-input" type="checkbox" id="v_enable_edit" disabled><label class="form-check-label" for="v_enable_edit" style="color: #dc3545;">Chỉnh sửa (Yêu cầu đang được thực hiện)</label>';
+          enable.parentElement.innerHTML = '<input class="form-check-input" type="checkbox" id="v_enable_edit" disabled><label class="form-check-label" for="v_enable_edit" style="color: #dc3545;">Chỉ chỉnh sửa và Lưu được yêu cầu trong trạng thái "Chờ xử lý"</label>';
         } else {
           enable.parentElement.style.color = '';
         }
@@ -1894,7 +1897,8 @@
         fetch(ctx + '/api/contracts', { headers: { 'Accept': 'application/json' } })
           .then(r=>r.json()).then(function(j){
             if (!j || !j.success) return;
-            const list = Array.isArray(j.data)? j.data: [];
+            // Lọc chỉ lấy hợp đồng có trạng thái 'active' hoặc 'terminated'
+            const list = Array.isArray(j.data) ? j.data.filter(function(c) { return c.status === 'active' || c.status === 'terminated'; }) : [];
             list.forEach(function(c){
               var opt = document.createElement('option');
               opt.value = c.id;
@@ -1908,9 +1912,13 @@
             var productLabel = (desc.match(/\[Sản phẩm:([^\]]+)\]/) || [])[1];
             var externalProductLabel = (desc.match(/\[Sản phẩm ngoài:([^\]]+)\]/) || [])[1];
             
-            // Hiển thị sản phẩm ngoài nếu có
-            if (vExternalProduct && externalProductLabel) {
+            // Hiển thị sản phẩm ngoài nếu có, nếu không thì để trống
+            if (vExternalProduct) {
+              if (externalProductLabel) {
               vExternalProduct.value = externalProductLabel.trim();
+              } else {
+                vExternalProduct.value = '';
+              }
             }
             if (contractLabel) {
               for (var i=0;i<vContract.options.length;i++) {
