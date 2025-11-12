@@ -2299,10 +2299,136 @@
             // Set minimum date for date fields
             setMinDateForTaskCreateDates();
             
+            // Load deadline from support request
+            loadWorkOrderDeadline(workOrderId);
+            
             $('#assignTaskModal').modal('show');
             loadTasks(workOrderId);
             // Load users for assignment dropdown
             loadUsersForTaskAssignment(workOrderId);
+        }
+        
+        // Load deadline from support request for work order
+        function loadWorkOrderDeadline(workOrderId) {
+            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+            if (!workOrder) {
+                // Clear deadline if work order not found
+                $('#taskStartDate').removeData('workOrderDeadline');
+                $('#taskDeadline').removeData('workOrderDeadline');
+                return;
+            }
+            
+            // Try to get deadline from support request
+            // First, try with ticketId if available
+            if (workOrder.supportRequestId) {
+                $.ajax({
+                    url: ctx + '/support-detail',
+                    type: 'GET',
+                    data: {
+                        id: workOrder.supportRequestId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response && response.success && response.data && response.data.deadline) {
+                            var deadlineStr = response.data.deadline;
+                            parseAndStoreDeadline(deadlineStr);
+                        } else {
+                            // Try fallback: find by customerId and title
+                            findDeadlineByCustomerAndTitle(workOrder.customerId, workOrder.title);
+                        }
+                    },
+                    error: function() {
+                        // Try fallback: find by customerId and title
+                        findDeadlineByCustomerAndTitle(workOrder.customerId, workOrder.title);
+                    }
+                });
+            } else {
+                // No ticketId, try to find by customerId and title
+                findDeadlineByCustomerAndTitle(workOrder.customerId, workOrder.title);
+            }
+        }
+        
+        // Helper function to find deadline by customerId and title
+        function findDeadlineByCustomerAndTitle(customerId, title) {
+            if (!customerId || !title) {
+                $('#taskStartDate').removeData('workOrderDeadline');
+                $('#taskDeadline').removeData('workOrderDeadline');
+                return;
+            }
+            
+            // Get all support requests for this customer and find matching one
+            $.ajax({
+                url: ctx + '/api/support-requests',
+                type: 'GET',
+                data: {
+                    action: 'listByCustomer',
+                    customerId: customerId
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success && response.data && Array.isArray(response.data)) {
+                        // Find ticket with matching subject/title
+                        var matchingTicket = response.data.find(function(ticket) {
+                            return ticket.subject && ticket.subject.trim() === title.trim();
+                        });
+                        
+                        if (matchingTicket && matchingTicket.deadline) {
+                            parseAndStoreDeadline(matchingTicket.deadline);
+                        } else {
+                            // No deadline found
+                            $('#taskStartDate').removeData('workOrderDeadline');
+                            $('#taskDeadline').removeData('workOrderDeadline');
+                        }
+                    } else {
+                        $('#taskStartDate').removeData('workOrderDeadline');
+                        $('#taskDeadline').removeData('workOrderDeadline');
+                    }
+                },
+                error: function() {
+                    console.warn('Error loading support requests for customer');
+                    $('#taskStartDate').removeData('workOrderDeadline');
+                    $('#taskDeadline').removeData('workOrderDeadline');
+                }
+            });
+        }
+        
+        // Helper function to parse and store deadline
+        function parseAndStoreDeadline(deadlineStr) {
+            if (deadlineStr && deadlineStr !== '' && deadlineStr !== 'null') {
+                try {
+                    var deadlineDate = null;
+                    // If deadline is in dd/MM/yyyy format
+                    if (deadlineStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                        var parts = deadlineStr.split('/');
+                        deadlineDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+                    } else if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        // Already in yyyy-MM-dd format
+                        deadlineDate = deadlineStr;
+                    } else {
+                        // Try to parse as Date and convert to yyyy-MM-dd
+                        var date = new Date(deadlineStr);
+                        if (!isNaN(date.getTime())) {
+                            var year = date.getFullYear();
+                            var month = String(date.getMonth() + 1).padStart(2, '0');
+                            var day = String(date.getDate()).padStart(2, '0');
+                            deadlineDate = year + '-' + month + '-' + day;
+                        }
+                    }
+                    
+                    if (deadlineDate) {
+                        // Store deadline in data attribute
+                        $('#taskStartDate').data('workOrderDeadline', deadlineDate);
+                        $('#taskDeadline').data('workOrderDeadline', deadlineDate);
+                    }
+                } catch (e) {
+                    console.warn('Error parsing deadline:', e);
+                    $('#taskStartDate').removeData('workOrderDeadline');
+                    $('#taskDeadline').removeData('workOrderDeadline');
+                }
+            } else {
+                $('#taskStartDate').removeData('workOrderDeadline');
+                $('#taskDeadline').removeData('workOrderDeadline');
+            }
         }
         
         function loadTasks(workOrderId) {
@@ -2731,7 +2857,7 @@
                 return;
             }
             
-            // Validate deadline must be after or equal to start date
+            // Additional validation: deadline must be after or equal to start date (already checked in validateTaskCreateDates, but keep for safety)
             if (startDate && deadline) {
                 var start = new Date(startDate);
                 var end = new Date(deadline);
@@ -2739,6 +2865,41 @@
                     alert('⚠ Lỗi: Deadline phải sau hoặc bằng ngày thực hiện!');
                     $('#taskDeadline').focus();
                     return;
+                }
+            }
+            
+            // Additional validation: check against work order deadline (already checked in validateTaskCreateDates, but keep for safety)
+            var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+            if (workOrderDeadline) {
+                try {
+                    var workOrderDeadlineDate = new Date(workOrderDeadline);
+                    workOrderDeadlineDate.setHours(0, 0, 0, 0);
+                    
+                    if (startDate) {
+                        var start = new Date(startDate);
+                        start.setHours(0, 0, 0, 0);
+                        if (start > workOrderDeadlineDate) {
+                            var deadlineParts = workOrderDeadline.split('-');
+                            var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + ').');
+                            $('#taskStartDate').focus();
+                            return;
+                        }
+                    }
+                    
+                    if (deadline) {
+                        var end = new Date(deadline);
+                        end.setHours(0, 0, 0, 0);
+                        if (end > workOrderDeadlineDate) {
+                            var deadlineParts = workOrderDeadline.split('-');
+                            var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                            alert('⚠ Lỗi: Deadline không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + ').');
+                            $('#taskDeadline').focus();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error validating against work order deadline on submit:', e);
                 }
             }
             
@@ -3079,11 +3240,45 @@
                     }
                     
                     // Phần trăm hoàn thành
+                    var percentage = null;
+                    var progressBarClass = 'progress-bar-success';
+                    
+                    // Nếu có completionPercentage, dùng giá trị đó
                     if(task.completionPercentage !== null && task.completionPercentage !== undefined) {
-                        var percentage = parseFloat(task.completionPercentage);
+                        percentage = parseFloat(task.completionPercentage);
+                    } 
+                    // Nếu task đang ở trạng thái in_progress nhưng chưa có completionPercentage
+                    else if(task.status === 'in_progress') {
+                        // Tính progress dựa trên actualHours / estimatedHours nếu có
+                        if(task.actualHours && task.estimatedHours) {
+                            var actual = parseFloat(task.actualHours);
+                            var estimated = parseFloat(task.estimatedHours);
+                            if(estimated > 0) {
+                                percentage = Math.min(100, Math.max(1, Math.round((actual / estimated) * 100)));
+                            } else {
+                                percentage = 1; // Tối thiểu 1% nếu đang thực hiện
+                            }
+                        } else {
+                            // Nếu không có actualHours/estimatedHours, hiển thị 1% để cho biết đang thực hiện
+                            percentage = 1;
+                        }
+                        progressBarClass = 'progress-bar-info'; // Màu xanh dương cho đang thực hiện
+                    }
+                    // Nếu task đã completed nhưng chưa có completionPercentage
+                    else if(task.status === 'completed') {
+                        percentage = 100;
+                    }
+                    // Nếu task ở trạng thái pending và chưa có completionPercentage
+                    else if(task.status === 'pending') {
+                        percentage = 0;
+                        progressBarClass = 'progress-bar-warning'; // Màu vàng cho chờ xử lý
+                    }
+                    
+                    // Hiển thị progress bar nếu có percentage
+                    if(percentage !== null) {
                         html += '<p><strong>Phần trăm hoàn thành:</strong> ';
                         html += '<div class="progress" style="margin-top: 5px;">';
-                        html += '<div class="progress-bar progress-bar-success" role="progressbar" style="width: ' + percentage + '%">';
+                        html += '<div class="progress-bar ' + progressBarClass + '" role="progressbar" style="width: ' + percentage + '%">';
                         html += percentage + '%';
                         html += '</div></div></p>';
                     }
@@ -3198,6 +3393,9 @@
             var today = new Date();
             today.setHours(0, 0, 0, 0);
             
+            // Get work order deadline from data attribute
+            var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+            
             // Validate start date
             if (startDate) {
                 var start = new Date(startDate);
@@ -3207,6 +3405,24 @@
                     $('#taskStartDate').val('');
                     $('#taskStartDate').focus();
                     return false;
+                }
+                
+                // Validate start date <= work order deadline
+                if (workOrderDeadline) {
+                    try {
+                        var workOrderDeadlineDate = new Date(workOrderDeadline);
+                        workOrderDeadlineDate.setHours(0, 0, 0, 0);
+                        if (start > workOrderDeadlineDate) {
+                            var deadlineParts = workOrderDeadline.split('-');
+                            var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + '). Vui lòng chọn ngày nhỏ hơn hoặc bằng deadline.');
+                            $('#taskStartDate').val('');
+                            $('#taskStartDate').focus();
+                            return false;
+                        }
+                    } catch (e) {
+                        console.warn('Error validating start date against work order deadline:', e);
+                    }
                 }
             }
             
@@ -3230,6 +3446,24 @@
                         $('#taskDeadline').val('');
                         $('#taskDeadline').focus();
                         return false;
+                    }
+                }
+                
+                // Validate deadline <= work order deadline
+                if (workOrderDeadline) {
+                    try {
+                        var workOrderDeadlineDate = new Date(workOrderDeadline);
+                        workOrderDeadlineDate.setHours(0, 0, 0, 0);
+                        if (end > workOrderDeadlineDate) {
+                            var deadlineParts = workOrderDeadline.split('-');
+                            var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                            alert('⚠ Lỗi: Deadline không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + '). Vui lòng chọn ngày nhỏ hơn hoặc bằng deadline.');
+                            $('#taskDeadline').val('');
+                            $('#taskDeadline').focus();
+                            return false;
+                        }
+                    } catch (e) {
+                        console.warn('Error validating deadline against work order deadline:', e);
                     }
                 }
             }

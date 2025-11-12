@@ -91,12 +91,51 @@ public class SupportDetailServlet extends HttpServlet {
             
             // Ngày tháng
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
             if (ticket.get("createdAt") != null) {
                 data.put("createdAt", sdf.format(ticket.get("createdAt")));
             }
             if (ticket.get("resolvedAt") != null) {
                 data.put("resolvedAt", sdf.format(ticket.get("resolvedAt")));
             }
+            // Deadline - luôn trả về (có thể null)
+            Object deadlineObj = ticket.get("deadline");
+            System.out.println("DEBUG SupportDetailServlet: deadline object from ticket map = " + deadlineObj);
+            System.out.println("DEBUG SupportDetailServlet: deadline object type = " + (deadlineObj != null ? deadlineObj.getClass().getName() : "null"));
+            
+            if (deadlineObj != null) {
+                try {
+                    // Deadline từ DB là yyyy-MM-dd, chuyển sang dd/MM/yyyy
+                    String deadlineStr = deadlineObj.toString();
+                    System.out.println("DEBUG SupportDetailServlet: deadline string = " + deadlineStr);
+                    
+                    if (deadlineStr != null && !deadlineStr.isEmpty() && !deadlineStr.equals("null")) {
+                        java.sql.Date deadlineDate = java.sql.Date.valueOf(deadlineStr);
+                        String formattedDeadline = dateFormat.format(deadlineDate);
+                        data.put("deadline", formattedDeadline);
+                        System.out.println("DEBUG SupportDetailServlet: formatted deadline = " + formattedDeadline);
+                    } else {
+                        data.put("deadline", "");
+                        System.out.println("DEBUG SupportDetailServlet: deadline is empty or 'null' string, setting to empty");
+                    }
+                } catch (Exception e) {
+                    // Nếu có lỗi, thử giữ nguyên format hoặc để rỗng
+                    System.out.println("DEBUG SupportDetailServlet: Error formatting deadline: " + e.getMessage());
+                    e.printStackTrace();
+                    // Thử giữ nguyên format nếu có thể
+                    String deadlineStr = deadlineObj.toString();
+                    if (deadlineStr != null && !deadlineStr.isEmpty() && !deadlineStr.equals("null")) {
+                        data.put("deadline", deadlineStr);
+                    } else {
+                        data.put("deadline", "");
+                    }
+                }
+            } else {
+                data.put("deadline", "");
+                System.out.println("DEBUG SupportDetailServlet: deadline is null, setting to empty string");
+            }
+            
+            System.out.println("DEBUG SupportDetailServlet: Final deadline in JSON data = " + data.get("deadline"));
             
             json.put("data", data);
             out.print(json.toString());

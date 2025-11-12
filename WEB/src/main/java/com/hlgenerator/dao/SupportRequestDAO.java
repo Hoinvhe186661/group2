@@ -886,17 +886,32 @@ public class SupportRequestDAO extends DBConnect {
                 ticket.put("customerAddress", rs.getString("customer_address"));
                 ticket.put("createdAt", rs.getTimestamp("created_at"));
                 ticket.put("resolvedAt", rs.getTimestamp("resolved_at"));
-                // Lấy deadline
-                java.sql.Date deadline = rs.getDate("deadline");
-                System.out.println("DEBUG getSupportRequestById: deadline from DB = " + deadline);
-                if (deadline != null) {
-                    String deadlineStr = deadline.toString(); // Format: yyyy-MM-dd
-                    ticket.put("deadline", deadlineStr);
-                    System.out.println("DEBUG getSupportRequestById: deadline string = " + deadlineStr);
+                // Lấy deadline - dùng getObject để xử lý NULL tốt hơn
+                Object deadlineObj = rs.getObject("deadline");
+                System.out.println("DEBUG getSupportRequestById: deadline object from DB = " + deadlineObj);
+                if (deadlineObj != null) {
+                    if (deadlineObj instanceof java.sql.Date) {
+                        java.sql.Date deadline = (java.sql.Date) deadlineObj;
+                        String deadlineStr = deadline.toString(); // Format: yyyy-MM-dd
+                        ticket.put("deadline", deadlineStr);
+                        System.out.println("DEBUG getSupportRequestById: deadline string = " + deadlineStr);
+                    } else if (deadlineObj instanceof java.util.Date) {
+                        java.util.Date deadline = (java.util.Date) deadlineObj;
+                        java.sql.Date sqlDate = new java.sql.Date(deadline.getTime());
+                        String deadlineStr = sqlDate.toString(); // Format: yyyy-MM-dd
+                        ticket.put("deadline", deadlineStr);
+                        System.out.println("DEBUG getSupportRequestById: deadline string (from util.Date) = " + deadlineStr);
+                    } else {
+                        // Nếu là String hoặc kiểu khác
+                        String deadlineStr = deadlineObj.toString();
+                        ticket.put("deadline", deadlineStr);
+                        System.out.println("DEBUG getSupportRequestById: deadline string (from object) = " + deadlineStr);
+                    }
                 } else {
                     ticket.put("deadline", null);
-                    System.out.println("DEBUG getSupportRequestById: deadline is NULL");
+                    System.out.println("DEBUG getSupportRequestById: deadline is NULL in database");
                 }
+                System.out.println("DEBUG getSupportRequestById: Final deadline in ticket map = " + ticket.get("deadline"));
                 
                 System.out.println("Found ticket: " + ticket.get("ticketNumber"));
                 return ticket;

@@ -294,10 +294,19 @@
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Mô tả vấn đề:</label>
+                        <!-- Hợp đồng & Sản phẩm -->
+                        <div class="form-group" id="detail_contract_product_group" style="display: none;">
+                            <label class="col-sm-3 control-label">Hợp đồng & Sản phẩm:</label>
                             <div class="col-sm-9">
-                                <textarea class="form-control" id="detail_description" rows="4" readonly></textarea>
+                                <div id="detail_contract_product" style="background: linear-gradient(135deg, #e7f3ff 0%, #d6e9f5 100%); padding: 15px; border-radius: 8px; border-left: 4px solid #3c8dbc; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mô tả chi tiết vấn đề -->
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Mô tả chi tiết vấn đề:</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="detail_description" rows="4" readonly style="background: #f9f9f9; border: 1px solid #e0e0e0; white-space: pre-wrap; word-wrap: break-word;"></textarea>
                             </div>
                         </div>
                         
@@ -322,6 +331,13 @@
                             <label class="col-sm-3 control-label">Ngày tạo:</label>
                             <div class="col-sm-3">
                                 <p class="form-control-static" id="detail_created"></p>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Ngày mong muốn hoàn thành:</label>
+                            <div class="col-sm-9">
+                                <p class="form-control-static" id="detail_deadline" style="color: #2c3e50; font-size: 14px;"></p>
                             </div>
                         </div>
                     </form>
@@ -371,10 +387,26 @@
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Mô tả công việc:</label>
+                        <!-- Hợp đồng & Sản phẩm -->
+                        <div class="form-group" id="work_order_contract_product_group" style="display: none;">
+                            <label class="col-sm-3 control-label">Hợp đồng & Sản phẩm:</label>
                             <div class="col-sm-9">
-                                <textarea class="form-control" id="work_order_description" rows="4" readonly></textarea>
+                                <div id="work_order_contract_product" style="background: linear-gradient(135deg, #e7f3ff 0%, #d6e9f5 100%); padding: 15px; border-radius: 8px; border-left: 4px solid #3c8dbc; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mô tả chi tiết vấn đề -->
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Mô tả chi tiết vấn đề:</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="work_order_description" rows="4" readonly style="background: #f9f9f9; border: 1px solid #e0e0e0; white-space: pre-wrap; word-wrap: break-word;"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Ngày mong muốn hoàn thành:</label>
+                            <div class="col-sm-9">
+                                <p class="form-control-static" id="work_order_deadline" style="color: #2c3e50; font-size: 14px;"></p>
                             </div>
                         </div>
                         
@@ -403,10 +435,10 @@
                         </div>
                         
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Ngày hẹn thực hiện:</label>
+                            <label class="col-sm-3 control-label">Ngày thực hiện:</label>
                             <div class="col-sm-9">
                                 <input type="date" class="form-control" id="work_order_scheduled_date" min="">
-                                <small class="help-block">Ngày dự kiến bắt đầu thực hiện công việc (không được chọn ngày quá khứ)</small>
+                                <small class="help-block">Ngày thực hiện công việc (không được chọn ngày quá khứ và phải nhỏ hơn hoặc bằng ngày mong muốn hoàn thành)</small>
                             </div>
                         </div>
                         
@@ -549,11 +581,34 @@
                 today.setHours(0, 0, 0, 0); // Reset time to 00:00:00
                 selectedDate.setHours(0, 0, 0, 0);
                 
+                // Kiểm tra không được là ngày quá khứ
                 if (selectedDate < today) {
-                    alert('⚠ Lỗi: Ngày hẹn thực hiện không được là ngày quá khứ. Vui lòng chọn ngày hôm nay hoặc ngày trong tương lai.');
+                    alert('⚠ Lỗi: Ngày thực hiện không được là ngày quá khứ. Vui lòng chọn ngày hôm nay hoặc ngày trong tương lai.');
                     $('#work_order_scheduled_date').val('');
                     $('#work_order_scheduled_date').focus();
                     return false;
+                }
+                
+                // Kiểm tra ngày thực hiện <= deadline
+                var deadlineValue = $('#work_order_scheduled_date').data('deadline');
+                if (deadlineValue) {
+                    try {
+                        // Deadline đã được lưu dạng yyyy-MM-dd
+                        var deadlineDate = new Date(deadlineValue);
+                        deadlineDate.setHours(0, 0, 0, 0);
+                        
+                        if (selectedDate > deadlineDate) {
+                            // Format deadline để hiển thị trong thông báo
+                            var deadlineParts = deadlineValue.split('-');
+                            var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + '). Vui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
+                            $('#work_order_scheduled_date').val('');
+                            $('#work_order_scheduled_date').focus();
+                            return false;
+                        }
+                    } catch (e) {
+                        console.warn('Không thể parse deadline:', e);
+                    }
                 }
             }
             return true;
@@ -904,15 +959,94 @@
         }
         
         function viewTicketDetail(id) {
-            var ticket = allTickets.find(function(t) { return t.id == id; });
-            if(!ticket) return;
-            
+            // Load fresh data from server
+            $.ajax({
+                url: ctx + '/api/tech-support?action=get',
+                type: 'GET',
+                data: { id: id },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        displayTicketDetail(response.data);
+                    } else {
+                        // Fallback to cached data
+                        var ticket = allTickets.find(function(t) { return t.id == id; });
+                        if (ticket) {
+                            displayTicketDetail(ticket);
+                        } else {
+                            alert('Không thể tải chi tiết ticket');
+                        }
+                    }
+                },
+                error: function() {
+                    // Fallback to cached data
+                    var ticket = allTickets.find(function(t) { return t.id == id; });
+                    if (ticket) {
+                        displayTicketDetail(ticket);
+                    } else {
+                        alert('Không thể tải chi tiết ticket');
+                    }
+                }
+            });
+        }
+        
+        function displayTicketDetail(ticket) {
             $('#detail_ticket_id').val(ticket.id);
             $('#detail_ticket_number').text(ticket.ticketNumber || '#' + ticket.id);
             $('#detail_customer').text(ticket.customerName || 'N/A');
             $('#detail_email').text(ticket.customerEmail || 'N/A');
             $('#detail_subject').text(ticket.subject || '');
-            $('#detail_description').val(ticket.description || '');
+            
+            // Tách thông tin hợp đồng và sản phẩm từ description
+            var description = ticket.description || '';
+            var contractInfo = '';
+            var productInfo = '';
+            var cleanDescription = description;
+            
+            // Tìm thông tin hợp đồng: [Hợp đồng: ...]
+            var contractMatch = description.match(/\[Hợp đồng:([^\]]+)\]/);
+            if (contractMatch) {
+                contractInfo = contractMatch[1].trim();
+                cleanDescription = cleanDescription.replace(/\[Hợp đồng:[^\]]+\]\s*/g, '').trim();
+            }
+            
+            // Tìm thông tin sản phẩm: [Sản phẩm: ...]
+            var productMatch = description.match(/\[Sản phẩm:([^\]]+)\]/);
+            if (productMatch) {
+                productInfo = productMatch[1].trim();
+                cleanDescription = cleanDescription.replace(/\[Sản phẩm:[^\]]+\]\s*/g, '').trim();
+            }
+            
+            // Hiển thị hợp đồng & sản phẩm
+            var contractProductHtml = '';
+            if (contractInfo || productInfo) {
+                $('#detail_contract_product_group').show();
+                if (contractInfo) {
+                    contractProductHtml += '<div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(60, 141, 188, 0.2);">';
+                    contractProductHtml += '<div style="display: flex; align-items: flex-start; gap: 10px;">';
+                    contractProductHtml += '<div style="flex-shrink: 0; color: #3c8dbc; font-size: 18px; margin-top: 2px;"><i class="fa fa-file-text-o"></i></div>';
+                    contractProductHtml += '<div style="flex: 1; min-width: 0;">';
+                    contractProductHtml += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">HỢP ĐỒNG</strong>';
+                    contractProductHtml += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(contractInfo) + '</div>';
+                    contractProductHtml += '</div></div></div>';
+                }
+                
+                if (productInfo) {
+                    contractProductHtml += '<div style="padding-top: 0;">';
+                    contractProductHtml += '<div style="display: flex; align-items: flex-start; gap: 10px;">';
+                    contractProductHtml += '<div style="flex-shrink: 0; color: #27ae60; font-size: 18px; margin-top: 2px;"><i class="fa fa-cube"></i></div>';
+                    contractProductHtml += '<div style="flex: 1; min-width: 0;">';
+                    contractProductHtml += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">SẢN PHẨM</strong>';
+                    contractProductHtml += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(productInfo) + '</div>';
+                    contractProductHtml += '</div></div></div>';
+                }
+                $('#detail_contract_product').html(contractProductHtml);
+            } else {
+                $('#detail_contract_product_group').hide();
+            }
+            
+            // Hiển thị mô tả chi tiết (đã loại bỏ hợp đồng/sản phẩm)
+            $('#detail_description').val(cleanDescription || 'Không có mô tả');
             
             // Hiển thị text cho các trường category, priority, status
             var categoryLabels = {
@@ -939,7 +1073,39 @@
             $('#detail_status').text(statusLabels[ticket.status] || ticket.status || 'N/A');
             $('#detail_created').text(formatDate(ticket.createdAt));
             
+            // Hiển thị deadline - format từ yyyy-MM-dd sang dd/MM/yyyy
+            var deadlineDisplay = '';
+            if (ticket.deadline && typeof ticket.deadline === 'string' && ticket.deadline.trim() !== '' && ticket.deadline !== 'null') {
+                try {
+                    // Deadline từ DB là yyyy-MM-dd, chuyển sang dd/MM/yyyy
+                    var deadlineStr = ticket.deadline.trim();
+                    if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        var parts = deadlineStr.split('-');
+                        deadlineDisplay = parts[2] + '/' + parts[1] + '/' + parts[0];
+                    } else {
+                        deadlineDisplay = deadlineStr;
+                    }
+                } catch (e) {
+                    deadlineDisplay = ticket.deadline;
+                }
+            } else {
+                deadlineDisplay = '<span style="color: #999; font-style: italic;">Chưa có</span>';
+            }
+            $('#detail_deadline').html(deadlineDisplay);
+            
             $('#ticketDetailModal').modal('show');
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.toString().replace(/[&<>"']/g, function(m) { return map[m]; });
         }
         
         function showCreateWorkOrderModal(id) {
@@ -993,6 +1159,29 @@
         }
         
         function openCreateWorkOrderModal(ticket, customerIdValue) {
+            // Load fresh data from server để có đầy đủ thông tin deadline
+            $.ajax({
+                url: ctx + '/api/tech-support?action=get',
+                type: 'GET',
+                data: { id: ticket.id },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success && response.data) {
+                        // Sử dụng dữ liệu từ server
+                        populateWorkOrderModal(response.data, customerIdValue);
+                    } else {
+                        // Fallback to cached data
+                        populateWorkOrderModal(ticket, customerIdValue);
+                    }
+                },
+                error: function() {
+                    // Fallback to cached data
+                    populateWorkOrderModal(ticket, customerIdValue);
+                }
+            });
+        }
+        
+        function populateWorkOrderModal(ticket, customerIdValue) {
             // Điền thông tin từ ticket
             $('#work_order_ticket_id').val(ticket.id);
             $('#work_order_customer_id').val(customerIdValue);
@@ -1004,7 +1193,57 @@
             
             // Điền thông tin work order (readonly fields)
             $('#work_order_title').val(ticket.subject || '');
-            $('#work_order_description').val(ticket.description || '');
+            
+            // Tách thông tin hợp đồng và sản phẩm từ description
+            var description = ticket.description || '';
+            var contractInfo = '';
+            var productInfo = '';
+            var cleanDescription = description;
+            
+            // Tìm thông tin hợp đồng: [Hợp đồng: ...]
+            var contractMatch = description.match(/\[Hợp đồng:([^\]]+)\]/);
+            if (contractMatch) {
+                contractInfo = contractMatch[1].trim();
+                cleanDescription = cleanDescription.replace(/\[Hợp đồng:[^\]]+\]\s*/g, '').trim();
+            }
+            
+            // Tìm thông tin sản phẩm: [Sản phẩm: ...]
+            var productMatch = description.match(/\[Sản phẩm:([^\]]+)\]/);
+            if (productMatch) {
+                productInfo = productMatch[1].trim();
+                cleanDescription = cleanDescription.replace(/\[Sản phẩm:[^\]]+\]\s*/g, '').trim();
+            }
+            
+            // Hiển thị hợp đồng & sản phẩm
+            var contractProductHtml = '';
+            if (contractInfo || productInfo) {
+                $('#work_order_contract_product_group').show();
+                if (contractInfo) {
+                    contractProductHtml += '<div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(60, 141, 188, 0.2);">';
+                    contractProductHtml += '<div style="display: flex; align-items: flex-start; gap: 10px;">';
+                    contractProductHtml += '<div style="flex-shrink: 0; color: #3c8dbc; font-size: 18px; margin-top: 2px;"><i class="fa fa-file-text-o"></i></div>';
+                    contractProductHtml += '<div style="flex: 1; min-width: 0;">';
+                    contractProductHtml += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">HỢP ĐỒNG</strong>';
+                    contractProductHtml += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(contractInfo) + '</div>';
+                    contractProductHtml += '</div></div></div>';
+                }
+                
+                if (productInfo) {
+                    contractProductHtml += '<div style="padding-top: 0;">';
+                    contractProductHtml += '<div style="display: flex; align-items: flex-start; gap: 10px;">';
+                    contractProductHtml += '<div style="flex-shrink: 0; color: #27ae60; font-size: 18px; margin-top: 2px;"><i class="fa fa-cube"></i></div>';
+                    contractProductHtml += '<div style="flex: 1; min-width: 0;">';
+                    contractProductHtml += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">SẢN PHẨM</strong>';
+                    contractProductHtml += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(productInfo) + '</div>';
+                    contractProductHtml += '</div></div></div>';
+                }
+                $('#work_order_contract_product').html(contractProductHtml);
+            } else {
+                $('#work_order_contract_product_group').hide();
+            }
+            
+            // Hiển thị mô tả chi tiết (đã loại bỏ hợp đồng/sản phẩm)
+            $('#work_order_description').val(cleanDescription || 'Không có mô tả');
             
             // Set độ ưu tiên
             var priority = ticket.priority || 'medium';
@@ -1020,6 +1259,35 @@
             // Set trạng thái mặc định là "in_progress"
             $('#work_order_status').val('in_progress');
             $('#work_order_status_display').val('Đang xử lý');
+            
+            // Hiển thị deadline - format từ yyyy-MM-dd sang dd/MM/yyyy
+            var deadlineDisplay = '';
+            var deadlineDateValue = null; // Lưu deadline dạng Date object để validate
+            if (ticket.deadline && typeof ticket.deadline === 'string' && ticket.deadline.trim() !== '' && ticket.deadline !== 'null') {
+                try {
+                    // Deadline từ DB là yyyy-MM-dd, chuyển sang dd/MM/yyyy
+                    var deadlineStr = ticket.deadline.trim();
+                    if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        var parts = deadlineStr.split('-');
+                        deadlineDisplay = parts[2] + '/' + parts[1] + '/' + parts[0];
+                        // Lưu deadline dạng yyyy-MM-dd vào data attribute để validate
+                        deadlineDateValue = deadlineStr;
+                    } else {
+                        deadlineDisplay = deadlineStr;
+                    }
+                } catch (e) {
+                    deadlineDisplay = ticket.deadline;
+                }
+            } else {
+                deadlineDisplay = '<span style="color: #999; font-style: italic;">Chưa có</span>';
+            }
+            $('#work_order_deadline').html(deadlineDisplay);
+            // Lưu deadline vào data attribute để validate
+            if (deadlineDateValue) {
+                $('#work_order_scheduled_date').data('deadline', deadlineDateValue);
+            } else {
+                $('#work_order_scheduled_date').removeData('deadline');
+            }
             
             $('#work_order_estimated_hours').val('');
             $('#work_order_scheduled_date').val('');

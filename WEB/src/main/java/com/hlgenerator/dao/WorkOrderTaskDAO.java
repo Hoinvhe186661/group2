@@ -1,14 +1,18 @@
 package com.hlgenerator.dao;
 
-import com.hlgenerator.model.WorkOrderTask;
-import com.hlgenerator.model.WorkOrderTaskAssignment;
-
 import java.math.BigDecimal;
-import java.sql.*;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.hlgenerator.model.WorkOrderTask;
+import com.hlgenerator.model.WorkOrderTaskAssignment;
 
 public class WorkOrderTaskDAO extends DBConnect {
     private static final Logger logger = Logger.getLogger(WorkOrderTaskDAO.class.getName());
@@ -1204,6 +1208,161 @@ public class WorkOrderTaskDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error getting technical staff with tasks", e);
         }
         
+        return result;
+    }
+    
+    /**
+     * Get all technical staff tasks as flat list (for table display)
+     * Returns list of tasks with staff information, with pagination support
+     * @param statusFilter Filter by task status (null or empty for all)
+     * @param priorityFilter Filter by task priority (null or empty for all)
+     * @param searchKeyword Search keyword for staff name, task number, or task description (null or empty for all)
+     * @param startDateFrom Filter by start date from (null for no filter)
+     * @param startDateTo Filter by start date to (null for no filter)
+     * @param deadlineFrom Filter by deadline from (null for no filter)
+     * @param deadlineTo Filter by deadline to (null for no filter)
+     * @param page Page number (1-based)
+     * @param pageSize Page size
+     * @return Map containing "data" (list of tasks) and "total" (total count)
+     */
+    public java.util.Map<String, Object> getTechnicalStaffTasksFlatList(String statusFilter, String priorityFilter, String searchKeyword, 
+            java.sql.Date startDateFrom, java.sql.Date startDateTo, java.sql.Date deadlineFrom, java.sql.Date deadlineTo, 
+            int page, int pageSize) {
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        List<java.util.Map<String, Object>> tasksList = new ArrayList<>();
+        int total = 0;
+        
+        if (!checkConnection()) {
+            result.put("data", tasksList);
+            result.put("total", total);
+            return result;
+        }
+        
+        try {
+            // Build count query
+            StringBuilder countSql = new StringBuilder();
+            countSql.append("SELECT COUNT(DISTINCT t.id) ");
+            countSql.append("FROM tasks t ");
+            countSql.append("JOIN task_assignments ta ON t.id = ta.task_id ");
+            countSql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
+            countSql.append("JOIN users u ON ta.user_id = u.id ");
+            countSql.append("WHERE ta.role = 'assignee' AND u.role = 'technical_staff' ");
+            
+            // Build data query
+            StringBuilder dataSql = new StringBuilder();
+            dataSql.append("SELECT t.id, t.task_number, t.task_description, t.status, t.priority, ");
+            dataSql.append("t.estimated_hours, t.start_date, t.deadline, t.completion_date, ");
+            dataSql.append("wo.work_order_number, wo.title AS work_order_title, ");
+            dataSql.append("u.id AS staff_id, u.full_name AS staff_name, u.email AS staff_email ");
+            dataSql.append("FROM tasks t ");
+            dataSql.append("JOIN task_assignments ta ON t.id = ta.task_id ");
+            dataSql.append("JOIN work_orders wo ON t.work_order_id = wo.id ");
+            dataSql.append("JOIN users u ON ta.user_id = u.id ");
+            dataSql.append("WHERE ta.role = 'assignee' AND u.role = 'technical_staff' ");
+            
+            // Add filters
+            List<String> conditions = new ArrayList<>();
+            List<Object> params = new ArrayList<>();
+            
+            if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+                conditions.add("t.status = ?");
+                params.add(statusFilter);
+            }
+            
+            if (priorityFilter != null && !priorityFilter.trim().isEmpty()) {
+                conditions.add("t.priority = ?");
+                params.add(priorityFilter);
+            }
+            
+            if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+                String keywordPattern = "%" + searchKeyword.trim() + "%";
+                conditions.add("(LOWER(u.full_name) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?) OR LOWER(t.task_number) LIKE LOWER(?) OR LOWER(t.task_description) LIKE LOWER(?) OR LOWER(wo.work_order_number) LIKE LOWER(?))");
+                params.add(keywordPattern);
+                params.add(keywordPattern);
+                params.add(keywordPattern);
+                params.add(keywordPattern);
+                params.add(keywordPattern);
+            }
+            
+            // Filter by start date
+            if (startDateFrom != null) {
+                conditions.add("t.start_date >= ?");
+                params.add(startDateFrom);
+            }
+            if (startDateTo != null) {
+                conditions.add("t.start_date <= ?");
+                params.add(startDateTo);
+            }
+            
+            // Filter by deadline
+            if (deadlineFrom != null) {
+                conditions.add("t.deadline >= ?");
+                params.add(deadlineFrom);
+            }
+            if (deadlineTo != null) {
+                conditions.add("t.deadline <= ?");
+                params.add(deadlineTo);
+            }
+            
+            if (!conditions.isEmpty()) {
+                String whereClause = "AND " + String.join(" AND ", conditions);
+                countSql.append(whereClause);
+                dataSql.append(whereClause);
+            }
+            
+            dataSql.append("ORDER BY t.updated_at DESC, t.created_at DESC ");
+            dataSql.append("LIMIT ? OFFSET ?");
+            
+            // Execute count query
+            try (PreparedStatement countPs = connection.prepareStatement(countSql.toString())) {
+                int paramIndex = 1;
+                for (Object param : params) {
+                    countPs.setObject(paramIndex++, param);
+                }
+                try (ResultSet countRs = countPs.executeQuery()) {
+                    if (countRs.next()) {
+                        total = countRs.getInt(1);
+                    }
+                }
+            }
+            
+            // Execute data query
+            try (PreparedStatement dataPs = connection.prepareStatement(dataSql.toString())) {
+                int paramIndex = 1;
+                for (Object param : params) {
+                    dataPs.setObject(paramIndex++, param);
+                }
+                int offset = (page - 1) * pageSize;
+                dataPs.setInt(paramIndex++, pageSize);
+                dataPs.setInt(paramIndex, offset);
+                
+                try (ResultSet rs = dataPs.executeQuery()) {
+                    while (rs.next()) {
+                        java.util.Map<String, Object> task = new java.util.HashMap<>();
+                        task.put("id", rs.getInt("id"));
+                        task.put("taskNumber", rs.getString("task_number"));
+                        task.put("taskDescription", rs.getString("task_description"));
+                        task.put("status", rs.getString("status"));
+                        task.put("priority", rs.getString("priority"));
+                        task.put("estimatedHours", rs.getBigDecimal("estimated_hours"));
+                        task.put("startDate", rs.getTimestamp("start_date"));
+                        task.put("deadline", rs.getTimestamp("deadline"));
+                        task.put("completionDate", rs.getTimestamp("completion_date"));
+                        task.put("workOrderNumber", rs.getString("work_order_number"));
+                        task.put("workOrderTitle", rs.getString("work_order_title"));
+                        task.put("staffId", rs.getInt("staff_id"));
+                        task.put("staffName", rs.getString("staff_name"));
+                        task.put("staffEmail", rs.getString("staff_email"));
+                        tasksList.add(task);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting technical staff tasks flat list", e);
+        }
+        
+        result.put("data", tasksList);
+        result.put("total", total);
         return result;
     }
 }

@@ -485,18 +485,19 @@
                             <small class="text-muted">Mỗi ticket sẽ được gửi riêng biệt cho từng trưởng phòng kỹ thuật</small>
                         </div>
                         <div class="form-group">
-                            <label>Độ ưu tiên: <span class="text-danger">*</span></label>
-                            <select class="form-control" id="forward_priority" required>
+                            <label>Độ ưu tiên:</label>
+                            <select class="form-control" id="forward_priority" disabled>
                                 <option value="urgent">Khẩn cấp</option>
                                 <option value="high">Cao</option>
                                 <option value="medium" selected>Trung bình</option>
                                 <option value="low">Thấp</option>
                             </select>
-                            <small class="text-muted">Bạn có thể thay đổi độ ưu tiên khi chuyển tiếp</small>
+                            <small class="text-muted">Độ ưu tiên không thể thay đổi khi chuyển tiếp</small>
                         </div>
-                        <div class="alert alert-info">
-                            <i class="fa fa-info-circle"></i> 
-                            <strong>Lưu ý:</strong> Sau khi chuyển tiếp thành công, trạng thái ticket sẽ tự động chuyển sang <strong>"Đang xử lý"</strong>.
+                        <div class="form-group">
+                            <label>Ngày mong muốn hoàn thành:</label>
+                            <input type="text" class="form-control" id="forward_deadline" readonly>
+                            <small class="text-muted">Ngày mong muốn hoàn thành của ticket</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -620,6 +621,8 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
+                        console.log('Ticket data received:', response.data);
+                        console.log('Deadline value:', response.data.deadline);
                         displayTicketDetail(response.data);
                     } else {
                         $('#ticketDetailContent').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> ' + response.message + '</div>');
@@ -781,6 +784,14 @@
             if (ticket.createdAt) {
                 html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Ngày tạo:</strong><br><span style="color: #2c3e50; font-size: 14px;">' + ticket.createdAt + '</span></p>';
             }
+            // Hiển thị deadline - luôn hiển thị, nếu không có thì hiển thị "Chưa có"
+            var deadlineDisplay = '';
+            if (ticket.deadline && typeof ticket.deadline === 'string' && ticket.deadline.trim() !== '' && ticket.deadline !== 'null') {
+                deadlineDisplay = escapeHtml(ticket.deadline);
+            } else {
+                deadlineDisplay = '<span style="color: #999; font-style: italic;">Chưa có</span>';
+            }
+            html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Ngày mong muốn hoàn thành:</strong><br><span style="color: #2c3e50; font-size: 14px;">' + deadlineDisplay + '</span></p>';
             if (ticket.resolvedAt) {
                 html += '<p style="margin-bottom: 12px; word-wrap: break-word; overflow-wrap: break-word;"><strong style="color: #34495e; font-size: 13px;">Ngày giải quyết:</strong><br><span style="color: #2c3e50; font-size: 14px;">' + ticket.resolvedAt + '</span></p>';
             }
@@ -891,45 +902,26 @@
             
             html += '<div class="col-md-4">';
             html += '<div class="form-group">';
-            // Kiểm tra nếu đã có người nhận hoặc ticket đã đóng/hoàn thành thì disable trường priority
-            var hasAssignedTo = false;
-            if (ticket.assignedTo !== null && ticket.assignedTo !== undefined) {
-                if (typeof ticket.assignedTo === 'number') {
-                    hasAssignedTo = ticket.assignedTo > 0;
-                } else if (typeof ticket.assignedTo === 'string') {
-                    hasAssignedTo = ticket.assignedTo.trim() !== '' && ticket.assignedTo !== '0';
-                } else {
-                    var assignedToStr = String(ticket.assignedTo).trim();
-                    hasAssignedTo = assignedToStr !== '' && assignedToStr !== '0' && assignedToStr !== 'null';
-                }
-            }
-            // Kiểm tra nếu ticket đã giải quyết
-            var isResolved = ticket.status === 'closed' || ticket.status === 'resolved';
-            var priorityDisabled = (hasAssignedTo || isResolved) ? ' disabled' : '';
-            var priorityReadonlyNote = '';
-            if (isResolved) {
-                priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi ticket đã giải quyết</small>';
-            } else if (hasAssignedTo) {
-                priorityReadonlyNote = '<small class="text-muted">Không thể sửa độ ưu tiên khi đã có người nhận</small>';
-            }
-            html += '<label>Độ ưu tiên: <span class="text-danger">*</span></label>';
-            html += '<select class="form-control" id="edit_priority"' + ((hasAssignedTo || isResolved) ? '' : ' required') + priorityDisabled + '>';
+            // Độ ưu tiên không cho phép sửa - luôn disable
+            html += '<label>Độ ưu tiên:</label>';
+            html += '<select class="form-control" id="edit_priority" disabled>';
             html += '<option value="urgent"' + (ticket.priority === 'urgent' ? ' selected' : '') + '>Khẩn cấp</option>';
             html += '<option value="high"' + (ticket.priority === 'high' ? ' selected' : '') + '>Cao</option>';
             html += '<option value="medium"' + (ticket.priority === 'medium' ? ' selected' : '') + '>Trung bình</option>';
             html += '<option value="low"' + (ticket.priority === 'low' ? ' selected' : '') + '>Thấp</option>';
             html += '</select>';
-            html += priorityReadonlyNote;
+            html += '<small class="text-muted">Độ ưu tiên không thể thay đổi</small>';
             html += '</div></div>';
             
             html += '<div class="col-md-4">';
             html += '<div class="form-group">';
-            html += '<label>Trạng thái: <span class="text-danger">*</span></label>';
-            html += '<select class="form-control" id="edit_status" required>';
+            html += '<label>Trạng thái:</label>';
+            html += '<select class="form-control" id="edit_status" disabled>';
             html += '<option value="open"' + (ticket.status === 'open' ? ' selected' : '') + '>Đang chờ</option>';
             html += '<option value="in_progress"' + (ticket.status === 'in_progress' ? ' selected' : '') + '>Đang xử lý</option>';
             html += '<option value="resolved"' + (ticket.status === 'resolved' || ticket.status === 'closed' ? ' selected' : '') + '>Đã giải quyết</option>';
             html += '</select>';
+            html += '<small class="text-muted">Trạng thái không thể thay đổi</small>';
             html += '</div></div>';
             
             html += '</div>'; // end row
@@ -962,29 +954,13 @@
             // Disable button
             $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang lưu...');
             
-            // Lấy dữ liệu (không gửi category và assignedTo vì đã bị disable)
+            // Lấy dữ liệu (không gửi category, assignedTo, priority và status vì đã bị disable)
             var data = {
                 id: currentEditTicketId,
-                status: $('#edit_status').val(),
                 resolution: $('#edit_resolution').val()
             };
             
-            // Chỉ gửi priority nếu:
-            // 1. Trường priority không bị disable
-            // 2. Ticket chưa giải quyết (kiểm tra cả trạng thái hiện tại và trạng thái mới)
-            var isResolved = currentTicketStatus === 'closed' || currentTicketStatus === 'resolved' || 
-                             $('#edit_status').val() === 'resolved';
-            
-            if (!$('#edit_priority').prop('disabled') && !isResolved) {
-                data.priority = $('#edit_priority').val();
-            }
-            
-            // Nếu status là resolved, đảm bảo gửi "resolved" thay vì "closed"
-            if ($('#edit_status').val() === 'resolved') {
-                data.status = 'resolved';
-            }
-            
-            // KHÔNG gửi assignedTo vì trường này đã bị disable và không cho phép chỉnh sửa
+            // KHÔNG gửi priority, status, assignedTo vì các trường này đã bị disable và không cho phép chỉnh sửa
             
             // Submit AJAX với UTF-8
             $.ajax({
@@ -1015,9 +991,11 @@
 
         // Load ticket để chuyển tiếp
         var currentForwardTicketId = null;
+        var currentForwardPriority = null; // Lưu priority hiện tại của ticket
         
         function loadTicketForForward(ticketId) {
             currentForwardTicketId = ticketId;
+            currentForwardPriority = null; // Reset priority
             
             // Reset form
             $('#forward_ticketNumber').val('');
@@ -1025,6 +1003,7 @@
             $('#forward_ticketId').val('');
             $('#forward_assignedTo').html('<option value="">-- Chọn trưởng phòng kỹ thuật --</option>');
             $('#forward_priority').val('medium');
+            $('#forward_deadline').val('');
             
             // Load thông tin ticket trước để kiểm tra status
             $.ajax({
@@ -1042,6 +1021,9 @@
                             return;
                         }
                         
+                        // Lưu priority hiện tại của ticket (không cho phép thay đổi)
+                        currentForwardPriority = ticket.priority || 'medium';
+                        
                         // Hiển thị modal nếu ticket chưa resolved/closed
                         $('#forwardTicketModal').modal('show');
                         
@@ -1049,9 +1031,18 @@
                         $('#forward_subject').val(ticket.subject);
                         $('#forward_ticketId').val(ticket.id);
                         
-                        // Set priority hiện tại nếu có
+                        // Set priority hiện tại (chỉ để hiển thị, không cho sửa)
                         if (ticket.priority) {
                             $('#forward_priority').val(ticket.priority);
+                        } else {
+                            $('#forward_priority').val('medium');
+                        }
+                        
+                        // Set deadline (chỉ để hiển thị)
+                        if (ticket.deadline && ticket.deadline.trim() !== '' && ticket.deadline !== 'null') {
+                            $('#forward_deadline').val(ticket.deadline);
+                        } else {
+                            $('#forward_deadline').val('Chưa có');
                         }
                         
                         // Load danh sách head technicians
@@ -1143,7 +1134,8 @@
         function forwardTicket() {
             var ticketId = $('#forward_ticketId').val();
             var assignedToId = $('#forward_assignedTo').val();
-            var priority = $('#forward_priority').val();
+            // Lấy priority từ ticket hiện tại (không từ form vì đã disabled)
+            var priority = currentForwardPriority || 'medium';
             
             if (!ticketId || !assignedToId) {
                 alert('✗ Vui lòng chọn trưởng phòng kỹ thuật');
@@ -1154,6 +1146,7 @@
             $('#btnForwardTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang chuyển tiếp...');
             
             // Submit AJAX - gọi SupportStatsServlet
+            // Gửi priority hiện tại của ticket (không cho phép thay đổi)
             $.ajax({
                 url: 'api/support-stats',  // Dùng URL tương đối
                 type: 'POST',
@@ -1161,7 +1154,7 @@
                     action: 'forward',
                     id: ticketId,  // SupportStatsServlet dùng 'id' thay vì 'ticketId'
                     assignedTo: assignedToId,  // SupportStatsServlet dùng 'assignedTo' thay vì 'assignedToId'
-                    forwardPriority: priority,  // SupportStatsServlet dùng 'forwardPriority' thay vì 'priority'
+                    forwardPriority: priority,  // Dùng priority hiện tại của ticket (không cho phép thay đổi)
                     forwardNote: ''  // Có thể thêm ghi chú nếu cần
                 },
                 dataType: 'json',

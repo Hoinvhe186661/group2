@@ -74,6 +74,7 @@ com\hlgenerator\dao\TaskDAO.class
 com\hlgenerator\servlet\ProductServlet$ValidationResult.class
 com\hlgenerator\model\StockHistory.class
 com\hlgenerator\dao\ActivityLogDAO.class
+com\hlgenerator\servlet\ProfileServlet.class
 com\hlgenerator\servlet\SettingsServlet.class
 com\hlgenerator\model\PriceHistory.class
 com\hlgenerator\servlet\ContactManagementServlet.class
