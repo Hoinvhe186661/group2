@@ -60,6 +60,7 @@ com\hlgenerator\servlet\LoginServlet.class
 com\hlgenerator\dao\InventoryDAO.class
 com\hlgenerator\dao\ContractDAO.class
 com\hlgenerator\dao\SupplierDAO.class
+com\hlgenerator\service\EmailService$2$1.class
 com\hlgenerator\dao\WorkOrderTaskDAO.class
 com\hlgenerator\model\EmailNotification.class
 com\hlgenerator\model\Customer.class

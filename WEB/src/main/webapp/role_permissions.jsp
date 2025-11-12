@@ -7,7 +7,7 @@
     // DB config (sync with src/main/resources/database.properties)
     final String JDBC_URL = "jdbc:mysql://localhost:3306/hlelectric?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci";
     final String JDBC_USER = "root";
-    final String JDBC_PASS = "12345";
+    final String JDBC_PASS = "admin";
 
     // Admin core permissions that cannot be removed
     final Set<String> ADMIN_CORE_PERMS = new HashSet<String>(Arrays.asList(

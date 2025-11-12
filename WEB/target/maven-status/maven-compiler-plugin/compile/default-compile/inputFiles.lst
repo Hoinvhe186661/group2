@@ -1,71 +1,71 @@
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\EmailNotification.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\AuthorizationFilter.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\SettingsDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\EmailNotificationDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTask.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTaskAssignment.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\GuestProductServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\util\ActionLogUtil.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderTaskDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\EmailManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\User.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\Feedback.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\PriceHistory.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\RbacDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\ActivityLogDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SettingsServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\TechnicalStaffManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\FeedbackDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\FeedbackServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerContractsServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\PriceHistoryDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ProfileServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\service\EmailService.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderTaskServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\AdminDashboardServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportCustomerServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
-D:\14-11\group2\WEB\src\main\java\com\hlgenerator\dao\ContactDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\TechSupportManagementServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\PriceHistory.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\ContactDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTaskAssignment.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\InventoryDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\FeedbackDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\EmailNotification.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrderTask.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\LoginServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\CharacterEncodingFilter.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\UserServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\StockHistory.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerContractsServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\TaskDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\TaskServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\RbacDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportDetailServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\EmailNotificationDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\SupplierDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\service\EmailService.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\FeedbackServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportManagementServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Product.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\UserManagementServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ChangePasswordServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Task.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ProductServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ResetPasswordServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\DBConnect.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Feedback.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\CustomerDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ForgotPasswordServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\AuthorizationFilter.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\TechnicalStaffManagementServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\User.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\GuestProductServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\AdminDashboardServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\SupplierServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportCustomerServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\InventoryServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\SettingsDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\TaskAssignment.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\PriceHistoryDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\WorkOrder.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Supplier.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\util\ActionLogUtil.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Inventory.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\ContractDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Contract.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\SupportStatsServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\ActivityLogDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\SupportRequestDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\EncodingTestServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\LogoutServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ProfileServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderTaskDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\WorkOrderTaskServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\WorkOrderDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\SupportRequest.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\EmailManagementServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\UserDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\model\Customer.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ContractItemsServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\dao\ProductDAO.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\SettingsServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\CustomerManagementServlet.java
+D:\New folder (12)\group2\WEB\src\main\java\com\hlgenerator\servlet\ContactManagementServlet.java

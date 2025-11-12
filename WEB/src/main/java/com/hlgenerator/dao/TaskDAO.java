@@ -54,6 +54,7 @@ public class TaskDAO extends DBConnect {
 					a.setAcknowledgedAt(rs.getTimestamp("acknowledged_at"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
+					a.setDeadline(rs.getTimestamp("deadline"));
 					a.setRejectionReason(rs.getString("rejection_reason"));
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));
@@ -212,7 +213,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
 		sql.append("wo.customer_id, wo.description AS work_order_description, ");
-		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
+		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.deadline, t.rejection_reason AS rejection_reason, ");
 		sql.append("(SELECT sr.description FROM support_requests sr ");
 		sql.append(" WHERE sr.customer_id = wo.customer_id ");
 		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
@@ -264,6 +265,7 @@ public class TaskDAO extends DBConnect {
 					a.setAcknowledgedAt(rs.getTimestamp("acknowledged_at"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
+					a.setDeadline(rs.getTimestamp("deadline"));
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));
 					results.add(a);
@@ -290,6 +292,24 @@ public class TaskDAO extends DBConnect {
 		return null;
 	}
 
+	// Get deadline and start_date for validation before completing task
+	public java.sql.Timestamp[] getTaskDeadlineAndStartDate(int taskId) {
+		String sql = "SELECT deadline, start_date FROM tasks WHERE id = ?";
+		try (PreparedStatement ps = connection.prepareStatement(sql)) {
+			ps.setInt(1, taskId);
+			try (ResultSet rs = ps.executeQuery()) {
+				if (rs.next()) {
+					java.sql.Timestamp deadline = rs.getTimestamp("deadline");
+					java.sql.Timestamp startDate = rs.getTimestamp("start_date");
+					return new java.sql.Timestamp[]{deadline, startDate};
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return new java.sql.Timestamp[]{null, null};
+	}
+
 	public TaskAssignment getAssignmentDetail(int taskId, int userId) {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT ta.id, ta.task_id, ta.user_id, ta.role, ta.assigned_at, ");
@@ -297,7 +317,7 @@ public class TaskDAO extends DBConnect {
 		sql.append("t.estimated_hours, ");
 		sql.append("wo.work_order_number, wo.title AS work_order_title, wo.scheduled_date, ");
 		sql.append("wo.customer_id, wo.description AS work_order_description, ");
-		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.rejection_reason AS rejection_reason, ");
+		sql.append("t.acknowledged_at, t.start_date, t.completion_date, t.deadline, t.rejection_reason AS rejection_reason, ");
 		sql.append("(SELECT sr.description FROM support_requests sr ");
 		sql.append(" WHERE sr.customer_id = wo.customer_id ");
 		sql.append(" AND (sr.subject = wo.title OR wo.description LIKE CONCAT('%[TICKET_ID:', sr.id, ']%')) ");
@@ -329,6 +349,7 @@ public class TaskDAO extends DBConnect {
 					a.setAcknowledgedAt(rs.getTimestamp("acknowledged_at"));
 					a.setStartDate(rs.getTimestamp("start_date"));
 					a.setCompletionDate(rs.getTimestamp("completion_date"));
+					a.setDeadline(rs.getTimestamp("deadline"));
 					a.setRejectionReason(rs.getString("rejection_reason"));
 					a.setEstimatedHours(rs.getBigDecimal("estimated_hours"));
 					a.setTicketDescription(rs.getString("ticket_description"));
@@ -342,14 +363,78 @@ public class TaskDAO extends DBConnect {
 	}
 
 	// New: acknowledge task (user clicks "Nhận")
+	// Chỉ cho phép acknowledge khi status = 'pending' và chưa quá start_date (nếu có)
 	public boolean acknowledgeTask(int taskId) {
-		String sql = "UPDATE tasks SET status = 'in_progress', acknowledged_at = NOW(), updated_at = NOW() WHERE id = ?";
+		// Đầu tiên kiểm tra start_date của task
+		String checkSql = "SELECT start_date FROM tasks WHERE id = ? AND status = 'pending'";
+		try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+			checkPs.setInt(1, taskId);
+			try (ResultSet rs = checkPs.executeQuery()) {
+				if (rs.next()) {
+					Timestamp startDate = rs.getTimestamp("start_date");
+					// Nếu task có start_date và đã quá thời gian thì không cho nhận
+					if (startDate != null) {
+						Timestamp now = new Timestamp(System.currentTimeMillis());
+						// So sánh chỉ phần ngày (bỏ qua giờ phút giây)
+						java.util.Calendar startCal = java.util.Calendar.getInstance();
+						startCal.setTime(startDate);
+						startCal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+						startCal.set(java.util.Calendar.MINUTE, 0);
+						startCal.set(java.util.Calendar.SECOND, 0);
+						startCal.set(java.util.Calendar.MILLISECOND, 0);
+						
+						java.util.Calendar nowCal = java.util.Calendar.getInstance();
+						nowCal.setTime(now);
+						nowCal.set(java.util.Calendar.HOUR_OF_DAY, 0);
+						nowCal.set(java.util.Calendar.MINUTE, 0);
+						nowCal.set(java.util.Calendar.SECOND, 0);
+						nowCal.set(java.util.Calendar.MILLISECOND, 0);
+						
+						// Nếu ngày hiện tại > ngày bắt đầu thì không cho nhận
+						if (nowCal.getTime().after(startCal.getTime())) {
+							return false; // Đã quá start_date
+						}
+					}
+				} else {
+					return false; // Task không tồn tại hoặc không ở trạng thái pending
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		// Nếu pass qua kiểm tra, thực hiện acknowledge
+		// Nếu task đã có start_date thì giữ nguyên, nếu không có thì set = NOW()
+		String sql = "UPDATE tasks SET status = 'in_progress', acknowledged_at = NOW(), " +
+		             "start_date = COALESCE(start_date, NOW()), updated_at = NOW() " +
+		             "WHERE id = ? AND status = 'pending'";
 		try (PreparedStatement ps = connection.prepareStatement(sql)) {
 			ps.setInt(1, taskId);
 			return ps.executeUpdate() > 0;
 		} catch (SQLException e) {
 			e.printStackTrace();
 			return false;
+		}
+	}
+
+	// Tự động hủy các task quá start_date mà vẫn ở trạng thái pending
+	// Trả về số lượng task đã được hủy
+	public int autoCancelOverduePendingTasks() {
+		// Tìm các task có start_date đã qua và vẫn ở trạng thái pending
+		// So sánh chỉ phần ngày (DATE(start_date) < CURDATE())
+		String sql = "UPDATE tasks SET status = 'cancelled', updated_at = NOW(), " +
+		             "notes = CONCAT(COALESCE(notes, ''), " +
+		             "CASE WHEN notes IS NULL OR notes = '' THEN '' ELSE '\n' END, " +
+		             "'[Tự động hủy] Đã quá ngày bắt đầu thực hiện mà chưa được nhận.') " +
+		             "WHERE status = 'pending' " +
+		             "AND start_date IS NOT NULL " +
+		             "AND DATE(start_date) < CURDATE()";
+		try (PreparedStatement ps = connection.prepareStatement(sql)) {
+			return ps.executeUpdate();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return 0;
 		}
 	}
 
@@ -380,9 +465,10 @@ public class TaskDAO extends DBConnect {
 		}
 	}
 
+	// Chỉ cho phép reject khi status = 'pending'
 	public boolean rejectTask(int taskId, String rejectionReason) {
 		System.out.println("TaskDAO - rejectTask called with taskId: " + taskId + ", reason: " + rejectionReason);
-		String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, completion_percentage = 0, updated_at = NOW() WHERE id = ?";
+		String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, completion_percentage = 0, updated_at = NOW() WHERE id = ? AND status = 'pending'";
 		try (PreparedStatement ps = connection.prepareStatement(sql)) {
 			ps.setString(1, rejectionReason);
 			ps.setInt(2, taskId);
@@ -397,12 +483,15 @@ public class TaskDAO extends DBConnect {
 	}
 
 	// NEW METHOD: Complete task with detailed report
+	// Chỉ cho phép complete khi status = 'in_progress'
+	// Nếu isLate = true, set status = 'completed_late', ngược lại = 'completed'
 	public boolean completeTask(int taskId, java.math.BigDecimal actualHours, 
 	                           java.math.BigDecimal completionPercentage,
 	                           String workDescription, String issuesFound, 
-	                           String notes, List<String> attachments) {
+	                           String notes, List<String> attachments, boolean isLate) {
+		String status = isLate ? "completed_late" : "completed";
 		String sql = "UPDATE tasks SET " +
-		             "status = 'completed', " +
+		             "status = ?, " +
 		             "completion_date = NOW(), " +
 		             "actual_hours = ?, " +
 		             "completion_percentage = ?, " +
@@ -411,14 +500,15 @@ public class TaskDAO extends DBConnect {
 		             "notes = ?, " +
 		             "attachments = ?, " +
 		             "updated_at = NOW() " +
-		             "WHERE id = ?";
+		             "WHERE id = ? AND status = 'in_progress'";
 		
 		try (PreparedStatement ps = connection.prepareStatement(sql)) {
-			ps.setBigDecimal(1, actualHours);
-			ps.setBigDecimal(2, completionPercentage);
-			ps.setString(3, workDescription);
-			ps.setString(4, issuesFound);
-			ps.setString(5, notes);
+			ps.setString(1, status);
+			ps.setBigDecimal(2, actualHours);
+			ps.setBigDecimal(3, completionPercentage);
+			ps.setString(4, workDescription);
+			ps.setString(5, issuesFound);
+			ps.setString(6, notes);
 			
 			// Convert List<String> to JSON string
 			String attachmentsJson = null;
@@ -426,8 +516,8 @@ public class TaskDAO extends DBConnect {
 				org.json.JSONArray jsonArray = new org.json.JSONArray(attachments);
 				attachmentsJson = jsonArray.toString();
 			}
-			ps.setString(6, attachmentsJson);
-			ps.setInt(7, taskId);
+			ps.setString(7, attachmentsJson);
+			ps.setInt(8, taskId);
 			
 			return ps.executeUpdate() > 0;
 			

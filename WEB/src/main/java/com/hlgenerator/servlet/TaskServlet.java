@@ -48,6 +48,9 @@ public class TaskServlet extends HttpServlet {
 
 		try {
 			if ("listAssigned".equals(action)) {
+				// Tự động hủy các task quá start_date mà vẫn pending trước khi load danh sách
+				taskDAO.autoCancelOverduePendingTasks();
+				
 				int userId = Integer.parseInt(param(request, "userId", "0"));
 				String status = request.getParameter("status");
 				String priority = request.getParameter("priority");
@@ -125,7 +128,9 @@ public class TaskServlet extends HttpServlet {
 			if ("acknowledge".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				boolean ok = taskDAO.acknowledgeTask(taskId);
-				out.print(jsonResult(ok, ok ? "Đã nhận nhiệm vụ" : "Không thể cập nhật").toString());
+				String message = ok ? "Đã nhận nhiệm vụ" : 
+					"Không thể nhận nhiệm vụ. Nhiệm vụ phải ở trạng thái 'Chờ nhận' và chưa quá ngày bắt đầu thực hiện.";
+				out.print(jsonResult(ok, message).toString());
 			} else if ("complete".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String workDesc = request.getParameter("workDescription");
@@ -134,10 +139,115 @@ public class TaskServlet extends HttpServlet {
 				String actual = request.getParameter("actualHours");
 				String percentage = request.getParameter("completionPercentage");
 				
-				BigDecimal actualHours = actual != null && !actual.isEmpty() 
-					? new BigDecimal(actual) : null;
-				BigDecimal completionPercentage = percentage != null && !percentage.isEmpty() 
-					? new BigDecimal(percentage) : new BigDecimal(100);
+				// Validate workDescription
+				if (workDesc == null || workDesc.trim().isEmpty()) {
+					out.print(jsonResult(false, "Mô tả công việc đã thực hiện không được để trống").toString());
+					return;
+				}
+				String workDescTrimmed = workDesc.trim();
+				if (workDescTrimmed.length() < 10) {
+					out.print(jsonResult(false, "Mô tả công việc quá ngắn. Vui lòng nhập tối thiểu 10 ký tự để mô tả rõ ràng.").toString());
+					return;
+				}
+				if (workDescTrimmed.length() > 1000) {
+					out.print(jsonResult(false, "Mô tả công việc quá dài. Vui lòng nhập tối đa 1000 ký tự.").toString());
+					return;
+				}
+				
+				// Validate issuesFound (nếu có nhập)
+				String issuesFoundTrimmed = null;
+				if (issuesFound != null && !issuesFound.trim().isEmpty()) {
+					issuesFoundTrimmed = issuesFound.trim();
+					if (issuesFoundTrimmed.length() < 10) {
+						out.print(jsonResult(false, "Vấn đề phát sinh quá ngắn. Vui lòng nhập tối thiểu 10 ký tự nếu có nhập.").toString());
+						return;
+					}
+					if (issuesFoundTrimmed.length() > 500) {
+						out.print(jsonResult(false, "Vấn đề phát sinh quá dài. Vui lòng nhập tối đa 500 ký tự.").toString());
+						return;
+					}
+				}
+				
+				// Validate notes (nếu có nhập)
+				String notesTrimmed = null;
+				if (notes != null && !notes.trim().isEmpty()) {
+					notesTrimmed = notes.trim();
+					if (notesTrimmed.length() < 10) {
+						out.print(jsonResult(false, "Ghi chú bổ sung quá ngắn. Vui lòng nhập tối thiểu 10 ký tự nếu có nhập.").toString());
+						return;
+					}
+					if (notesTrimmed.length() > 1000) {
+						out.print(jsonResult(false, "Ghi chú bổ sung quá dài. Vui lòng nhập tối đa 1000 ký tự.").toString());
+						return;
+					}
+				}
+				
+				// Validate actualHours
+				BigDecimal actualHours = null;
+				if (actual != null && !actual.isEmpty()) {
+					try {
+						actualHours = new BigDecimal(actual);
+						if (actualHours.compareTo(BigDecimal.ZERO) <= 0) {
+							out.print(jsonResult(false, "Số giờ thực tế phải lớn hơn 0").toString());
+							return;
+						}
+					} catch (NumberFormatException e) {
+						out.print(jsonResult(false, "Số giờ thực tế không hợp lệ").toString());
+						return;
+					}
+				} else {
+					out.print(jsonResult(false, "Số giờ thực tế không được để trống").toString());
+					return;
+				}
+				
+				// Validate completionPercentage
+				BigDecimal completionPercentage;
+				if (percentage != null && !percentage.isEmpty()) {
+					try {
+						completionPercentage = new BigDecimal(percentage);
+						if (completionPercentage.compareTo(new BigDecimal("1")) < 0) {
+							out.print(jsonResult(false, "Phần trăm hoàn thành phải lớn hơn hoặc bằng 1%").toString());
+							return;
+						}
+						if (completionPercentage.compareTo(new BigDecimal("100")) > 0) {
+							out.print(jsonResult(false, "Phần trăm hoàn thành không được vượt quá 100%").toString());
+							return;
+						}
+					} catch (NumberFormatException e) {
+						out.print(jsonResult(false, "Phần trăm hoàn thành không hợp lệ").toString());
+						return;
+					}
+				} else {
+					completionPercentage = new BigDecimal(100);
+				}
+				
+				// Validate deadline and start_date before completing
+				java.sql.Timestamp[] deadlineAndStart = taskDAO.getTaskDeadlineAndStartDate(taskId);
+				java.sql.Timestamp deadline = deadlineAndStart[0];
+				java.sql.Timestamp startDate = deadlineAndStart[1];
+				
+				java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+				boolean isLate = false;
+				String lateMessage = "";
+				
+				// Check if completion is after deadline
+				if (deadline != null && now.after(deadline)) {
+					isLate = true;
+					long diffMs = now.getTime() - deadline.getTime();
+					long diffDays = diffMs / (1000 * 60 * 60 * 24);
+					long diffHours = (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60);
+					if (diffDays > 0) {
+						lateMessage = String.format("Nhiệm vụ hoàn thành muộn %d ngày %d giờ so với deadline", diffDays, diffHours);
+					} else {
+						lateMessage = String.format("Nhiệm vụ hoàn thành muộn %d giờ so với deadline", diffHours);
+					}
+				}
+				
+				// Check if completion_date < start_date (should not happen, but validate anyway)
+				if (startDate != null && now.before(startDate)) {
+					out.print(jsonResult(false, "Ngày hoàn thành không thể trước ngày bắt đầu").toString());
+					return;
+				}
 				
 				// Upload files
 				List<String> uploadedFiles = new ArrayList<>();
@@ -166,10 +276,20 @@ public class TaskServlet extends HttpServlet {
 					// Continue even if file upload fails
 				}
 				
-				// Update task with detailed report
+				// Update task with detailed report (pass isLate to set status = 'completed_late' if late)
 				boolean ok = taskDAO.completeTask(taskId, actualHours, completionPercentage,
-				                                 workDesc, issuesFound, notes, uploadedFiles);
-				out.print(jsonResult(ok, ok ? "Đã báo cáo hoàn thành!" : "Không thể cập nhật").toString());
+				                                 workDescTrimmed, issuesFoundTrimmed, notesTrimmed, uploadedFiles, isLate);
+				
+				// Return message with late warning if applicable
+				if (ok) {
+					if (isLate) {
+						out.print(jsonResult(true, "Đã báo cáo hoàn thành! ⚠️ " + lateMessage + " (Trạng thái: Hoàn thành muộn)").toString());
+					} else {
+						out.print(jsonResult(true, "Đã báo cáo hoàn thành!").toString());
+					}
+				} else {
+					out.print(jsonResult(false, "Không thể hoàn thành nhiệm vụ. Nhiệm vụ phải ở trạng thái 'Đang thực hiện'").toString());
+				}
 			} else if ("updateNotes".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String notes = request.getParameter("notes");
@@ -180,13 +300,27 @@ public class TaskServlet extends HttpServlet {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String rejectionReason = request.getParameter("rejectionReason");
 				System.out.println("TaskServlet - TaskId: " + taskId + ", Reason: " + rejectionReason); // Debug log
+				
+				// Validate rejection reason
 				if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
 					out.print(jsonResult(false, "Lý do từ chối không được để trống").toString());
 					return;
 				}
-				boolean ok = rejectTaskDirectly(taskId, rejectionReason.trim());
+				
+				String trimmedReason = rejectionReason.trim();
+				if (trimmedReason.length() < 10) {
+					out.print(jsonResult(false, "Lý do từ chối quá ngắn. Vui lòng nhập tối thiểu 10 ký tự để giải thích rõ ràng").toString());
+					return;
+				}
+				
+				if (trimmedReason.length() > 300) {
+					out.print(jsonResult(false, "Lý do từ chối quá dài. Vui lòng nhập tối đa 300 ký tự").toString());
+					return;
+				}
+				
+				boolean ok = rejectTaskDirectly(taskId, trimmedReason);
 				System.out.println("TaskServlet - Reject result: " + ok); // Debug log
-				out.print(jsonResult(ok, ok ? "Đã từ chối nhiệm vụ" : "Không thể từ chối nhiệm vụ").toString());
+				out.print(jsonResult(ok, ok ? "Đã từ chối nhiệm vụ" : "Không thể từ chối nhiệm vụ. Nhiệm vụ phải ở trạng thái 'Chờ nhận'").toString());
 			} else {
 				System.out.println("TaskServlet - Unknown action: " + action); // Debug log
 				out.print(jsonResult(false, "Hành động không hợp lệ: " + action).toString());
@@ -220,7 +354,7 @@ public class TaskServlet extends HttpServlet {
 			String pass = props.getProperty("db.password");
 			
 			try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-				String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, completion_percentage = 0, updated_at = NOW() WHERE id = ?";
+				String sql = "UPDATE tasks SET status = 'rejected', rejection_reason = ?, completion_percentage = 0, updated_at = NOW() WHERE id = ? AND status = 'pending'";
 				try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
 					ps.setString(1, rejectionReason);
 					ps.setInt(2, taskId);

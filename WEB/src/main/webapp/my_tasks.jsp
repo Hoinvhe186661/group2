@@ -220,6 +220,7 @@
                                                             <option value="pending">Chờ nhận</option>
                                                             <option value="in_progress">Đang thực hiện</option>
                                                             <option value="completed">Đã hoàn thành</option>
+                                                            <option value="completed_late">Hoàn thành muộn</option>
                                                             <option value="cancelled">Đã hủy</option>
                                                             <option value="rejected">Đã từ chối</option>
                                                         </select>
@@ -278,8 +279,9 @@
                                             <th>Nhiệm vụ</th>
                                             <th>Trạng thái</th>
                                             <th>Ưu tiên</th>
-                                            <th>Thời gian dự kiến</th>
                                             <th>Deadline</th>
+                                            <th>Ngày thực hiện</th>
+                                            <th>Thời gian dự kiến</th>
                                             <th>Ngày nhận</th>
                                             <th>Ngày hoàn thành</th>
                                             <th>Mô tả từ ticket</th>
@@ -288,7 +290,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="taskBody">
-                                        <tr><td colspan="11" class="text-center text-muted">Đang tải...</td></tr>
+                                        <tr><td colspan="12" class="text-center text-muted">Đang tải...</td></tr>
                                     </tbody>
                                 </table>
                                 <nav aria-label="Task pagination">
@@ -339,11 +341,11 @@
                                 <div class="form-group">
                                     <label>Phần trăm hoàn thành <span class="text-danger">*</span></label>
                                     <input type="range" class="form-control-range" 
-                                           id="completionPercentage" min="0" max="100" value="0" 
+                                           id="completionPercentage" min="1" max="100" value="100" 
                                            style="width: 100%; margin-top: 8px;">
                                     <div class="text-center" style="margin-top: 5px;">
                                         <strong style="font-size: 18px; color: #00a65a;">
-                                            <span id="percentageValue">0</span>%
+                                            <span id="percentageValue">100</span>%
                                         </strong>
                                     </div>
                                 </div>
@@ -353,27 +355,30 @@
                         <!-- Mô tả công việc -->
                         <div class="form-group">
                             <label>Mô tả công việc đã thực hiện <span class="text-danger">*</span></label>
+                            <span class="char-counter"><span id="workDescCount">0</span>/1000</span>
                             <textarea class="form-control" id="workDescription" 
-                                      rows="3" required 
-                                      placeholder="VD: Đã kiểm tra hệ thống điện, thay thế bộ lọc không khí, bảo dưỡng máy phát điện..."></textarea>
-                            <small class="text-muted">Mô tả chi tiết những gì đã thực hiện</small>
+                                      rows="3" required maxlength="1000"
+                                      placeholder="VD: Đã kiểm tra hệ thống điện, thay thế bộ lọc không khí, bảo dưỡng máy phát điện... (tối thiểu 10 ký tự, tối đa 1000 ký tự)"></textarea>
+                            <small class="text-muted">Mô tả chi tiết những gì đã thực hiện, tối thiểu 10 ký tự</small>
                         </div>
                         
                         <!-- Vấn đề phát sinh -->
                         <div class="form-group">
                             <label>Vấn đề phát sinh (nếu có)</label>
+                            <span class="char-counter"><span id="issuesFoundCount">0</span>/500</span>
                             <textarea class="form-control" id="issuesFound" 
-                                      rows="2" 
-                                      placeholder="VD: Phát hiện dây dẫn bị mòn, cần thay thế trong lần bảo trì tiếp theo..."></textarea>
+                                      rows="2" maxlength="500"
+                                      placeholder="VD: Phát hiện dây dẫn bị mòn, cần thay thế trong lần bảo trì tiếp theo... (tối thiểu 10 ký tự nếu có nhập, tối đa 500 ký tự)"></textarea>
                             <small class="text-muted">Ghi chú các vấn đề phát hiện trong quá trình làm việc</small>
                         </div>
                         
                         <!-- Ghi chú -->
                         <div class="form-group">
                             <label>Ghi chú bổ sung</label>
+                            <span class="char-counter"><span id="notesCount">0</span>/1000</span>
                             <textarea class="form-control" id="notes" 
-                                      rows="2" 
-                                      placeholder="Thông tin khác cần lưu ý..."></textarea>
+                                      rows="2" maxlength="1000"
+                                      placeholder="Thông tin khác cần lưu ý... (tối thiểu 10 ký tự nếu có nhập, tối đa 1000 ký tự)"></textarea>
                         </div>
                         
                         <!-- Upload hình ảnh -->
@@ -419,7 +424,8 @@
                         <div class="form-group">
                             <label>Lý do từ chối <span class="text-danger">*</span></label>
                             <span class="char-counter"><span id="rejectCount">0</span>/300</span>
-                            <textarea id="rejectReason" class="form-control" rows="4" maxlength="300" placeholder="Nhập lý do từ chối (tối đa 300 ký tự)" required></textarea>
+                            <textarea id="rejectReason" class="form-control" rows="4" maxlength="300" placeholder="Nhập lý do từ chối (tối thiểu 10 ký tự, tối đa 300 ký tự)" required></textarea>
+                            <small class="text-muted">Vui lòng nhập lý do chi tiết, tối thiểu 10 ký tự</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -618,6 +624,7 @@
                 pending: 'Chờ nhận',
                 in_progress: 'Đang thực hiện',
                 completed: 'Đã hoàn thành',
+                completed_late: 'Hoàn thành muộn',
                 cancelled: 'Đã hủy',
                 rejected: 'Đã từ chối'
             };
@@ -635,7 +642,14 @@
             return map[key] || p;
         }
         function badgeForStatus(s){
-            var classMap = {pending:'label-default', in_progress:'label-warning', completed:'label-success', cancelled:'label-default', rejected:'label-danger'};
+            var classMap = {
+                pending:'label-default', 
+                in_progress:'label-warning', 
+                completed:'label-success', 
+                completed_late:'label-warning',  // Màu vàng/cam để cảnh báo
+                cancelled:'label-default', 
+                rejected:'label-danger'
+            };
             return '<span class="label ' + (classMap[s]||'label-default') + '">' + statusToVietnamese(s) + '</span>';
         }
 
@@ -662,8 +676,8 @@
             $.getJSON('api/tasks', { action:'listAssigned', userId: currentUserId, status: status, priority: priority, scheduledFrom: scheduledFrom, scheduledTo: scheduledTo, q: q, page: currentPage, size: size }, function(res){
                 var tbody = document.getElementById('taskBody');
                 tbody.innerHTML = '';
-                if(!res.success){ tbody.innerHTML = '<tr><td colspan="11">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
-                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); currentTasksData = []; return; }
+                if(!res.success){ tbody.innerHTML = '<tr><td colspan="12">' + (res.message||'Lỗi tải dữ liệu') + '</td></tr>'; return; }
+                if(!res.data || res.data.length === 0){ tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">Không có nhiệm vụ</td></tr>'; renderPagination(res.meta); currentTasksData = []; return; }
                 renderPagination(res.meta);
                 // Lưu dữ liệu để sử dụng cho modal chi tiết
                 currentTasksData = res.data;
@@ -703,22 +717,41 @@
                     actions.push('<button class="btn btn-xs btn-info" onclick="viewTaskDetail(' + it.taskId + ')"><i class="fa fa-info-circle"></i> Chi tiết</button>');
                     
                     if(it.taskStatus === 'pending'){
-                        actions.push('<button class="btn btn-xs btn-primary" onclick="ack(' + it.taskId + ')"><i class="fa fa-check"></i> Nhận</button>');
+                        // Kiểm tra xem có quá start_date không
+                        var canAccept = true;
+                        if(it.startDate) {
+                            try {
+                                var startDate = null;
+                                if(typeof it.startDate === 'string') {
+                                    var norm = it.startDate.indexOf('T') === -1 ? it.startDate.replace(' ', 'T') : it.startDate;
+                                    startDate = new Date(norm);
+                                } else if(typeof it.startDate === 'number') {
+                                    startDate = new Date(it.startDate);
+                                }
+                                
+                                if(startDate && !isNaN(startDate.getTime())) {
+                                    var now = new Date();
+                                    var startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                                    var nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                    
+                                    if(nowDateOnly > startDateOnly) {
+                                        canAccept = false;
+                                    }
+                                }
+                            } catch(e) {}
+                        }
+                        
+                        // Chỉ hiển thị nút "Nhận" nếu chưa quá start_date
+                        if(canAccept) {
+                            actions.push('<button class="btn btn-xs btn-primary" onclick="ack(' + it.taskId + ')"><i class="fa fa-check"></i> Nhận</button>');
+                        }
                         actions.push('<button class="btn btn-xs btn-danger" onclick="openRejectModal(' + it.taskId + ')"><i class="fa fa-times"></i> Từ chối</button>');
                     }
                     if(it.taskStatus === 'in_progress'){
                         actions.push('<button class="btn btn-xs btn-success" onclick="openCompleteModal(' + it.taskId + ', \'' + (it.taskNumber||'').replace(/'/g, "\\'") + '\', \'' + (it.taskDescription||'').replace(/'/g, "\\'") + '\')"><i class="fa fa-flag-checkered"></i> Hoàn thành</button>');
                     }
-                    if(it.taskStatus === 'completed'){
+                    if(it.taskStatus === 'completed' || it.taskStatus === 'completed_late'){
                         actions.push('<button class="btn btn-xs btn-success" onclick="viewReport(' + it.taskId + ')"><i class="fa fa-file-text"></i> Báo cáo</button>');
-                    }
-                    
-                    // Format thời gian dự kiến
-                    var estimatedTimeDisplay = '<span class="text-muted">-</span>';
-                    if(it.estimatedHours && parseFloat(it.estimatedHours) > 0) {
-                        estimatedTimeDisplay = '<strong>' + parseFloat(it.estimatedHours).toFixed(1) + 'h</strong>';
-                    } else if(it.assignedAt) {
-                        estimatedTimeDisplay = fmt(it.assignedAt);
                     }
                     
                     // Format mô tả từ ticket - loại bỏ các phần trong dấu ngoặc vuông
@@ -740,21 +773,54 @@
                         }
                     }
                     
-                    // Format deadline với màu sắc cảnh báo nếu quá hạn
+                    // Format deadline - hiển thị với cảnh báo nếu overdue hoặc sắp hết hạn
                     var deadlineDisplay = '<span class="text-muted">-</span>';
                     if(it.deadline) {
-                        var deadlineDate = new Date(it.deadline);
-                        if(!isNaN(deadlineDate.getTime())) {
-                            var deadlineFormatted = fmt(it.deadline);
+                        var deadlineFormatted = fmt(it.deadline);
+                        if(deadlineFormatted) {
+                            // Kiểm tra deadline
+                            var deadlineDate = null;
+                            try {
+                                if(typeof it.deadline === 'string') {
+                                    var norm = it.deadline.indexOf('T') === -1 ? it.deadline.replace(' ', 'T') : it.deadline;
+                                    deadlineDate = new Date(norm);
+                                } else if(typeof it.deadline === 'number') {
+                                    deadlineDate = new Date(it.deadline);
+                                }
+                            } catch(e) {}
+                            
                             var now = new Date();
-                            var deadlineClass = '';
-                            if(deadlineDate < now && it.taskStatus !== 'completed' && it.taskStatus !== 'cancelled') {
-                                deadlineClass = 'text-danger';
-                            } else if(deadlineDate < new Date(now.getTime() + 24*60*60*1000) && it.taskStatus !== 'completed' && it.taskStatus !== 'cancelled') {
-                                deadlineClass = 'text-warning';
+                            var oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                            
+                            if(deadlineDate && !isNaN(deadlineDate.getTime())) {
+                                if(deadlineDate < now) {
+                                    // Overdue - màu đỏ
+                                    deadlineDisplay = '<span class="label label-danger" title="Đã quá hạn">' + deadlineFormatted + ' <i class="fa fa-exclamation-triangle"></i></span>';
+                                } else if(deadlineDate < oneDayFromNow) {
+                                    // Sắp hết hạn - màu vàng
+                                    deadlineDisplay = '<span class="label label-warning" title="Sắp hết hạn">' + deadlineFormatted + ' <i class="fa fa-clock-o"></i></span>';
+                                } else {
+                                    deadlineDisplay = deadlineFormatted;
+                                }
+                            } else {
+                                deadlineDisplay = deadlineFormatted;
                             }
-                            deadlineDisplay = '<span class="' + deadlineClass + '">' + deadlineFormatted + '</span>';
                         }
+                    }
+                    
+                    // Format ngày thực hiện
+                    var startDateDisplay = '<span class="text-muted">-</span>';
+                    if(it.startDate) {
+                        var startDateFormatted = fmt(it.startDate);
+                        if(startDateFormatted) {
+                            startDateDisplay = startDateFormatted;
+                        }
+                    }
+                    
+                    // Format thời gian dự kiến
+                    var estimatedHoursDisplay = '<span class="text-muted">-</span>';
+                    if(it.estimatedHours && parseFloat(it.estimatedHours) > 0) {
+                        estimatedHoursDisplay = parseFloat(it.estimatedHours).toFixed(1) + ' giờ';
                     }
                     
                     var tr = document.createElement('tr');
@@ -763,8 +829,9 @@
                         '<td><div><strong>' + (it.taskNumber||'') + '</strong></div><div>' + (it.taskDescription||'') + '</div></td>' +
                         '<td>' + badgeForStatus(it.taskStatus) + '</td>' +
                         '<td>' + (priorityToVietnamese(it.taskPriority)||'') + '</td>' +
-						'<td>' + estimatedTimeDisplay + '</td>' +
 						'<td>' + deadlineDisplay + '</td>' +
+						'<td>' + startDateDisplay + '</td>' +
+						'<td>' + estimatedHoursDisplay + '</td>' +
 						'<td>' + (fmt(it.acknowledgedAt) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td>' + (fmt(it.completionDate) || '<span class="text-muted">-</span>') + '</td>' +
                         '<td class="reason-cell">' + ticketDescDisplay + '</td>' +
@@ -817,6 +884,74 @@
         }
 
         function ack(id){
+            // Kiểm tra deadline và start_date trước khi acknowledge
+            var taskData = null;
+            for(var i = 0; i < currentTasksData.length; i++) {
+                if(currentTasksData[i].taskId == id) {
+                    taskData = currentTasksData[i];
+                    break;
+                }
+            }
+            
+            if(!taskData) {
+                alert('Không tìm thấy thông tin nhiệm vụ!');
+                return;
+            }
+            
+            // Kiểm tra start_date: nếu đã quá ngày bắt đầu thực hiện thì không cho nhận
+            if(taskData.startDate) {
+                var startDate = null;
+                try {
+                    if(typeof taskData.startDate === 'string') {
+                        var norm = taskData.startDate.indexOf('T') === -1 ? taskData.startDate.replace(' ', 'T') : taskData.startDate;
+                        startDate = new Date(norm);
+                    } else if(typeof taskData.startDate === 'number') {
+                        startDate = new Date(taskData.startDate);
+                    }
+                } catch(e) {}
+                
+                if(startDate && !isNaN(startDate.getTime())) {
+                    var now = new Date();
+                    // So sánh chỉ phần ngày (bỏ qua giờ phút giây) để chính xác hơn
+                    var startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                    var nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    
+                    if(nowDateOnly > startDateOnly) {
+                        // Đã quá ngày bắt đầu thực hiện
+                        var startDateFormatted = String(startDate.getDate()).padStart(2,'0') + '/' + 
+                                                String(startDate.getMonth()+1).padStart(2,'0') + '/' + 
+                                                startDate.getFullYear();
+                        alert('Không thể nhận nhiệm vụ này!\n\n' +
+                              'Ngày bắt đầu thực hiện: ' + startDateFormatted + '\n' +
+                              'Hiện tại đã quá thời gian bắt đầu thực hiện.\n\n' +
+                              'Vui lòng liên hệ trưởng phòng kỹ thuật để được hỗ trợ.');
+                        return;
+                    }
+                }
+            }
+            
+            // Kiểm tra deadline: nếu quá deadline thì cảnh báo nhưng vẫn cho phép nhận (có xác nhận)
+            if(taskData.deadline) {
+                var deadlineDate = null;
+                try {
+                    if(typeof taskData.deadline === 'string') {
+                        var norm = taskData.deadline.indexOf('T') === -1 ? taskData.deadline.replace(' ', 'T') : taskData.deadline;
+                        deadlineDate = new Date(norm);
+                    } else if(typeof taskData.deadline === 'number') {
+                        deadlineDate = new Date(taskData.deadline);
+                    }
+                } catch(e) {}
+                
+                if(deadlineDate && !isNaN(deadlineDate.getTime())) {
+                    var now = new Date();
+                    if(deadlineDate < now) {
+                        if(!confirm('Cảnh báo: Nhiệm vụ này đã quá deadline!\n\nBạn có chắc chắn muốn nhận nhiệm vụ này không?')) {
+                            return;
+                        }
+                    }
+                }
+            }
+            
             $.post('api/tasks', { action:'acknowledge', id: id }, function(res){
                 try{ res = JSON.parse(res); }catch(e){}
                 alert(res.message||'');
@@ -832,9 +967,12 @@
             
             // Reset form
             $('#completeTaskForm')[0].reset();
-            $('#completionPercentage').val('0');
-            $('#percentageValue').text('0');
+            $('#completionPercentage').val('100');
+            $('#percentageValue').text('100');
             $('#imagePreview').html('');
+            $('#workDescCount').text('0');
+            $('#issuesFoundCount').text('0');
+            $('#notesCount').text('0');
             
             $('#completeTaskModal').modal('show');
         }
@@ -843,15 +981,143 @@
         $('#completeTaskForm').on('submit', function(e){
             e.preventDefault();
             
+            // Validate frontend
+            var actualHours = parseFloat($('#actualHours').val());
+            if(!actualHours || actualHours <= 0) {
+                alert('Số giờ thực tế phải lớn hơn 0');
+                $('#actualHours').focus();
+                return;
+            }
+            
+            var completionPercentage = parseFloat($('#completionPercentage').val());
+            if(completionPercentage < 1) {
+                alert('Phần trăm hoàn thành phải lớn hơn hoặc bằng 1%');
+                $('#completionPercentage').focus();
+                return;
+            }
+            if(completionPercentage > 100) {
+                alert('Phần trăm hoàn thành không được vượt quá 100%');
+                $('#completionPercentage').focus();
+                return;
+            }
+            
+            var workDescription = $('#workDescription').val().trim();
+            if(!workDescription) {
+                alert('Mô tả công việc đã thực hiện không được để trống');
+                $('#workDescription').focus();
+                return;
+            }
+            if(workDescription.length < 10) {
+                alert('Mô tả công việc quá ngắn. Vui lòng nhập tối thiểu 10 ký tự để mô tả rõ ràng.');
+                $('#workDescription').focus();
+                return;
+            }
+            if(workDescription.length > 1000) {
+                alert('Mô tả công việc quá dài. Vui lòng nhập tối đa 1000 ký tự.');
+                $('#workDescription').focus();
+                return;
+            }
+            
+            // Validate issuesFound (nếu có nhập)
+            var issuesFound = $('#issuesFound').val().trim();
+            if(issuesFound.length > 0) {
+                if(issuesFound.length < 10) {
+                    alert('Vấn đề phát sinh quá ngắn. Vui lòng nhập tối thiểu 10 ký tự nếu có nhập.');
+                    $('#issuesFound').focus();
+                    return;
+                }
+                if(issuesFound.length > 500) {
+                    alert('Vấn đề phát sinh quá dài. Vui lòng nhập tối đa 500 ký tự.');
+                    $('#issuesFound').focus();
+                    return;
+                }
+            }
+            
+            // Validate notes (nếu có nhập)
+            var notes = $('#notes').val().trim();
+            if(notes.length > 0) {
+                if(notes.length < 10) {
+                    alert('Ghi chú bổ sung quá ngắn. Vui lòng nhập tối thiểu 10 ký tự nếu có nhập.');
+                    $('#notes').focus();
+                    return;
+                }
+                if(notes.length > 1000) {
+                    alert('Ghi chú bổ sung quá dài. Vui lòng nhập tối đa 1000 ký tự.');
+                    $('#notes').focus();
+                    return;
+                }
+            }
+            
             var taskId = $('#modalTaskId').val();
+            
+            // Kiểm tra deadline trước khi submit
+            var taskData = null;
+            for(var i = 0; i < currentTasksData.length; i++) {
+                if(currentTasksData[i].taskId == taskId) {
+                    taskData = currentTasksData[i];
+                    break;
+                }
+            }
+            
+            if(taskData && taskData.deadline) {
+                var deadlineDate = null;
+                try {
+                    if(typeof taskData.deadline === 'string') {
+                        var norm = taskData.deadline.indexOf('T') === -1 ? taskData.deadline.replace(' ', 'T') : taskData.deadline;
+                        deadlineDate = new Date(norm);
+                    } else if(typeof taskData.deadline === 'number') {
+                        deadlineDate = new Date(taskData.deadline);
+                    }
+                } catch(e) {}
+                
+                if(deadlineDate && !isNaN(deadlineDate.getTime())) {
+                    var now = new Date();
+                    if(deadlineDate < now) {
+                        var diffMs = now.getTime() - deadlineDate.getTime();
+                        var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        var diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        var lateMsg = '';
+                        if(diffDays > 0) {
+                            lateMsg = 'Nhiệm vụ này đã quá deadline ' + diffDays + ' ngày ' + diffHours + ' giờ.\n\n';
+                        } else {
+                            lateMsg = 'Nhiệm vụ này đã quá deadline ' + diffHours + ' giờ.\n\n';
+                        }
+                        lateMsg += 'Bạn có chắc chắn muốn báo cáo hoàn thành không?';
+                        if(!confirm(lateMsg)) {
+                            return;
+                        }
+                    }
+                }
+            }
+            
+            // Kiểm tra start_date (nếu có)
+            if(taskData && taskData.startDate) {
+                var startDate = null;
+                try {
+                    if(typeof taskData.startDate === 'string') {
+                        var norm = taskData.startDate.indexOf('T') === -1 ? taskData.startDate.replace(' ', 'T') : taskData.startDate;
+                        startDate = new Date(norm);
+                    } else if(typeof taskData.startDate === 'number') {
+                        startDate = new Date(taskData.startDate);
+                    }
+                } catch(e) {}
+                
+                if(startDate && !isNaN(startDate.getTime())) {
+                    var now = new Date();
+                    if(now < startDate) {
+                        alert('Lỗi: Ngày hoàn thành không thể trước ngày bắt đầu!');
+                        return;
+                    }
+                }
+            }
             var formData = new FormData();
             formData.append('action', 'complete');
             formData.append('id', taskId);
-            formData.append('actualHours', $('#actualHours').val());
-            formData.append('completionPercentage', $('#completionPercentage').val());
-            formData.append('workDescription', $('#workDescription').val());
-            formData.append('issuesFound', $('#issuesFound').val());
-            formData.append('notes', $('#notes').val());
+            formData.append('actualHours', actualHours);
+            formData.append('completionPercentage', completionPercentage);
+            formData.append('workDescription', workDescription);
+            formData.append('issuesFound', issuesFound);
+            formData.append('notes', notes);
             
             // Thêm files
             var files = $('#attachments')[0].files;
@@ -888,9 +1154,17 @@
             });
         });
 
-        // Update percentage value
+        // Update percentage value với validation
         $('#completionPercentage').on('input', function(){
-            $('#percentageValue').text($(this).val());
+            var val = parseFloat($(this).val()) || 0;
+            if(val < 1) {
+                $(this).val(1);
+                val = 1;
+            } else if(val > 100) {
+                $(this).val(100);
+                val = 100;
+            }
+            $('#percentageValue').text(val);
         });
 
         // Preview images
@@ -1037,23 +1311,15 @@
                         }
                         $('#detailEstimatedHours').html(estimatedDisplay);
                         
-                        // Deadline với màu sắc cảnh báo
+                        // Deadline - chỉ hiển thị ngày
                         var deadlineDisplay = '-';
                         if(taskData.deadline) {
-                            var deadlineDate = new Date(taskData.deadline);
-                            if(!isNaN(deadlineDate.getTime())) {
-                                var deadlineFormatted = formatDateTime(taskData.deadline);
-                                var now = new Date();
-                                var deadlineClass = '';
-                                if(deadlineDate < now && taskData.taskStatus !== 'completed' && taskData.taskStatus !== 'cancelled') {
-                                    deadlineClass = 'text-danger';
-                                } else if(deadlineDate < new Date(now.getTime() + 24*60*60*1000) && taskData.taskStatus !== 'completed' && taskData.taskStatus !== 'cancelled') {
-                                    deadlineClass = 'text-warning';
-                                }
-                                deadlineDisplay = '<span class="' + deadlineClass + '"><strong>' + deadlineFormatted + '</strong></span>';
+                            var deadlineFormatted = formatDateTime(taskData.deadline);
+                            if(deadlineFormatted && deadlineFormatted !== '-') {
+                                deadlineDisplay = deadlineFormatted;
                             }
                         }
-                        $('#detailDeadline').html(deadlineDisplay);
+                        $('#detailDeadline').text(deadlineDisplay);
                         
                         // Thời gian
                         $('#detailAssignedAt').text(taskData.assignedAt ? formatDateTime(taskData.assignedAt) : '-');
@@ -1138,12 +1404,27 @@
         $('#rejectReason').on('input', function(){
             $('#rejectCount').text(this.value.length);
         });
+        $('#workDescription').on('input', function(){
+            $('#workDescCount').text(this.value.length);
+        });
+        $('#issuesFound').on('input', function(){
+            $('#issuesFoundCount').text(this.value.length);
+        });
+        $('#notes').on('input', function(){
+            $('#notesCount').text(this.value.length);
+        });
         $('#rejectTaskForm').on('submit', function(e){
             e.preventDefault();
             var id = $('#rejectTaskId').val();
             var reason = ($('#rejectReason').val()||'').trim();
-            if(reason.length < 3){
-                alert('Lý do quá ngắn. Vui lòng nhập tối thiểu 3 ký tự.');
+            if(reason.length < 10){
+                alert('Lý do từ chối quá ngắn. Vui lòng nhập tối thiểu 10 ký tự để giải thích rõ ràng.');
+                $('#rejectReason').focus();
+                return;
+            }
+            if(reason.length > 300){
+                alert('Lý do từ chối quá dài. Vui lòng nhập tối đa 300 ký tự.');
+                $('#rejectReason').focus();
                 return;
             }
             var btn = $(this).find('button[type="submit"]');
