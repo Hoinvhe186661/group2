@@ -659,6 +659,52 @@ public class ContractDAO extends DBConnect {
         return fallback;
     }
     
+    public static class ContractDeliveryStats {
+        private final int totalProducts;
+        private final int deliveredProducts;
+
+        public ContractDeliveryStats(int totalProducts, int deliveredProducts) {
+            this.totalProducts = Math.max(totalProducts, 0);
+            this.deliveredProducts = Math.max(deliveredProducts, 0);
+        }
+
+        public int getTotalProducts() {
+            return totalProducts;
+        }
+
+        public int getDeliveredProducts() {
+            return deliveredProducts;
+        }
+
+        public boolean isFullyDelivered() {
+            return totalProducts > 0 && deliveredProducts >= totalProducts;
+        }
+    }
+
+    public ContractDeliveryStats getContractDeliveryStats(int contractId) {
+        if (!checkConnection()) {
+            return new ContractDeliveryStats(0, 0);
+        }
+
+        String sql = "SELECT COUNT(*) AS total_products, " +
+                     "SUM(CASE WHEN COALESCE(delivery_status, 'not_delivered') = 'delivered' THEN 1 ELSE 0 END) AS delivered_products " +
+                     "FROM contract_products WHERE contract_id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int total = rs.getInt("total_products");
+                    int delivered = rs.getInt("delivered_products");
+                    return new ContractDeliveryStats(total, delivered);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting contract delivery stats for contract ID: " + contractId, e);
+        }
+        return new ContractDeliveryStats(0, 0);
+    }
+
     /**
      * Lấy danh sách sản phẩm của hợp đồng
      * @param contractId ID của hợp đồng
@@ -670,7 +716,8 @@ public class ContractDAO extends DBConnect {
             return contractProducts;
         }
         
-        String sql = "SELECT cp.product_id, cp.quantity, p.product_code, p.product_name, p.unit " +
+        String sql = "SELECT cp.product_id, cp.quantity, p.product_code, p.product_name, p.unit, " +
+                    "COALESCE(cp.delivery_status, 'not_delivered') AS delivery_status " +
                     "FROM contract_products cp " +
                     "LEFT JOIN products p ON p.id = cp.product_id " +
                     "WHERE cp.contract_id = ? ORDER BY cp.id";
@@ -685,11 +732,52 @@ public class ContractDAO extends DBConnect {
                     product.put("productCode", rs.getString("product_code"));
                     product.put("productName", rs.getString("product_name"));
                     product.put("unit", rs.getString("unit"));
+                    product.put("deliveryStatus", rs.getString("delivery_status"));
                     contractProducts.add(product);
                 }
             }
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Error getting contract products for contract ID: " + contractId, e);
+        }
+        
+        return contractProducts;
+    }
+    
+    /**
+     * Lấy danh sách sản phẩm chưa bàn giao của hợp đồng (dùng cho xuất kho)
+     * @param contractId ID của hợp đồng
+     * @return Danh sách Map chứa thông tin sản phẩm chưa bàn giao (productId, quantity, productCode, productName, unit)
+     */
+    public List<java.util.Map<String, Object>> getContractProductsNotDelivered(int contractId) {
+        List<java.util.Map<String, Object>> contractProducts = new ArrayList<>();
+        if (!checkConnection()) {
+            return contractProducts;
+        }
+        
+        String sql = "SELECT cp.product_id, cp.quantity, p.product_code, p.product_name, p.unit, " +
+                    "COALESCE(cp.delivery_status, 'not_delivered') AS delivery_status " +
+                    "FROM contract_products cp " +
+                    "LEFT JOIN products p ON p.id = cp.product_id " +
+                    "WHERE cp.contract_id = ? " +
+                    "AND COALESCE(cp.delivery_status, 'not_delivered') != 'delivered' " +
+                    "ORDER BY cp.id";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> product = new java.util.HashMap<>();
+                    product.put("productId", rs.getInt("product_id"));
+                    product.put("quantity", rs.getBigDecimal("quantity"));
+                    product.put("productCode", rs.getString("product_code"));
+                    product.put("productName", rs.getString("product_name"));
+                    product.put("unit", rs.getString("unit"));
+                    product.put("deliveryStatus", rs.getString("delivery_status"));
+                    contractProducts.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting contract products not delivered for contract ID: " + contractId, e);
         }
         
         return contractProducts;

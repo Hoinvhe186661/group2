@@ -72,7 +72,7 @@
 
     <body class="skin-black">
       <header class="header">
-        <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">Bảng điều khiển</a>
+        <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">Quản lý kho</a>
         <nav class="navbar navbar-static-top" role="navigation">
           <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
             <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
@@ -313,24 +313,39 @@
           $('#inHistoryInfo').text('0 bản ghi');
           return;
         }
+        var totalQuantity = 0;
+        var totalAmount = 0;
         res.data.forEach(function(h) {
           var when = new Date(h.createdAt).toLocaleString('vi-VN');
-          var unitCost = h.unitCost != null ? formatCurrencyVN(h.unitCost) + ' đ' : '--';
-          var total = (h.unitCost != null && h.quantity != null) ? formatCurrencyVN(h.unitCost * h.quantity) + ' đ' : '--';
+          var unitCost = h.unitCost != null ? formatCurrencyVN(h.unitCost) + ' đ' : '';
+          var qty = h.quantity || 0;
+          var amount = (h.unitCost != null && h.quantity != null) ? h.unitCost * h.quantity : 0;
+          var total = amount > 0 ? formatCurrencyVN(amount) + ' đ' : '';
           var supplier = extractSupplierFromNotes(h.notes);
+          totalQuantity += qty;
+          totalAmount += amount;
           var row = '<tr>' +
             '<td>' + when + '</td>' +
             '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
-            '<td class="qty-pos">+' + (h.quantity || 0) + '</td>' +
+            '<td class="qty-pos">+' + qty + '</td>' +
             '<td>' + unitCost + '</td>' +
             '<td><strong>' + total + '</strong></td>' +
-            '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
+            '<td>' + escapeHtml(h.warehouseLocation || '') + '</td>' +
             '<td>' + escapeHtml(supplier) + '</td>' +
-            '<td>' + escapeHtml(h.createdByName || '--') + '</td>' +
+            '<td>' + escapeHtml(h.createdByName || '') + '</td>' +
             '<td>' + escapeHtml(h.notes || '') + '</td>' +
             '</tr>';
           body.append(row);
         });
+        // Thêm hàng tổng
+        var totalRow = '<tr style="background-color: #f5f5f5; font-weight: bold;">' +
+          '<td colspan="2" style="text-align: right;"><strong>TỔNG:</strong></td>' +
+          '<td class="qty-pos"><strong>+' + totalQuantity + '</strong></td>' +
+          '<td></td>' +
+          '<td><strong>' + (totalAmount > 0 ? formatCurrencyVN(totalAmount) + ' đ' : '') + '</strong></td>' +
+          '<td colspan="4"></td>' +
+          '</tr>';
+        body.append(totalRow);
         var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
         var end = (res.currentPage - 1) * res.pageSize + res.data.length;
         $('#inHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
@@ -404,22 +419,32 @@
           $('#outHistoryInfo').text('0 bản ghi');
           return;
         }
+        var totalQuantity = 0;
         res.data.forEach(function(h) {
           var when = new Date(h.createdAt).toLocaleString('vi-VN');
-          var unitPrice = h.unitPrice != null ? formatCurrencyVN(h.unitPrice) + ' đ' : '--';
+          var unitPrice = h.unitPrice != null ? formatCurrencyVN(h.unitPrice) + ' đ' : '';
           var reason = extractReasonFromNotes(h.notes);
+          var qty = h.quantity || 0;
+          totalQuantity += qty;
           var row = '<tr>' +
             '<td>' + when + '</td>' +
             '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
-            '<td class="qty-neg">-' + (h.quantity || 0) + '</td>' +
+            '<td class="qty-neg">-' + qty + '</td>' +
             '<td>' + unitPrice + '</td>' +
-            '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
+            '<td>' + escapeHtml(h.warehouseLocation || '') + '</td>' +
             '<td>' + escapeHtml(reason) + '</td>' +
-            '<td>' + escapeHtml(h.createdByName || '--') + '</td>' +
+            '<td>' + escapeHtml(h.createdByName || '') + '</td>' +
             '<td>' + escapeHtml(h.notes || '') + '</td>' +
           '</tr>';
           body.append(row);
         });
+        // Thêm hàng tổng
+        var totalRow = '<tr style="background-color: #f5f5f5; font-weight: bold;">' +
+          '<td colspan="2" style="text-align: right;"><strong>TỔNG:</strong></td>' +
+          '<td class="qty-neg"><strong>-' + totalQuantity + '</strong></td>' +
+          '<td colspan="5"></td>' +
+          '</tr>';
+        body.append(totalRow);
         var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
         var end = (res.currentPage - 1) * res.pageSize + res.data.length;
         $('#outHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
@@ -474,12 +499,12 @@
         if (dateTo) params.dateTo = dateTo;
         $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
           if (!res.success) {
-            $('#balanceHistoryBody').html('<tr><td colspan="6" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
+            $('#balanceHistoryBody').html('<tr><td colspan="7" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
             return;
           }
           renderBalanceHistory(res);
         }).fail(function (xhr) {
-          $('#balanceHistoryBody').html('<tr><td colspan="6" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
+          $('#balanceHistoryBody').html('<tr><td colspan="7" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
         });
       }
 
@@ -488,11 +513,15 @@
         var body = $('#balanceHistoryBody');
         body.empty();
         if (!res.data || res.data.length === 0) {
-          body.html('<tr><td colspan="6" class="text-center muted">Không có dữ liệu</td></tr>');
+          body.html('<tr><td colspan="7" class="text-center muted">Không có dữ liệu</td></tr>');
           updateBalancePagination(res.totalCount || 0, res.totalPages || 1);
           $('#balanceHistoryInfo').text('0 bản ghi');
           return;
         }
+        var totalStockBefore = 0;
+        var totalCurrentStock = 0;
+        var totalReservedStock = 0;
+        var totalAvailableStock = 0;
         res.data.forEach(function(h) {
           var when = new Date(h.createdAt).toLocaleString('vi-VN');
           var stockOriginal = h.stockBefore != null ? h.stockBefore : 0;
@@ -500,6 +529,10 @@
           var currentStockNow = h.currentStock != null ? h.currentStock : 0;
           var reservedStockNow = h.reservedStock != null ? h.reservedStock : 0;
           var availableStockNow = h.availableStock != null ? h.availableStock : Math.max(currentStockNow - reservedStockNow, 0);
+          totalStockBefore += stockBefore;
+          totalCurrentStock += currentStockNow;
+          totalReservedStock += reservedStockNow;
+          totalAvailableStock += availableStockNow;
           var row = '<tr>' +
             '<td>' + when + '</td>' +
             '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
@@ -507,10 +540,20 @@
             '<td>' + currentStockNow + '</td>' +
             '<td>' + reservedStockNow + '</td>' +
             '<td>' + availableStockNow + '</td>' +
-            '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
+            '<td>' + escapeHtml(h.warehouseLocation || '') + '</td>' +
             '</tr>';
           body.append(row);
         });
+        // Thêm hàng tổng
+        var totalRow = '<tr style="background-color: #f5f5f5; font-weight: bold;">' +
+          '<td colspan="2" style="text-align: right;"><strong>TỔNG:</strong></td>' +
+          '<td><strong>' + totalStockBefore + '</strong></td>' +
+          '<td><strong>' + totalCurrentStock + '</strong></td>' +
+          '<td><strong>' + totalReservedStock + '</strong></td>' +
+          '<td><strong>' + totalAvailableStock + '</strong></td>' +
+          '<td></td>' +
+          '</tr>';
+        body.append(totalRow);
         var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
         var end = (res.currentPage - 1) * res.pageSize + res.data.length;
         $('#balanceHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
@@ -562,15 +605,33 @@
       }
 
       function extractSupplierFromNotes(notes) {
-        if (!notes) return '--';
-        var match = notes.match(/Nhà cung cấp:\s*([^\n|]+)/);
-        return match ? match[1].trim() : '--';
+        if (!notes) return '';
+        // Thử nhiều pattern để tìm nhà cung cấp
+        var patterns = [
+          /Nhà cung cấp:\s*([^\n|]+)/i,
+          /Nhà cung cấp[:\s]+([^\n|]+)/i,
+          /NCC[:\s]+([^\n|]+)/i,
+          /Supplier[:\s]+([^\n|]+)/i,
+          /Nhà cung cấp\s+([^\n|]+)/i
+        ];
+        for (var i = 0; i < patterns.length; i++) {
+          var match = notes.match(patterns[i]);
+          if (match && match[1]) {
+            var supplier = match[1].trim();
+            // Loại bỏ các ký tự không cần thiết ở cuối
+            supplier = supplier.replace(/[|\n\r].*$/, '').trim();
+            if (supplier.length > 0) {
+              return supplier;
+            }
+          }
+        }
+        return '';
       }
 
       function extractReasonFromNotes(notes) {
-        if (!notes) return '--';
+        if (!notes) return '';
         var match = notes.match(/Lý do:\s*([^\n]+)/);
-        return match ? match[1].trim() : '--';
+        return match ? match[1].trim() : '';
       }
 
       // ================== INITIALIZE ==================

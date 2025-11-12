@@ -279,6 +279,21 @@ public class InventoryServlet extends HttpServlet {
             for (int i = 0; i < pagedContracts.size(); i++) {
                 if (i > 0) json.append(",");
                 Contract c = pagedContracts.get(i);
+                ContractDAO.ContractDeliveryStats deliveryStats = contractDAO.getContractDeliveryStats(c.getId());
+                int totalProducts = deliveryStats != null ? deliveryStats.getTotalProducts() : 0;
+                int deliveredProducts = deliveryStats != null ? deliveryStats.getDeliveredProducts() : 0;
+                boolean fullyDelivered = deliveryStats != null && deliveryStats.isFullyDelivered();
+                String deliveryStatus;
+                if (totalProducts <= 0) {
+                    deliveryStatus = "no_products";
+                } else if (deliveredProducts <= 0) {
+                    deliveryStatus = "not_delivered";
+                } else if (deliveredProducts < totalProducts) {
+                    deliveryStatus = "partial";
+                } else {
+                    deliveryStatus = "delivered";
+                }
+
                 json.append("{");
                 json.append("\"id\":").append(c.getId()).append(",");
                 json.append("\"contractNumber\":\"").append(escapeJson(c.getContractNumber())).append("\",");
@@ -289,7 +304,11 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"title\":\"").append(escapeJson(c.getTitle() != null ? c.getTitle() : "")).append("\",");
                 json.append("\"startDate\":\"").append(c.getStartDate() != null ? c.getStartDate().toString() : "").append("\",");
                 json.append("\"contractValue\":").append(c.getContractValue() != null ? c.getContractValue() : "null").append(",");
-                json.append("\"status\":\"").append(escapeJson(c.getStatus() != null ? c.getStatus() : "")).append("\"");
+                json.append("\"status\":\"").append(escapeJson(c.getStatus() != null ? c.getStatus() : "")).append("\",");
+                json.append("\"totalProducts\":").append(totalProducts).append(",");
+                json.append("\"deliveredProducts\":").append(deliveredProducts).append(",");
+                json.append("\"deliveryStatus\":\"").append(escapeJson(deliveryStatus)).append("\",");
+                json.append("\"fullyDelivered\":").append(fullyDelivered);
                 json.append("}");
             }
             
@@ -591,8 +610,8 @@ public class InventoryServlet extends HttpServlet {
                 return;
             }
             
-            // Lấy danh sách sản phẩm trong hợp đồng từ database
-            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProducts(contractId);
+            // Lấy danh sách sản phẩm chưa bàn giao trong hợp đồng từ database
+            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProductsNotDelivered(contractId);
             
             // Lấy ngày hiện tại từ database (hoặc server)
             java.util.Date today = new java.util.Date();
@@ -735,7 +754,8 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"reservedStock\":").append(reservedStockNow).append(",");
                 json.append("\"availableStock\":").append(availableStockNow).append(",");
                 json.append("\"createdAt\":\"").append(h.getCreatedAt()).append("\",");
-                json.append("\"createdByName\":\"").append(escapeJson(h.getCreatedByName())).append("\"");
+                json.append("\"createdByName\":\"").append(escapeJson(h.getCreatedByName())).append("\",");
+                json.append("\"notes\":\"").append(escapeJson(h.getNotes() != null ? h.getNotes() : "")).append("\"");
                 json.append("}");
             }
             json.append("],\"totalCount\":").append(totalCount);
@@ -1398,7 +1418,8 @@ public class InventoryServlet extends HttpServlet {
             // Kiểm tra số lượng trong kho cho từng sản phẩm
             java.util.List<java.util.Map<String, Object>> productsWithStock = new java.util.ArrayList<>();
             boolean allProductsAvailable = true;
-            
+            int deliveredCount = 0;
+
             for (java.util.Map<String, Object> product : contractProducts) {
                 int productId = (Integer) product.get("productId");
                 java.math.BigDecimal requiredQuantity = (java.math.BigDecimal) product.get("quantity");
@@ -1415,6 +1436,16 @@ public class InventoryServlet extends HttpServlet {
                 productWithStock.put("availableStock", availableStock);
                 productWithStock.put("available", availableStock >= requiredQty);
                 
+                String deliveryStatus = "not_delivered";
+                Object rawDelivery = productWithStock.get("deliveryStatus");
+                if (rawDelivery != null) {
+                    deliveryStatus = rawDelivery.toString();
+                }
+                productWithStock.put("deliveryStatus", deliveryStatus);
+                if ("delivered".equalsIgnoreCase(deliveryStatus)) {
+                    deliveredCount++;
+                }
+                
                 if (availableStock < requiredQty) {
                     allProductsAvailable = false;
                 }
@@ -1430,6 +1461,23 @@ public class InventoryServlet extends HttpServlet {
             json.append("\"customerName\":\"").append(escapeJson(contract.getCustomerName() != null ? contract.getCustomerName() : "")).append("\",");
             json.append("\"status\":\"").append(escapeJson(contract.getStatus() != null ? contract.getStatus() : "")).append("\",");
             json.append("\"allProductsAvailable\":").append(allProductsAvailable).append(",");
+            
+            int totalProducts = productsWithStock.size();
+            String overallDeliveryStatus;
+            if (totalProducts <= 0) {
+                overallDeliveryStatus = "no_products";
+            } else if (deliveredCount <= 0) {
+                overallDeliveryStatus = "not_delivered";
+            } else if (deliveredCount < totalProducts) {
+                overallDeliveryStatus = "partial";
+            } else {
+                overallDeliveryStatus = "delivered";
+            }
+
+            json.append("\"totalProducts\":").append(totalProducts).append(",");
+            json.append("\"deliveredProducts\":").append(deliveredCount).append(",");
+            json.append("\"overallDeliveryStatus\":\"").append(escapeJson(overallDeliveryStatus)).append("\",");
+            json.append("\"fullyDelivered\":").append("delivered".equals(overallDeliveryStatus)).append(",");
             json.append("\"products\":[");
             
             for (int i = 0; i < productsWithStock.size(); i++) {
@@ -1444,7 +1492,8 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"totalStock\":").append(p.get("totalStock")).append(",");
                 json.append("\"reservedStock\":").append(p.get("reservedStock")).append(",");
                 json.append("\"availableStock\":").append(p.get("availableStock")).append(",");
-                json.append("\"available\":").append(p.get("available"));
+                json.append("\"available\":").append(p.get("available")).append(",");
+                json.append("\"deliveryStatus\":\"").append(escapeJson(p.get("deliveryStatus") != null ? p.get("deliveryStatus").toString() : "not_delivered")).append("\"");
                 json.append("}");
             }
             

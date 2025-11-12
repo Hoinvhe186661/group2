@@ -18,11 +18,11 @@
 			</div>
 		</div>
 		<ul class="sidebar-menu">
-			<li>
+			<!-- <li>
 				<a href="admin">
 					<i class="fa fa-dashboard"></i> <span>Bảng điều khiển</span>
 				</a>
-			</li>
+			</li> -->
 			<% if ( __perms.contains("manage_users") ) { %>
 			<li>
 				<a href="users">
@@ -120,14 +120,14 @@
 
 			<% if ( __perms.contains("manage_products") ) { %>
 			<li>
-				<a href="products.jsp">
+				<a href="product">
 					<i class="fa fa-box"></i> <span>Quản lý sản phẩm</span>
 				</a>
 			</li>
 			<% } %>
 			<% if ( __perms.contains("manage_suppliers") ) { %>
 			<li>
-				<a href="supplier.jsp">
+				<a href="supplier">
 					<i class="fa fa-truck"></i> <span>Nhà cung cấp</span>
 				</a>
 			</li>

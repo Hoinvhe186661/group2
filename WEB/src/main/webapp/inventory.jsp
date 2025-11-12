@@ -227,34 +227,7 @@
     </header>
     <div class="wrapper row-offcanvas row-offcanvas-left">
         <!-- Left side column. contains the logo and sidebar -->
-        <aside class="left-side sidebar-offcanvas">
-            <!-- sidebar: style can be found in sidebar.less -->
-            <section class="sidebar">
-                <!-- Sidebar user panel -->
-                <div class="user-panel">
-                    <div class="pull-left image">
-                        <img src="<%=request.getContextPath()%>/img/26115.jpg" class="img-circle" alt="User Image" />
-                    </div>
-                    <div class="pull-left info">
-                        <p>Xin chào, <%= username %></p>
-                        <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
-                    </div>
-                </div>
-                <!-- search form -->
-                <form action="#" method="get" class="sidebar-form">
-                    <div class="input-group">
-                        <input type="text" name="q" class="form-control" placeholder="Tìm kiếm..."/>
-                        <span class="input-group-btn">
-                            <button type='submit' name='seach' id='search-btn' class="btn btn-flat"><i class="fa fa-search"></i></button>
-                        </span>
-                    </div>
-                </form>
-                <!-- /.search form -->
-                <!-- sidebar menu: : style can be found in sidebar.less -->
-                <jsp:include page="partials/sidebar.jsp"/>
-            </section>
-            <!-- /.sidebar -->
-        </aside>
+		<jsp:include page="partials/sidebar.jsp"/>
         <aside class="right-side">
             <!-- Main content -->
             <section class="content">
@@ -349,6 +322,7 @@
                                             <th>Ngày bắt đầu</th>
                                             <th>Giá trị</th>
                                             <th>Trạng thái</th>
+                                            <th>Trạng thái bàn giao</th>
                                             <th>Thao tác</th>
                                         </tr>
                                     </thead>
@@ -451,8 +425,6 @@
                                     <label>Kho <span class="text-danger">*</span></label>
                                     <select id="stockInWarehouse" class="form-control" required>
                                         <option value="Main Warehouse">Kho Chính</option>
-                                        <option value="Warehouse A">Kho A</option>
-                                        <option value="Warehouse B">Kho B</option>
                                     </select>
                                 </div>
                             </div>
@@ -780,6 +752,7 @@
                 console.log('Contract ID:', contract.id, 'Status:', contract.status);
                 
                 var statusBadge = getStatusBadge(contract.status);
+                var deliveryBadge = getContractDeliveryBadge(contract.deliveryStatus, contract.deliveredProducts || 0, contract.totalProducts || 0);
                 var contractValue = contract.contractValue != null && contract.contractValue !== 'null' 
                     ? formatCurrencyVN(contract.contractValue) + ' VNĐ' 
                     : '--';
@@ -787,6 +760,7 @@
                 // Tạo nút thao tác dựa vào trạng thái
                 var actionButtons = '';
                 var contractStatus = contract.status || '';
+                var isFullyDelivered = contract.fullyDelivered === true;
                 
                 // Hiển thị nút Xem cho tất cả hợp đồng
                 actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
@@ -794,11 +768,13 @@
                 '</button>';
                 
                 // Hiển thị nút Xuất kho cho hợp đồng ở trạng thái draft hoặc active
-                if (contractStatus === 'draft' || contractStatus === 'active') {
+                if ((contractStatus === 'draft' || contractStatus === 'active') && !isFullyDelivered) {
                     actionButtons += ' ' +
                         '<button class="btn btn-danger btn-xs" onclick="exportStockForContract(' + contract.id + ')" title="Xuất kho">' +
                         '<i class="fa fa-arrow-up"></i> Xuất kho' +
                     '</button>';
+                } else if (isFullyDelivered) {
+                    actionButtons += ' <span class="label label-success" style="display: inline-block; margin-left: 5px;" title="Hợp đồng đã bàn giao đầy đủ">Đã xuất</span>';
                 }
                 
                 var row = '<tr>' +
@@ -811,6 +787,7 @@
                     '<td>' + (contract.startDate || '--') + '</td>' +
                     '<td>' + contractValue + '</td>' +
                     '<td>' + statusBadge + '</td>' +
+                    '<td>' + deliveryBadge + '</td>' +
                     '<td>' + actionButtons + '</td>' +
                 '</tr>';
                 tbody.append(row);
@@ -848,6 +825,45 @@
             return '<span class="label ' + badgeClass + '">' + statusText + '</span>';
         }
         
+        function getContractDeliveryBadge(status, deliveredCount, totalCount) {
+            var normalized = (status || '').toLowerCase();
+            var badgeClass = 'label-default';
+            var label = 'Không có sản phẩm';
+            
+            if (normalized === 'delivered') {
+                badgeClass = 'label-success';
+                label = 'Đã bàn giao';
+            } else if (normalized === 'partial') {
+                badgeClass = 'label-warning';
+                label = 'Đang bàn giao';
+            } else if (normalized === 'not_delivered') {
+                badgeClass = 'label-default';
+                label = 'Chưa bàn giao';
+            } else if (normalized === 'no_products') {
+                badgeClass = 'label-default';
+                label = 'Không có sản phẩm';
+            } else {
+                label = 'Không xác định';
+            }
+            
+            if (totalCount > 0) {
+                label += ' (' + deliveredCount + '/' + totalCount + ')';
+            }
+            
+            return '<span class="label ' + badgeClass + '">' + label + '</span>';
+        }
+
+        function getProductDeliveryBadge(status) {
+            var normalized = (status || '').toLowerCase();
+            if (normalized === 'delivered') {
+                return '<span class="label label-success"><i class="fa fa-check"></i> Đã bàn giao</span>';
+            }
+            if (normalized === 'partial') {
+                return '<span class="label label-warning"><i class="fa fa-exclamation"></i> Đang bàn giao</span>';
+            }
+            return '<span class="label label-default"><i class="fa fa-clock-o"></i> Chưa bàn giao</span>';
+        }
+        
         // Xem chi tiết hợp đồng - hiển thị modal với danh sách sản phẩm và kiểm tra kho
         function viewContract(contractId) {
             if (!contractId || contractId <= 0) {
@@ -865,13 +881,14 @@
                     if (response.success && response.data) {
                         var data = response.data;
                         var products = data.products || [];
+                        var deliveryBadge = getContractDeliveryBadge(data.overallDeliveryStatus, data.deliveredProducts || 0, data.totalProducts || 0);
                         
                         // Tạo HTML cho bảng sản phẩm
                         var productsHtml = '';
                         var insufficientProducts = [];
                         
                         if (products.length === 0) {
-                            productsHtml = '<tr><td colspan="7" class="text-center text-muted">Hợp đồng chưa có sản phẩm</td></tr>';
+                            productsHtml = '<tr><td colspan="8" class="text-center text-muted">Hợp đồng chưa có sản phẩm</td></tr>';
                         } else {
                             products.forEach(function(product, index) {
                                 var isAvailable = product.available === true;
@@ -897,6 +914,7 @@
                                 var availableBadge = isAvailable 
                                     ? '<span class="label label-success"><i class="fa fa-check"></i> Đủ</span>' 
                                     : '<span class="label label-danger"><i class="fa fa-times"></i> Thiếu</span>';
+                                var handoverBadge = getProductDeliveryBadge(product.deliveryStatus);
                                 
                                 // Màu nền cho hàng không đủ
                                 var rowClass = isAvailable ? '' : 'danger';
@@ -904,7 +922,7 @@
                                 
                                 var stockTitle = 'Tổng: ' + totalQty + ' | Giữ chỗ: ' + reservedQty + ' | Khả dụng: ' + availableQty;
                                 
-                                productsHtml += '<tr class="' + rowClass + '" style="' + rowStyle + '">' +
+                                var rowHtml = '<tr class="' + rowClass + '" style="' + rowStyle + '">' +
                                     '<td>' + (index + 1) + '</td>' +
                                     '<td><strong>' + escapeHtml(product.productCode || '') + '</strong></td>' +
                                     '<td><strong>' + escapeHtml(product.productName || '') + '</strong></td>' +
@@ -915,10 +933,14 @@
                                 
                                 // Hiển thị số lượng thiếu nếu không đủ
                                 if (!isAvailable) {
-                                    productsHtml += '<br/><small class="text-danger">Thiếu: <strong>' + shortage + '</strong></small>';
+                                    rowHtml += '<br/><small class="text-danger">Thiếu: <strong>' + shortage + '</strong></small>';
                                 }
                                 
-                                productsHtml += '</td></tr>';
+                                rowHtml += '</td>' +
+                                    '<td style="text-align: center;">' + handoverBadge + '</td>' +
+                                '</tr>';
+                                
+                                productsHtml += rowHtml;
                             });
                         }
                         
@@ -928,6 +950,7 @@
                                 '<h4>Hợp đồng: ' + escapeHtml(data.contractNumber || '') + '</h4>' +
                                 '<p><strong>Khách hàng:</strong> ' + escapeHtml(data.customerName || '') + '</p>' +
                                 '<p><strong>Trạng thái:</strong> ' + getStatusBadge(data.status) + '</p>' +
+                                '<p><strong>Trạng thái bàn giao:</strong> ' + deliveryBadge + '</p>' +
                             '</div>' +
                         '</div>' +
                         '<hr/>' +
@@ -943,6 +966,7 @@
                                         '<th style="text-align: right;">Số lượng cần</th>' +
                                         '<th style="text-align: right;">Tồn khả dụng</th>' +
                                         '<th style="text-align: center;">Trạng thái</th>' +
+                                        '<th style="text-align: center;">Bàn giao</th>' +
                                     '</tr>' +
                                 '</thead>' +
                                 '<tbody>' + productsHtml + '</tbody>' +
@@ -996,6 +1020,8 @@
         
         // Biến flag để tránh reset form khi đang load từ exportStockForContract
         var isExportingFromContract = false;
+        // Biến lưu contractId khi đang xuất từ hợp đồng cụ thể
+        var lockedContractId = null;
         
         // Xuất kho cho hợp đồng đã duyệt
         // Tự động mở form xuất kho và load dữ liệu từ hợp đồng
@@ -1007,8 +1033,9 @@
             
             console.log('Export stock for contract ID:', contractId);
             
-            // Set flag để tránh reset form
+            // Set flag và lock contract ID
             isExportingFromContract = true;
+            lockedContractId = contractId;
             
             // Kiểm tra xem modal đã mở chưa
             var modal = $('#stockOutModal');
@@ -1058,6 +1085,13 @@
                         // Set contract ID trong dropdown
                         var contractSelect = $('#stockOutContractId');
                         contractSelect.val(contractId);
+                        
+                        // Disable dropdown hợp đồng khi đang xuất từ hợp đồng cụ thể
+                        if (lockedContractId) {
+                            contractSelect.prop('disabled', true);
+                            contractSelect.css('background-color', '#f5f5f5');
+                            contractSelect.attr('title', 'Đang xuất kho cho hợp đồng này, không thể thay đổi');
+                        }
                         
                         // Hiển thị tên khách hàng từ backend
                         $('#stockOutCustomerName').val(data.customerName || '');
@@ -1982,8 +2016,15 @@
         
         // Reset form khi đóng modal xuất kho
         $('#stockOutModal').on('hidden.bs.modal', function() {
-            // Reset flag
+            // Reset flag và unlock contract
             isExportingFromContract = false;
+            lockedContractId = null;
+            
+            // Enable lại dropdown hợp đồng
+            var contractSelect = $('#stockOutContractId');
+            contractSelect.prop('disabled', false);
+            contractSelect.css('background-color', '');
+            contractSelect.removeAttr('title');
             
             $('#stockOutForm')[0].reset();
             $('#stockOutContractId').val('');
@@ -2245,6 +2286,13 @@
         
         // Xử lý khi chọn hợp đồng - gọi backend để load thông tin
         $('#stockOutContractId').on('change', function() {
+            // Nếu đang bị lock (xuất từ hợp đồng cụ thể), không cho thay đổi
+            if (lockedContractId) {
+                $(this).val(lockedContractId);
+                alert('Đang xuất kho cho hợp đồng này, không thể chọn hợp đồng khác.');
+                return;
+            }
+            
             var contractId = $(this).val();
             if (!contractId || contractId === '') {
                 $('#stockOutCustomerName').val('');
