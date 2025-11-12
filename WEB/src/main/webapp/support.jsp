@@ -1,5 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page import="java.util.Set" %>
 <%
+
+
     // Kiểm tra đăng nhập
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -10,12 +13,11 @@
         return;
     }
     
-    // Kiểm tra quyền truy cập - tất cả role đều có thể gửi yêu cầu hỗ trợ
-    // Nhưng chỉ customer, customer_support, admin mới có thể xem trang này
-    boolean canAccessSupport = "admin".equals(userRole) || "customer_support".equals(userRole) || 
-                              "customer".equals(userRole) || "guest".equals(userRole);
-    if (!canAccessSupport) {
-        response.sendRedirect(request.getContextPath() + "/403.jsp");
+    // Kiểm tra quyền: chỉ người có quyền submit_support_request mới truy cập được
+    @SuppressWarnings("unchecked")
+    Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+    if (userPermissions == null || !userPermissions.contains("submit_support_request")) {
+        response.sendRedirect(request.getContextPath() + "/error/403.jsp");
         return;
     }
 %>
