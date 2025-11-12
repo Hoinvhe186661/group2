@@ -168,20 +168,48 @@ public class InventoryDAO {
         return 0;
     }
 
+    public Integer getReservedStock(int productId) {
+        if (connection == null) { lastError = "Không thể kết nối đến cơ sở dữ liệu"; return 0; }
+        String sql = "SELECT COALESCE(SUM(reserved_quantity),0) FROM inventory WHERE product_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt(1); }
+        } catch (SQLException e) { e.printStackTrace(); lastError = "Lỗi khi lấy số lượng giữ chỗ: " + e.getMessage(); }
+        return 0;
+    }
+
+    public Integer getAvailableStock(int productId) {
+        if (connection == null) { lastError = "Không thể kết nối đến cơ sở dữ liệu"; return 0; }
+        String sql = "SELECT COALESCE(SUM(GREATEST(current_stock - reserved_quantity, 0)),0) FROM inventory WHERE product_id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt(1); }
+        } catch (SQLException e) { e.printStackTrace(); lastError = "Lỗi khi lấy tồn kho khả dụng: " + e.getMessage(); }
+        return 0;
+    }
+
     /**
      * Tồn theo từng vị trí kho của sản phẩm
      */
     public List<Map<String, Object>> getWarehouseStocks(int productId) {
         List<Map<String, Object>> list = new ArrayList<>();
         if (connection == null) return list;
-        String sql = "SELECT warehouse_location, current_stock FROM inventory WHERE product_id = ? ORDER BY warehouse_location";
+        String sql = "SELECT warehouse_location, current_stock, reserved_quantity FROM inventory WHERE product_id = ? ORDER BY warehouse_location";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, productId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Map<String, Object> m = new HashMap<>();
                     m.put("warehouse", rs.getString("warehouse_location"));
-                    m.put("stock", rs.getInt("current_stock"));
+                    int stock = rs.getInt("current_stock");
+                    int reserved = rs.getInt("reserved_quantity");
+                    int available = stock - reserved;
+                    if (available < 0) {
+                        available = 0;
+                    }
+                    m.put("stock", stock);
+                    m.put("reserved", reserved);
+                    m.put("available", available);
                     list.add(m);
                 }
             }
@@ -364,7 +392,7 @@ public class InventoryDAO {
             }
         } else {
             // Đã có -> Cập nhật
-            String updateSql = "UPDATE inventory SET current_stock = current_stock + ? " +
+            String updateSql = "UPDATE inventory SET current_stock = current_stock + ?, last_updated = CURRENT_TIMESTAMP " +
                               "WHERE product_id = ? AND warehouse_location = ?";
             try (PreparedStatement ps = connection.prepareStatement(updateSql)) {
                 ps.setInt(1, quantity);
@@ -388,8 +416,8 @@ public class InventoryDAO {
             return false;
         }
         
-        String sql = "UPDATE inventory SET current_stock = current_stock - ? " +
-                     "WHERE product_id = ? AND warehouse_location = ? AND current_stock >= ?";
+        String sql = "UPDATE inventory SET current_stock = current_stock - ?, last_updated = CURRENT_TIMESTAMP " +
+                     "WHERE product_id = ? AND warehouse_location = ? AND (current_stock - reserved_quantity) >= ?";
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, quantity);
@@ -406,6 +434,139 @@ public class InventoryDAO {
         } catch (SQLException e) {
             e.printStackTrace();
             lastError = "Lỗi khi trừ tồn kho: " + e.getMessage();
+            return false;
+        }
+    }
+    
+    public boolean increaseReservedStock(int productId, int quantity) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        if (quantity <= 0) {
+            return true;
+        }
+        
+        String sql = "SELECT id, current_stock, reserved_quantity FROM inventory WHERE product_id = ? ORDER BY (current_stock - reserved_quantity) DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                List<int[]> rows = new ArrayList<int[]>();
+                while (rs.next()) {
+                    rows.add(new int[] { rs.getInt("id"), rs.getInt("current_stock"), rs.getInt("reserved_quantity") });
+                }
+                int remaining = quantity;
+                for (int[] row : rows) {
+                    int available = row[1] - row[2];
+                    if (available <= 0) {
+                        continue;
+                    }
+                    int toReserve = Math.min(available, remaining);
+                    if (toReserve <= 0) {
+                        continue;
+                    }
+                    if (!adjustReservedQuantity(row[0], toReserve)) {
+                        return false;
+                    }
+                    remaining -= toReserve;
+                    if (remaining <= 0) {
+                        break;
+                    }
+                }
+                if (remaining > 0) {
+                    lastError = "Không đủ tồn kho khả dụng để giữ chỗ";
+                    return false;
+                }
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi cập nhật số lượng giữ chỗ: " + e.getMessage();
+            return false;
+        }
+    }
+    
+    public boolean releaseReservedStock(int productId, String warehouseLocation, int quantity) {
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return false;
+        }
+        if (quantity <= 0) {
+            return true;
+        }
+        int remaining = quantity;
+        if (warehouseLocation != null && !warehouseLocation.trim().isEmpty()) {
+            String targetSql = "SELECT id, reserved_quantity FROM inventory WHERE product_id = ? AND warehouse_location = ?";
+            try (PreparedStatement ps = connection.prepareStatement(targetSql)) {
+                ps.setInt(1, productId);
+                ps.setString(2, warehouseLocation);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        int id = rs.getInt("id");
+                        int reserved = rs.getInt("reserved_quantity");
+                        int toRelease = Math.min(reserved, remaining);
+                        if (toRelease > 0) {
+                            if (!adjustReservedQuantity(id, -toRelease)) {
+                                return false;
+                            }
+                            remaining -= toRelease;
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                lastError = "Lỗi khi giải phóng số lượng giữ chỗ: " + e.getMessage();
+                return false;
+            }
+        }
+        if (remaining <= 0) {
+            return true;
+        }
+        String sql = "SELECT id, reserved_quantity FROM inventory WHERE product_id = ? AND reserved_quantity > 0 ORDER BY reserved_quantity DESC";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next() && remaining > 0) {
+                    int id = rs.getInt("id");
+                    int reserved = rs.getInt("reserved_quantity");
+                    if (reserved <= 0) {
+                        continue;
+                    }
+                    int toRelease = Math.min(reserved, remaining);
+                    if (!adjustReservedQuantity(id, -toRelease)) {
+                        return false;
+                    }
+                    remaining -= toRelease;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi giải phóng số lượng giữ chỗ: " + e.getMessage();
+            return false;
+        }
+        return remaining <= 0;
+    }
+    
+    public boolean releaseReservedStock(int productId, int quantity) {
+        return releaseReservedStock(productId, null, quantity);
+    }
+    
+    private boolean adjustReservedQuantity(int inventoryId, int delta) {
+        String sql = "UPDATE inventory SET reserved_quantity = reserved_quantity + ?, last_updated = CURRENT_TIMESTAMP " +
+                     "WHERE id = ? AND reserved_quantity + ? >= 0";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, delta);
+            ps.setInt(2, inventoryId);
+            ps.setInt(3, delta);
+            int updated = ps.executeUpdate();
+            if (updated <= 0) {
+                lastError = "Không thể cập nhật số lượng giữ chỗ (delta=" + delta + ")";
+                return false;
+            }
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi điều chỉnh số lượng giữ chỗ: " + e.getMessage();
             return false;
         }
     }
@@ -665,22 +826,27 @@ public class InventoryDAO {
                     String key = pId + "_" + wh;
                     
                     // Lấy tồn kho trước giao dịch (bắt đầu từ 0)
-                    int stockBefore = currentStockMap.getOrDefault(key, 0);
+                    int stockBeforeRaw = currentStockMap.getOrDefault(key, 0);
+                    int stockBeforeDisplay = Math.max(stockBeforeRaw, 0);
                     
                     // Tính tồn kho sau giao dịch
                     String movementType = rs.getString("movement_type");
                     int quantity = rs.getInt("quantity");
-                    int stockAfter = stockBefore;
+                    int stockAfterRaw = stockBeforeRaw;
                     if ("in".equals(movementType)) {
-                        stockAfter = stockBefore + quantity;
+                        stockAfterRaw = stockBeforeRaw + quantity;
                     } else if ("out".equals(movementType)) {
-                        stockAfter = stockBefore - quantity;
+                        stockAfterRaw = stockBeforeRaw - quantity;
                     } else if ("adjustment".equals(movementType)) {
-                        stockAfter = stockBefore + quantity; // adjustment có thể âm hoặc dương
+                        stockAfterRaw = stockBeforeRaw + quantity; // adjustment có thể âm hoặc dương
                     }
+                    if (stockAfterRaw < 0) {
+                        stockAfterRaw = 0;
+                    }
+                    int stockAfterDisplay = Math.max(stockAfterRaw, 0);
                     
                     // Cập nhật tồn kho hiện tại
-                    currentStockMap.put(key, stockAfter);
+                    currentStockMap.put(key, stockAfterRaw);
                     
                     // Tạo map cho kết quả
                     Map<String, Object> item = new HashMap<>();
@@ -691,10 +857,28 @@ public class InventoryDAO {
                     item.put("warehouseLocation", wh);
                     item.put("movementType", movementType);
                     item.put("quantity", quantity);
-                    item.put("stockBefore", stockBefore);
-                    item.put("stockAfter", stockAfter);
+                    item.put("stockBefore", stockBeforeDisplay);
+                    item.put("stockAfter", stockAfterDisplay);
                     item.put("createdAt", rs.getTimestamp("created_at"));
                     item.put("createdByName", rs.getString("created_by_name"));
+                    
+                    // Snapshot tồn kho hiện tại (real-time)
+                    try {
+                        Inventory currentInv = getInventoryByProductAndWarehouse(pId, wh);
+                        if (currentInv != null) {
+                            item.put("currentStock", currentInv.getCurrentStock());
+                            item.put("reservedStock", currentInv.getReservedQuantity());
+                            item.put("availableStock", currentInv.getAvailableStock());
+                        } else {
+                            item.put("currentStock", 0);
+                            item.put("reservedStock", 0);
+                            item.put("availableStock", 0);
+                        }
+                    } catch (Exception ex) {
+                        item.put("currentStock", 0);
+                        item.put("reservedStock", 0);
+                        item.put("availableStock", 0);
+                    }
                     
                     allHistory.add(item);
                 }
@@ -874,6 +1058,8 @@ public class InventoryDAO {
         sql.append("p.unit_price, ");
         sql.append("p.image_url, ");
         sql.append("COALESCE(SUM(i.current_stock), 0) as total_stock, ");
+        sql.append("COALESCE(SUM(i.reserved_quantity), 0) as reserved_stock, ");
+        sql.append("COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) as available_stock, ");
         sql.append("MIN(i.min_stock) as min_stock, ");
         sql.append("MAX(i.max_stock) as max_stock ");
         sql.append("FROM products p ");
@@ -902,13 +1088,13 @@ public class InventoryDAO {
         if (stockStatus != null && !stockStatus.trim().isEmpty()) {
             switch (stockStatus) {
                 case "out":
-                    sql.append("HAVING COALESCE(total_stock, 0) <= 0 ");
+                    sql.append("HAVING COALESCE(available_stock, 0) <= 0 ");
                     break;
                 case "low":
-                    sql.append("HAVING COALESCE(total_stock, 0) > 0 AND COALESCE(total_stock, 0) <= COALESCE(min_stock, 0) ");
+                    sql.append("HAVING COALESCE(available_stock, 0) > 0 AND COALESCE(available_stock, 0) <= COALESCE(min_stock, 0) ");
                     break;
                 case "normal":
-                    sql.append("HAVING COALESCE(total_stock, 0) > COALESCE(min_stock, 0) ");
+                    sql.append("HAVING COALESCE(available_stock, 0) > COALESCE(min_stock, 0) ");
                     break;
             }
         }
@@ -937,6 +1123,8 @@ public class InventoryDAO {
                     product.put("unitPrice", rs.getDouble("unit_price"));
                     product.put("imageUrl", rs.getString("image_url"));
                     product.put("totalStock", rs.getInt("total_stock"));
+                    product.put("reservedStock", rs.getInt("reserved_stock"));
+                    product.put("availableStock", rs.getInt("available_stock"));
                     product.put("minStock", rs.getInt("min_stock"));
                     int maxStock = rs.getInt("max_stock");
                     product.put("maxStock", rs.wasNull() ? null : maxStock);
@@ -985,13 +1173,14 @@ public class InventoryDAO {
         if (stockStatus != null && !stockStatus.trim().isEmpty()) {
             switch (stockStatus) {
                 case "out":
-                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) <= 0 ");
+                    sql.append("HAVING COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) <= 0 ");
                     break;
                 case "low":
-                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > 0 AND COALESCE(SUM(i.current_stock), 0) <= COALESCE(MIN(i.min_stock), 0) ");
+                    sql.append("HAVING COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) > 0 ");
+                    sql.append("AND COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) <= COALESCE(MIN(i.min_stock), 0) ");
                     break;
                 case "normal":
-                    sql.append("HAVING COALESCE(SUM(i.current_stock), 0) > COALESCE(MIN(i.min_stock), 0) ");
+                    sql.append("HAVING COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) > COALESCE(MIN(i.min_stock), 0) ");
                     break;
             }
         }
@@ -1049,6 +1238,11 @@ public class InventoryDAO {
         inventory.setMinStock(rs.getInt("min_stock"));
         inventory.setMaxStock(rs.getInt("max_stock"));
         inventory.setLastUpdated(rs.getTimestamp("last_updated"));
+        try {
+            inventory.setReservedQuantity(rs.getInt("reserved_quantity"));
+        } catch (SQLException ignore) {
+            inventory.setReservedQuantity(0);
+        }
         
         // JOIN fields
         inventory.setProductCode(rs.getString("product_code"));

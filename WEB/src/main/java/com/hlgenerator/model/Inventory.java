@@ -14,6 +14,7 @@ public class Inventory {
     private int minStock;
     private int maxStock;
     private Timestamp lastUpdated;
+    private int reservedQuantity;
     
     // Thông tin bổ sung từ JOIN
     private String productCode;
@@ -84,6 +85,14 @@ public class Inventory {
         this.maxStock = maxStock;
     }
     
+    public int getReservedQuantity() {
+        return reservedQuantity;
+    }
+    
+    public void setReservedQuantity(int reservedQuantity) {
+        this.reservedQuantity = reservedQuantity;
+    }
+    
     public Timestamp getLastUpdated() {
         return lastUpdated;
     }
@@ -141,18 +150,24 @@ public class Inventory {
         this.imageUrl = imageUrl;
     }
     
+    public int getAvailableStock() {
+        int available = currentStock - reservedQuantity;
+        return available < 0 ? 0 : available;
+    }
+    
     /**
      * Kiểm tra xem tồn kho có đang ở mức thấp không
      */
     public boolean isLowStock() {
-        return currentStock > 0 && currentStock <= minStock;
+        int available = getAvailableStock();
+        return available > 0 && available <= minStock;
     }
     
     /**
      * Kiểm tra xem sản phẩm có hết hàng không
      */
     public boolean isOutOfStock() {
-        return currentStock <= 0;
+        return getAvailableStock() <= 0;
     }
     
     /**

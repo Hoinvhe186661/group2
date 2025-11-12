@@ -116,16 +116,10 @@
                   <!-- TAB 1: LỊCH SỬ NHẬP KHO -->
                   <div class="tab-pane active" id="tab-in">
                     <div class="row filter-bar" style="margin-bottom:10px;">
-                      <div class="col-sm-3"><input id="inSearchKeyword" class="form-control"
+                      <div class="col-sm-4"><input id="inSearchKeyword" class="form-control"
                           placeholder="Tìm theo tên/mã sản phẩm" /></div>
-                      <div class="col-sm-3"><select id="inFilterWarehouse" class="form-control">
-                          <option value="">Tất cả kho</option>
-                          <option value="Main Warehouse">Kho Chính</option>
-                          <option value="Warehouse A">Kho A</option>
-                          <option value="Warehouse B">Kho B</option>
-                        </select></div>
-                      <div class="col-sm-2"><input type="date" id="inDateFrom" class="form-control" placeholder="Từ ngày" /></div>
-                      <div class="col-sm-2"><input type="date" id="inDateTo" class="form-control" placeholder="Đến ngày" /></div>
+                      <div class="col-sm-3"><input type="date" id="inDateFrom" class="form-control" placeholder="Từ ngày" /></div>
+                      <div class="col-sm-3"><input type="date" id="inDateTo" class="form-control" placeholder="Đến ngày" /></div>
                       <div class="col-sm-1">
                         <div class="form-group">
                           <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
@@ -174,16 +168,10 @@
                   <!-- TAB 2: LỊCH SỬ XUẤT KHO -->
                   <div class="tab-pane" id="tab-out">
                     <div class="row filter-bar" style="margin-bottom:10px;">
-                      <div class="col-sm-3"><input id="outSearchKeyword" class="form-control"
+                      <div class="col-sm-4"><input id="outSearchKeyword" class="form-control"
                           placeholder="Tìm theo tên/mã sản phẩm" /></div>
-                      <div class="col-sm-3"><select id="outFilterWarehouse" class="form-control">
-                          <option value="">Tất cả kho</option>
-                          <option value="Main Warehouse">Kho Chính</option>
-                          <option value="Warehouse A">Kho A</option>
-                          <option value="Warehouse B">Kho B</option>
-                        </select></div>
-                      <div class="col-sm-2"><input type="date" id="outDateFrom" class="form-control" placeholder="Từ ngày" /></div>
-                      <div class="col-sm-2"><input type="date" id="outDateTo" class="form-control" placeholder="Đến ngày" /></div>
+                      <div class="col-sm-3"><input type="date" id="outDateFrom" class="form-control" placeholder="Từ ngày" /></div>
+                      <div class="col-sm-3"><input type="date" id="outDateTo" class="form-control" placeholder="Đến ngày" /></div>
                       <div class="col-sm-1">
                         <div class="form-group">
                           <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
@@ -231,16 +219,10 @@
                   <!-- TAB 3: LỊCH SỬ TỒN KHO -->
                   <div class="tab-pane" id="tab-balance">
                       <div class="row filter-bar" style="margin-bottom:10px;">
-                      <div class="col-sm-3"><input id="balanceSearchKeyword" class="form-control"
+                      <div class="col-sm-4"><input id="balanceSearchKeyword" class="form-control"
                           placeholder="Tìm theo tên/mã sản phẩm" /></div>
-                      <div class="col-sm-3"><select id="balanceFilterWarehouse" class="form-control">
-                          <option value="">Tất cả kho</option>
-                          <option value="Main Warehouse">Kho Chính</option>
-                          <option value="Warehouse A">Kho A</option>
-                          <option value="Warehouse B">Kho B</option>
-                          </select></div>
-                      <div class="col-sm-2"><input type="date" id="balanceDateFrom" class="form-control" placeholder="Từ ngày" /></div>
-                      <div class="col-sm-2"><input type="date" id="balanceDateTo" class="form-control" placeholder="Đến ngày" /></div>
+                      <div class="col-sm-3"><input type="date" id="balanceDateFrom" class="form-control" placeholder="Từ ngày" /></div>
+                      <div class="col-sm-3"><input type="date" id="balanceDateTo" class="form-control" placeholder="Đến ngày" /></div>
                       <div class="col-sm-1">
                         <div class="form-group">
                           <label style="color: transparent; margin-bottom: 5px;">Lọc</label>
@@ -264,16 +246,15 @@
                             <tr>
                               <th>Thời gian</th>
                               <th>Sản phẩm</th>
-                            <th>Tồn kho trước</th>
-                            <th>Thay đổi</th>
-                            <th>Tồn kho sau</th>
-                            <th>Kho</th>
-                            <th>Loại giao dịch</th>
-                            <th>Người thực hiện</th>
+                              <th>Tồn kho</th>
+                              <th>Tồn thực tế (hiện tại)</th>
+                              <th>Đã giữ chỗ (hiện tại)</th>
+                              <th>Khả dụng (hiện tại)</th>
+                              <th>Kho</th>
                             </tr>
                           </thead>
                         <tbody id="balanceHistoryBody">
-                          <tr><td colspan="8" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                          <tr><td colspan="6" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
                           </tbody>
                         </table>
                       </div>
@@ -305,12 +286,10 @@
         var urlParams = new URLSearchParams(window.location.search);
         var productIdParam = urlParams.get('productId');
         var keyword = ($('#inSearchKeyword').val() || '').trim();
-        var wh = $('#inFilterWarehouse').val();
         var dateFrom = $('#inDateFrom').val();
         var dateTo = $('#inDateTo').val();
         if (productIdParam) params.productId = productIdParam;
         if (keyword) params.q = keyword;
-        if (wh) params.warehouse = wh;
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
         $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
@@ -382,7 +361,6 @@
 
       function resetInFilters() {
         $('#inSearchKeyword').val('');
-        $('#inFilterWarehouse').val('');
         $('#inDateFrom').val('');
         $('#inDateTo').val('');
         inPage = 1;
@@ -391,7 +369,7 @@
 
       // ================== TAB XUẤT KHO ==================
       var outPage = 1;
-      var outPageSize = 10;
+      var outPageSize = 8;
 
       function reloadOutHistory(resetPage) {
         if (resetPage) outPage = 1;
@@ -399,12 +377,10 @@
         var urlParams = new URLSearchParams(window.location.search);
         var productIdParam = urlParams.get('productId');
         var keyword = ($('#outSearchKeyword').val() || '').trim();
-        var wh = $('#outFilterWarehouse').val();
         var dateFrom = $('#outDateFrom').val();
         var dateTo = $('#outDateTo').val();
         if (productIdParam) params.productId = productIdParam;
         if (keyword) params.q = keyword;
-        if (wh) params.warehouse = wh;
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
         $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
@@ -474,7 +450,6 @@
 
       function resetOutFilters() {
         $('#outSearchKeyword').val('');
-        $('#outFilterWarehouse').val('');
         $('#outDateFrom').val('');
         $('#outDateTo').val('');
         outPage = 1;
@@ -491,22 +466,20 @@
         var urlParams = new URLSearchParams(window.location.search);
         var productIdParam = urlParams.get('productId');
         var keyword = ($('#balanceSearchKeyword').val() || '').trim();
-        var wh = $('#balanceFilterWarehouse').val();
         var dateFrom = $('#balanceDateFrom').val();
         var dateTo = $('#balanceDateTo').val();
         if (productIdParam) params.productId = productIdParam;
         if (keyword) params.q = keyword;
-        if (wh) params.warehouse = wh;
         if (dateFrom) params.dateFrom = dateFrom;
         if (dateTo) params.dateTo = dateTo;
         $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
           if (!res.success) {
-            $('#balanceHistoryBody').html('<tr><td colspan="8" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
+            $('#balanceHistoryBody').html('<tr><td colspan="6" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
             return;
           }
           renderBalanceHistory(res);
         }).fail(function (xhr) {
-          $('#balanceHistoryBody').html('<tr><td colspan="8" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
+          $('#balanceHistoryBody').html('<tr><td colspan="6" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
         });
       }
 
@@ -515,30 +488,26 @@
         var body = $('#balanceHistoryBody');
         body.empty();
         if (!res.data || res.data.length === 0) {
-          body.html('<tr><td colspan="8" class="text-center muted">Không có dữ liệu</td></tr>');
+          body.html('<tr><td colspan="6" class="text-center muted">Không có dữ liệu</td></tr>');
           updateBalancePagination(res.totalCount || 0, res.totalPages || 1);
           $('#balanceHistoryInfo').text('0 bản ghi');
           return;
         }
         res.data.forEach(function(h) {
           var when = new Date(h.createdAt).toLocaleString('vi-VN');
-          var stockBefore = h.stockBefore != null ? h.stockBefore : 0;
-          var stockAfter = h.stockAfter != null ? h.stockAfter : 0;
-          var change = h.quantity || 0;
-          var changeClass = h.movementType === 'in' ? 'qty-pos' : (h.movementType === 'out' ? 'qty-neg' : '');
-          var changeSign = h.movementType === 'in' ? '+' : (h.movementType === 'out' ? '-' : '');
-          var typeText = h.movementType === 'in' ? '<span class="badge badge-in">Nhập kho</span>' : 
-                        (h.movementType === 'out' ? '<span class="badge badge-out">Xuất kho</span>' : 
-                        '<span class="badge badge-adj">Điều chỉnh</span>');
+          var stockOriginal = h.stockBefore != null ? h.stockBefore : 0;
+          var stockBefore = Math.max(stockOriginal, 0);
+          var currentStockNow = h.currentStock != null ? h.currentStock : 0;
+          var reservedStockNow = h.reservedStock != null ? h.reservedStock : 0;
+          var availableStockNow = h.availableStock != null ? h.availableStock : Math.max(currentStockNow - reservedStockNow, 0);
           var row = '<tr>' +
             '<td>' + when + '</td>' +
             '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
             '<td>' + stockBefore + '</td>' +
-            '<td class="' + changeClass + '">' + changeSign + change + '</td>' +
-            '<td><strong>' + stockAfter + '</strong></td>' +
+            '<td>' + currentStockNow + '</td>' +
+            '<td>' + reservedStockNow + '</td>' +
+            '<td>' + availableStockNow + '</td>' +
             '<td>' + escapeHtml(h.warehouseLocation || '--') + '</td>' +
-            '<td>' + typeText + '</td>' +
-            '<td>' + escapeHtml(h.createdByName || '--') + '</td>' +
             '</tr>';
           body.append(row);
         });
@@ -572,7 +541,6 @@
 
       function resetBalanceFilters() {
         $('#balanceSearchKeyword').val('');
-        $('#balanceFilterWarehouse').val('');
         $('#balanceDateFrom').val('');
         $('#balanceDateTo').val('');
         balancePage = 1;
