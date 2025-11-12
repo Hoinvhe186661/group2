@@ -2,22 +2,21 @@
 <%@ page import="com.hlgenerator.dao.SettingsDAO" %>
 <%@ page import="java.util.Map" %>
 <%
-    if (pageContext.getAttribute("siteName") == null) {
-        SettingsDAO settingsDAO = new SettingsDAO();
-        Map<String, String> settings = settingsDAO.getAllSettings();
+    // Luôn load settings mới nhất từ database để đảm bảo hiển thị đúng giá trị đã cập nhật
+    SettingsDAO settingsDAO = new SettingsDAO();
+    Map<String, String> settings = settingsDAO.getAllSettings();
 
-        String siteName = settings.get("site_name") != null ? settings.get("site_name") : "HOÀ LẠC ELECTRIC";
-        String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
-        String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
-        String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
-        String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
+    String siteName = settings.get("site_name") != null ? settings.get("site_name") : "HOÀ LẠC ELECTRIC";
+    String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
+    String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
+    String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
+    String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
 
-        pageContext.setAttribute("siteName", siteName);
-        pageContext.setAttribute("siteDescription", siteDescription);
-        pageContext.setAttribute("siteEmail", siteEmail);
-        pageContext.setAttribute("sitePhone", sitePhone);
-        pageContext.setAttribute("siteAddress", siteAddress);
-    }
+    pageContext.setAttribute("siteName", siteName);
+    pageContext.setAttribute("siteDescription", siteDescription);
+    pageContext.setAttribute("siteEmail", siteEmail);
+    pageContext.setAttribute("sitePhone", sitePhone);
+    pageContext.setAttribute("siteAddress", siteAddress);
 
     String pageTitle = (String) pageContext.getAttribute("siteName") + " - " + (String) pageContext.getAttribute("siteDescription");
 %>

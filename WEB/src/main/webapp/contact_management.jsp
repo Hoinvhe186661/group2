@@ -187,14 +187,30 @@
                                     <table id="messagesTable" class="table table-striped table-bordered table-hover">
                                         <thead>
                                             <tr>
-                                                <th>ID</th>
-                                                <th>Họ tên</th>
-                                                <th>Email</th>
-                                                <th>Số điện thoại</th>
-                                                <th>Tin nhắn</th>
-                                                <th>Trạng thái</th>
-                                                <th>Ngày gửi</th>
-                                                <th>Ngày phản hồi</th>
+                                                <th class="sortable" data-sort="id" style="cursor: pointer;">
+                                                    ID <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="full_name" style="cursor: pointer;">
+                                                    Họ tên <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="email" style="cursor: pointer;">
+                                                    Email <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="phone" style="cursor: pointer;">
+                                                    Số điện thoại <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="message" style="cursor: pointer;">
+                                                    Tin nhắn <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="status" style="cursor: pointer;">
+                                                    Trạng thái <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="created_at" style="cursor: pointer;">
+                                                    Ngày gửi <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="replied_at" style="cursor: pointer;">
+                                                    Ngày phản hồi <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
                                                 <th>Thao tác</th>
                                             </tr>
                                         </thead>
@@ -447,10 +463,35 @@
     <script>
         var currentMessageId = null;
         var shouldReloadAfterModalClose = false;
+        var currentSortColumn = null;
+        var currentSortOrder = 'asc';
         
         // Đảm bảo jQuery đã sẵn sàng
         $(document).ready(function() {
             console.log('Contact management script loaded');
+            
+            // Xử lý sắp xếp tĩnh
+            $('.sortable').on('click', function() {
+                var column = $(this).data('sort');
+                var $icon = $(this).find('.sort-icon');
+                
+                if (currentSortColumn === column) {
+                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortColumn = column;
+                    currentSortOrder = 'asc';
+                }
+                
+                $('.sortable .sort-icon').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort').css('color', '#ccc');
+                
+                if (currentSortOrder === 'asc') {
+                    $icon.removeClass('fa-sort fa-sort-desc').addClass('fa-sort-asc').css('color', '#3498db');
+                } else {
+                    $icon.removeClass('fa-sort fa-sort-asc').addClass('fa-sort-desc').css('color', '#3498db');
+                }
+                
+                sortMessagesTable(column, currentSortOrder);
+            });
             
             // Xử lý click button xem chi tiết
             $(document).on('click', '.view-message-btn', function(e) {
@@ -986,6 +1027,52 @@
             $('#markContactedModal').modal('show');
         }
         
+        // Sắp xếp bảng tin nhắn
+        function sortMessagesTable(column, order) {
+            var columnMap = { 'id': 0, 'full_name': 1, 'email': 2, 'phone': 3, 'message': 4, 'status': 5, 'created_at': 6, 'replied_at': 7 };
+            var colIdx = columnMap[column];
+            if (colIdx === undefined) return;
+            
+            var $rows = $('#messagesTable tbody tr').toArray();
+            $rows.sort(function(a, b) {
+                var aVal = $(a).find('td').eq(colIdx).text().trim();
+                var bVal = $(b).find('td').eq(colIdx).text().trim();
+                
+                if (column === 'id') {
+                    return order === 'asc' ? (parseInt(aVal) || 0) - (parseInt(bVal) || 0) : (parseInt(bVal) || 0) - (parseInt(aVal) || 0);
+                }
+                if (column === 'phone') {
+                    var aNum = aVal.replace(/\D/g, ''), bNum = bVal.replace(/\D/g, '');
+                    if (aNum && bNum) return order === 'asc' ? aNum.localeCompare(bNum) : bNum.localeCompare(aNum);
+                }
+                if (column === 'created_at' || column === 'replied_at') {
+                    // So sánh ngày tháng (format: dd/MM/yyyy HH:mm)
+                    var aDate = parseDate(aVal);
+                    var bDate = parseDate(bVal);
+                    if (aDate && bDate) {
+                        return order === 'asc' ? aDate - bDate : bDate - aDate;
+                    }
+                }
+                var cmp = aVal.localeCompare(bVal, 'vi', { sensitivity: 'base' });
+                return order === 'asc' ? cmp : -cmp;
+            });
+            $('#messagesTable tbody').empty().append($rows);
+        }
+        
+        // Parse date từ format dd/MM/yyyy HH:mm
+        function parseDate(dateStr) {
+            if (!dateStr || dateStr === '-') return null;
+            try {
+                var parts = dateStr.split(' ');
+                if (parts.length < 2) return null;
+                var datePart = parts[0].split('/');
+                var timePart = parts[1].split(':');
+                if (datePart.length !== 3 || timePart.length < 2) return null;
+                return new Date(datePart[2], datePart[1] - 1, datePart[0], timePart[0], timePart[1] || 0).getTime();
+            } catch (e) {
+                return null;
+            }
+        }
         
         // Hàm escape HTML
         function escapeHtml(text) {

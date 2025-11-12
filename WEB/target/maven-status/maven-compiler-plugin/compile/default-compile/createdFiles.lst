@@ -10,7 +10,9 @@ com\hlgenerator\servlet\UserManagementServlet.class
 com\hlgenerator\servlet\UserServlet.class
 com\hlgenerator\servlet\AuthorizationFilter.class
 com\hlgenerator\dao\UserDAO.class
+com\hlgenerator\dao\ContractDAO$ContractDeliveryStats.class
 com\hlgenerator\servlet\ContactServlet.class
+com\hlgenerator\util\AuthorizationUtil.class
 com\hlgenerator\servlet\SupportCustomerServlet.class
 com\hlgenerator\servlet\CustomerServlet.class
 com\hlgenerator\servlet\GuestProductServlet.class
@@ -68,6 +70,7 @@ com\hlgenerator\service\EmailService.class
 com\hlgenerator\dao\ContactDAO.class
 com\hlgenerator\servlet\AdminDashboardServlet.class
 com\hlgenerator\model\TaskAssignment.class
+com\hlgenerator\util\Permission.class
 com\hlgenerator\dao\RbacDAO.class
 com\hlgenerator\service\EmailService$3.class
 com\hlgenerator\servlet\TechnicalStaffManagementServlet.class

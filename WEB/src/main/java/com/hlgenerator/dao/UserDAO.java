@@ -539,6 +539,141 @@ public class UserDAO extends DBConnect {
         return users;
     }
 
+    /**
+     * Đếm tổng số người dùng với bộ lọc
+     */
+    public int countUsersFiltered(String role, String status, String search) {
+        if (!checkConnection()) {
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM users WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (role != null && !role.trim().isEmpty()) {
+            sql.append(" AND role = ?");
+            params.add(role.trim());
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            boolean wantActive = "active".equalsIgnoreCase(status.trim());
+            sql.append(" AND is_active = ?");
+            params.add(wantActive);
+        }
+
+        // Thêm điều kiện search
+        addSearchConditions(sql, params, search, "CAST(id AS CHAR)", "username", "email", "full_name", "phone");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error counting filtered users", e);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Lấy danh sách người dùng với phân trang và bộ lọc
+     */
+    public List<User> getUsersPageFiltered(int page, int pageSize, String role, String status, String search) {
+        List<User> users = new ArrayList<>();
+
+        if (!checkConnection()) {
+            return users;
+        }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        int offset = (page - 1) * pageSize;
+
+        StringBuilder sql = new StringBuilder("SELECT * FROM users WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (role != null && !role.trim().isEmpty()) {
+            sql.append(" AND role = ?");
+            params.add(role.trim());
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            boolean wantActive = "active".equalsIgnoreCase(status.trim());
+            sql.append(" AND is_active = ?");
+            params.add(wantActive);
+        }
+
+        // Thêm điều kiện search
+        addSearchConditions(sql, params, search, "CAST(id AS CHAR)", "username", "email", "full_name", "phone");
+
+        // Sắp xếp người dùng mới nhất lên đầu
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, pageSize);
+            ps.setInt(idx, offset);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    User user = new User(
+                        rs.getInt("id"),
+                        rs.getString("username"),
+                        rs.getString("email"),
+                        rs.getString("password_hash"),
+                        rs.getString("full_name"),
+                        rs.getString("phone"),
+                        rs.getString("role"),
+                        rs.getBoolean("is_active"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                    );
+                    int cid = rs.getInt("customer_id");
+                    if (!rs.wasNull()) {
+                        user.setCustomerId(cid);
+                    }
+                    users.add(user);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting filtered users page", e);
+        }
+
+        return users;
+    }
+
+    /**
+     * Helper method để thêm điều kiện tìm kiếm vào SQL query
+     */
+    private void addSearchConditions(StringBuilder sql, List<Object> params, String search, String... columns) {
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append(" AND (");
+            for (int i = 0; i < columns.length; i++) {
+                if (i > 0) sql.append(" OR ");
+                sql.append(columns[i]).append(" LIKE ?");
+                params.add("%" + search.trim() + "%");
+            }
+            // Thêm exact ID search nếu search là số
+            try {
+                int exactId = Integer.parseInt(search.trim());
+                sql.append(" OR id = ?");
+                params.add(exactId);
+            } catch (NumberFormatException ignore) {
+                // not numeric, ignore
+            }
+            sql.append(")");
+        }
+    }
+
     // Get users by role
     public List<User> getUsersByRole(String role) {
         List<User> users = new ArrayList<>();

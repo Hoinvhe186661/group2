@@ -2,13 +2,33 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ page import="com.hlgenerator.dao.SettingsDAO" %>
+<%@ page import="java.util.Map" %>
+<%
+    // Luôn load settings mới nhất từ database để đảm bảo hiển thị đúng giá trị đã cập nhật
+    SettingsDAO settingsDAO = new SettingsDAO();
+    Map<String, String> settings = settingsDAO.getAllSettings();
 
+    String siteName = settings.get("site_name") != null ? settings.get("site_name") : "HOÀ LẠC ELECTRIC";
+    String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
+    String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
+    String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
+    String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
+
+    pageContext.setAttribute("siteName", siteName);
+    pageContext.setAttribute("siteDescription", siteDescription);
+    pageContext.setAttribute("siteEmail", siteEmail);
+    pageContext.setAttribute("sitePhone", sitePhone);
+    pageContext.setAttribute("siteAddress", siteAddress);
+
+    String pageTitle = "Máy phát điện | " + (String) pageContext.getAttribute("siteName");
+%>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Máy phát điện | HOÀ LẠC ELECTRIC</title>
+    <title><%= pageTitle %></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -362,10 +382,6 @@
         .hidden-price-range {
             display: none;
         }
-        
-        .hidden-supplier {
-            display: none;
-        }
 
         .filter-actions {
             display: flex;
@@ -422,7 +438,6 @@
         var currentPage = 1;
         var currentSort = 'all';
         var currentPriceRange = null;
-        var currentSuppliers = [];
         var currentSearchTerm = '';
         var contextPath = '${pageContext.request.contextPath}';
         
@@ -597,8 +612,7 @@
                 page: currentPage,
                 sort: currentSort,
                 searchTerm: currentSearchTerm,
-                priceRange: currentPriceRange,
-                suppliers: currentSuppliers
+                priceRange: currentPriceRange
             });
 
             const params = new URLSearchParams();
@@ -624,11 +638,6 @@
                     params.append('priceMax', max);
                 }
             }
-            
-            // Gửi tất cả suppliers đã chọn, nếu có nhiều thì lấy tất cả
-            currentSuppliers.forEach(supplierId => {
-                params.append('supplierId', supplierId);
-            });
 
             // Đảm bảo contextPath có dấu / ở đầu
             let url = contextPath;
@@ -689,10 +698,6 @@
             const priceRadio = document.querySelector('input[name="priceRange"]:checked');
             currentPriceRange = priceRadio ? priceRadio.value : null;
 
-            // Get selected suppliers
-            currentSuppliers = Array.from(document.querySelectorAll('input[name="supplier"]:checked'))
-                .map(cb => cb.value);
-
             // Get search term
             const searchInput = document.getElementById('searchInput');
             currentSearchTerm = searchInput ? searchInput.value.trim() : '';
@@ -702,7 +707,6 @@
             
             console.log('Filters applied:', {
                 priceRange: currentPriceRange,
-                suppliers: currentSuppliers,
                 searchTerm: currentSearchTerm,
                 sort: currentSort
             });
@@ -726,13 +730,6 @@
                 radio.checked = false;
             });
             currentPriceRange = null;
-
-            // Reset tất cả checkboxes (suppliers)
-            const supplierCheckboxes = document.querySelectorAll('input[name="supplier"]');
-            supplierCheckboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            currentSuppliers = [];
 
             // Reset search input
             const searchInput = document.getElementById('searchInput');
@@ -796,14 +793,9 @@
             
             // Load products trực tiếp - không cần đợi function khác
             function loadProductsNow() {
-                // Lấy selected price range, suppliers và search term nếu có
+                // Lấy selected price range và search term nếu có
                 var priceRadio = document.querySelector('input[name="priceRange"]:checked');
                 var selectedPriceRange = priceRadio ? priceRadio.value : null;
-                
-                var selectedSuppliers = [];
-                document.querySelectorAll('input[name="supplier"]:checked').forEach(function(cb) {
-                    selectedSuppliers.push(cb.value);
-                });
                 
                 var searchInput = document.getElementById('searchInput');
                 var searchTerm = searchInput ? searchInput.value.trim() : '';
@@ -832,10 +824,6 @@
                         }
                     }
                 }
-                
-                selectedSuppliers.forEach(function(supplierId) {
-                    params.append('supplierId', supplierId);
-                });
                 
                 console.log('Loading products with sort:', currentSort);
                 
@@ -911,24 +899,6 @@
             }
         }
         
-        // Toggle suppliers visibility
-        function toggleSuppliers() {
-            const hidden = document.querySelectorAll('.hidden-supplier');
-            if (hidden.length === 0) {
-                console.log('No hidden suppliers found');
-                return;
-            }
-            
-            const isHidden = window.getComputedStyle(hidden[0]).display === 'none';
-            hidden.forEach(function(item) {
-                item.style.display = isHidden ? 'block' : 'none';
-            });
-            
-            const seeMoreLink = document.getElementById('seeMoreSupplier');
-            if (seeMoreLink) {
-                seeMoreLink.textContent = isHidden ? 'Thu gọn' : 'Xem thêm';
-            }
-        }
     </script>
 </head>
 <body>
@@ -970,29 +940,6 @@
                                 <label for="price6">Lớn hơn 35 triệu</label>
                             </div>
                             <a href="javascript:void(0);" class="see-more-link" id="seeMorePrice" onclick="togglePriceRanges()">Xem thêm</a>
-                        </div>
-
-                        <!-- Supplier Filter -->
-                        <div class="filter-section">
-                            <div class="filter-title">NHÀ CUNG CẤP</div>
-                            <div class="filter-section-content" id="supplierFilters" data-suppliers='<c:choose><c:when test="${not empty suppliers}"><c:forEach var="supplier" items="${suppliers}" varStatus="status">{&quot;id&quot;:${supplier.id},&quot;name&quot;:&quot;<c:out value="${fn:escapeXml(supplier.companyName)}" />&quot;}<c:if test="${!status.last}">,</c:if></c:forEach></c:when></c:choose>'>
-                                <c:choose>
-                                    <c:when test="${not empty suppliers}">
-                                        <c:forEach var="supplier" items="${suppliers}" varStatus="status">
-                                            <div class="filter-item <c:if test="${status.index >= 5}">hidden-supplier</c:if>">
-                                                <input type="checkbox" name="supplier" id="supplier${supplier.id}" value="${supplier.id}">
-                                                <label for="supplier${supplier.id}"><c:out value="${supplier.companyName}" /></label>
-                                            </div>
-                                        </c:forEach>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <div class="filter-item" style="color: #999; font-style: italic;">Chưa có nhà cung cấp nào</div>
-                                    </c:otherwise>
-                                </c:choose>
-                            </div>
-                            <c:if test="${fn:length(suppliers) > 5}">
-                                <a href="javascript:void(0);" class="see-more-link" id="seeMoreSupplier" onclick="toggleSuppliers()">Xem thêm</a>
-                            </c:if>
                         </div>
 
                         <!-- Filter Actions -->
@@ -1130,7 +1077,6 @@
                 currentSort = sortInput.value || 'all';
             }
             currentPriceRange = null;
-            currentSuppliers = [];
             
             // Get search term from input or hidden field
             const searchInput = document.getElementById('searchInput');
@@ -1147,71 +1093,6 @@
             console.log('Initialized. Current sort:', currentSort, 'Current page:', currentPage, 'Search term:', currentSearchTerm);
             console.log('Context path:', contextPath);
         });
-
-        // Load all suppliers for filter
-        function loadAllSuppliers() {
-            const supplierFilters = document.getElementById('supplierFilters');
-            if (!supplierFilters) return;
-            
-            // Kiểm tra xem đã có suppliers trong HTML chưa (từ server render)
-            const existingSuppliers = supplierFilters.querySelectorAll('.filter-item input[type="checkbox"]');
-            if (existingSuppliers.length > 0) {
-                // Đã có suppliers từ server, chỉ cần đảm bảo "Xem thêm" link hiển thị đúng
-                const hiddenSuppliers = supplierFilters.querySelectorAll('.hidden-supplier');
-                const seeMoreLink = document.getElementById('seeMoreSupplier');
-                if (seeMoreLink && hiddenSuppliers.length > 0) {
-                    seeMoreLink.style.display = 'block';
-                }
-                return; // Không cần làm gì thêm
-            }
-            
-            // Nếu không có suppliers trong HTML, thử load từ data attribute
-            const suppliersData = supplierFilters.getAttribute('data-suppliers');
-            if (!suppliersData || suppliersData.trim() === '') {
-                console.warn('No supplier data found');
-                return;
-            }
-            
-            try {
-                const suppliers = JSON.parse('[' + suppliersData + ']');
-                
-                if (!suppliers || suppliers.length === 0) {
-                    supplierFilters.innerHTML = '<div class="filter-item" style="color: #999; font-style: italic;">Chưa có nhà cung cấp nào</div>';
-                    return;
-                }
-                
-                // Clear existing content
-                supplierFilters.innerHTML = '';
-                
-                // Hiển thị tất cả nhà cung cấp, ẩn những cái sau 5
-                suppliers.forEach((supplier, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'filter-item';
-                    if (index >= 5) {
-                        div.classList.add('hidden-supplier');
-                    }
-                    div.innerHTML = `
-                        <input type="checkbox" name="supplier" id="supplier${supplier.id}" value="${supplier.id}">
-                        <label for="supplier${supplier.id}">${supplier.name || 'Nhà cung cấp ' + supplier.id}</label>
-                    `;
-                    supplierFilters.appendChild(div);
-                });
-                
-                // Update "Xem thêm" link visibility và onclick
-                const seeMoreLink = document.getElementById('seeMoreSupplier');
-                if (seeMoreLink) {
-                    seeMoreLink.style.display = suppliers.length > 5 ? 'block' : 'none';
-                    if (suppliers.length > 5) {
-                        seeMoreLink.setAttribute('onclick', 'toggleSuppliers()');
-                        seeMoreLink.href = 'javascript:void(0);';
-                    }
-                }
-            } catch (e) {
-                console.error('Error parsing supplier data:', e);
-                console.log('Supplier data:', suppliersData);
-                // Giữ nguyên HTML hiện tại nếu có lỗi parse
-            }
-        }
 
         // Setup event listeners (backup method)
         function setupSeeMoreLinks() {
@@ -1351,24 +1232,6 @@
             
             // Setup sort links FIRST - đảm bảo các link sort hoạt động
             setupSortLinks();
-            
-            // Kiểm tra và đảm bảo suppliers được hiển thị
-            const supplierFilters = document.getElementById('supplierFilters');
-            if (supplierFilters) {
-                const existingSuppliers = supplierFilters.querySelectorAll('.filter-item');
-                console.log('Existing suppliers count:', existingSuppliers.length);
-                if (existingSuppliers.length === 0) {
-                    // Nếu không có suppliers, thử load từ data attribute
-                    loadAllSuppliers();
-                } else {
-                    // Đã có suppliers từ server, chỉ cần update UI
-                    const hiddenSuppliers = supplierFilters.querySelectorAll('.hidden-supplier');
-                    const seeMoreLink = document.getElementById('seeMoreSupplier');
-                    if (seeMoreLink) {
-                        seeMoreLink.style.display = hiddenSuppliers.length > 0 ? 'block' : 'none';
-                    }
-                }
-            }
             
             // Setup event listeners cho các nút "Xem thêm"
             setupSeeMoreLinks();

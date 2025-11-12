@@ -448,4 +448,135 @@ public class CustomerDAO extends DBConnect {
 
         return result;
     }
+
+    /**
+     * Đếm tổng số khách hàng với bộ lọc
+     */
+    public int countCustomersFiltered(String customerType, String status, String search) {
+        if (!checkConnection()) {
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM customers WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (customerType != null && !customerType.trim().isEmpty()) {
+            sql.append(" AND customer_type = ?");
+            params.add(customerType.trim());
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status.trim());
+        }
+
+        // Thêm điều kiện search
+        addSearchConditions(sql, params, search, "CAST(id AS CHAR)", "customer_code", "company_name", "contact_person", "email", "phone", "address", "tax_code");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error counting filtered customers", e);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Lấy danh sách khách hàng với phân trang và bộ lọc
+     */
+    public List<Customer> getCustomersPageFiltered(int page, int pageSize, String customerType, String status, String search) {
+        List<Customer> customers = new ArrayList<>();
+
+        if (!checkConnection()) {
+            return customers;
+        }
+
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        int offset = (page - 1) * pageSize;
+
+        StringBuilder sql = new StringBuilder("SELECT * FROM customers WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (customerType != null && !customerType.trim().isEmpty()) {
+            sql.append(" AND customer_type = ?");
+            params.add(customerType.trim());
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status.trim());
+        }
+
+        // Thêm điều kiện search
+        addSearchConditions(sql, params, search, "CAST(id AS CHAR)", "customer_code", "company_name", "contact_person", "email", "phone", "address", "tax_code");
+
+        // Sắp xếp khách hàng mới nhất lên đầu
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int idx = 1;
+            for (Object p : params) {
+                ps.setObject(idx++, p);
+            }
+            ps.setInt(idx++, pageSize);
+            ps.setInt(idx, offset);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Customer customer = new Customer(
+                        rs.getInt("id"),
+                        rs.getString("customer_code"),
+                        rs.getString("company_name"),
+                        rs.getString("contact_person"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("address"),
+                        rs.getString("tax_code"),
+                        rs.getString("customer_type"),
+                        rs.getString("status"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                    );
+                    customers.add(customer);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting filtered customers page", e);
+        }
+
+        return customers;
+    }
+
+    /**
+     * Helper method để thêm điều kiện tìm kiếm vào SQL query
+     */
+    private void addSearchConditions(StringBuilder sql, List<Object> params, String search, String... columns) {
+        if (search != null && !search.trim().isEmpty()) {
+            sql.append(" AND (");
+            for (int i = 0; i < columns.length; i++) {
+                if (i > 0) sql.append(" OR ");
+                sql.append(columns[i]).append(" LIKE ?");
+                params.add("%" + search.trim() + "%");
+            }
+            // Thêm exact ID search nếu search là số
+            try {
+                int exactId = Integer.parseInt(search.trim());
+                sql.append(" OR id = ?");
+                params.add(exactId);
+            } catch (NumberFormatException ignore) {
+                // not numeric, ignore
+            }
+            sql.append(")");
+        }
+    }
 }

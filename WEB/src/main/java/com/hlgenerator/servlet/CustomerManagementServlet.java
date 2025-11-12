@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -159,26 +160,41 @@ public class CustomerManagementServlet extends HttpServlet {
         }
         
         try {
+            // Lấy filter parameters
+            // Với GET request, cần xử lý encoding đặc biệt
+            String pType = getParameterUTF8(request, "customerType");
+            String pStatus = getParameterUTF8(request, "status");
+            String search = getParameterUTF8(request, "q");
             
+            // Lấy tham số phân trang
+            String pageParam = request.getParameter("page");
+            String sizeParam = request.getParameter("size");
+            int currentPage = 1;
+            int pageSize = 10;
+            try {
+                if (pageParam != null) currentPage = Integer.parseInt(pageParam);
+            } catch (Exception ignored) {}
+            try {
+                if (sizeParam != null) pageSize = Integer.parseInt(sizeParam);
+            } catch (Exception ignored) {}
+            if (currentPage < 1) currentPage = 1;
+            if (pageSize < 1) pageSize = 10;
+            
+            // Đếm tổng số khách hàng với bộ lọc
+            int total = customerDAO.countCustomersFiltered(pType, pStatus, search);
+            int totalPages = (int) Math.ceil(total / (double) pageSize);
+            if (totalPages == 0) totalPages = 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            // Lấy danh sách khách hàng với phân trang và bộ lọc
+            List<Customer> filteredCustomers = customerDAO.getCustomersPageFiltered(
+                currentPage, pageSize, pType, pStatus, search
+            );
+            
+            System.out.println("CustomerManagementServlet: Loaded " + filteredCustomers.size() + " customers (page " + currentPage + " of " + totalPages + ", total: " + total + ")");
+            
+            // Lấy danh sách loại và trạng thái từ tất cả khách hàng (để hiển thị trong dropdown)
             List<Customer> allCustomers = customerDAO.getAllCustomers();
-            
-            // Đảm bảo allCustomers không null
-            if (allCustomers == null) {
-                allCustomers = new ArrayList<>();
-                System.err.println("Warning: getAllCustomers() returned null, using empty list");
-            }
-            
-            System.out.println("CustomerManagementServlet: Loaded " + allCustomers.size() + " customers");
-        
-            String pType = decodeParam(request.getParameter("customerType"));
-            String pStatus = decodeParam(request.getParameter("status"));
-            
-            
-            
-            List<Customer> filteredCustomers = filterCustomers(allCustomers,  pType, pStatus);
-            
-            System.out.println("CustomerManagementServlet: Filtered to " + filteredCustomers.size() + " customers");
-            
             Set<String> customerTypes = extractCustomerTypes(allCustomers);
             Set<String> statuses = extractStatuses(allCustomers);
             
@@ -189,8 +205,11 @@ public class CustomerManagementServlet extends HttpServlet {
             
             request.setAttribute("filterType", pType != null ? pType : "");
             request.setAttribute("filterStatus", pStatus != null ? pStatus : "");
-           
-            
+            request.setAttribute("search", search);
+            request.setAttribute("totalCustomers", total);
+            request.setAttribute("currentPage", currentPage);
+            request.setAttribute("pageSize", pageSize);
+            request.setAttribute("totalPages", totalPages);
             
             request.getRequestDispatcher("/customers.jsp").forward(request, response);
             
@@ -204,6 +223,11 @@ public class CustomerManagementServlet extends HttpServlet {
                 request.setAttribute("statuses", new TreeSet<String>());
                 request.setAttribute("filterType", "");
                 request.setAttribute("filterStatus", "");
+                request.setAttribute("search", "");
+                request.setAttribute("totalCustomers", 0);
+                request.setAttribute("currentPage", 1);
+                request.setAttribute("pageSize", 10);
+                request.setAttribute("totalPages", 1);
                 request.getRequestDispatcher("/customers.jsp").forward(request, response);
             } catch (Exception e2) {
                 throw new ServletException("Error processing customer management request", e);
@@ -211,44 +235,6 @@ public class CustomerManagementServlet extends HttpServlet {
         }
     }
     
-    
-    private List<Customer> filterCustomers(List<Customer> allCustomers, 
-                                          String type, String status) {
-        List<Customer> filtered = new ArrayList<>();
-        
-        if (allCustomers == null) {
-            System.err.println("filterCustomers: allCustomers is null");
-            return filtered;
-        }
-        
-        System.out.println("filterCustomers: Total customers: " + allCustomers.size() + ", Filter type: " + type + ", Filter status: " + status);
-        
-        for (Customer c : allCustomers) {
-            if (c == null) {
-                System.err.println("filterCustomers: Found null customer, skipping");
-                continue;
-            }
-            
-            // Debug log cho từng customer
-            System.out.println("Checking customer ID: " + c.getId() + ", Type: " + c.getCustomerType() + ", Status: " + c.getStatus());
-            
-            if (!equalsParam(type, c.getCustomerType())) {
-                System.out.println("  -> Filtered out by type");
-                continue;
-            }
-            
-            if (!equalsParam(status, c.getStatus())) {
-                System.out.println("  -> Filtered out by status");
-                continue;
-            }
-    
-            System.out.println("  -> Customer passed filter, adding to list");
-            filtered.add(c);
-        }
-        
-        System.out.println("filterCustomers: Result: " + filtered.size() + " customers");
-        return filtered;
-    }
     
     /**
      * Trích xuất danh sách loại khách hàng từ tất cả khách hàng
@@ -281,33 +267,72 @@ public class CustomerManagementServlet extends HttpServlet {
     }
     
     
-    private boolean equalsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) {
-            // Không có filter, chấp nhận tất cả
-            return true;
+    /**
+     * Lấy parameter từ GET request và decode đúng với UTF-8
+     * Xử lý trường hợp Tomcat chưa được cấu hình URIEncoding="UTF-8"
+     */
+    private String getParameterUTF8(HttpServletRequest request, String paramName) {
+        String value = request.getParameter(paramName);
+        if (value == null || value.trim().isEmpty()) {
+            return value;
         }
-        String val = actual == null ? "" : actual.trim();
-        boolean matches = param.trim().equalsIgnoreCase(val);
-        if (!matches) {
-            System.out.println("equalsParam: param='" + param + "' != actual='" + val + "'");
-        }
-        return matches;
-    }
-    
-    
-    private boolean containsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) return true;
-        String val = actual == null ? "" : actual.trim().toLowerCase();
-        return val.contains(param.trim().toLowerCase());
-    }
-    
-    
-    private String decodeParam(String s) {
-        if (s == null) return null;
+        
+        // Thử lấy từ raw query string để decode lại
         try {
-            return new String(s.getBytes("ISO-8859-1"), "UTF-8").trim();
-        } catch (UnsupportedEncodingException e) { 
-            return s.trim(); 
+            String queryString = request.getQueryString();
+            if (queryString != null && queryString.contains(paramName + "=")) {
+                // Parse query string thủ công
+                String[] pairs = queryString.split("&");
+                for (String pair : pairs) {
+                    int idx = pair.indexOf("=");
+                    if (idx > 0) {
+                        String key = URLDecoder.decode(pair.substring(0, idx), "UTF-8");
+                        if (key.equals(paramName)) {
+                            String rawValue = pair.substring(idx + 1);
+                            // Decode với UTF-8
+                            return URLDecoder.decode(rawValue, "UTF-8").trim();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Nếu có lỗi, fallback về cách cũ
+        }
+        
+        // Fallback: nếu parameter đã được decode sai (chứa "?" thay vì ký tự tiếng Việt)
+        // Thử decode lại từ ISO-8859-1 bytes sang UTF-8
+        if (value.contains("?") && !value.equals("?")) {
+            try {
+                byte[] bytes = value.getBytes("ISO-8859-1");
+                String decoded = new String(bytes, "UTF-8");
+                // Chỉ dùng nếu decoded không chứa replacement character
+                if (!decoded.contains("") && !decoded.contains("")) {
+                    return decoded.trim();
+                }
+            } catch (UnsupportedEncodingException e) {
+                // Ignore
+            }
+        }
+        
+        // Nếu không có vấn đề, trả về giá trị gốc
+        return value.trim();
+    }
+    
+    /**
+     * Decode parameter từ GET request (URL encoded) - DEPRECATED, dùng getParameterUTF8 thay thế
+     * @deprecated Sử dụng getParameterUTF8() thay thế
+     */
+    @Deprecated
+    private String decodeParam(String s) {
+        if (s == null || s.trim().isEmpty()) return s;
+        try {
+            return URLDecoder.decode(s, "UTF-8").trim();
+        } catch (Exception e) {
+            try {
+                return new String(s.getBytes("ISO-8859-1"), "UTF-8").trim();
+            } catch (UnsupportedEncodingException e2) {
+                return s.trim();
+            }
         }
     }
     

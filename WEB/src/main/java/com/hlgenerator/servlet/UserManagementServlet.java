@@ -10,8 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.net.URLDecoder;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -41,58 +40,36 @@ public class UserManagementServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        
-       
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html; charset=UTF-8");
         
-        
-        HttpSession session = request.getSession(false);
-        String username = (String) session.getAttribute("username");
-        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-        String userRole = (String) session.getAttribute("userRole");
-        
-        if (username == null || isLoggedIn == null || !isLoggedIn) {
-            response.sendRedirect(request.getContextPath() + "/login.jsp");
-            return;
-        }
-        
-        
-        if (!"admin".equals(userRole)) {
-            response.sendRedirect(request.getContextPath() + "/403.jsp");
-            return;
-        }
+        // Kiểm tra đăng nhập và quyền
+        if (!checkAuth(request, response)) return;
         
         try {
+            // Lấy filter parameters
+            String pRole = getParameterUTF8(request, "role");
+            String pStatus = getParameterUTF8(request, "status");
+            String search = getParameterUTF8(request, "q");
             
-            List<User> allUsers = userDAO.getAllUsers();
+            // Lấy tham số phân trang
+            int[] pagination = parsePagination(request);
+            int currentPage = pagination[0];
+            int pageSize = pagination[1];
             
+            // Đếm và lấy dữ liệu
+            int total = userDAO.countUsersFiltered(pRole, pStatus, search);
+            int totalPages = Math.max(1, (int) Math.ceil(total / (double) pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
             
-            String pUsername = decodeParam(request.getParameter("username"));
-            String pEmail = decodeParam(request.getParameter("email"));
-            String pFullName = decodeParam(request.getParameter("fullName"));
-            String pPhone = decodeParam(request.getParameter("phone"));
-            String pRole = decodeParam(request.getParameter("role"));
-            String pStatus = decodeParam(request.getParameter("status"));
+            List<User> filteredUsers = userDAO.getUsersPageFiltered(currentPage, pageSize, pRole, pStatus, search);
+            Set<String> roles = extractRoles(userDAO.getAllUsers());
             
-            List<User> filteredUsers = filterUsers(allUsers, pUsername, pEmail, pFullName, pPhone, pRole, pStatus);
-            
-            Set<String> roles = extractRoles(allUsers);
-            
-            
-            request.setAttribute("filteredUsers", filteredUsers);
-            request.setAttribute("roles", roles);
-            request.setAttribute("filterUsername", pUsername != null ? pUsername : "");
-            request.setAttribute("filterEmail", pEmail != null ? pEmail : "");
-            request.setAttribute("filterFullName", pFullName != null ? pFullName : "");
-            request.setAttribute("filterPhone", pPhone != null ? pPhone : "");
-            request.setAttribute("filterRole", pRole != null ? pRole : "");
-            request.setAttribute("filterStatus", pStatus != null ? pStatus : "");
-            
+            // Set attributes
+            setRequestAttributes(request, filteredUsers, roles, pRole, pStatus, search, total, currentPage, pageSize, totalPages);
             
             request.getRequestDispatcher("/users.jsp").forward(request, response);
-            
         } catch (Exception e) {
             System.err.println("Error in UserManagementServlet: " + e.getMessage());
             e.printStackTrace();
@@ -101,40 +78,77 @@ public class UserManagementServlet extends HttpServlet {
     }
     
     /**
-     * Lọc danh sách người dùng dựa trên các tiêu chí
+     * Kiểm tra đăng nhập và quyền admin
      */
-    private List<User> filterUsers(List<User> allUsers, String username, String email, 
-                                   String fullName, String phone, String role, String status) {
-        List<User> filtered = new ArrayList<>();
-        
-        for (User user : allUsers) {
-            
-            if (!containsParam(username, user.getUsername())) continue;
-            if (!containsParam(email, user.getEmail())) continue;
-            if (!containsParam(fullName, user.getFullName())) continue;
-            if (!containsParam(phone, user.getPhone())) continue;
-            
-           
-            if (!equalsParam(role, getUserRole(user))) continue;
-            
-            
-            if (status != null && !status.trim().isEmpty()) {
-                boolean wantActive = "active".equalsIgnoreCase(status);
-                if (user.isActive() != wantActive) continue;
-            }
-            
-            filtered.add(user);
+    private boolean checkAuth(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp");
+            return false;
         }
         
-        return filtered;
+        String username = (String) session.getAttribute("username");
+        Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
+        String userRole = (String) session.getAttribute("userRole");
+        
+        if (username == null || isLoggedIn == null || !isLoggedIn) {
+            response.sendRedirect(request.getContextPath() + "/login.jsp");
+            return false;
+        }
+        
+        if (!"admin".equals(userRole)) {
+            response.sendRedirect(request.getContextPath() + "/403.jsp");
+            return false;
+        }
+        
+        return true;
     }
     
-   
+    /**
+     * Parse tham số phân trang từ request
+     */
+    private int[] parsePagination(HttpServletRequest request) {
+        int currentPage = parseInt(request.getParameter("page"), 1);
+        int pageSize = parseInt(request.getParameter("size"), 10);
+        return new int[]{Math.max(1, currentPage), Math.max(1, pageSize)};
+    }
+    
+    /**
+     * Parse string sang int với giá trị mặc định
+     */
+    private int parseInt(String value, int defaultValue) {
+        if (value == null || value.trim().isEmpty()) return defaultValue;
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+    
+    /**
+     * Set tất cả request attributes
+     */
+    private void setRequestAttributes(HttpServletRequest request, List<User> users, Set<String> roles,
+                                     String pRole, String pStatus, String search, int total,
+                                     int currentPage, int pageSize, int totalPages) {
+        request.setAttribute("filteredUsers", users);
+        request.setAttribute("roles", roles);
+        request.setAttribute("filterRole", pRole != null ? pRole : "");
+        request.setAttribute("filterStatus", pStatus != null ? pStatus : "");
+        request.setAttribute("search", search);
+        request.setAttribute("totalUsers", total);
+        request.setAttribute("currentPage", currentPage);
+        request.setAttribute("pageSize", pageSize);
+        request.setAttribute("totalPages", totalPages);
+    }
+    /**
+     * Trích xuất danh sách vai trò từ danh sách người dùng
+     */
     private Set<String> extractRoles(List<User> users) {
         Set<String> roles = new TreeSet<>();
         for (User user : users) {
-            String role = getUserRole(user);
-            if (role != null && !role.isEmpty()) {
+            String role = user.getRole();
+            if (role != null && !role.trim().isEmpty()) {
                 roles.add(role);
             }
         }
@@ -142,38 +156,15 @@ public class UserManagementServlet extends HttpServlet {
     }
     
     /**
-     * So sánh chính xác (equals) giữa tham số filter và giá trị thực tế
+     * Lấy parameter từ request và decode UTF-8
      */
-    private boolean equalsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) return true;
-        String val = actual == null ? "" : actual.trim();
-        return param.trim().equalsIgnoreCase(val);
-    }
-    
-    
-    private boolean containsParam(String param, String actual) {
-        if (param == null || param.trim().isEmpty()) return true;
-        String val = actual == null ? "" : actual.trim().toLowerCase();
-        return val.contains(param.trim().toLowerCase());
-    }
-    
-   
-    private String decodeParam(String s) {
-        if (s == null) return null;
+    private String getParameterUTF8(HttpServletRequest request, String paramName) {
+        String value = request.getParameter(paramName);
+        if (value == null) return null;
         try {
-            return new String(s.getBytes("ISO-8859-1"), "UTF-8").trim();
-        } catch (UnsupportedEncodingException e) { 
-            return s.trim(); 
-        }
-    }
-    
-    
-    private String getUserRole(User user) {
-        try {
-            String role = user.getRole();
-            return role != null ? role : (user.getRoleDisplayName() != null ? user.getRoleDisplayName() : "");
+            return URLDecoder.decode(value, "UTF-8").trim();
         } catch (Exception e) {
-            return user.getRoleDisplayName() != null ? user.getRoleDisplayName() : "";
+            return value.trim();
         }
     }
     

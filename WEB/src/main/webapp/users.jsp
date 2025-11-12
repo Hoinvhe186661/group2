@@ -8,6 +8,12 @@
     Set<String> roles = (Set<String>) request.getAttribute("roles");
     String pRole = (String) request.getAttribute("filterRole");
     String pStatus = (String) request.getAttribute("filterStatus");
+    
+    // Lấy thông tin phân trang
+    int currentPage = (Integer) request.getAttribute("currentPage");
+    int pageSize = (Integer) request.getAttribute("pageSize");
+    int total = (Integer) request.getAttribute("totalUsers");
+    int totalPages = (Integer) request.getAttribute("totalPages");
 %>
 <!DOCTYPE html>
 <html>
@@ -29,6 +35,13 @@
     <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
     
     <style>
+        .filter-section {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
         :root {
             --btn-padding: 4px 12px;
             --btn-radius: 4px;
@@ -190,65 +203,102 @@
                             </header>
                             <div class="panel-body table-responsive">
                                 
-                                <form class="form-inline" method="get" action="users" accept-charset="UTF-8" style="margin-bottom: 10px;">
-                                    <div class="row" style="margin-bottom: 10px;">
-                                        
-                                        <div class="col-sm-2">
-                                            <label for="filterRole">Vai trò</label>
-                                            <select id="filterRole" name="role" class="form-control" style="width:100%">
-                                                <option value="">Tất cả</option>
-                                                <% 
-                                                if (roles != null) {
-                                                    for (String r : roles) { 
-                                                %>
-                                                <option value="<%= r %>" <%= (pRole != null && pRole.equalsIgnoreCase(r)) ? "selected" : "" %>>
-                                                    <%= RoleHelper.roleLabel(r) %>
-                                                </option>
-                                                <% 
-                                                    } 
-                                                }
-                                                %>
-                                            </select>
+                                <!-- Filter Section -->
+                                <div class="filter-section" style="background: #f9f9f9; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                                    <form method="GET" action="users" accept-charset="UTF-8">
+                                        <div class="row">
+                                            <div class="col-md-2">
+                                                <label>Vai trò:</label>
+                                                <select name="role" class="form-control">
+                                                    <option value="">Tất cả</option>
+                                                    <% 
+                                                    if (roles != null) {
+                                                        for (String r : roles) { 
+                                                    %>
+                                                    <option value="<%= r %>" <%= (pRole != null && pRole.equalsIgnoreCase(r)) ? "selected" : "" %>>
+                                                        <%= RoleHelper.roleLabel(r) %>
+                                                    </option>
+                                                    <% 
+                                                        } 
+                                                    }
+                                                    %>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label>Trạng thái:</label>
+                                                <select name="status" class="form-control">
+                                                    <option value="">Tất cả</option>
+                                                    <option value="active" <%= ("active".equalsIgnoreCase(pStatus)) ? "selected" : "" %>>Hoạt động</option>
+                                                    <option value="inactive" <%= ("inactive".equalsIgnoreCase(pStatus)) ? "selected" : "" %>>Tạm khóa</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label>Tìm kiếm:</label>
+                                                <input type="text" class="form-control" name="q" placeholder="ID, tên đăng nhập, email, họ tên, SĐT" value="<%= request.getAttribute("search") != null && !((String)request.getAttribute("search")).isEmpty() ? (String)request.getAttribute("search") : "" %>">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label>Hiển thị:</label>
+                                                <select name="size" class="form-control" onchange="this.form.submit()">
+                                                    <option value="5" <%= pageSize == 5 ? "selected" : "" %>>5</option>
+                                                    <option value="10" <%= pageSize == 10 ? "selected" : "" %>>10</option>
+                                                    <option value="25" <%= pageSize == 25 ? "selected" : "" %>>25</option>
+                                                    <option value="50" <%= pageSize == 50 ? "selected" : "" %>>50</option>
+                                                    <option value="100" <%= pageSize == 100 ? "selected" : "" %>>100</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="col-sm-2">
-                                            <label for="filterStatus">Trạng thái</label>
-                                            <select id="filterStatus" name="status" class="form-control" style="width:100%">
-                                                <option value="">Tất cả</option>
-                                                <option value="active" <%= ("active".equalsIgnoreCase(pStatus)) ? "selected" : "" %>>Hoạt động</option>
-                                                <option value="inactive" <%= ("inactive".equalsIgnoreCase(pStatus)) ? "selected" : "" %>>Tạm khóa</option>
-                                            </select>
+                                        <div class="row" style="margin-top: 10px;">
+                                            <div class="col-md-12">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fa fa-filter"></i> Lọc
+                                                </button>
+                                                <a href="users" class="btn btn-default">
+                                                    <i class="fa fa-refresh"></i> Xóa bộ lọc
+                                                </a>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="row" style="margin-bottom: 10px;">
-                                        <div class="col-sm-12">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <i class="fa fa-filter"></i> Lọc
-                                            </button>
-                                            <a href="users" class="btn btn-default btn-sm">
-                                                <i class="fa fa-times"></i> Xóa lọc
-                                            </a>
-                                            
+                                        <div class="row" style="margin-top: 5px;">
+                                            <div class="col-md-12 text-right">
+                                                <span class="text-muted">Tổng số: <strong>${totalUsers}</strong> người dùng</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </form>
+                                        <input type="hidden" name="page" value="1">
+                                    </form>
+                                </div>
                                 
-                                <table class="table table-hover" id="usersTable">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Tên đăng nhập</th>
-                                            <th>Email</th>
-                                            <th>Họ tên</th>
-                                            <th>Số điện thoại</th>
-                                            <th>Vai trò</th>
-                                            <th>Trạng thái</th>
-                                            <th>Thao tác</th>
-                                        </tr>
-                                    </thead>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-bordered table-hover" id="usersTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="sortable" data-sort="id" style="cursor: pointer;">
+                                                    ID <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="username" style="cursor: pointer;">
+                                                    Tên đăng nhập <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="email" style="cursor: pointer;">
+                                                    Email <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="full_name" style="cursor: pointer;">
+                                                    Họ tên <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="phone" style="cursor: pointer;">
+                                                    Số điện thoại <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="role" style="cursor: pointer;">
+                                                    Vai trò <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="status" style="cursor: pointer;">
+                                                    Trạng thái <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th>Thao tác</th>
+                                            </tr>
+                                        </thead>
                                     <tbody id="usersTableBody">
                                         <% 
-                                        if (filteredUsers != null) {
+                                        if (filteredUsers != null && !filteredUsers.isEmpty()) {
                                             for (User user : filteredUsers) { 
+                                                if (user == null) continue;
                                         %>
                                         <tr>
                                             <td><%= user.getId() %></td>
@@ -292,10 +342,73 @@
                                         </tr>
                                         <% 
                                             }
+                                        } else {
+                                        %>
+                                        <tr>
+                                            <td colspan="8" class="text-center">
+                                                <p class="text-muted">Không có người dùng nào.</p>
+                                            </td>
+                                        </tr>
+                                        <% 
                                         }
                                         %>
                                     </tbody>
                                 </table>
+                                </div>
+                                
+                                <!-- Phân trang -->
+                                <div class="row" style="margin-top: 10px;">
+                                    <div class="col-md-6">
+                                        <div class="text-muted" style="line-height: 34px;">
+                                            <%
+                                                int startIdx = total == 0 ? 0 : (currentPage - 1) * pageSize + 1;
+                                                int endIdx = total == 0 ? 0 : Math.min(currentPage * pageSize, total);
+                                            %>
+                                            Hiển thị <%= startIdx %> - <%= endIdx %> của <%= total %> người dùng
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav aria-label="Phân trang người dùng" class="pull-right">
+                                            <ul class="pagination pagination-sm" style="margin: 0;">
+                                                <%
+                                                    // Build query string
+                                                    java.util.List<String> params = new java.util.ArrayList<String>();
+                                                    String[] paramNames = {"role", "status", "q"};
+                                                    for (String name : paramNames) {
+                                                        String value = request.getParameter(name);
+                                                        if (value != null && !value.trim().isEmpty()) {
+                                                            params.add(name + "=" + java.net.URLEncoder.encode(value, "UTF-8"));
+                                                        }
+                                                    }
+                                                    params.add("size=" + pageSize);
+                                                    String baseUrl = "users" + (params.isEmpty() ? "" : ("?" + String.join("&", params)));
+                                                    
+                                                    int start = Math.max(1, currentPage - 2);
+                                                    int end = Math.min(totalPages, currentPage + 2);
+                                                %>
+                                                <li class="<%= currentPage == 1 ? "disabled" : "" %>">
+                                                    <a href="<%= baseUrl + "&page=" + Math.max(1, currentPage - 1) %>">&laquo;</a>
+                                                </li>
+                                                <% if (start > 1) { %>
+                                                    <li><a href="<%= baseUrl + "&page=1" %>">1</a></li>
+                                                    <%= start > 2 ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <% } %>
+                                                <% for (int i = start; i <= end; i++) { %>
+                                                    <li class="<%= i == currentPage ? "active" : "" %>">
+                                                        <a href="<%= baseUrl + "&page=" + i %>"><%= i %></a>
+                                                    </li>
+                                                <% } %>
+                                                <% if (end < totalPages) { %>
+                                                    <%= end < totalPages - 1 ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                    <li><a href="<%= baseUrl + "&page=" + totalPages %>"><%= totalPages %></a></li>
+                                                <% } %>
+                                                <li class="<%= currentPage == totalPages ? "disabled" : "" %>">
+                                                    <a href="<%= baseUrl + "&page=" + Math.min(totalPages, currentPage + 1) %>">&raquo;</a>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -464,37 +577,35 @@
     <script src="js/Director/app.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        var usersTable;
         var currentEditingUser = null;
         var currentPasswordUserId = null;
+        var currentSortColumn = null;
+        var currentSortOrder = 'asc';
 
         $(document).ready(function() {
-            // Initialize DataTable with pagination - sử dụng dữ liệu tĩnh từ JSP
-            usersTable = $('#usersTable').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
-                },
-                "processing": false,
-                "serverSide": false,
-                "paging": true,
-                "pageLength": 10,
-                "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tất cả"]],
-                "searching": true,
-                "ordering": true,
-                "info": true,
-                "autoWidth": false,
-                "responsive": true,
-                "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>' +
-                       '<"row"<"col-sm-12"tr>>' +
-                       '<"row"<"col-sm-5"i><"col-sm-7"p>>',
-                "order": [[0, "desc"]],
-                "columnDefs": [
-                    {
-                        "targets": [7], // Cột thao tác
-                        "orderable": false,
-                        "searchable": false
-                    }
-                ]
+            // Không còn sử dụng DataTables, phân trang được xử lý ở server-side
+            
+            // Xử lý sắp xếp tĩnh
+            $('.sortable').on('click', function() {
+                var column = $(this).data('sort');
+                var $icon = $(this).find('.sort-icon');
+                
+                if (currentSortColumn === column) {
+                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortColumn = column;
+                    currentSortOrder = 'asc';
+                }
+                
+                $('.sortable .sort-icon').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort').css('color', '#ccc');
+                
+                if (currentSortOrder === 'asc') {
+                    $icon.removeClass('fa-sort fa-sort-desc').addClass('fa-sort-asc').css('color', '#3498db');
+                } else {
+                    $icon.removeClass('fa-sort fa-sort-asc').addClass('fa-sort-desc').css('color', '#3498db');
+                }
+                
+                sortUsersTable(column, currentSortOrder);
             });
 
             // Toggle customer selector when role changes
@@ -593,11 +704,28 @@
             }
         }
 
-        // Refresh bảng dữ liệu
-        function refreshTable() {
-            if (usersTable) {
-                usersTable.draw();
-            }
+        // Sắp xếp bảng người dùng
+        function sortUsersTable(column, order) {
+            var columnMap = { 'id': 0, 'username': 1, 'email': 2, 'full_name': 3, 'phone': 4, 'role': 5, 'status': 6 };
+            var colIdx = columnMap[column];
+            if (colIdx === undefined) return;
+            
+            var $rows = $('#usersTable tbody tr').toArray();
+            $rows.sort(function(a, b) {
+                var aVal = $(a).find('td').eq(colIdx).text().trim();
+                var bVal = $(b).find('td').eq(colIdx).text().trim();
+                
+                if (column === 'id') {
+                    return order === 'asc' ? (parseInt(aVal) || 0) - (parseInt(bVal) || 0) : (parseInt(bVal) || 0) - (parseInt(aVal) || 0);
+                }
+                if (column === 'phone') {
+                    var aNum = aVal.replace(/\D/g, ''), bNum = bVal.replace(/\D/g, '');
+                    if (aNum && bNum) return order === 'asc' ? aNum.localeCompare(bNum) : bNum.localeCompare(aNum);
+                }
+                var cmp = aVal.localeCompare(bVal, 'vi', { sensitivity: 'base' });
+                return order === 'asc' ? cmp : -cmp;
+            });
+            $('#usersTable tbody').empty().append($rows);
         }
 
         // Lấy danh sách vai trò bị ẩn từ localStorage
@@ -678,25 +806,32 @@
             return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN');
         }
 
-        // Xem chi tiết người dùng
-        function viewUser(id) {
+        // Helper function cho AJAX calls
+        function callUserAPI(action, data, successCallback) {
             $.ajax({
-                url: 'api/users?action=get&id=' + id,
-                type: 'GET',
+                url: 'api/users' + (action === 'get' ? '?action=get&id=' + data.id : ''),
+                type: action === 'get' ? 'GET' : 'POST',
+                data: action !== 'get' ? data : null,
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        var user = response.data;
-                        populateUserDetail(user);
-                        $('#userDetailModal').modal('show');
+                        if (successCallback) successCallback(response.data);
                     } else {
-                        showAlert('Không thể tải thông tin người dùng: ' + response.message, 'danger');
+                        showAlert(response.message || 'Có lỗi xảy ra', 'danger');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('AJAX Error:', xhr.responseText);
                     showAlert('Lỗi kết nối đến server: ' + error, 'danger');
                 }
+            });
+        }
+
+        // Xem chi tiết người dùng
+        function viewUser(id) {
+            callUserAPI('get', {id: id}, function(user) {
+                populateUserDetail(user);
+                $('#userDetailModal').modal('show');
             });
         }
 
@@ -716,25 +851,11 @@
 
         // Chỉnh sửa người dùng
         function editUser(id) {
-            $.ajax({
-                url: 'api/users?action=get&id=' + id,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        var user = response.data;
-                        populateEditForm(user);
-                        currentEditingUser = user;
-                        $('#addUserModal').modal('show');
-                        $('#addUserModalLabel').text('Chỉnh sửa người dùng');
-                    } else {
-                        showAlert('Không thể tải thông tin người dùng: ' + response.message, 'danger');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText);
-                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                }
+            callUserAPI('get', {id: id}, function(user) {
+                populateEditForm(user);
+                currentEditingUser = user;
+                $('#addUserModal').modal('show');
+                $('#addUserModalLabel').text('Chỉnh sửa người dùng');
             });
         }
 
@@ -788,57 +909,26 @@
                 return;
             }
 
-            $.ajax({
-                url: 'api/users',
-                type: 'POST',
-                data: {
-                    action: 'changePassword',
-                    id: currentPasswordUserId,
-                    newPassword: newPassword
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        showAlert('Đã đổi mật khẩu thành công', 'success');
-                        logAction('Đổi mật khẩu cho người dùng #' + currentPasswordUserId, 'success');
-                        $('#changePasswordModal').modal('hide');
-                        document.getElementById('changePasswordForm').reset();
-                        currentPasswordUserId = null;
-                    } else {
-                        showAlert('Lỗi: ' + response.message, 'danger');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText);
-                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                }
+            callUserAPI('changePassword', {
+                action: 'changePassword',
+                id: currentPasswordUserId,
+                newPassword: newPassword
+            }, function() {
+                showAlert('Đã đổi mật khẩu thành công', 'success');
+                logAction('Đổi mật khẩu cho người dùng #' + currentPasswordUserId, 'success');
+                $('#changePasswordModal').modal('hide');
+                document.getElementById('changePasswordForm').reset();
+                currentPasswordUserId = null;
             });
         }
 
         // Xóa mềm người dùng (tạm khóa)
         function deleteUser(id) {
             if (confirm('Bạn có chắc chắn muốn tạm khóa người dùng này?\n\nLưu ý: Đây là xóa mềm, người dùng sẽ bị tạm khóa nhưng dữ liệu vẫn được giữ lại.')) {
-                $.ajax({
-                    url: 'api/users',
-                    type: 'POST',
-                    data: {
-                        action: 'delete',
-                        id: id
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            showAlert('Đã tạm khóa người dùng thành công', 'success');
-                        logAction('Tạm khóa người dùng #' + id, 'warning');
-                            location.reload(); // Reload trang để cập nhật dữ liệu
-                        } else {
-                            showAlert('Lỗi khi tạm khóa người dùng: ' + response.message, 'danger');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', xhr.responseText);
-                        showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                    }
+                callUserAPI('delete', {action: 'delete', id: id}, function() {
+                    showAlert('Đã tạm khóa người dùng thành công', 'success');
+                    logAction('Tạm khóa người dùng #' + id, 'warning');
+                    location.reload();
                 });
             }
         }
@@ -849,30 +939,12 @@
                        'Hành động này KHÔNG THỂ HOÀN TÁC!\n' +
                        'Tất cả dữ liệu liên quan đến người dùng này sẽ bị xóa vĩnh viễn.\n\n' +
                        'Nhập "XÓA" để xác nhận:')) {
-                
                 var confirmation = prompt('Nhập "XÓA" để xác nhận xóa vĩnh viễn:');
                 if (confirmation === 'XÓA') {
-                    $.ajax({
-                        url: 'api/users',
-                        type: 'POST',
-                        data: {
-                            action: 'hardDelete',
-                            id: id
-                        },
-                        dataType: 'json',
-                        success: function(response) {
-                            if (response.success) {
-                                showAlert('Đã xóa vĩnh viễn người dùng thành công', 'success');
+                    callUserAPI('hardDelete', {action: 'hardDelete', id: id}, function() {
+                        showAlert('Đã xóa vĩnh viễn người dùng thành công', 'success');
                         logAction('Xóa vĩnh viễn người dùng #' + id, 'danger');
-                                location.reload(); // Reload trang để cập nhật dữ liệu
-                            } else {
-                                showAlert('Lỗi khi xóa vĩnh viễn người dùng: ' + response.message, 'danger');
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            console.error('AJAX Error:', xhr.responseText);
-                            showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                        }
+                        location.reload();
                     });
                 } else {
                     showAlert('Hủy bỏ xóa vĩnh viễn', 'info');
@@ -880,58 +952,23 @@
             }
         }
 
-        // Tạm khóa người dùng
+        // Tạm khóa/Kích hoạt người dùng
         function deactivateUser(id) {
             if (confirm('Bạn có chắc chắn muốn tạm khóa người dùng này?')) {
-                $.ajax({
-                    url: 'api/users',
-                    type: 'POST',
-                    data: {
-                        action: 'deactivate',
-                        id: id
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            showAlert('Đã tạm khóa người dùng thành công', 'success');
-                        logAction('Tạm khóa người dùng #' + id, 'warning');
-                            location.reload(); // Reload trang để cập nhật dữ liệu
-                        } else {
-                            showAlert('Lỗi khi tạm khóa người dùng: ' + response.message, 'danger');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', xhr.responseText);
-                        showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                    }
+                callUserAPI('deactivate', {action: 'deactivate', id: id}, function() {
+                    showAlert('Đã tạm khóa người dùng thành công', 'success');
+                    logAction('Tạm khóa người dùng #' + id, 'warning');
+                    location.reload();
                 });
             }
         }
 
-        // Kích hoạt người dùng
         function activateUser(id) {
             if (confirm('Bạn có chắc chắn muốn kích hoạt người dùng này?')) {
-                $.ajax({
-                    url: 'api/users',
-                    type: 'POST',
-                    data: {
-                        action: 'activate',
-                        id: id
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success) {
-                            showAlert('Đã kích hoạt người dùng thành công', 'success');
-                        logAction('Kích hoạt người dùng #' + id, 'success');
-                            location.reload(); // Reload trang để cập nhật dữ liệu
-                        } else {
-                            showAlert('Lỗi khi kích hoạt người dùng: ' + response.message, 'danger');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', xhr.responseText);
-                        showAlert('Lỗi kết nối đến server: ' + error, 'danger');
-                    }
+                callUserAPI('activate', {action: 'activate', id: id}, function() {
+                    showAlert('Đã kích hoạt người dùng thành công', 'success');
+                    logAction('Kích hoạt người dùng #' + id, 'success');
+                    location.reload();
                 });
             }
         }
@@ -1013,33 +1050,19 @@
                 formData.id = currentEditingUser.id;
             }
 
-            $.ajax({
-                url: url,
-                type: 'POST',
-                data: formData,
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        if (!currentEditingUser) {
-                            showAlert('Tạo người dùng thành công! Tài khoản đã được kích hoạt và có thể đăng nhập ngay lập tức.', 'success');
-                            logAction('Tạo người dùng mới: ' + username, 'success');
-                        } else {
-                            showAlert(response.message, 'success');
-                            logAction('Cập nhật người dùng #' + currentEditingUser.id + ': ' + username, 'info');
-                        }
-                        $('#addUserModal').modal('hide');
-                        document.getElementById('addUserForm').reset();
-                        currentEditingUser = null;
-                        $('#addUserModalLabel').text('Thêm người dùng mới');
-                        location.reload(); // Reload trang để cập nhật dữ liệu
-                    } else {
-                        showAlert('Lỗi: ' + response.message, 'danger');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error:', xhr.responseText);
-                    showAlert('Lỗi kết nối đến server: ' + error, 'danger');
+            callUserAPI(action, formData, function() {
+                if (!currentEditingUser) {
+                    showAlert('Tạo người dùng thành công! Tài khoản đã được kích hoạt và có thể đăng nhập ngay lập tức.', 'success');
+                    logAction('Tạo người dùng mới: ' + username, 'success');
+                } else {
+                    showAlert('Cập nhật người dùng thành công', 'success');
+                    logAction('Cập nhật người dùng #' + currentEditingUser.id + ': ' + username, 'info');
                 }
+                $('#addUserModal').modal('hide');
+                document.getElementById('addUserForm').reset();
+                currentEditingUser = null;
+                $('#addUserModalLabel').text('Thêm người dùng mới');
+                location.reload();
             });
         }
 

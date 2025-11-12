@@ -3,28 +3,23 @@
 <%@ page import="com.hlgenerator.dao.SettingsDAO" %>
 <%@ page import="java.util.Map" %>
 <%
-    // Chỉ load settings nếu chưa được load (tránh duplicate khi include từ index.jsp)
-    if (pageContext.getAttribute("siteName") == null) {
-        // Load settings từ database - sử dụng block scope để tránh xung đột biến
-        {
-            SettingsDAO headerSettingsDAO = new SettingsDAO();
-            Map<String, String> headerSettings = headerSettingsDAO.getAllSettings();
-            
-            // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định
-            String headerSiteName = headerSettings.get("site_name") != null ? headerSettings.get("site_name") : "HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR";
-            String headerSiteDescription = headerSettings.get("site_description") != null ? headerSettings.get("site_description") : "MÁY PHÁT ĐIỆN CÔNG NGHIỆP";
-            String headerSiteEmail = headerSettings.get("site_email") != null ? headerSettings.get("site_email") : "Mayphatdienhoalac@gmail.com";
-            String headerSitePhone = headerSettings.get("site_phone") != null ? headerSettings.get("site_phone") : "0989.888.999";
-            String headerSiteAddress = headerSettings.get("site_address") != null ? headerSettings.get("site_address") : "";
-            
-            // Lưu vào pageContext để dùng lại
-            pageContext.setAttribute("siteName", headerSiteName);
-            pageContext.setAttribute("siteDescription", headerSiteDescription);
-            pageContext.setAttribute("siteEmail", headerSiteEmail);
-            pageContext.setAttribute("sitePhone", headerSitePhone);
-            pageContext.setAttribute("siteAddress", headerSiteAddress);
-        }
-    }
+    // Luôn load settings mới nhất từ database để đảm bảo hiển thị đúng giá trị đã cập nhật
+    SettingsDAO headerSettingsDAO = new SettingsDAO();
+    Map<String, String> headerSettings = headerSettingsDAO.getAllSettings();
+    
+    // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định
+    String headerSiteName = headerSettings.get("site_name") != null ? headerSettings.get("site_name") : "HOÀ LẠC ELECTRIC INDUSTRIAL GENERATOR";
+    String headerSiteDescription = headerSettings.get("site_description") != null ? headerSettings.get("site_description") : "MÁY PHÁT ĐIỆN CÔNG NGHIỆP";
+    String headerSiteEmail = headerSettings.get("site_email") != null ? headerSettings.get("site_email") : "Mayphatdienhoalac@gmail.com";
+    String headerSitePhone = headerSettings.get("site_phone") != null ? headerSettings.get("site_phone") : "0989.888.999";
+    String headerSiteAddress = headerSettings.get("site_address") != null ? headerSettings.get("site_address") : "";
+    
+    // Lưu vào pageContext để dùng lại trong cùng request (nhưng các trang khác sẽ load lại từ DB)
+    pageContext.setAttribute("siteName", headerSiteName);
+    pageContext.setAttribute("siteDescription", headerSiteDescription);
+    pageContext.setAttribute("siteEmail", headerSiteEmail);
+    pageContext.setAttribute("sitePhone", headerSitePhone);
+    pageContext.setAttribute("siteAddress", headerSiteAddress);
 %>
 <%-- Shared Header: Top bar + Logo/Search + Menu --%>
 <style>
@@ -190,7 +185,7 @@
             <li class="nav-item"><a class="nav-link" href="about.jsp" id="nav-about">GIỚI THIỆU</a></li>
             <li class="nav-item"><a class="nav-link" href="guest-products">MÁY PHÁT ĐIỆN</a></li>
           
-            <li class="nav-item"><a class="nav-link" href="#guide">HƯỚNG DẪN</a></li>
+            
            
             <li class="nav-item"><a class="nav-link" href="contact.jsp" id="nav-contact">LIÊN HỆ</a></li>
             <c:if test="${sessionScope.isLoggedIn eq true}">

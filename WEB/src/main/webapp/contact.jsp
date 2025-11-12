@@ -1,19 +1,25 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="com.hlgenerator.dao.SettingsDAO" %>
 <%@ page import="java.util.Map" %>
+<%@ page import="java.net.URLEncoder" %>
 <%
-    // Load settings từ database
+    // Luôn load settings mới nhất từ database để đảm bảo hiển thị đúng giá trị đã cập nhật
     SettingsDAO settingsDAO = new SettingsDAO();
     Map<String, String> settings = settingsDAO.getAllSettings();
     
-    // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định từ ảnh
     String siteName = settings.get("site_name") != null ? settings.get("site_name") : "Công ty CP Chế tạo máy Thăng Long";
     String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "mayphatdienthanglong@gmail.com";
     String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0979538979";
     String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "Đội 4, đường Đại Thanh, xã Đại Thanh, Thành phố Hà Nội";
     
-    // Địa chỉ cho Google Map (chi tiết hơn)
-    String mapAddress = "123 Đường Láng, Đống Đa, Hà Nội";
+    // Lưu vào pageContext để dùng lại
+    pageContext.setAttribute("siteName", siteName);
+    pageContext.setAttribute("siteEmail", siteEmail);
+    pageContext.setAttribute("sitePhone", sitePhone);
+    pageContext.setAttribute("siteAddress", siteAddress);
+    
+    // Địa chỉ cho Google Map - lấy từ settings để tự động cập nhật khi thay đổi
+    String mapAddress = siteAddress;
 %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -140,7 +146,7 @@
                 <div class="map-section">
                     <div class="map-container" id="map">
                         <iframe 
-                            src="https://www.google.com/maps?q=<%= java.net.URLEncoder.encode(mapAddress, "UTF-8") %>&output=embed&hl=vi"
+                            src="https://www.google.com/maps?q=<%= URLEncoder.encode(mapAddress, "UTF-8") %>&output=embed&hl=vi"
                             width="100%" 
                             height="100%" 
                             style="border:0; min-height: 600px;" 

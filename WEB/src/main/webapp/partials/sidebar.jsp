@@ -26,7 +26,7 @@
 			<% if ( __perms.contains("manage_users") ) { %>
 			<li>
 				<a href="users">
-					<i class="fa fa-user-secret"></i> <span>Quản lý người dùng</span>
+					<i class="fa fa-user"></i> <span>Quản lý người dùng</span>
 				</a>
 			</li>
 			<% } %>
@@ -55,7 +55,7 @@
 			<% if ( __perms.contains("manage_support_requests") ) { %>
 			<li>
 				<a href="support-management">
-					<i class="fa fa-headset"></i> <span>Quản lý yêu cầu hỗ trợ</span>
+					<i class="fa fa-question-circle"></i> <span>Quản lý yêu cầu hỗ trợ</span>
 				</a>
 			</li>
 			<% } %>
@@ -69,14 +69,14 @@
 			<% if ( __perms.contains("manage_contracts") ) { %>
 			<li>
 				<a href="contracts.jsp">
-					<i class="fa fa-file-contract"></i> <span>Quản lý hợp đồng</span>
+					<i class="fa fa-file-signature"></i> <span>Quản lý hợp đồng</span>
 				</a>
 			</li>
 			<% } %>
 			<% if ( __perms.contains("manage_contacts") ) { %>
 			<li>
 				<a href="contact-management">
-					<i class="fa fa-address-book"></i> <span>Quản lý liên hệ</span>
+					<i class="fa fa-phone"></i> <span>Quản lý liên hệ</span>
 				</a>
 			</li>
 			<% } %>

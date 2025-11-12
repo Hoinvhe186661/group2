@@ -235,11 +235,6 @@ public class ProductDAO {
         params.add(pageSize);
         params.add((page - 1) * pageSize);
 
-        // Debug log
-        System.out.println("=== FILTER PRODUCTS SQL DEBUG ===");
-        System.out.println("SQL Query: " + sql.toString());
-        System.out.println("Parameters: " + params);
-
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             // Set parameters với UTF-8 encoding
             for (int i = 0; i < params.size(); i++) {
@@ -470,11 +465,6 @@ public class ProductDAO {
             params.add(likeTerm); // product_name
             params.add(likeTerm); // product_code
         }
-
-        // Debug log
-        System.out.println("=== COUNT PRODUCTS SQL DEBUG ===");
-        System.out.println("SQL Query: " + sql.toString());
-        System.out.println("Parameters: " + params);
 
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             // Set parameters với UTF-8 encoding
@@ -796,6 +786,40 @@ public class ProductDAO {
         // Cuối cùng nếu vẫn trùng, tạo chuỗi ngẫu nhiên an toàn hơn
         String fallback = prefix + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         return fallback;
+    }
+    
+    /**
+     * Lấy danh sách sản phẩm chính (featured products) để hiển thị trên trang chủ
+     * @param limit Số lượng sản phẩm cần lấy (mặc định 3)
+     * @return Danh sách sản phẩm active, sắp xếp ngẫu nhiên
+     */
+    public List<Product> getFeaturedProducts(int limit) {
+        List<Product> products = new ArrayList<>();
+        if (connection == null) {
+            lastError = "Không thể kết nối đến cơ sở dữ liệu";
+            return products;
+        }
+
+        String sql = "SELECT p.*, s.company_name as supplier_name " +
+                    "FROM products p " +
+                    "LEFT JOIN suppliers s ON p.supplier_id = s.id " +
+                    "WHERE p.status = 'active' " +
+                    "ORDER BY RAND() " +
+                    "LIMIT ?";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Product product = createProductFromResultSet(rs);
+                    products.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            lastError = "Lỗi khi lấy danh sách sản phẩm chính: " + e.getMessage();
+        }
+        return products;
     }
     
     /**

@@ -1,27 +1,32 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.hlgenerator.dao.SettingsDAO" %>
+<%@ page import="com.hlgenerator.dao.ProductDAO" %>
+<%@ page import="com.hlgenerator.model.Product" %>
 <%@ page import="java.util.Map" %>
+<%@ page import="java.util.List" %>
 <%
-    // Chỉ load settings nếu chưa được load (tránh duplicate khi include header.jsp)
-    if (pageContext.getAttribute("siteName") == null) {
-        // Load settings từ database
-        SettingsDAO settingsDAO = new SettingsDAO();
-        Map<String, String> settings = settingsDAO.getAllSettings();
+    // Luôn load settings mới nhất từ database để đảm bảo hiển thị đúng giá trị đã cập nhật
+    SettingsDAO settingsDAO = new SettingsDAO();
+    Map<String, String> settings = settingsDAO.getAllSettings();
 
-        // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định
-        String siteName = settings.get("site_name") != null ? settings.get("site_name") : "CÔNG TY CP CHẾ TẠO MÁY HOÀ LẠC";
-        String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
-        String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
-        String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
-        String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
+    // Lấy các giá trị settings, nếu không có thì dùng giá trị mặc định
+    String siteName = settings.get("site_name") != null ? settings.get("site_name") : "CÔNG TY CP CHẾ TẠO MÁY HOÀ LẠC";
+    String siteDescription = settings.get("site_description") != null ? settings.get("site_description") : "Chuyên cung cấp máy phát điện chính hãng";
+    String siteEmail = settings.get("site_email") != null ? settings.get("site_email") : "contact@example.com";
+    String sitePhone = settings.get("site_phone") != null ? settings.get("site_phone") : "0989 888 999";
+    String siteAddress = settings.get("site_address") != null ? settings.get("site_address") : "";
 
-        // Lưu vào pageContext để dùng lại
-        pageContext.setAttribute("siteName", siteName);
-        pageContext.setAttribute("siteDescription", siteDescription);
-        pageContext.setAttribute("siteEmail", siteEmail);
-        pageContext.setAttribute("sitePhone", sitePhone);
-        pageContext.setAttribute("siteAddress", siteAddress);
-    }
+    // Lưu vào pageContext để dùng lại
+    pageContext.setAttribute("siteName", siteName);
+    pageContext.setAttribute("siteDescription", siteDescription);
+    pageContext.setAttribute("siteEmail", siteEmail);
+    pageContext.setAttribute("sitePhone", sitePhone);
+    pageContext.setAttribute("siteAddress", siteAddress);
+
+    // Load sản phẩm chính từ database
+    ProductDAO productDAO = new ProductDAO();
+    List<Product> featuredProducts = productDAO.getFeaturedProducts(3);
+    pageContext.setAttribute("featuredProducts", featuredProducts);
 
     // Set title từ site_name
     String pageTitle = (String) pageContext.getAttribute("siteName") + " - " + (String) pageContext.getAttribute("siteDescription");
@@ -545,6 +550,8 @@
                             transition: all 0.3s ease;
                             align-self: flex-start;
                             margin-top: auto;
+                            text-decoration: none;
+                            display: inline-block;
                         }
 
                         .product-info .btn:hover {
@@ -552,6 +559,7 @@
                             color: white;
                             transform: translateY(-3px);
                             box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+                            text-decoration: none;
                         }
 
                         /* Services Section (fixed info) */
@@ -836,7 +844,36 @@
                                 </div>
 
                                 <div class="product-grid">
-                                    <!-- Sản phẩm 1: Máy phát điện nhập khẩu đồng bộ -->
+                                    <%
+                                        List<Product> products = (List<Product>) pageContext.getAttribute("featuredProducts");
+                                        if (products != null && !products.isEmpty()) {
+                                            for (Product product : products) {
+                                                String imageUrl = product.getImageUrl() != null && !product.getImageUrl().trim().isEmpty() 
+                                                    ? product.getImageUrl() : "images/sanpham1.jpg";
+                                                String productName = product.getProductName() != null ? product.getProductName() : "Sản phẩm";
+                                                String description = product.getDescription() != null && !product.getDescription().trim().isEmpty()
+                                                    ? product.getDescription() : "Sản phẩm chất lượng cao từ Hoà Lạc Power.";
+                                    %>
+                                    <div class="product-card">
+                                        <div class="product-image">
+                                            <img src="<%= imageUrl %>" alt="<%= productName %>"
+                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                            <div
+                                                style="display:none; width:100%; height:100%; background:var(--light-grey); border-radius:10px; align-items:center; justify-content:center; font-size:48px; color:var(--primary-red);">
+                                                ⚙</div>
+                                        </div>
+                                        <h4 class="product-title-card"><%= productName.toUpperCase() %></h4>
+                                        <div class="product-info">
+                                            <p><%= description %></p>
+                                            <a href="<%= request.getContextPath() %>/guest-products?action=detail&id=<%= product.getId() %>" class="btn btn-outline-secondary">Xem thêm</a>
+                                        </div>
+                                    </div>
+                                    <%
+                                            }
+                                        } else {
+                                            // Hiển thị sản phẩm mặc định nếu không có sản phẩm trong DB
+                                    %>
+                                    <!-- Sản phẩm mặc định 1 -->
                                     <div class="product-card">
                                         <div class="product-image">
                                             <img src="images/sanpham1.jpg" alt="Máy phát điện nhập khẩu đồng bộ"
@@ -851,11 +888,11 @@
                                                 khẩu đồng bộ từ các hãng máy phát điện lớn trên thế giới: Cummins,
                                                 Genmac, Denyo... Chất lượng máy, phụ tùng thay thế và chế độ bảo hành
                                                 theo đúng tiêu chuẩn của hãng.</p>
-                                            <button class="btn btn-outline-secondary">Xem thêm</button>
+                                            <a href="<%= request.getContextPath() %>/guest-products" class="btn btn-outline-secondary">Xem thêm</a>
                                         </div>
                                     </div>
 
-                                    <!-- Sản phẩm 2: Máy phát điện lắp ráp trong nước -->
+                                    <!-- Sản phẩm mặc định 2 -->
                                     <div class="product-card">
                                         <div class="product-image">
                                             <img src="images/sanpham2.jpg" alt="Máy phát điện lắp ráp trong nước"
@@ -870,11 +907,11 @@
                                                 hãng nổi tiếng thế giới: Cummins, Denyo, Komatsu, Mitsubishi,... với dải
                                                 công suất từ 10-2000kVA được cung cấp bởi Hoà Lạc Power luôn đạt chất
                                                 lượng cao, hoạt động bền bỉ.</p>
-                                            <button class="btn btn-outline-secondary">Xem thêm</button>
+                                            <a href="<%= request.getContextPath() %>/guest-products" class="btn btn-outline-secondary">Xem thêm</a>
                                         </div>
                                     </div>
 
-                                    <!-- Sản phẩm 3: Máy phát điện cũ (đã qua sử dụng) -->
+                                    <!-- Sản phẩm mặc định 3 -->
                                     <div class="product-card">
                                         <div class="product-image">
                                             <img src="images/sanpham3.jpg" alt="Máy phát điện cũ"
@@ -889,9 +926,12 @@
                                                 nhiều công suất khác nhau của nhiều hãng hàng đầu thế giới cho Quý khách
                                                 hàng lựa chọn. Chất lượng máy phát điện cũ đạt chất lượng từ 80% đến 90%
                                                 so với máy mới.</p>
-                                            <button class="btn btn-outline-secondary">Xem thêm</button>
+                                            <a href="<%= request.getContextPath() %>/guest-products" class="btn btn-outline-secondary">Xem thêm</a>
                                         </div>
                                     </div>
+                                    <%
+                                        }
+                                    %>
                                 </div>
                             </div>
                         </section>

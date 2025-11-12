@@ -47,6 +47,13 @@
     <link href="css/style.css" rel="stylesheet" type="text/css" />
     
     <style>
+        .filter-section {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
         :root {
             --btn-padding: 4px 12px;
             --btn-radius: 4px;
@@ -358,139 +365,269 @@
                             
                             <div class="panel-body table-responsive">
                                 
-                                <form class="form-inline" method="get" action="customers" accept-charset="UTF-8" style="margin-bottom: 10px;">
-                                    <div class="row" style="margin-bottom: 10px;">
-                                        
-                                        <div class="col-sm-3">
-                                            <label for="filterCustomerType">Loại khách hàng</label>
-                                            <select id="filterCustomerType" name="customerType" class="form-control" style="width:100%">
-                                                <option value="">Tất cả</option>
-                                                <% 
-                                                if (customerTypes != null) {
-                                                    for (String raw : customerTypes) { 
-                                                        String label = CustomerHelper.typeLabel(raw);
+                                <!-- Filter Section -->
+                                <div class="filter-section" style="background: #f9f9f9; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                                    <form method="GET" action="customers" accept-charset="UTF-8">
+                                        <div class="row">
+                                            <div class="col-md-2">
+                                                <label>Loại khách hàng:</label>
+                                                <select name="customerType" class="form-control">
+                                                    <option value="">Tất cả</option>
+                                                    <% 
+                                                    if (customerTypes != null) {
+                                                        for (String raw : customerTypes) { 
+                                                            String label = CustomerHelper.typeLabel(raw);
+                                                    %>
+                                                    <option value="<%= raw %>" <%= (pType != null && pType.equalsIgnoreCase(raw)) ? "selected" : "" %>>
+                                                        <%= label %>
+                                                    </option>
+                                                    <% 
+                                                        } 
+                                                    }
+                                                    %>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label>Trạng thái:</label>
+                                                <select name="status" class="form-control">
+                                                    <option value="">Tất cả</option>
+                                                    <% 
+                                                    if (statuses != null) {
+                                                        for (String raw : statuses) { 
+                                                            String label = CustomerHelper.statusLabel(raw);
+                                                    %>
+                                                    <option value="<%= raw %>" <%= (pStatus != null && pStatus.equalsIgnoreCase(raw)) ? "selected" : "" %>>
+                                                        <%= label %>
+                                                    </option>
+                                                    <% 
+                                                        } 
+                                                    }
+                                                    %>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label>Tìm kiếm:</label>
+                                                <input type="text" class="form-control" name="q" placeholder="ID, mã KH, tên công ty, email, SĐT, địa chỉ" value="<%= request.getAttribute("search") != null && !((String)request.getAttribute("search")).isEmpty() ? (String)request.getAttribute("search") : "" %>">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <label>Hiển thị:</label>
+                                                <%
+                                                    int _sz = 10;
+                                                    try { 
+                                                        String sp = request.getParameter("size"); 
+                                                        if (sp != null) _sz = Integer.parseInt(sp); 
+                                                    } catch (Exception ignored) {}
                                                 %>
-                                                <option value="<%= raw %>" <%= (pType != null && pType.equalsIgnoreCase(raw)) ? "selected" : "" %>>
-                                                    <%= label %>
-                                                </option>
-                                                <% 
-                                                    } 
-                                                }
-                                                %>
-                                            </select>
+                                                <select name="size" class="form-control" onchange="this.form.submit()">
+                                                    <option value="5" <%= _sz == 5 ? "selected" : "" %>>5</option>
+                                                    <option value="10" <%= _sz == 10 ? "selected" : "" %>>10</option>
+                                                    <option value="25" <%= _sz == 25 ? "selected" : "" %>>25</option>
+                                                    <option value="50" <%= _sz == 50 ? "selected" : "" %>>50</option>
+                                                    <option value="100" <%= _sz == 100 ? "selected" : "" %>>100</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="col-sm-3">
-                                            <label for="filterStatus">Trạng thái</label>
-                                            <select id="filterStatus" name="status" class="form-control" style="width:100%">
-                                                <option value="">Tất cả</option>
-                                                <% 
-                                                if (statuses != null) {
-                                                    for (String raw : statuses) { 
-                                                        String label = CustomerHelper.statusLabel(raw);
-                                                %>
-                                                <option value="<%= raw %>" <%= (pStatus != null && pStatus.equalsIgnoreCase(raw)) ? "selected" : "" %>>
-                                                    <%= label %>
-                                                </option>
-                                                <% 
-                                                    } 
-                                                }
-                                                %>
-                                            </select>
+                                        <div class="row" style="margin-top: 10px;">
+                                            <div class="col-md-12">
+                                                <button type="submit" class="btn btn-primary">
+                                                    <i class="fa fa-filter"></i> Lọc
+                                                </button>
+                                                <a href="customers" class="btn btn-default">
+                                                    <i class="fa fa-refresh"></i> Xóa bộ lọc
+                                                </a>
+                                            </div>
                                         </div>
-                                        
-                                    </div>
-                                    <div class="row" style="margin-bottom: 10px;">
-                                        
-                                    </div>
-                                    <div class="row" style="margin-bottom: 10px;">
-                                        <div class="col-sm-12">
-                                            <button type="submit" class="btn btn-primary btn-sm">
-                                                <i class="fa fa-filter"></i> Lọc
-                                            </button>
-                                            <a href="customers" class="btn btn-default btn-sm">
-                                                <i class="fa fa-times"></i> Xóa lọc
-                                            </a>
+                                        <div class="row" style="margin-top: 5px;">
+                                            <div class="col-md-12 text-right">
+                                                <span class="text-muted">Tổng số: <strong>${totalCustomers}</strong> khách hàng</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </form>
+                                        <input type="hidden" name="page" value="1">
+                                    </form>
+                                </div>
                                 
-                                <div id="filterSummary" style="margin: 5px 0 10px 0;"></div>
-                                
-                                <table class="table table-hover" id="customersTable">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Mã khách hàng</th>
-                                            <th>Tên công ty</th>
-                                            <th>Người liên hệ</th>
-                                            <th>Email</th>
-                                            <th>Số điện thoại</th>
-                                            <th>Địa chỉ</th>
-                                            <th>Mã số thuế</th>
-                                            <th>Loại khách hàng</th>
-                                            <th>Trạng thái</th>
-                                            <th>Thao tác</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="customersTableBody">
-                                        <% 
-                                        if (filteredCustomers != null && !filteredCustomers.isEmpty()) {
-                                            int rowCount = 0;
-                                            for (Customer customer : filteredCustomers) { 
-                                                if (customer == null) continue;
-                                                rowCount++;
-                                        %>
-                                        <tr data-customer-id="<%= customer.getId() %>">
-                                            <td><%= customer.getId() %></td>
-                                            <td><%= customer.getCustomerCode() != null ? customer.getCustomerCode() : "" %></td>
-                                            <td><%= customer.getCompanyName() != null ? customer.getCompanyName() : "" %></td>
-                                            <td><%= customer.getContactPerson() != null ? customer.getContactPerson() : "" %></td>
-                                            <td><%= customer.getEmail() != null ? customer.getEmail() : "" %></td>
-                                            <td><%= customer.getPhone() != null ? customer.getPhone() : "" %></td>
-                                            <td><%= customer.getAddress() != null ? customer.getAddress() : "" %></td>
-                                            <td><%= customer.getTaxCode() != null ? customer.getTaxCode() : "" %></td>
-                                            <td><%= CustomerHelper.typeLabel(customer.getCustomerType()) %></td>
-                                            <td><%= CustomerHelper.statusLabel(customer.getStatus()) %></td>
-                                            <td>
-                                                <div class="action-buttons">
-                                                    <div class="btn-group">
-                                                        <!-- Nút Xem -->
-                                                        <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')" title="Xem chi tiết">
-                                                            <i class="fa fa-eye"></i> Xem
-                                                        </button>
-                                                        <!-- Nút Sửa với dropdown -->
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-bordered table-hover" id="customersTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="sortable" data-sort="id" style="cursor: pointer;">
+                                                    ID <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="customer_code" style="cursor: pointer;">
+                                                    Mã khách hàng <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="company_name" style="cursor: pointer;">
+                                                    Tên công ty <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="contact_person" style="cursor: pointer;">
+                                                    Người liên hệ <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="email" style="cursor: pointer;">
+                                                    Email <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="phone" style="cursor: pointer;">
+                                                    Số điện thoại <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="address" style="cursor: pointer;">
+                                                    Địa chỉ <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="tax_code" style="cursor: pointer;">
+                                                    Mã số thuế <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="customer_type" style="cursor: pointer;">
+                                                    Loại khách hàng <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th class="sortable" data-sort="status" style="cursor: pointer;">
+                                                    Trạng thái <i class="fa fa-sort sort-icon" style="color: #ccc; margin-left: 5px;"></i>
+                                                </th>
+                                                <th>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="customersTableBody">
+                                            <% 
+                                            if (filteredCustomers != null && !filteredCustomers.isEmpty()) {
+                                                for (Customer customer : filteredCustomers) { 
+                                                    if (customer == null) continue;
+                                            %>
+                                            <tr data-customer-id="<%= customer.getId() %>">
+                                                <td><%= customer.getId() %></td>
+                                                <td><%= customer.getCustomerCode() != null ? customer.getCustomerCode() : "" %></td>
+                                                <td><%= customer.getCompanyName() != null ? customer.getCompanyName() : "" %></td>
+                                                <td><%= customer.getContactPerson() != null ? customer.getContactPerson() : "" %></td>
+                                                <td><%= customer.getEmail() != null ? customer.getEmail() : "" %></td>
+                                                <td><%= customer.getPhone() != null ? customer.getPhone() : "" %></td>
+                                                <td><%= customer.getAddress() != null ? customer.getAddress() : "" %></td>
+                                                <td><%= customer.getTaxCode() != null ? customer.getTaxCode() : "" %></td>
+                                                <td><%= CustomerHelper.typeLabel(customer.getCustomerType()) %></td>
+                                                <td><%= CustomerHelper.statusLabel(customer.getStatus()) %></td>
+                                                <td>
+                                                    <div class="action-buttons">
                                                         <div class="btn-group">
-                                                            <button class="btn btn-warning btn-xs dropdown-toggle" data-toggle="dropdown" title="Chỉnh sửa">
-                                                                <i class="fa fa-edit"></i> Sửa <span class="caret"></span>
+                                                            <!-- Nút Xem -->
+                                                            <button class="btn btn-info btn-xs" onclick="viewCustomer('<%= customer.getId() %>')" title="Xem chi tiết">
+                                                                <i class="fa fa-eye"></i> Xem
                                                             </button>
-                                                            <ul class="dropdown-menu">
-                                                                <li><a href="#" onclick="editCustomer('<%= customer.getId() %>')"><i class="fa fa-edit"></i> Chỉnh sửa thông tin</a></li>
-                                                                <li class="divider"></li>
-                                                                <% if ("active".equals(customer.getStatus())) { %>
-                                                                    <li><a href="#" onclick="deactivateCustomer('<%= customer.getId() %>')" style="color: #f39c12;"><i class="fa fa-lock"></i> Tạm khóa</a></li>
-                                                                <% } else { %>
-                                                                    <li><a href="#" onclick="activateCustomer('<%= customer.getId() %>')" style="color: #27ae60;"><i class="fa fa-unlock"></i> Kích hoạt</a></li>
-                                                                <% } %>
-                                                                <li><a href="#" onclick="hardDeleteCustomer('<%= customer.getId() %>')" style="color: #e74c3c;"><i class="fa fa-trash"></i> Xóa vĩnh viễn</a></li>
-                                                            </ul>
+                                                            <!-- Nút Sửa với dropdown -->
+                                                            <div class="btn-group">
+                                                                <button class="btn btn-warning btn-xs dropdown-toggle" data-toggle="dropdown" title="Chỉnh sửa">
+                                                                    <i class="fa fa-edit"></i> Sửa <span class="caret"></span>
+                                                                </button>
+                                                                <ul class="dropdown-menu">
+                                                                    <li><a href="#" onclick="editCustomer('<%= customer.getId() %>')"><i class="fa fa-edit"></i> Chỉnh sửa thông tin</a></li>
+                                                                    <li class="divider"></li>
+                                                                    <% if ("active".equals(customer.getStatus())) { %>
+                                                                        <li><a href="#" onclick="deactivateCustomer('<%= customer.getId() %>')" style="color: #f39c12;"><i class="fa fa-lock"></i> Tạm khóa</a></li>
+                                                                    <% } else { %>
+                                                                        <li><a href="#" onclick="activateCustomer('<%= customer.getId() %>')" style="color: #27ae60;"><i class="fa fa-unlock"></i> Kích hoạt</a></li>
+                                                                    <% } %>
+                                                                    <li><a href="#" onclick="hardDeleteCustomer('<%= customer.getId() %>')" style="color: #e74c3c;"><i class="fa fa-trash"></i> Xóa vĩnh viễn</a></li>
+                                                                </ul>
+                                                            </div>
+                                                            <!-- Nút Xóa -->
+                                                            <button class="btn btn-danger btn-xs" onclick="deleteCustomer('<%= customer.getId() %>')" title="Xóa tạm thời">
+                                                                <i class="fa fa-trash-o"></i> Xóa
+                                                            </button>
                                                         </div>
-                                                        <!-- Nút Xóa -->
-                                                        <button class="btn btn-danger btn-xs" onclick="deleteCustomer('<%= customer.getId() %>')" title="Xóa tạm thời">
-                                                            <i class="fa fa-trash-o"></i> Xóa
-                                                        </button>
                                                     </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <% 
+                                                </td>
+                                            </tr>
+                                            <% 
+                                                }
+                                            } else {
+                                            %>
+                                            <tr>
+                                                <td colspan="11" class="text-center">
+                                                    <p class="text-muted">Không có khách hàng nào.</p>
+                                                </td>
+                                            </tr>
+                                            <% 
                                             }
-                                        } else {
-                                            // Không có dữ liệu - DataTables sẽ tự hiển thị "No data available"
-                                        }
-                                        %>
-                                        <!-- DEBUG: filteredCustomers size = <%= filteredCustomers != null ? filteredCustomers.size() : "NULL" %> -->
-                                    </tbody>
-                                </table>
+                                            %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <!-- Phân trang -->
+                                <div class="row" style="margin-top: 10px;">
+                                    <div class="col-md-6">
+                                        <div class="text-muted" style="line-height: 34px;">
+                                            <%
+                                                int _currentPage = (Integer) request.getAttribute("currentPage");
+                                                int _pageSize = (Integer) request.getAttribute("pageSize");
+                                                int _total = (Integer) request.getAttribute("totalCustomers");
+                                                int _startIdx = (_currentPage - 1) * _pageSize + 1;
+                                                int _endIdx = Math.min(_currentPage * _pageSize, _total);
+                                                if (_total == 0) { 
+                                                    _startIdx = 0; 
+                                                    _endIdx = 0; 
+                                                }
+                                            %>
+                                            Hiển thị <%= _startIdx %> - <%= _endIdx %> của <%= _total %> khách hàng
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <nav aria-label="Phân trang khách hàng" class="pull-right">
+                                            <ul class="pagination pagination-sm" style="margin: 0;">
+                                                <%
+                                                    // Xây base query giữ nguyên filter
+                                                    java.util.List<String> _p = new java.util.ArrayList<String>();
+                                                    try { 
+                                                        String v = request.getParameter("customerType"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("customerType=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    try { 
+                                                        String v = request.getParameter("status"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("status=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    try { 
+                                                        String v = request.getParameter("q"); 
+                                                        if (v != null && !v.isEmpty()) 
+                                                            _p.add("q=" + java.net.URLEncoder.encode(v, "UTF-8")); 
+                                                    } catch (Exception ignored) {}
+                                                    _p.add("size=" + _pageSize);
+                                                    String _base = "customers" + (_p.isEmpty() ? "" : ("?" + String.join("&", _p)));
+                                                    
+                                                    int _totalPages = (Integer) request.getAttribute("totalPages");
+                                                    
+                                                    // Nút prev
+                                                    int _prev = Math.max(1, _currentPage - 1);
+                                                %>
+                                                <li class="<%= _currentPage == 1 ? "disabled" : "" %>">
+                                                    <a href="<%= _base + "&page=" + _prev %>">&laquo;</a>
+                                                </li>
+                                                <%
+                                                    int _s = Math.max(1, _currentPage - 2);
+                                                    int _e = Math.min(_totalPages, _currentPage + 2);
+                                                    if (_s > 1) {
+                                                %>
+                                                <li><a href="<%= _base + "&page=1" %>">1</a></li>
+                                                <%= (_s > 2) ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <%
+                                                    }
+                                                    for (int i = _s; i <= _e; i++) {
+                                                %>
+                                                <li class="<%= i == _currentPage ? "active" : "" %>">
+                                                    <a href="<%= _base + "&page=" + i %>"><%= i %></a>
+                                                </li>
+                                                <%
+                                                    }
+                                                    if (_e < _totalPages) {
+                                                %>
+                                                <%= (_e < _totalPages - 1) ? "<li class=\"disabled\"><span>...</span></li>" : "" %>
+                                                <li><a href="<%= _base + "&page=" + _totalPages %>"><%= _totalPages %></a></li>
+                                                <%
+                                                    }
+                                                    int _next = Math.min(_totalPages, _currentPage + 1);
+                                                %>
+                                                <li class="<%= _currentPage == _totalPages ? "disabled" : "" %>">
+                                                    <a href="<%= _base + "&page=" + _next %>">&raquo;</a>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -623,61 +760,66 @@
     <!-- Scripts -->
     <script src="js/jquery.min.js" type="text/javascript"></script>
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
-    <script src="js/plugins/datatables/jquery.dataTables.js" type="text/javascript"></script>
-    <script src="js/plugins/datatables/dataTables.bootstrap.js" type="text/javascript"></script>
 
     <script type="text/javascript">
-        var customersTable;
         var currentEditingCustomer = null;
         var selectedContactId = null; // Lưu contactId khi chọn từ khách hàng chờ
+        var currentSortColumn = null;
+        var currentSortOrder = 'asc'; // 'asc' hoặc 'desc'
 
         $(document).ready(function() {
-            // Initialize DataTable with pagination - sử dụng dữ liệu tĩnh từ JSP (giống users.jsp)
-            customersTable = $('#customersTable').DataTable({
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
-                },
-                "processing": false,
-                "serverSide": false,
-                "paging": true,
-                "pageLength": 10,
-                "lengthMenu": [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tất cả"]],
-                "searching": true,
-                "ordering": true,
-                "info": true,
-                "autoWidth": false,
-                "responsive": true,
-                "dom": '<"row"<"col-sm-6"l><"col-sm-6"f>>' +
-                       '<"row"<"col-sm-12"tr>>' +
-                       '<"row"<"col-sm-5"i><"col-sm-7"p>>',
-                "order": [[0, "desc"]],
-                "columnDefs": [
-                    {
-                        "targets": [10], // Cột thao tác
-                        "orderable": false,
-                        "searchable": false
-                    }
-                ]
-            });
-
-            // Hiển thị tóm tắt lựa chọn hiện tại (đọc từ tham số GET đã bind sẵn vào selected)
-                function renderFilterSummary() {
-                    var params = new URLSearchParams(window.location.search);
-                    var items = [];
-                    var code = params.get('customerCode') || '';
-                    var contact = params.get('contactPerson') || '';
-                    var type = params.get('customerType') || '';
-                    var status = params.get('status') || '';
-                    var address = params.get('address') || '';
-                    if (code) items.push('<span class="label label-primary" style="margin-right:6px;">Mã KH: ' + $('<div>').text(code).html() + '</span>');
-                    if (contact) items.push('<span class="label label-info" style="margin-right:6px;">Người LH: ' + $('<div>').text(contact).html() + '</span>');
-                    if (type) items.push('<span class="label label-success" style="margin-right:6px;">Loại: ' + $('<div>').text(type).html() + '</span>');
-                    if (status) items.push('<span class="label label-warning" style="margin-right:6px;">Trạng thái: ' + $('<div>').text(status).html() + '</span>');
-                    if (address) items.push('<span class="label label-default" style="margin-right:6px;">Địa chỉ: ' + $('<div>').text(address).html() + '</span>');
-                    $('#filterSummary').html(items.join(''));
+            // Không còn sử dụng DataTables, phân trang được xử lý ở server-side
+            
+            // Xử lý sắp xếp tĩnh
+            $('.sortable').on('click', function() {
+                var column = $(this).data('sort');
+                var $icon = $(this).find('.sort-icon');
+                
+                // Nếu click vào cùng cột, đảo ngược thứ tự
+                if (currentSortColumn === column) {
+                    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortColumn = column;
+                    currentSortOrder = 'asc';
                 }
-                renderFilterSummary();
+                
+                // Cập nhật icon cho tất cả các cột
+                $('.sortable .sort-icon').removeClass('fa-sort-asc fa-sort-desc').addClass('fa-sort').css('color', '#ccc');
+                
+                // Cập nhật icon cho cột hiện tại
+                if (currentSortOrder === 'asc') {
+                    $icon.removeClass('fa-sort fa-sort-desc').addClass('fa-sort-asc').css('color', '#3498db');
+                } else {
+                    $icon.removeClass('fa-sort fa-sort-asc').addClass('fa-sort-desc').css('color', '#3498db');
+                }
+                
+                // Sắp xếp bảng
+                sortTable(column, currentSortOrder);
+            });
         });
+        
+        function sortTable(column, order) {
+            var columnMap = { 'id': 0, 'customer_code': 1, 'company_name': 2, 'contact_person': 3, 'email': 4, 'phone': 5, 'address': 6, 'tax_code': 7, 'customer_type': 8, 'status': 9 };
+            var colIdx = columnMap[column];
+            if (colIdx === undefined) return;
+            
+            var $rows = $('#customersTable tbody tr').toArray();
+            $rows.sort(function(a, b) {
+                var aVal = $(a).find('td').eq(colIdx).text().trim();
+                var bVal = $(b).find('td').eq(colIdx).text().trim();
+                
+                if (column === 'id') {
+                    return order === 'asc' ? (parseInt(aVal) || 0) - (parseInt(bVal) || 0) : (parseInt(bVal) || 0) - (parseInt(aVal) || 0);
+                }
+                if (column === 'phone') {
+                    var aNum = aVal.replace(/\D/g, ''), bNum = bVal.replace(/\D/g, '');
+                    if (aNum && bNum) return order === 'asc' ? aNum.localeCompare(bNum) : bNum.localeCompare(aNum);
+                }
+                var cmp = aVal.localeCompare(bVal, 'vi', { sensitivity: 'base' });
+                return order === 'asc' ? cmp : -cmp;
+            });
+            $('#customersTable tbody').empty().append($rows);
+        }
 
         function viewCustomer(id) {
             $.ajax({
@@ -1034,13 +1176,21 @@
                 type: 'GET',
                 dataType: 'json',
                 success: function(data) {
+                    console.log('Response from getWaitingCustomers:', data);
+                    
                     // Kiểm tra nếu response là error object
                     if (data && data.error) {
                         $('#waitingCustomersContent').html('<div class="alert alert-danger text-center">' + escapeHtml(data.error) + '</div>');
                         return;
                     }
                     
-                    if (data && Array.isArray(data) && data.length > 0) {
+                    // Kiểm tra nếu data không phải là array
+                    if (!data) {
+                        $('#waitingCustomersContent').html('<div class="alert alert-danger text-center">Không nhận được dữ liệu từ server.</div>');
+                        return;
+                    }
+                    
+                    if (Array.isArray(data) && data.length > 0) {
                         var html = '<div class="table-responsive">';
                         html += '<table class="table table-striped table-bordered table-hover">';
                         html += '<thead>';
@@ -1063,43 +1213,25 @@
                         html += '<tbody>';
                         
                         for (var i = 0; i < data.length; i++) {
-                            var customer = data[i];
-                            var createdDate = customer.createdAt ? formatDateTime(customer.createdAt) : '-';
-                            var repliedDate = customer.repliedAt ? formatDateTime(customer.repliedAt) : '-';
-                            var contactMethod = String(customer.contactMethod || '');
-                            var message = String(customer.message || '');
-                            var address = String(customer.address || '');
-                            var customerType = String(customer.customerType || '');
-                            var companyName = String(customer.companyName || '');
-                            var taxCode = String(customer.taxCode || '');
-                            var contactContent = String(customer.contactContent || '');
-                            
-                            // Xử lý loại khách hàng
-                            var customerTypeLabel = '';
-                            if (customerType && customerType.trim() !== '') {
-                                customerTypeLabel = customerType === 'company' ? '<span class="label label-primary">Doanh nghiệp</span>' : '<span class="label label-default">Cá nhân</span>';
-                            } else {
-                                customerTypeLabel = '<span style="color: #999;">-</span>';
-                            }
+                            var c = data[i];
+                            var contactMethod = String(c.contactMethod || '');
+                            var createdDate = formatDateTime(c.createdAt || c.created_at || '');
+                            var repliedDate = formatDateTime(c.repliedAt || c.replied_at || c.contactedAt || c.contacted_at || '');
                             
                             html += '<tr>';
-                            html += '<td style="text-align: center; font-weight: 600;">' + customer.id + '</td>';
-                            html += '<td><strong style="color: #333;">' + escapeHtml(customer.fullName) + '</strong></td>';
-                            html += '<td><a href="mailto:' + escapeHtml(customer.email) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(customer.email) + '</a></td>';
-                            html += '<td><a href="tel:' + escapeHtml(customer.phone) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(customer.phone) + '</a></td>';
-                            html += '<td style="word-wrap: break-word; max-width: 150px;">' + (address && address.trim() !== '' ? escapeHtml(address) : '<span style="color: #999;">-</span>') + '</td>';
-                            html += '<td style="text-align: center;">' + customerTypeLabel + '</td>';
-                            html += '<td>' + (companyName && companyName.trim() !== '' ? '<strong>' + escapeHtml(companyName) + '</strong>' : '<span style="color: #999;">-</span>') + '</td>';
-                            html += '<td>' + (taxCode && taxCode.trim() !== '' ? escapeHtml(taxCode) : '<span style="color: #999;">-</span>') + '</td>';
-                            if (contactMethod && contactMethod.trim() !== '') {
-                                html += '<td><span class="label label-info" style="display: inline-block; padding: 4px 10px;">' + escapeHtml(contactMethod) + '</span></td>';
-                            } else {
-                                html += '<td><span style="color: #999;">-</span></td>';
-                            }
+                            html += '<td style="text-align: center; font-weight: 600;">' + c.id + '</td>';
+                            html += '<td><strong style="color: #333;">' + escapeHtml(c.fullName || c.full_name || '') + '</strong></td>';
+                            html += '<td><a href="mailto:' + escapeHtml(c.email) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(c.email) + '</a></td>';
+                            html += '<td><a href="tel:' + escapeHtml(c.phone) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(c.phone) + '</a></td>';
+                            html += '<td style="word-wrap: break-word; max-width: 150px;">' + formatField(c.address) + '</td>';
+                            html += '<td style="text-align: center;">' + getCustomerTypeLabel(c.customerType) + '</td>';
+                            html += '<td>' + formatField(c.companyName, true) + '</td>';
+                            html += '<td>' + formatField(c.taxCode) + '</td>';
+                            html += '<td>' + (contactMethod.trim() ? '<span class="label label-info" style="display: inline-block; padding: 4px 10px;">' + escapeHtml(contactMethod) + '</span>' : '<span style="color: #999;">-</span>') + '</td>';
                             html += '<td style="font-size: 12px; color: #666;">' + createdDate + '</td>';
                             html += '<td style="font-size: 12px; color: #666;">' + repliedDate + '</td>';
-                            html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + escapeHtml(message) + '</td>';
-                            html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + (contactContent && contactContent.trim() !== '' ? escapeHtml(contactContent) : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + escapeHtml(c.message || '') + '</td>';
+                            html += '<td style="word-wrap: break-word; word-break: break-word; max-width: 300px; white-space: normal; line-height: 1.5;">' + formatField(c.contactContent) + '</td>';
                             html += '</tr>';
                         }
                         
@@ -1116,14 +1248,8 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    var errorMsg = 'Lỗi khi tải danh sách khách hàng chờ.';
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMsg = xhr.responseJSON.error;
-                    } else if (xhr.status === 401) {
-                        errorMsg = 'Bạn cần đăng nhập để xem danh sách này.';
-                    } else if (xhr.status === 403) {
-                        errorMsg = 'Bạn không có quyền truy cập.';
-                    }
+                    console.error('Error loading waiting customers:', xhr, status, error);
+                    var errorMsg = handleAjaxError(xhr, status, error, 'Lỗi khi tải danh sách khách hàng chờ.');
                     $('#waitingCustomersContent').html('<div class="alert alert-danger text-center">' + escapeHtml(errorMsg) + '</div>');
                 }
             });
@@ -1185,7 +1311,7 @@
             }
         }
 
-        // Format datetime
+        // Helper functions
         function formatDateTime(dateString) {
             if (!dateString) return '-';
             try {
@@ -1200,6 +1326,40 @@
             } catch (e) {
                 return dateString;
             }
+        }
+        
+        function getCustomerTypeLabel(customerType) {
+            if (!customerType || !customerType.trim()) return '<span style="color: #999;">-</span>';
+            return customerType === 'company' 
+                ? '<span class="label label-primary">Doanh nghiệp</span>' 
+                : '<span class="label label-default">Cá nhân</span>';
+        }
+        
+        function formatField(value, isStrong) {
+            if (!value || !value.trim()) return '<span style="color: #999;">-</span>';
+            return isStrong ? '<strong>' + escapeHtml(value) + '</strong>' : escapeHtml(value);
+        }
+        
+        function handleAjaxError(xhr, status, error, defaultMsg) {
+            var errorMsg = defaultMsg || 'Đã xảy ra lỗi.';
+            try {
+                if (xhr.responseText) {
+                    var responseText = xhr.responseText.trim();
+                    if (responseText.startsWith('{')) {
+                        var errorObj = JSON.parse(responseText);
+                        if (errorObj.error) errorMsg = errorObj.error;
+                    } else if (responseText) {
+                        errorMsg = responseText;
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing error response:', e);
+            }
+            if (xhr.responseJSON && xhr.responseJSON.error) errorMsg = xhr.responseJSON.error;
+            else if (xhr.status === 401) errorMsg = 'Bạn cần đăng nhập.';
+            else if (xhr.status === 403) errorMsg = 'Bạn không có quyền truy cập.';
+            else if (xhr.status === 500) errorMsg = 'Lỗi server. Vui lòng thử lại sau.';
+            return errorMsg;
         }
 
         // Khởi tạo danh sách khách hàng đã chọn (lưu trong sessionStorage để giữ khi reload)
@@ -1242,47 +1402,25 @@
                         html += '<tbody>';
                         
                         for (var i = 0; i < data.length; i++) {
-                            var customer = data[i];
-                            var address = String(customer.address || '');
-                            var customerType = String(customer.customerType || '');
-                            var companyName = String(customer.companyName || '');
-                            var taxCode = String(customer.taxCode || '');
-                            
-                            // Kiểm tra xem khách hàng đã được chọn chưa
-                            var isSelected = window.selectedWaitingCustomers.indexOf(customer.id) !== -1;
-                            
-                            var customerTypeLabel = '';
-                            if (customerType && customerType.trim() !== '') {
-                                customerTypeLabel = customerType === 'company' ? '<span class="label label-primary">Doanh nghiệp</span>' : '<span class="label label-default">Cá nhân</span>';
-                            } else {
-                                customerTypeLabel = '<span style="color: #999;">-</span>';
-                            }
+                            var c = data[i];
+                            var isSelected = window.selectedWaitingCustomers.indexOf(c.id) !== -1;
+                            var btnClass = isSelected ? 'btn-success' : 'btn-primary';
+                            var btnText = isSelected ? '<i class="fa fa-check"></i> Đã chọn' : '<i class="fa fa-check-circle"></i> Chọn';
+                            var btnAttrs = isSelected ? 'disabled title="Đã chọn" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap; cursor: not-allowed;"' 
+                                : 'onclick="selectWaitingCustomer(' + i + ')" title="Chọn khách hàng này" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap;"';
                             
                             html += '<tr>';
-                            html += '<td style="text-align: center; font-weight: 600; vertical-align: middle;">' + customer.id + '</td>';
-                            html += '<td style="vertical-align: middle;"><strong style="color: #333;">' + escapeHtml(customer.fullName) + '</strong></td>';
-                            html += '<td style="vertical-align: middle;"><a href="mailto:' + escapeHtml(customer.email) + '" style="color: #337ab7; text-decoration: none; word-break: break-all;">' + escapeHtml(customer.email) + '</a></td>';
-                            html += '<td style="vertical-align: middle;"><a href="tel:' + escapeHtml(customer.phone) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(customer.phone) + '</a></td>';
-                            html += '<td style="word-wrap: break-word; word-break: break-word; vertical-align: middle; font-size: 12px;">' + (address && address.trim() !== '' ? escapeHtml(address) : '<span style="color: #999;">-</span>') + '</td>';
-                            html += '<td style="text-align: center; vertical-align: middle;">' + customerTypeLabel + '</td>';
-                            html += '<td style="vertical-align: middle; font-size: 12px;">' + (companyName && companyName.trim() !== '' ? '<strong>' + escapeHtml(companyName) + '</strong>' : '<span style="color: #999;">-</span>') + '</td>';
-                            html += '<td style="vertical-align: middle; font-size: 12px;">' + (taxCode && taxCode.trim() !== '' ? escapeHtml(taxCode) : '<span style="color: #999;">-</span>') + '</td>';
+                            html += '<td style="text-align: center; font-weight: 600; vertical-align: middle;">' + c.id + '</td>';
+                            html += '<td style="vertical-align: middle;"><strong style="color: #333;">' + escapeHtml(c.fullName || c.full_name || '') + '</strong></td>';
+                            html += '<td style="vertical-align: middle;"><a href="mailto:' + escapeHtml(c.email) + '" style="color: #337ab7; text-decoration: none; word-break: break-all;">' + escapeHtml(c.email) + '</a></td>';
+                            html += '<td style="vertical-align: middle;"><a href="tel:' + escapeHtml(c.phone) + '" style="color: #337ab7; text-decoration: none;">' + escapeHtml(c.phone) + '</a></td>';
+                            html += '<td style="word-wrap: break-word; word-break: break-word; vertical-align: middle; font-size: 12px;">' + formatField(c.address) + '</td>';
+                            html += '<td style="text-align: center; vertical-align: middle;">' + getCustomerTypeLabel(c.customerType) + '</td>';
+                            html += '<td style="vertical-align: middle; font-size: 12px;">' + formatField(c.companyName, true) + '</td>';
+                            html += '<td style="vertical-align: middle; font-size: 12px;">' + formatField(c.taxCode) + '</td>';
                             html += '<td style="text-align: center; vertical-align: middle;">';
-                            
-                            if (isSelected) {
-                                // Nếu đã chọn, hiển thị nút "Đã chọn" và disable
-                                html += '<button class="btn btn-success btn-xs" disabled title="Đã chọn" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap; cursor: not-allowed;">';
-                                html += '<i class="fa fa-check"></i> Đã chọn';
-                                html += '</button>';
-                            } else {
-                                // Nếu chưa chọn, hiển thị nút "Chọn" bình thường
-                                html += '<button class="btn btn-primary btn-xs" onclick="selectWaitingCustomer(' + i + ')" title="Chọn khách hàng này" style="padding: 4px 10px; font-size: 11px; border-radius: 3px; white-space: nowrap;">';
-                                html += '<i class="fa fa-check-circle"></i> Chọn';
-                                html += '</button>';
-                            }
-                            
-                            html += '</td>';
-                            html += '</tr>';
+                            html += '<button class="btn ' + btnClass + ' btn-xs" ' + btnAttrs + '>' + btnText + '</button>';
+                            html += '</td></tr>';
                         }
                         
                         html += '</tbody>';
@@ -1301,12 +1439,7 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    var errorMsg = 'Lỗi khi tải danh sách khách hàng chờ.';
-                    if (xhr.status === 401) {
-                        errorMsg = 'Bạn chưa đăng nhập. Vui lòng đăng nhập lại.';
-                    } else if (xhr.status === 403) {
-                        errorMsg = 'Bạn không có quyền truy cập chức năng này.';
-                    }
+                    var errorMsg = handleAjaxError(xhr, status, error, 'Lỗi khi tải danh sách khách hàng chờ.');
                     $('#selectWaitingCustomerContent').html('<div class="alert alert-danger text-center">' + escapeHtml(errorMsg) + '</div>');
                 }
             });
