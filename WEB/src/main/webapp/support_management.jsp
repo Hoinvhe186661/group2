@@ -342,7 +342,7 @@
                                                             </c:otherwise>
                                                         </c:choose>
                                                     </td>
-                                                    <td>
+                                                    <td data-order="${ticket.createdAt != null ? ticket.createdAt.time : 0}">
                                                         <fmt:formatDate value="${ticket.createdAt}" pattern="dd/MM/yyyy HH:mm" />
                                                     </td>
                                                     <td>
@@ -446,7 +446,7 @@
                             <i class="fa fa-times"></i> Hủy
                         </button>
                         <button type="submit" class="btn btn-warning" id="btnSaveTicket">
-                            <i class="fa fa-save"></i> Lưu thay đổi
+                            <i class="fa fa-check-circle"></i> Đóng ticket
                         </button>
                     </div>
                 </form>
@@ -551,9 +551,10 @@
                     "lengthChange": false, // Ẩn dropdown "records per page"
                     "paging": true, // Bật phân trang
                     "pagingType": "full_numbers", // Hiển thị số trang đầy đủ
-                    "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần
+                    "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần - mới nhất lên đầu
                     "columnDefs": [
-                        { "orderable": false, "targets": 8 } // Không sort cột Thao tác
+                        { "orderable": false, "targets": [0, 8] }, // Không sort cột ID và Thao tác
+                        { "orderData": [7], "targets": 7 } // Sử dụng data-order attribute cho cột Ngày tạo để sắp xếp đúng
                     ],
                     "autoWidth": false,
                     "responsive": false,
@@ -937,12 +938,68 @@
             // Load danh sách head technicians vào dropdown (chỉ để hiển thị, không cho chỉnh sửa)
             loadHeadTechniciansForEdit(ticket.assignedTo);
             
+            // Kiểm tra xem ticket đã được chuyển tiếp chưa (có assignedTo)
+            var isAssigned = ticket.assignedTo && ticket.assignedTo !== '' && ticket.assignedTo !== null;
+            
             html += '<div class="form-group">';
             html += '<label>Giải pháp / Kết quả xử lý:</label>';
-            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp hoặc kết quả xử lý...">' + (ticket.resolution ? escapeHtml(ticket.resolution) : '') + '</textarea>';
+            if (!isAssigned) {
+                html += '<div class="alert alert-warning" style="margin-bottom: 10px;">';
+                html += '<i class="fa fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Chỉ có thể nhập giải pháp và đóng ticket sau khi ticket đã được chuyển tiếp (phân công cho người xử lý).';
+                html += '</div>';
+            }
+            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp hoặc kết quả xử lý..." maxlength="10000" ' + (isAssigned ? '' : 'readonly') + '>' + (ticket.resolution ? escapeHtml(ticket.resolution) : '') + '</textarea>';
+            html += '<small class="text-muted" id="resolution_word_count">Số từ: 0 / 1000 từ</small>';
             html += '</div>';
             
             $('#editTicketContent').html(html);
+            
+            // Disable nút đóng ticket nếu chưa được chuyển tiếp
+            if (!isAssigned) {
+                $('#btnSaveTicket').prop('disabled', true).attr('title', 'Ticket chưa được chuyển tiếp. Vui lòng chuyển tiếp ticket trước khi đóng.');
+            } else {
+                $('#btnSaveTicket').prop('disabled', false).removeAttr('title');
+            }
+            
+            // Thêm event listener để đếm số từ real-time
+            $('#edit_resolution').on('input', function() {
+                updateResolutionWordCount();
+            });
+            
+            // Cập nhật số từ ban đầu
+            updateResolutionWordCount();
+        }
+        
+        function countWords(text) {
+            if (!text || text.trim() === '') {
+                return 0;
+            }
+            // Loại bỏ các khoảng trắng thừa và đếm số từ
+            var trimmed = text.trim();
+            if (trimmed === '') {
+                return 0;
+            }
+            // Tách theo khoảng trắng và lọc các phần tử rỗng
+            var words = trimmed.split(/\s+/).filter(function(word) {
+                return word.length > 0;
+            });
+            return words.length;
+        }
+        
+        function updateResolutionWordCount() {
+            var text = $('#edit_resolution').val() || '';
+            var wordCount = countWords(text);
+            var maxWords = 1000;
+            var remaining = maxWords - wordCount;
+            
+            var countElement = $('#resolution_word_count');
+            if (wordCount > maxWords) {
+                countElement.removeClass('text-muted').addClass('text-danger');
+                countElement.text('Số từ: ' + wordCount + ' / ' + maxWords + ' từ (Vượt quá ' + (wordCount - maxWords) + ' từ)');
+            } else {
+                countElement.removeClass('text-danger').addClass('text-muted');
+                countElement.text('Số từ: ' + wordCount + ' / ' + maxWords + ' từ (Còn lại: ' + remaining + ' từ)');
+            }
         }
 
         function saveTicketChanges() {
@@ -951,16 +1008,38 @@
                 return;
             }
             
-            // Disable button
-            $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang lưu...');
+            // Kiểm tra ticket đã được chuyển tiếp chưa
+            var assignedTo = $('#edit_assignedTo').val();
+            if (!assignedTo || assignedTo === '' || assignedTo === null) {
+                alert('Không thể đóng ticket! Ticket chưa được chuyển tiếp (phân công cho người xử lý).\n\nVui lòng chuyển tiếp ticket trước khi đóng.');
+                return;
+            }
             
-            // Lấy dữ liệu (không gửi category, assignedTo, priority và status vì đã bị disable)
+            // Kiểm tra giải pháp xử lý
+            var resolution = $('#edit_resolution').val();
+            if (!resolution || resolution.trim() === '') {
+                alert('Vui lòng nhập giải pháp xử lý trước khi đóng ticket!');
+                $('#edit_resolution').focus();
+                return;
+            }
+            
+            // Kiểm tra số từ (tối đa 1000 từ)
+            var wordCount = countWords(resolution);
+            if (wordCount > 1000) {
+                alert('Giải pháp xử lý không được vượt quá 1000 từ. Hiện tại bạn đã nhập ' + wordCount + ' từ. Vui lòng rút gọn nội dung.');
+                $('#edit_resolution').focus();
+                return;
+            }
+            
+            // Disable button
+            $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
+            
+            // Lấy dữ liệu - nếu có resolution thì tự động set status = resolved
             var data = {
                 id: currentEditTicketId,
-                resolution: $('#edit_resolution').val()
+                resolution: resolution,
+                status: 'resolved' // Tự động set status thành resolved khi có resolution
             };
-            
-            // KHÔNG gửi priority, status, assignedTo vì các trường này đã bị disable và không cho phép chỉnh sửa
             
             // Submit AJAX với UTF-8
             $.ajax({
@@ -971,7 +1050,7 @@
                 dataType: 'json',
                 success: function(response) {
                     if (response.success) {
-                        alert('✓ ' + response.message);
+                        alert('✓ Đóng ticket thành công! Trạng thái đã được cập nhật thành "Đã giải quyết".');
                         $('#editTicketModal').modal('hide');
                         // Reload trang để cập nhật danh sách
                         location.reload();
@@ -980,11 +1059,11 @@
                     }
                 },
                 error: function() {
-                    alert('✗ Không thể lưu. Vui lòng thử lại!');
+                    alert('✗ Không thể đóng ticket. Vui lòng thử lại!');
                 },
                 complete: function() {
                     // Enable button
-                    $('#btnSaveTicket').prop('disabled', false).html('<i class="fa fa-save"></i> Lưu thay đổi');
+                    $('#btnSaveTicket').prop('disabled', false).html('<i class="fa fa-check-circle"></i> Đóng ticket');
                 }
             });
         }

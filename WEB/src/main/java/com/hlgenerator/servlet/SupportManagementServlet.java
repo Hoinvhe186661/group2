@@ -15,6 +15,8 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,8 +90,30 @@ public class SupportManagementServlet extends HttpServlet {
             }
         }
         
-        
-        
+        // Sắp xếp lại theo thời gian tạo mới nhất lên đầu (created_at DESC)
+        Collections.sort(filteredTickets, new Comparator<Map<String, Object>>() {
+            @Override
+            public int compare(Map<String, Object> t1, Map<String, Object> t2) {
+                java.sql.Timestamp ts1 = (java.sql.Timestamp) t1.get("createdAt");
+                java.sql.Timestamp ts2 = (java.sql.Timestamp) t2.get("createdAt");
+                
+                // Nếu cả hai đều null, coi như bằng nhau
+                if (ts1 == null && ts2 == null) {
+                    return 0;
+                }
+                // Nếu ts1 null, đặt nó xuống cuối
+                if (ts1 == null) {
+                    return 1;
+                }
+                // Nếu ts2 null, đặt nó xuống cuối
+                if (ts2 == null) {
+                    return -1;
+                }
+                
+                // So sánh ngược lại để mới nhất lên đầu (DESC)
+                return ts2.compareTo(ts1);
+            }
+        });
         
         request.setAttribute("tickets", filteredTickets);
         request.setAttribute("filterStatus", filterStatus);
@@ -151,6 +175,17 @@ public class SupportManagementServlet extends HttpServlet {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Thiếu thông tin ID");
                 } else {
+                    // Validate resolution - tối đa 1000 từ
+                    if (resolution != null && !resolution.trim().isEmpty()) {
+                        int wordCount = countWords(resolution);
+                        if (wordCount > 1000) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Giải pháp xử lý không được vượt quá 1000 từ. Hiện tại bạn đã nhập " + wordCount + " từ. Vui lòng rút gọn nội dung.");
+                            out.print(jsonResponse.toString());
+                            return;
+                        }
+                    }
+                    
                     try {
                         int ticketId = Integer.parseInt(idParam);
                         Integer assignedToId = null;
@@ -239,6 +274,34 @@ public class SupportManagementServlet extends HttpServlet {
             out.print(jsonResponse.toString());
             out.close();
         }
+    }
+    
+    /**
+     * Đếm số từ trong một chuỗi văn bản
+     * @param text Chuỗi văn bản cần đếm
+     * @return Số từ trong văn bản
+     */
+    private int countWords(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return 0;
+        }
+        
+        // Loại bỏ các khoảng trắng thừa và tách theo khoảng trắng
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return 0;
+        }
+        
+        // Tách theo khoảng trắng (whitespace) và lọc các phần tử rỗng
+        String[] words = trimmed.split("\\s+");
+        int count = 0;
+        for (String word : words) {
+            if (word != null && !word.trim().isEmpty()) {
+                count++;
+            }
+        }
+        
+        return count;
     }
 }
 

@@ -595,6 +595,81 @@ public class WorkOrderServlet extends HttpServlet {
                     }
                 }
                 
+            } else if ("finish".equals(action)) {
+                // Hoàn thành đơn hàng (set completion_date nhưng giữ status là in_progress)
+                String idParam = request.getParameter("id");
+                if (idParam == null || idParam.isEmpty()) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Thiếu ID work order");
+                } else {
+                    try {
+                        int id = Integer.parseInt(idParam);
+                        WorkOrder workOrder = workOrderDAO.getWorkOrderById(id);
+                        
+                        if (workOrder == null) {
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy work order");
+                        } else {
+                            // Check if work order is already closed/completed/cancelled
+                            if ("completed".equals(workOrder.getStatus()) || "cancelled".equals(workOrder.getStatus())) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Đơn hàng này đã được đóng hoặc hủy rồi");
+                            } else {
+                                // Check if already finished (has completion_date but status is in_progress)
+                                if (workOrder.getCompletionDate() != null && "in_progress".equals(workOrder.getStatus())) {
+                                    jsonResponse.addProperty("success", false);
+                                    jsonResponse.addProperty("message", "Đơn hàng này đã được hoàn thành rồi");
+                                } else {
+                                    // Set completion date but keep status as in_progress
+                                    String completionDateParam = request.getParameter("completionDate");
+                                    Date completionDate = null;
+                                    
+                                    if (completionDateParam != null && !completionDateParam.isEmpty() && !"null".equals(completionDateParam)) {
+                                        try {
+                                            completionDate = Date.valueOf(completionDateParam);
+                                        } catch (IllegalArgumentException e) {
+                                            completionDate = null;
+                                        }
+                                    }
+                                    
+                                    // Nếu không có từ request, sử dụng ngày hiện tại
+                                    if (completionDate == null) {
+                                        completionDate = new Date(System.currentTimeMillis());
+                                    }
+                                    
+                                    // Validate: completion_date không được trước scheduled_date
+                                    Date scheduledDate = workOrder.getScheduledDate();
+                                    if (scheduledDate != null && completionDate.before(scheduledDate)) {
+                                        jsonResponse.addProperty("success", false);
+                                        jsonResponse.addProperty("message", "Ngày hoàn thành (" + completionDate.toString() + 
+                                            ") không được trước ngày lên lịch (" + scheduledDate.toString() + 
+                                            "). Vui lòng chọn ngày từ ngày lên lịch trở đi.");
+                                        out.print(jsonResponse.toString());
+                                        return;
+                                    }
+                                    
+                                    // Set completion date nhưng giữ status là in_progress
+                                    workOrder.setCompletionDate(completionDate);
+                                    // Không thay đổi status - vẫn giữ là in_progress
+                                    boolean success = workOrderDAO.updateWorkOrder(workOrder);
+                                    
+                                    if (success) {
+                                        jsonResponse.addProperty("success", true);
+                                        jsonResponse.addProperty("message", "Hoàn thành đơn hàng thành công");
+                                    } else {
+                                        jsonResponse.addProperty("success", false);
+                                        jsonResponse.addProperty("message", "Lỗi hoàn thành đơn hàng");
+                                    }
+                                }
+                            }
+                        }
+                        
+                    } catch (NumberFormatException e) {
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "ID không hợp lệ");
+                    }
+                }
+                
             } else {
                 jsonResponse.addProperty("success", false);
                 jsonResponse.addProperty("message", "Action không hợp lệ");

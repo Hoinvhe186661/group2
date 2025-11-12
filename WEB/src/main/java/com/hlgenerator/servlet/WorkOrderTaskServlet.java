@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hlgenerator.dao.WorkOrderTaskDAO;
 import com.hlgenerator.dao.WorkOrderDAO;
+import com.hlgenerator.dao.SupportRequestDAO;
 import com.hlgenerator.model.WorkOrderTask;
 import com.hlgenerator.model.WorkOrderTaskAssignment;
 import com.hlgenerator.model.WorkOrder;
@@ -233,7 +234,11 @@ public class WorkOrderTaskServlet extends HttpServlet {
             }
             
             String workOrderStatus = workOrder.getStatus();
-            if ("completed".equals(workOrderStatus) || "cancelled".equals(workOrderStatus) || "rejected".equals(workOrderStatus)) {
+            
+            // Check if work order is finished (has completion_date but status is in_progress)
+            boolean isFinished = workOrder.getCompletionDate() != null && "in_progress".equals(workOrderStatus);
+            
+            if ("completed".equals(workOrderStatus) || "cancelled".equals(workOrderStatus) || "rejected".equals(workOrderStatus) || isFinished) {
                 String statusText = "";
                 if ("completed".equals(workOrderStatus)) {
                     statusText = "Đã hoàn thành";
@@ -241,6 +246,8 @@ public class WorkOrderTaskServlet extends HttpServlet {
                     statusText = "Đã hủy";
                 } else if ("rejected".equals(workOrderStatus)) {
                     statusText = "Đã từ chối";
+                } else if (isFinished) {
+                    statusText = "Đã hoàn thành";
                 }
                 String actionText = "";
                 if ("completed".equals(workOrderStatus)) {
@@ -249,6 +256,8 @@ public class WorkOrderTaskServlet extends HttpServlet {
                     actionText = "hủy";
                 } else if ("rejected".equals(workOrderStatus)) {
                     actionText = "từ chối";
+                } else if (isFinished) {
+                    actionText = "hoàn thành";
                 }
                 sendError(response, "Không thể tạo công việc mới cho đơn hàng đã " + actionText + ". Trạng thái đơn hàng: " + statusText);
                 return;
@@ -313,6 +322,84 @@ public class WorkOrderTaskServlet extends HttpServlet {
             } catch (IllegalArgumentException e) {
                 sendError(response, "Invalid date format. Please use YYYY-MM-DD format.");
                 return;
+            }
+            
+            // Validate dates against desired completion date (deadline from ticket)
+            java.sql.Date ticketDeadline = null;
+            try {
+                // Try to get ticket deadline from support request
+                SupportRequestDAO supportDAO = new SupportRequestDAO();
+                java.sql.Date ticketDeadlineDate = null;
+                
+                // Method 1: Extract ticket ID from work order description
+                if (workOrder.getDescription() != null && workOrder.getDescription().contains("[TICKET_ID:")) {
+                    try {
+                        String desc = workOrder.getDescription();
+                        int startIdx = desc.indexOf("[TICKET_ID:") + 11;
+                        int endIdx = desc.indexOf("]", startIdx);
+                        if (endIdx > startIdx) {
+                            String ticketIdStr = desc.substring(startIdx, endIdx).trim();
+                            int ticketId = Integer.parseInt(ticketIdStr);
+                            java.util.Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                            if (ticket != null && ticket.get("deadline") != null) {
+                                String deadlineStr = ticket.get("deadline").toString();
+                                if (deadlineStr != null && !deadlineStr.isEmpty() && !"null".equals(deadlineStr)) {
+                                    ticketDeadlineDate = java.sql.Date.valueOf(deadlineStr);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error extracting ticket ID from description: " + e.getMessage());
+                    }
+                }
+                
+                // Method 2: Try to find ticket by title and customer_id
+                if (ticketDeadlineDate == null && workOrder.getTitle() != null && workOrder.getCustomerId() > 0) {
+                    try {
+                        java.util.Map<String, Object> ticket = supportDAO.getSupportRequestBySubjectAndCustomer(
+                            workOrder.getTitle().trim(), 
+                            workOrder.getCustomerId()
+                        );
+                        if (ticket != null && ticket.get("deadline") != null) {
+                            String deadlineStr = ticket.get("deadline").toString();
+                            if (deadlineStr != null && !deadlineStr.isEmpty() && !"null".equals(deadlineStr)) {
+                                ticketDeadlineDate = java.sql.Date.valueOf(deadlineStr);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error finding ticket by title and customer: " + e.getMessage());
+                    }
+                }
+                
+                ticketDeadline = ticketDeadlineDate;
+                
+                // Validate start date <= ticket deadline
+                if (ticketDeadline != null && startDate != null) {
+                    java.sql.Date startDateOnly = new java.sql.Date(startDate.getTime());
+                    if (startDateOnly.after(ticketDeadline)) {
+                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                        String startDisplay = sdf.format(startDateOnly);
+                        String deadlineDisplay = sdf.format(ticketDeadline);
+                        sendError(response, "Ngày thực hiện (" + startDisplay + ") không được lớn hơn ngày mong muốn hoàn thành (" + deadlineDisplay + "). Vui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.");
+                        return;
+                    }
+                }
+                
+                // Validate deadline <= ticket deadline
+                if (ticketDeadline != null && deadline != null) {
+                    java.sql.Date deadlineDateOnly = new java.sql.Date(deadline.getTime());
+                    if (deadlineDateOnly.after(ticketDeadline)) {
+                        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                        String deadlineDisplay2 = sdf.format(deadlineDateOnly);
+                        String deadlineDisplay = sdf.format(ticketDeadline);
+                        sendError(response, "Deadline (" + deadlineDisplay2 + ") không được lớn hơn ngày mong muốn hoàn thành (" + deadlineDisplay + "). Vui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.");
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error validating dates against ticket deadline: " + e.getMessage());
+                e.printStackTrace();
+                // Don't block creation if validation fails due to error, but log it
             }
             
             WorkOrderTask task = new WorkOrderTask();

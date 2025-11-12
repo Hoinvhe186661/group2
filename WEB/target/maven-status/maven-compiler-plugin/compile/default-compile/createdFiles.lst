@@ -50,6 +50,7 @@ com\hlgenerator\servlet\CustomerManagementServlet.class
 com\hlgenerator\servlet\ForgotPasswordServlet.class
 com\hlgenerator\model\Product.class
 com\hlgenerator\model\WorkOrderTaskAssignment.class
+com\hlgenerator\servlet\SupportManagementServlet$1.class
 com\hlgenerator\servlet\EncodingTestServlet.class
 com\hlgenerator\servlet\TechSupportManagementServlet.class
 com\hlgenerator\servlet\ResetPasswordServlet.class

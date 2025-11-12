@@ -708,8 +708,8 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" id="btnCloseWorkOrder" style="display: none;">
-                        <i class="fa fa-check-circle"></i> Đóng đơn hàng
+                    <button type="button" class="btn btn-success" id="btnFinishWorkOrder" style="display: none;">
+                        <i class="fa fa-check"></i> Hoàn thành đơn hàng
                     </button>
                     <button type="button" class="btn btn-primary" id="btnSaveWorkOrder">
                         <i class="fa fa-save"></i> Lưu thay đổi
@@ -1149,9 +1149,9 @@
                 saveWorkOrderChanges();
             });
             
-            // Close work order
-            $('#btnCloseWorkOrder').click(function() {
-                closeWorkOrder();
+            // Finish work order
+            $('#btnFinishWorkOrder').click(function() {
+                finishWorkOrder();
             });
             
             // Enter to search
@@ -1435,15 +1435,20 @@
                 var escapedCustomerName = customerName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 var escapedTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
                 
-                // Kiểm tra nếu work order đã completed/cancelled/rejected thì ẩn nút Chia việc
-                var isWorkOrderClosed = workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected';
+                // Kiểm tra nếu work order đã completed/cancelled/rejected hoặc đã hoàn thành thì ẩn nút Chia việc
+                var isFinished = workOrder.completionDate && workOrder.status === 'in_progress';
+                var isWorkOrderClosed = workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected' || isFinished;
                 var assignTaskButton = '';
                 if (!isWorkOrderClosed) {
                     assignTaskButton = '<button class="btn btn-success btn-assign-task" data-id="' + workOrder.id + '" title="Chia việc">' +
                         '<i class="fa fa-tasks"></i>' +
                     '</button>';
                 } else {
-                    assignTaskButton = '<button class="btn btn-success btn-assign-task" disabled data-id="' + workOrder.id + '" title="Không thể chia việc cho đơn hàng đã đóng">' +
+                    var disabledTitle = 'Không thể chia việc cho đơn hàng đã đóng';
+                    if (isFinished) {
+                        disabledTitle = 'Không thể chia việc cho đơn hàng đã hoàn thành';
+                    }
+                    assignTaskButton = '<button class="btn btn-success btn-assign-task" disabled data-id="' + workOrder.id + '" title="' + disabledTitle + '">' +
                         '<i class="fa fa-tasks"></i>' +
                     '</button>';
                 }
@@ -1480,8 +1485,13 @@
             $('.btn-assign-task').click(function() {
                 var id = $(this).data('id');
                 var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
-                if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
-                    alert('Không thể chia việc cho đơn hàng đã đóng!');
+                var isFinished = workOrder && workOrder.completionDate && workOrder.status === 'in_progress';
+                if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected' || isFinished)) {
+                    if (isFinished) {
+                        alert('Không thể chia việc cho đơn hàng đã hoàn thành!');
+                    } else {
+                        alert('Không thể chia việc cho đơn hàng đã đóng!');
+                    }
                     return;
                 }
                 openAssignTaskModal(id);
@@ -1749,12 +1759,19 @@
             // Load danh sách người đã được phân công từ các task
             loadAssignedUsers(id);
             
-            // Check if work order can be closed and show/hide close button
-            checkCanCloseWorkOrder(id);
+            // Kiểm tra nếu work order đã hoàn thành (có completion_date nhưng status là in_progress)
+            var isFinished = workOrder.completionDate && workOrder.status === 'in_progress';
             
-            // Disable form fields và nút lưu nếu work order đã đóng
+            // Hiển thị/ẩn nút "Hoàn thành đơn hàng"
+            if (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected' || isFinished) {
+                $('#btnFinishWorkOrder').hide();
+            } else {
+                $('#btnFinishWorkOrder').show();
+            }
+            
+            // Disable form fields và nút lưu nếu work order đã đóng hoặc đã hoàn thành
             var workOrderStatus = workOrder.status;
-            if (workOrderStatus === 'completed' || workOrderStatus === 'cancelled' || workOrderStatus === 'rejected') {
+            if (workOrderStatus === 'completed' || workOrderStatus === 'cancelled' || workOrderStatus === 'rejected' || isFinished) {
                 // Disable tất cả input fields trong modal (trừ các field đã readonly)
                 $('#workOrderDetailModal').find('input:not([readonly]), textarea:not([readonly]), select:not([disabled])').prop('readonly', true);
                 
@@ -1769,6 +1786,8 @@
                     statusText = 'Đã hủy';
                 } else if (workOrderStatus === 'rejected') {
                     statusText = 'Đã từ chối';
+                } else if (isFinished) {
+                    statusText = 'Đã hoàn thành';
                 }
                 
                 // Xóa alert cũ nếu có và thêm alert mới
@@ -1820,68 +1839,6 @@
                 },
                 error: function(xhr, status, error) {
                     console.log('Error calculating actual hours:', error);
-                }
-            });
-        }
-        
-        function checkCanCloseWorkOrder(workOrderId) {
-            // Check if work order is already closed/completed/cancelled
-            var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
-            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled')) {
-                $('#btnCloseWorkOrder').hide();
-                return;
-            }
-            
-            // Check for active tasks
-            $.ajax({
-                url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + workOrderId,
-                type: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if(response && response.success && response.data) {
-                        var hasActiveTasks = false;
-                        var activeTaskCount = 0;
-                        var activeTasks = [];
-                        
-                        response.data.forEach(function(task) {
-                            // Chỉ kiểm tra in_progress, không bao gồm pending
-                            if(task.status === 'in_progress') {
-                                hasActiveTasks = true;
-                                activeTaskCount++;
-                                activeTasks.push({
-                                    taskNumber: task.taskNumber || 'N/A',
-                                    description: task.taskDescription || '',
-                                    status: task.status
-                                });
-                            }
-                        });
-                        
-                        if(hasActiveTasks) {
-                            // Hide close button or show disabled state
-                            $('#btnCloseWorkOrder').show();
-                            $('#btnCloseWorkOrder').prop('disabled', true);
-                            $('#btnCloseWorkOrder').html('<i class="fa fa-ban"></i> Không thể đóng (' + activeTaskCount + ' nhiệm vụ đang thực hiện)');
-                            $('#btnCloseWorkOrder').attr('title', 'Vẫn còn ' + activeTaskCount + ' nhiệm vụ đang thực hiện (in_progress):\n' + 
-                                activeTasks.map(function(t) { return '- ' + t.taskNumber + ': ' + t.description.substring(0, 50); }).join('\n'));
-                        } else {
-                            // Show close button
-                            $('#btnCloseWorkOrder').show();
-                            $('#btnCloseWorkOrder').prop('disabled', false);
-                            $('#btnCloseWorkOrder').html('<i class="fa fa-check-circle"></i> Đóng đơn hàng');
-                            $('#btnCloseWorkOrder').removeAttr('title');
-                        }
-                    } else {
-                        // No tasks or error - allow to close
-                        $('#btnCloseWorkOrder').show();
-                        $('#btnCloseWorkOrder').prop('disabled', false);
-                        $('#btnCloseWorkOrder').html('<i class="fa fa-check-circle"></i> Đóng đơn hàng');
-                    }
-                },
-                error: function() {
-                    // On error, show button but allow user to try
-                    $('#btnCloseWorkOrder').show();
-                    $('#btnCloseWorkOrder').prop('disabled', false);
-                    $('#btnCloseWorkOrder').html('<i class="fa fa-check-circle"></i> Đóng đơn hàng');
                 }
             });
         }
@@ -2000,7 +1957,7 @@
             });
         }
         
-        function closeWorkOrder() {
+        function finishWorkOrder() {
             var id = $('#detail_work_order_id').val();
             
             // Validate completion date không được trước scheduled date
@@ -2032,125 +1989,63 @@
                 }
             }
             
-            // Confirm before closing
-            if(!confirm('Bạn có chắc chắn muốn đóng đơn hàng này?\n\n' +
-                       'Đơn hàng sẽ được đánh dấu là "Hoàn thành" và không thể chỉnh sửa thêm.')) {
+            // Confirm before finishing
+            if(!confirm('Bạn có chắc chắn muốn hoàn thành đơn hàng này?\n\n' +
+                       'Sau khi hoàn thành, bạn sẽ không thể tạo task hay chỉnh sửa đơn hàng này nữa.\n' +
+                       'Trạng thái đơn hàng vẫn là "Đang xử lý" và không thể cập nhật thành "Đã giải quyết".')) {
                 return;
             }
             
-            // Check again for active tasks before closing
+            // Send completion date from input (if set)
+            var completionDateValue = $('#detail_completion_date').val();
+            
             $.ajax({
-                url: ctx + '/api/work-order-tasks?action=list&workOrderId=' + id,
-                type: 'GET',
+                url: ctx + '/api/work-orders',
+                type: 'POST',
+                data: {
+                    action: 'finish',
+                    id: id,
+                    completionDate: completionDateValue || ''
+                },
                 dataType: 'json',
                 success: function(response) {
-                    if(response && response.success && response.data) {
-                        // Chỉ kiểm tra in_progress, không bao gồm pending
-                        var activeTasks = response.data.filter(function(task) {
-                            return task.status === 'in_progress';
-                        });
+                    if(response && response.success) {
+                        alert('✓ Hoàn thành đơn hàng thành công!');
                         
-                        if(activeTasks.length > 0) {
-                            var taskList = activeTasks.map(function(t) {
-                                return '- ' + (t.taskNumber || 'N/A') + ': ' + (t.taskDescription || '').substring(0, 50);
-                            }).join('\n');
-                            
-                            alert('Không thể đóng đơn hàng!\n\n' +
-                                  'Vẫn còn ' + activeTasks.length + ' nhiệm vụ đang thực hiện (in_progress):\n\n' +
-                                  taskList + '\n\n' +
-                                  'Vui lòng hoàn thành tất cả nhiệm vụ đang thực hiện trước khi đóng đơn hàng.');
-                            return;
+                        // Update completion date in modal (if not already set)
+                        if (completionDateValue) {
+                            $('#detail_completion_date').val(completionDateValue);
                         }
+                        
+                        // Update work order in local array
+                        var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
+                        if (workOrder) {
+                            workOrder.completionDate = completionDateValue || new Date().toISOString().split('T')[0];
+                        }
+                        
+                        // Disable form và ẩn nút lưu và nút hoàn thành
+                        $('#workOrderDetailModal').find('input:not([readonly]), textarea:not([readonly]), select:not([disabled])').prop('readonly', true);
+                        $('#btnSaveWorkOrder').hide();
+                        $('#btnFinishWorkOrder').hide();
+                        
+                        // Hiển thị alert
+                        $('#workOrderDetailLockedAlert').remove();
+                        $('#workOrderDetailModal .modal-body').first().prepend(
+                            '<div class="alert alert-warning" id="workOrderDetailLockedAlert" style="margin-bottom: 15px;">' +
+                            '<i class="fa fa-lock"></i> <strong>Đơn hàng Đã hoàn thành.</strong> ' +
+                            'Không thể chỉnh sửa thông tin đơn hàng này hoặc tạo task mới.' +
+                            '</div>'
+                        );
+                        
+                        // Reload work orders list
+                        loadWorkOrders();
+                    } else {
+                        var errorMsg = response.message || 'Không thể hoàn thành đơn hàng';
+                        alert('✗ Lỗi: ' + errorMsg);
                     }
-                    
-                    // If no active tasks, proceed to close
-                    // Send completion date from input (if set) to ensure validation
-                    var completionDateValue = $('#detail_completion_date').val();
-                    console.log('Closing work order with completionDate: ', completionDateValue);
-                    
-                    $.ajax({
-                        url: ctx + '/api/work-orders',
-                        type: 'POST',
-                        data: {
-                            action: 'close',
-                            id: id,
-                            completionDate: completionDateValue || ''
-                        },
-                        dataType: 'json',
-                        success: function(response) {
-                            if(response && response.success) {
-                                alert('✓ Đóng đơn hàng thành công!');
-                                
-                                // Update status in modal
-                                $('#detail_status').val('completed');
-                                
-                                // Update work order status in local array
-                                var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
-                                if (workOrder) {
-                                    workOrder.status = 'completed';
-                                }
-                                
-                                // Ngày hoàn thành đã được hiển thị trong input field
-                                
-                                // Disable form và ẩn nút lưu
-                                $('#workOrderDetailModal').find('input:not([readonly]), textarea:not([readonly]), select:not([disabled])').prop('readonly', true);
-                                $('#btnSaveWorkOrder').hide();
-                                $('#btnCloseWorkOrder').hide();
-                                
-                                // Hiển thị alert
-                                $('#workOrderDetailLockedAlert').remove();
-                                $('#workOrderDetailModal .modal-body').first().prepend(
-                                    '<div class="alert alert-warning" id="workOrderDetailLockedAlert" style="margin-bottom: 15px;">' +
-                                    '<i class="fa fa-lock"></i> <strong>Đơn hàng Đã hoàn thành.</strong> ' +
-                                    'Không thể chỉnh sửa thông tin đơn hàng này.' +
-                                    '</div>'
-                                );
-                                
-                                // Reload work orders list
-                                loadWorkOrders();
-                            } else {
-                                var errorMsg = response.message || 'Không thể đóng đơn hàng';
-                                if(errorMsg.includes('nhiệm vụ đang thực hiện')) {
-                                    alert('✗ ' + errorMsg);
-                                    // Refresh the check button state
-                                    checkCanCloseWorkOrder(id);
-                                } else {
-                                    alert('✗ Lỗi: ' + errorMsg);
-                                }
-                            }
-                        },
-                        error: function() {
-                            alert('✗ Lỗi kết nối máy chủ');
-                        }
-                    });
                 },
                 error: function() {
-                    // If check fails, still try to close (backend will validate)
-                    $.ajax({
-                        url: ctx + '/api/work-orders',
-                        type: 'POST',
-                        data: {
-                            action: 'close',
-                            id: id
-                        },
-                        dataType: 'json',
-                        success: function(response) {
-                            if(response && response.success) {
-                                alert('✓ Đóng đơn hàng thành công!');
-                                // Update status in modal
-                                $('#detail_status').val('completed');
-                                // Hide close button
-                                $('#btnCloseWorkOrder').hide();
-                                // Reload work orders list
-                                loadWorkOrders();
-                            } else {
-                                alert('✗ Lỗi: ' + (response.message || 'Không thể đóng đơn hàng'));
-                            }
-                        },
-                        error: function() {
-                            alert('✗ Lỗi kết nối máy chủ');
-                        }
-                    });
+                    alert('✗ Lỗi kết nối máy chủ');
                 }
             });
         }
@@ -2218,8 +2113,13 @@
         function openAssignTaskModal(workOrderId) {
             // Kiểm tra work order status trước khi mở modal
             var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
-            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected')) {
-                alert('Không thể chia việc cho đơn hàng đã đóng!');
+            var isFinished = workOrder && workOrder.completionDate && workOrder.status === 'in_progress';
+            if (workOrder && (workOrder.status === 'completed' || workOrder.status === 'cancelled' || workOrder.status === 'rejected' || isFinished)) {
+                if (isFinished) {
+                    alert('Không thể chia việc cho đơn hàng đã hoàn thành!');
+                } else {
+                    alert('Không thể chia việc cho đơn hàng đã đóng!');
+                }
                 return;
             }
             
@@ -2419,6 +2319,12 @@
                         // Store deadline in data attribute
                         $('#taskStartDate').data('workOrderDeadline', deadlineDate);
                         $('#taskDeadline').data('workOrderDeadline', deadlineDate);
+                        console.log('✓ Deadline loaded and stored:', deadlineDate);
+                        // Update max attribute for date inputs
+                        $('#taskStartDate').attr('max', deadlineDate);
+                        $('#taskDeadline').attr('max', deadlineDate);
+                    } else {
+                        console.warn('⚠ Could not parse deadline:', deadlineStr);
                     }
                 } catch (e) {
                     console.warn('Error parsing deadline:', e);
@@ -2806,6 +2712,16 @@
             setMinDateForTaskCreateDates();
             var length = $('#taskDescription').val().length;
             $('#taskDescriptionCounter').text(length);
+            
+            // Ensure deadline is loaded - reload if needed
+            var workOrderId = $('#assign_work_order_id').val();
+            if (workOrderId) {
+                var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+                if (!workOrderDeadline) {
+                    // Reload deadline if not available
+                    loadWorkOrderDeadline(workOrderId);
+                }
+            }
         });
         
         // Form submit handler for adding new task
@@ -2852,9 +2768,81 @@
                 return;
             }
             
-            // Validate dates
-            if (!validateTaskCreateDates()) {
+            // Validate dates - MUST validate before proceeding
+            // First, check if deadline is loaded
+            var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+            if (!workOrderDeadline) {
+                // Try to reload deadline synchronously if not available
+                var workOrder = allWorkOrders.find(function(w) { return w.id == workOrderId; });
+                if (workOrder) {
+                    console.warn('⚠ Deadline not loaded, attempting to reload...');
+                    // Try to get deadline directly from work order or ticket
+                    if (workOrder.supportRequestId) {
+                        // Try synchronous call to get deadline
+                        var deadlineLoaded = false;
+                        $.ajax({
+                            url: ctx + '/support-detail',
+                            type: 'GET',
+                            data: { id: workOrder.supportRequestId },
+                            dataType: 'json',
+                            async: false, // Synchronous to ensure deadline is loaded before validation
+                            success: function(response) {
+                                if (response && response.success && response.data && response.data.deadline) {
+                                    parseAndStoreDeadline(response.data.deadline);
+                                    deadlineLoaded = true;
+                                }
+                            }
+                        });
+                        if (!deadlineLoaded) {
+                            console.warn('⚠ Could not load deadline from support request');
+                        }
+                    }
+                }
+            }
+            
+            // Now validate dates
+            var validationResult = validateTaskCreateDates();
+            if (!validationResult) {
+                // Validation failed, stop submission
+                console.error('✗ Validation failed - blocking task creation');
                 return;
+            }
+            
+            // Final check: ensure deadline is still valid after all validations
+            workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+            if (workOrderDeadline && (startDate || deadline)) {
+                var workOrderDeadlineDate = new Date(workOrderDeadline);
+                workOrderDeadlineDate.setHours(0, 0, 0, 0);
+                
+                if (startDate) {
+                    var start = new Date(startDate);
+                    start.setHours(0, 0, 0, 0);
+                    if (start > workOrderDeadlineDate) {
+                        var deadlineParts = workOrderDeadline.split('-');
+                        var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                        var startParts = startDate.split('-');
+                        var startDisplay = startParts[2] + '/' + startParts[1] + '/' + startParts[0];
+                        alert('⚠ Lỗi: Ngày thực hiện (' + startDisplay + ') không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + ').\n\nVui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
+                        $('#taskStartDate').val('');
+                        $('#taskStartDate').focus();
+                        return;
+                    }
+                }
+                
+                if (deadline) {
+                    var end = new Date(deadline);
+                    end.setHours(0, 0, 0, 0);
+                    if (end > workOrderDeadlineDate) {
+                        var deadlineParts = workOrderDeadline.split('-');
+                        var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
+                        var deadlineParts2 = deadline.split('-');
+                        var deadlineDisplay2 = deadlineParts2[2] + '/' + deadlineParts2[1] + '/' + deadlineParts2[0];
+                        alert('⚠ Lỗi: Deadline (' + deadlineDisplay2 + ') không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + ').\n\nVui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
+                        $('#taskDeadline').val('');
+                        $('#taskDeadline').focus();
+                        return;
+                    }
+                }
             }
             
             // Additional validation: deadline must be after or equal to start date (already checked in validateTaskCreateDates, but keep for safety)
@@ -2868,7 +2856,7 @@
                 }
             }
             
-            // Additional validation: check against work order deadline (already checked in validateTaskCreateDates, but keep for safety)
+            // Additional validation: check against ngày mong muốn hoàn thành (deadline từ ticket) - double check để đảm bảo
             var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
             if (workOrderDeadline) {
                 try {
@@ -2881,7 +2869,8 @@
                         if (start > workOrderDeadlineDate) {
                             var deadlineParts = workOrderDeadline.split('-');
                             var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
-                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + ').');
+                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + ').\n\nVui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
+                            $('#taskStartDate').val('');
                             $('#taskStartDate').focus();
                             return;
                         }
@@ -2893,7 +2882,8 @@
                         if (end > workOrderDeadlineDate) {
                             var deadlineParts = workOrderDeadline.split('-');
                             var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
-                            alert('⚠ Lỗi: Deadline không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + ').');
+                            alert('⚠ Lỗi: Deadline không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + ').\n\nVui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
+                            $('#taskDeadline').val('');
                             $('#taskDeadline').focus();
                             return;
                         }
@@ -3376,6 +3366,18 @@
         
         // Set minimum date for task create dates (form thêm task mới)
         function setMinDateForTaskCreateDates() {
+            // Set max date based on desired completion date (deadline from ticket)
+            var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+            if (workOrderDeadline) {
+                // Set max attribute for both start date and deadline
+                $('#taskStartDate').attr('max', workOrderDeadline);
+                $('#taskDeadline').attr('max', workOrderDeadline);
+            } else {
+                // Remove max if no deadline
+                $('#taskStartDate').removeAttr('max');
+                $('#taskDeadline').removeAttr('max');
+            }
+            
             // Set minimum date to today (YYYY-MM-DD format)
             var today = new Date();
             var dd = String(today.getDate()).padStart(2, '0');
@@ -3393,8 +3395,15 @@
             var today = new Date();
             today.setHours(0, 0, 0, 0);
             
-            // Get work order deadline from data attribute
+            // Get work order deadline from data attribute (ngày mong muốn hoàn thành từ ticket)
             var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+            
+            // Debug: log deadline for troubleshooting
+            if (!workOrderDeadline) {
+                console.warn('Warning: Desired completion date (workOrderDeadline) not found in data attribute');
+            } else {
+                console.log('Desired completion date loaded:', workOrderDeadline);
+            }
             
             // Validate start date
             if (startDate) {
@@ -3407,7 +3416,7 @@
                     return false;
                 }
                 
-                // Validate start date <= work order deadline
+                // Validate start date <= ngày mong muốn hoàn thành (deadline từ ticket)
                 if (workOrderDeadline) {
                     try {
                         var workOrderDeadlineDate = new Date(workOrderDeadline);
@@ -3415,13 +3424,13 @@
                         if (start > workOrderDeadlineDate) {
                             var deadlineParts = workOrderDeadline.split('-');
                             var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
-                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + '). Vui lòng chọn ngày nhỏ hơn hoặc bằng deadline.');
+                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + ').\n\nVui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
                             $('#taskStartDate').val('');
                             $('#taskStartDate').focus();
                             return false;
                         }
                     } catch (e) {
-                        console.warn('Error validating start date against work order deadline:', e);
+                        console.warn('Error validating start date against desired completion date:', e);
                     }
                 }
             }
@@ -3449,7 +3458,7 @@
                     }
                 }
                 
-                // Validate deadline <= work order deadline
+                // Validate deadline <= ngày mong muốn hoàn thành (deadline từ ticket)
                 if (workOrderDeadline) {
                     try {
                         var workOrderDeadlineDate = new Date(workOrderDeadline);
@@ -3457,14 +3466,21 @@
                         if (end > workOrderDeadlineDate) {
                             var deadlineParts = workOrderDeadline.split('-');
                             var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
-                            alert('⚠ Lỗi: Deadline không được lớn hơn deadline của đơn hàng (' + deadlineDisplay + '). Vui lòng chọn ngày nhỏ hơn hoặc bằng deadline.');
+                            // Format deadline for display
+                            var deadlineParts2 = deadline.split('-');
+                            var deadlineDisplay2 = deadlineParts2[2] + '/' + deadlineParts2[1] + '/' + deadlineParts2[0];
+                            alert('⚠ Lỗi: Deadline (' + deadlineDisplay2 + ') không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + ').\n\nVui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
                             $('#taskDeadline').val('');
                             $('#taskDeadline').focus();
                             return false;
                         }
                     } catch (e) {
-                        console.warn('Error validating deadline against work order deadline:', e);
+                        console.warn('Error validating deadline against desired completion date:', e);
+                        return false; // Fail validation if error parsing
                     }
+                } else {
+                    // If no deadline is set, we should still allow but log warning
+                    console.warn('Warning: No desired completion date found. Cannot validate deadline against desired completion date.');
                 }
             }
             
@@ -3480,6 +3496,12 @@
                 var deadline = $('#taskDeadline').val();
                 if (deadline && deadline < startDate) {
                     $('#taskDeadline').val('');
+                }
+                
+                // Ensure max date (desired completion date) is still applied
+                var workOrderDeadline = $('#taskStartDate').data('workOrderDeadline');
+                if (workOrderDeadline) {
+                    $('#taskDeadline').attr('max', workOrderDeadline);
                 }
             } else {
                 // Reset to today if start date is cleared
