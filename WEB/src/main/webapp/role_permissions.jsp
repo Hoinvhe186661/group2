@@ -1,13 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="java.sql.*, java.util.*, java.util.stream.*" %>
+<%@ page import="java.sql.*, java.util.*, java.util.stream.*, com.hlgenerator.dao.DBConnect" %>
 <%
     request.setCharacterEncoding("UTF-8");
     response.setCharacterEncoding("UTF-8");
-
-    // DB config (sync with src/main/resources/database.properties)
-    final String JDBC_URL = "jdbc:mysql://localhost:3306/hlelectric?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci";
-    final String JDBC_USER = "root";
-    final String JDBC_PASS = "admin";
 
     // Admin core permissions that cannot be removed
     final Set<String> ADMIN_CORE_PERMS = new HashSet<String>(Arrays.asList(
@@ -29,14 +24,12 @@
         return;
     }
 
-    Class.forName("com.mysql.cj.jdbc.Driver");
-
     // Handle POST to update matrix
     if ("POST".equalsIgnoreCase(request.getMethod())) {
         Connection conn = null;
         PreparedStatement ps = null;
         try {
-            conn = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASS);
+            conn = DBConnect.getConnectionFromProperties();
             conn.setAutoCommit(false);
 
             // Load role ids and keys
@@ -122,7 +115,7 @@
     Statement st2 = null;
     ResultSet rs2 = null;
     try {
-        conn2 = DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASS);
+        conn2 = DBConnect.getConnectionFromProperties();
         // Load roles
         try {
             st2 = conn2.createStatement();

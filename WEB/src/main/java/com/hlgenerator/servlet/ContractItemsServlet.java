@@ -44,7 +44,7 @@ public class ContractItemsServlet extends HttpServlet {
             String user = props.getProperty("db.username");
             String pass = props.getProperty("db.password");
 
-            String sql = "SELECT product_id, description, quantity, unit_price, warranty_months, notes FROM contract_products WHERE contract_id = ? ORDER BY id";
+            String sql = "SELECT product_id, description, quantity, unit_price, warranty_months, notes, COALESCE(delivery_status, 'not_delivered') as delivery_status FROM contract_products WHERE contract_id = ? ORDER BY id";
             try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass);
                  java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, contractId);
@@ -65,6 +65,8 @@ public class ContractItemsServlet extends HttpServlet {
                         }
                         String notes = rs.getString("notes");
                         obj.put("notes", rs.wasNull() ? JSONObject.NULL : notes);
+                        String deliveryStatus = rs.getString("delivery_status");
+                        obj.put("deliveryStatus", deliveryStatus != null ? deliveryStatus : "not_delivered");
                         arr.put(obj);
                     }
                     out.print(successJson(arr));

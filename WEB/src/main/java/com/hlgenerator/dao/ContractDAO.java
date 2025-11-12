@@ -114,6 +114,27 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    /**
+     * Cập nhật trạng thái hợp đồng
+     * @param contractId ID của hợp đồng
+     * @param status Trạng thái mới
+     * @return true nếu cập nhật thành công, false nếu thất bại
+     */
+    public boolean updateContractStatus(int contractId, String status) {
+        if (!checkConnection()) return false;
+        String sql = "UPDATE contracts SET status = ? WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, contractId);
+            int result = ps.executeUpdate();
+            logger.info("Updated contract ID " + contractId + " status to " + status + ", affected rows: " + result);
+            return result > 0;
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error updating contract status", e);
+            return false;
+        }
+    }
+
     public boolean deleteContract(int id) {
         return performSoftDelete(id, null);
     }
@@ -344,7 +365,7 @@ public class ContractDAO extends DBConnect {
     }
 
     public int countContractsFiltered(String status, String contractType, String search,
-                                      Date startFrom, Date startTo, Date endFrom, Date endTo) {
+                                      Date signedFrom, Date signedTo, Date endFrom, Date endTo) {
         if (!checkConnection()) return 0;
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT COUNT(*) FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE 1=1");
@@ -357,8 +378,8 @@ public class ContractDAO extends DBConnect {
         }
         if (contractType != null && !contractType.isEmpty()) { sql.append(" AND c.contract_type = ?"); params.add(contractType); }
         addSearchConditions(sql, params, search, "CAST(c.id AS CHAR)", "c.contract_number", "c.title", "cu.company_name", "cu.contact_person", "cu.customer_code");
-        if (startFrom != null) { sql.append(" AND c.start_date >= ?"); params.add(startFrom); }
-        if (startTo != null) { sql.append(" AND c.start_date <= ?"); params.add(startTo); }
+        if (signedFrom != null) { sql.append(" AND c.signed_date >= ?"); params.add(signedFrom); }
+        if (signedTo != null) { sql.append(" AND c.signed_date <= ?"); params.add(signedTo); }
         if (endFrom != null) { sql.append(" AND c.end_date >= ?"); params.add(endFrom); }
         if (endTo != null) { sql.append(" AND c.end_date <= ?"); params.add(endTo); }
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -375,7 +396,7 @@ public class ContractDAO extends DBConnect {
     }
 
     public List<Contract> getContractsPageFiltered(int page, int pageSize, String status, String contractType, String search,
-                                                   Date startFrom, Date startTo, Date endFrom, Date endTo,
+                                                   Date signedFrom, Date signedTo, Date endFrom, Date endTo,
                                                    String sortBy, String sortDir) {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) return list;
@@ -386,7 +407,7 @@ public class ContractDAO extends DBConnect {
         // Whitelist sort columns
         String orderColumn;
         if ("customerName".equalsIgnoreCase(sortBy)) orderColumn = "cu.company_name";
-        else if ("startDate".equalsIgnoreCase(sortBy)) orderColumn = "c.start_date";
+        else if ("signedDate".equalsIgnoreCase(sortBy)) orderColumn = "c.signed_date";
         else if ("endDate".equalsIgnoreCase(sortBy)) orderColumn = "c.end_date";
         else if ("status".equalsIgnoreCase(sortBy)) orderColumn = "c.status";
         else orderColumn = "c.id"; // default id
@@ -404,8 +425,8 @@ public class ContractDAO extends DBConnect {
         }
         if (contractType != null && !contractType.isEmpty()) { sql.append(" AND c.contract_type = ?"); params.add(contractType); }
         addSearchConditions(sql, params, search, "CAST(c.id AS CHAR)", "c.contract_number", "c.title", "cu.company_name", "cu.contact_person", "cu.customer_code");
-        if (startFrom != null) { sql.append(" AND c.start_date >= ?"); params.add(startFrom); }
-        if (startTo != null) { sql.append(" AND c.start_date <= ?"); params.add(startTo); }
+        if (signedFrom != null) { sql.append(" AND c.signed_date >= ?"); params.add(signedFrom); }
+        if (signedTo != null) { sql.append(" AND c.signed_date <= ?"); params.add(signedTo); }
         if (endFrom != null) { sql.append(" AND c.end_date >= ?"); params.add(endFrom); }
         if (endTo != null) { sql.append(" AND c.end_date <= ?"); params.add(endTo); }
         sql.append(" ORDER BY ").append(orderColumn).append(" ").append(direction).append(" LIMIT ? OFFSET ?");
@@ -672,31 +693,6 @@ public class ContractDAO extends DBConnect {
         }
         
         return contractProducts;
-    }
-    
-    /**
-     * Cập nhật trạng thái hợp đồng
-     * Tác giả: Sơn Lê
-     * @param contractId ID của hợp đồng
-     * @param status Trạng thái mới
-     * @return true nếu cập nhật thành công, false nếu có lỗi
-     */
-    public boolean updateContractStatus(int contractId, String status) {
-        if (!checkConnection()) {
-            return false;
-        }
-        
-        String sql = "UPDATE contracts SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-        
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, status);
-            ps.setInt(2, contractId);
-            int rowsAffected = ps.executeUpdate();
-            return rowsAffected > 0;
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error updating contract status for contract ID: " + contractId, e);
-            return false;
-        }
     }
 }
 

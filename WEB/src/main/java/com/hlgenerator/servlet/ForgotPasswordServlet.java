@@ -12,10 +12,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @WebServlet("/forgot-password")
 public class ForgotPasswordServlet extends HttpServlet {
@@ -74,33 +77,62 @@ public class ForgotPasswordServlet extends HttpServlet {
     }
 
     private void sendEmail(String to, String subject, String body) throws MessagingException {
-        final String username = "nguyenvanhoitgm@gmail.com";
-        final String password = "qvms fnhj ehgg qmcn";
-
-        Properties props = new Properties();
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", "smtp.gmail.com");
-        props.put("mail.smtp.port", "587");
-        props.put("mail.mime.charset", "UTF-8");
-        props.put("mail.smtp.connectiontimeout", "10000");
-        props.put("mail.smtp.timeout", "10000");
-        props.put("mail.smtp.writetimeout", "10000");
-
-        Session session = Session.getInstance(props, new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(username, password);
+        // Load email configuration from database.properties file
+        Properties emailProps = new Properties();
+        InputStream inputStream = null;
+        
+        try {
+            inputStream = getClass().getClassLoader().getResourceAsStream("database.properties");
+            if (inputStream == null) {
+                throw new MessagingException("database.properties file not found!");
             }
-        });
+            emailProps.load(inputStream);
+            
+            // Get email configuration from properties
+            final String username = emailProps.getProperty("mail.smtp.username");
+            final String password = emailProps.getProperty("mail.smtp.password");
+            
+            if (username == null || password == null) {
+                throw new MessagingException("Email username or password not found in properties file!");
+            }
+            
+            // Create mail properties from configuration file
+            Properties props = new Properties();
+            props.put("mail.smtp.auth", emailProps.getProperty("mail.smtp.auth", "true"));
+            props.put("mail.smtp.starttls.enable", emailProps.getProperty("mail.smtp.starttls.enable", "true"));
+            props.put("mail.smtp.host", emailProps.getProperty("mail.smtp.host", "smtp.gmail.com"));
+            props.put("mail.smtp.port", emailProps.getProperty("mail.smtp.port", "587"));
+            props.put("mail.mime.charset", emailProps.getProperty("mail.mime.charset", "UTF-8"));
+            props.put("mail.smtp.connectiontimeout", emailProps.getProperty("mail.smtp.connectiontimeout", "10000"));
+            props.put("mail.smtp.timeout", emailProps.getProperty("mail.smtp.timeout", "10000"));
+            props.put("mail.smtp.writetimeout", emailProps.getProperty("mail.smtp.writetimeout", "10000"));
 
-        MimeMessage message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(username));
-        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
-        message.setSubject(subject, "UTF-8");
-        message.setText(body, "UTF-8");
+            Session session = Session.getInstance(props, new Authenticator() {
+                @Override
+                protected PasswordAuthentication getPasswordAuthentication() {
+                    return new PasswordAuthentication(username, password);
+                }
+            });
 
-        Transport.send(message);
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(username));
+            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
+            message.setSubject(subject, emailProps.getProperty("mail.mime.charset", "UTF-8"));
+            message.setText(body, emailProps.getProperty("mail.mime.charset", "UTF-8"));
+
+            Transport.send(message);
+        } catch (IOException e) {
+            Logger.getLogger(ForgotPasswordServlet.class.getName()).log(Level.SEVERE, "Error loading email properties", e);
+            throw new MessagingException("Error loading email configuration", e);
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    Logger.getLogger(ForgotPasswordServlet.class.getName()).log(Level.WARNING, "Error closing input stream", e);
+                }
+            }
+        }
     }
 }
 

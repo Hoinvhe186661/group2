@@ -862,10 +862,14 @@
         
         if (j && j.success) {
           alert('✓ ' + (j.message || 'Cảm ơn bạn đã gửi feedback!'));
-          // Redirect to feedback management page
-          setTimeout(function() {
-            window.location.href = ctx + '/feedback_management.jsp';
-          }, 500);
+          // Đóng modal feedback
+          const feedbackModalEl = document.getElementById('feedbackModal');
+          const feedbackModal = bootstrap.Modal.getInstance(feedbackModalEl);
+          if (feedbackModal) {
+            feedbackModal.hide();
+          }
+          // Reload lại danh sách support requests để cập nhật trạng thái
+          load();
         } else {
           alert('✗ ' + (j && j.message ? j.message : 'Lỗi khi gửi feedback'));
         }
@@ -919,10 +923,14 @@
         
         if (j && j.success) {
           alert('✓ ' + (j.message || 'Cảm ơn bạn đã gửi feedback!'));
-          // Redirect to feedback management page
-          setTimeout(function() {
-            window.location.href = ctx + '/feedback_management.jsp';
-          }, 500);
+          // Đóng modal feedback
+          const feedbackModalEl = document.getElementById('feedbackModal');
+          const feedbackModal = bootstrap.Modal.getInstance(feedbackModalEl);
+          if (feedbackModal) {
+            feedbackModal.hide();
+          }
+          // Reload lại danh sách support requests để cập nhật trạng thái
+          load();
         } else {
           alert('✗ ' + (j && j.message ? j.message : 'Lỗi khi gửi feedback'));
         }

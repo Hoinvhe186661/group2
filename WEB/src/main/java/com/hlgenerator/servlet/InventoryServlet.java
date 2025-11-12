@@ -19,7 +19,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.HashSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,12 +69,6 @@ public class InventoryServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         
-        if ("approveContract".equals(action) && !canManageInventory) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("{\"success\":false,\"message\":\"Không có quyền thực hiện\"}");
-            return;
-        }
-
         if ("getInventory".equals(action)) {
             getInventory(request, response);
         } else if ("getProducts".equals(action)) {
@@ -98,8 +91,6 @@ public class InventoryServlet extends HttpServlet {
             getContractsList(request, response);
         } else if ("getContractDetails".equals(action)) {
             getContractDetails(request, response);
-        } else if ("approveContract".equals(action)) {
-            approveContract(request, response);
         } else if ("getStockList".equals(action)) {
             getStockList(request, response);
         } else if ("getStockBalance".equals(action)) {
@@ -207,8 +198,6 @@ public class InventoryServlet extends HttpServlet {
             handleStockIn(request, response);
         } else if ("stockOut".equals(action)) {
             handleStockOut(request, response);
-        } else if ("approveContract".equals(action)) {
-            approveContract(request, response);
         } else {
             response.getWriter().write("{\"success\":false,\"message\":\"Invalid action\"}");
         }
@@ -216,8 +205,7 @@ public class InventoryServlet extends HttpServlet {
     
     /**
      * Lấy danh sách hợp đồng với lọc và phân trang
-     * Chỉ lấy hợp đồng có trạng thái 'pending_approval' (chờ duyệt) và 'approved' (đã duyệt)
-     * Tác giả: Sơn Lê
+     * Lấy tất cả hợp đồng (không lọc theo trạng thái cụ thể)
      */
     private void getContractsList(HttpServletRequest request, HttpServletResponse response) 
             throws IOException {
@@ -242,30 +230,12 @@ public class InventoryServlet extends HttpServlet {
             List<Contract> allContracts = contractDAO.getAllContracts();
             
             // Lọc theo trạng thái và tìm kiếm
-            // CHỈ LẤY hợp đồng có trạng thái 'pending_approval' hoặc 'approved'
             List<Contract> filteredContracts = new java.util.ArrayList<>();
             
-            // Debug: đếm số hợp đồng theo trạng thái
-            int pendingCount = 0;
-            int approvedCount = 0;
-            int otherCount = 0;
-            
             for (Contract c : allContracts) {
-                // Chỉ lấy hợp đồng chờ duyệt hoặc đã duyệt
                 String contractStatus = c.getStatus();
                 if (contractStatus == null) {
                     contractStatus = "";
-                }
-                
-                // Đếm số lượng theo trạng thái để debug
-                if ("pending_approval".equals(contractStatus)) {
-                    pendingCount++;
-                } else if ("approved".equals(contractStatus)) {
-                    approvedCount++;
-                } else {
-                    otherCount++;
-                    // Bỏ qua các trạng thái khác
-                    continue;
                 }
                 
                 // Lọc theo trạng thái nếu có filter
@@ -290,7 +260,6 @@ public class InventoryServlet extends HttpServlet {
             
             // Log để debug
             System.out.println("InventoryServlet.getContractsList - Total contracts: " + allContracts.size() + 
-                ", Pending: " + pendingCount + ", Approved: " + approvedCount + ", Other: " + otherCount + 
                 ", Filtered: " + filteredContracts.size());
             
             int totalCount = filteredContracts.size();
@@ -1161,28 +1130,47 @@ public class InventoryServlet extends HttpServlet {
                             String currentStatus = contract.getStatus();
                             System.out.println("Contract ID " + contractId + " current status: " + currentStatus);
                             
-                            // Chỉ cập nhật nếu hợp đồng đang ở trạng thái "approved" (đã duyệt)
-                            // và chuyển sang "active" (hiệu lực) sau khi xuất kho
-                            if ("approved".equals(currentStatus)) {
-                                // Cập nhật trạng thái hợp đồng thành "active" (hiệu lực)
+                            // Cập nhật trạng thái hợp đồng thành "active" (hiệu lực) nếu đang là "draft"
+                            if ("draft".equals(currentStatus)) {
                                 boolean updated = contractDAO.updateContractStatus(contractId, "active");
                                 if (updated) {
-                                    // Verify the update
-                                    Contract updatedContract = contractDAO.getContractById(contractId);
-                                    if (updatedContract != null && "active".equals(updatedContract.getStatus())) {
-                                        updateMessage = "Xuất kho thành công. Hợp đồng đã được chuyển sang trạng thái hiệu lực.";
-                                        System.out.println("Contract ID " + contractId + " status successfully updated to 'active'");
-                                    } else {
-                                        System.out.println("Warning: Update returned true but verification failed for contract ID " + contractId);
-                                        updateMessage = "Xuất kho thành công. Cảnh báo: Không thể xác minh cập nhật trạng thái hợp đồng.";
-                                    }
-                                } else {
-                                    System.out.println("Error: Failed to update contract ID " + contractId + " status to 'active'");
-                                    updateMessage = "Xuất kho thành công. Cảnh báo: Không thể cập nhật trạng thái hợp đồng.";
+                                    updateMessage = "Xuất kho thành công. Hợp đồng đã được chuyển sang trạng thái hiệu lực.";
+                                    System.out.println("Contract ID " + contractId + " status successfully updated to 'active'");
                                 }
-                            } else {
-                                System.out.println("Contract ID " + contractId + " status is '" + currentStatus + "', not 'approved'. Status update skipped.");
-                                // Không cập nhật nếu không phải trạng thái "approved"
+                            }
+                            
+                            // Đánh dấu các sản phẩm đã bàn giao (đã xuất kho)
+                            try {
+                                java.util.Properties props = new java.util.Properties();
+                                java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
+                                props.load(input);
+                                
+                                String url = props.getProperty("db.url");
+                                String user = props.getProperty("db.username");
+                                String pass = props.getProperty("db.password");
+                                
+                                try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
+                                    // Parse JSON để lấy danh sách sản phẩm đã xuất (sử dụng biến productsJson đã có)
+                                    if (productsJson != null && !productsJson.trim().isEmpty()) {
+                                        org.json.JSONArray products = new org.json.JSONArray(productsJson);
+                                        String updateDeliverySql = "UPDATE contract_products SET delivery_status = 'delivered' WHERE contract_id = ? AND product_id = ?";
+                                        try (java.sql.PreparedStatement ps = conn.prepareStatement(updateDeliverySql)) {
+                                            for (int i = 0; i < products.length(); i++) {
+                                                try {
+                                                    org.json.JSONObject product = products.getJSONObject(i);
+                                                    int prodId = product.getInt("productId");
+                                                    ps.setInt(1, contractId);
+                                                    ps.setInt(2, prodId);
+                                                    ps.executeUpdate();
+                                                } catch (Exception e) {
+                                                    System.out.println("Warning: Could not update delivery status for product: " + e.getMessage());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                System.out.println("Warning: Could not update delivery status: " + e.getMessage());
                             }
                         } else {
                             System.out.println("Error: Contract ID " + contractId + " not found in database");
@@ -1462,122 +1450,6 @@ public class InventoryServlet extends HttpServlet {
             
             json.append("]}}");
             response.getWriter().write(json.toString());
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.getWriter().write("{\"success\":false,\"message\":\"" + 
-                escapeJson(e.getMessage()) + "\"}");
-        }
-    }
-    
-    /**
-     * Duyệt hợp đồng sau khi kiểm tra kho
-     * Nếu đủ hàng: đổi trạng thái thành 'approved' (đã duyệt)
-     * Nếu không đủ: không được duyệt
-     * Tác giả: Sơn Lê
-     */
-    private void approveContract(HttpServletRequest request, HttpServletResponse response) 
-            throws IOException {
-        try {
-            String contractIdParam = request.getParameter("contractId");
-            if (contractIdParam == null || contractIdParam.trim().isEmpty()) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Thiếu contractId\"}");
-                return;
-            }
-            
-            int contractId = Integer.parseInt(contractIdParam);
-            System.out.println("InventoryServlet.approveContract - Contract ID: " + contractId);
-            
-            Contract contract = contractDAO.getContractById(contractId);
-            
-            if (contract == null) {
-                System.out.println("InventoryServlet.approveContract - Contract not found: " + contractId);
-                response.getWriter().write("{\"success\":false,\"message\":\"Không tìm thấy hợp đồng\"}");
-                return;
-            }
-            
-            String currentStatus = contract.getStatus();
-            System.out.println("InventoryServlet.approveContract - Current status: " + currentStatus);
-            
-            // Kiểm tra trạng thái hợp đồng - chỉ duyệt hợp đồng chờ duyệt
-            if (!"pending_approval".equals(currentStatus)) {
-                System.out.println("InventoryServlet.approveContract - Invalid status: " + currentStatus);
-                response.getWriter().write("{\"success\":false,\"message\":\"Hợp đồng này không ở trạng thái chờ duyệt (hiện tại: " + 
-                    escapeJson(currentStatus != null ? currentStatus : "null") + ")\"}");
-                return;
-            }
-            
-            // Lấy danh sách sản phẩm trong hợp đồng
-            java.util.List<java.util.Map<String, Object>> contractProducts = contractDAO.getContractProducts(contractId);
-            
-            if (contractProducts.isEmpty()) {
-                response.getWriter().write("{\"success\":false,\"message\":\"Hợp đồng không có sản phẩm\"}");
-                return;
-            }
-            
-            java.util.List<String> insufficientProducts = new java.util.ArrayList<>();
-            for (java.util.Map<String, Object> product : contractProducts) {
-                int productId = (Integer) product.get("productId");
-                java.math.BigDecimal requiredQuantity = (java.math.BigDecimal) product.get("quantity");
-                int requiredQty = requiredQuantity.intValue();
-                String productName = (String) product.get("productName");
-                
-                int availableStock = inventoryDAO.getAvailableStock(productId);
-                
-                if (availableStock < requiredQty) {
-                    insufficientProducts.add(productName + " (cần: " + requiredQty + ", khả dụng: " + availableStock + ")");
-                }
-            }
-            
-            if (!insufficientProducts.isEmpty()) {
-                String message = "Không thể duyệt hợp đồng. Sản phẩm không đủ: " +
-                    String.join(", ", insufficientProducts);
-                response.getWriter().write("{\"success\":false,\"message\":\"" +
-                    escapeJson(message) + "\"}");
-                return;
-            }
-            
-            java.util.Map<Integer, Integer> reservedAllocations = new HashMap<Integer, Integer>();
-            for (java.util.Map<String, Object> product : contractProducts) {
-                int productId = (Integer) product.get("productId");
-                java.math.BigDecimal requiredQuantity = (java.math.BigDecimal) product.get("quantity");
-                int requiredQty = requiredQuantity.intValue();
-                if (requiredQty <= 0) {
-                    continue;
-                }
-                if (!inventoryDAO.increaseReservedStock(productId, requiredQty)) {
-                    System.out.println("InventoryServlet.approveContract - Failed to reserve stock for product " + productId + ": " + inventoryDAO.getLastError());
-                    for (Map.Entry<Integer, Integer> entry : reservedAllocations.entrySet()) {
-                        inventoryDAO.releaseReservedStock(entry.getKey(), entry.getValue());
-                    }
-                    String message = inventoryDAO.getLastError() != null ? inventoryDAO.getLastError() : "Không thể giữ chỗ tồn kho cho sản phẩm";
-                    response.getWriter().write("{\"success\":false,\"message\":\"" + escapeJson(message) + "\"}");
-                    return;
-                }
-                reservedAllocations.merge(productId, requiredQty, Integer::sum);
-            }
-            
-            System.out.println("InventoryServlet.approveContract - All products available, updating status to 'approved'");
-            boolean updated = contractDAO.updateContractStatus(contractId, "approved");
-            
-            if (updated) {
-                System.out.println("InventoryServlet.approveContract - Status updated successfully");
-                // Verify the update
-                Contract updatedContract = contractDAO.getContractById(contractId);
-                if (updatedContract != null && "approved".equals(updatedContract.getStatus())) {
-                    System.out.println("InventoryServlet.approveContract - Verified: Contract status is now 'approved'");
-                    response.getWriter().write("{\"success\":true,\"message\":\"Duyệt hợp đồng thành công. Trạng thái đã chuyển sang 'Đã duyệt'\"}");
-                } else {
-                    System.out.println("InventoryServlet.approveContract - Warning: Update returned true but status verification failed");
-                    response.getWriter().write("{\"success\":true,\"message\":\"Duyệt hợp đồng thành công\"}");
-                }
-            } else {
-                System.out.println("InventoryServlet.approveContract - Failed to update contract status");
-                for (Map.Entry<Integer, Integer> entry : reservedAllocations.entrySet()) {
-                    inventoryDAO.releaseReservedStock(entry.getKey(), entry.getValue());
-                }
-                response.getWriter().write("{\"success\":false,\"message\":\"Lỗi khi cập nhật trạng thái hợp đồng\"}");
-            }
             
         } catch (Exception e) {
             e.printStackTrace();

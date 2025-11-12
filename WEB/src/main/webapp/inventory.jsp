@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="com.hlgenerator.util.AuthorizationUtil, com.hlgenerator.util.Permission" %>
+<%@ page import="java.util.*" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
@@ -12,9 +12,15 @@
         return;
     }
     
-    // Kiểm tra quyền truy cập - sử dụng permission
-    boolean canManage = AuthorizationUtil.hasPermission(request, Permission.MANAGE_INVENTORY);
-    boolean canView = AuthorizationUtil.hasPermission(request, Permission.VIEW_INVENTORY);
+    // Kiểm tra quyền truy cập - giống như role_permissions.jsp
+    @SuppressWarnings("unchecked")
+    Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+    if (userPermissions == null) {
+        userPermissions = new HashSet<String>();
+    }
+    
+    boolean canManage = userPermissions.contains("manage_inventory");
+    boolean canView = userPermissions.contains("view_inventory");
     if (!canManage && !canView) {
         response.sendRedirect(request.getContextPath() + "/403.jsp");
         return;
@@ -285,8 +291,9 @@
                                                     <label for="filterContractStatus">Trạng thái:</label>
                                                     <select class="form-control" id="filterContractStatus">
                                                         <option value="">Tất cả trạng thái</option>
-                                                        <option value="pending_approval">Chờ duyệt</option>
-                                                        <option value="approved">Đã duyệt</option>
+                                                        <option value="draft">Nháp</option>
+                                                        <option value="active">Hiệu Lực</option>
+                                                        <option value="terminated">Chấm Dứt</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -420,9 +427,6 @@
                     <div class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" id="approveContractBtn" style="display:none;" onclick="approveContract($('#viewContractModal').data('contract-id'))">
-                        <i class="fa fa-check"></i> Duyệt hợp đồng
-                    </button>
                     <button type="button" class="btn btn-primary" data-dismiss="modal">Đóng</button>
                 </div>
             </div>
@@ -767,7 +771,7 @@
             
             if (data.length === 0) {
                 tbody.append('<tr><td colspan="11" class="text-center text-muted">' +
-                    '<i class="fa fa-info-circle"></i> Không có hợp đồng chờ duyệt hoặc đã duyệt nào</td></tr>');
+                    '<i class="fa fa-info-circle"></i> Không có hợp đồng nào</td></tr>');
                 return;
             }
             
@@ -784,24 +788,16 @@
                 var actionButtons = '';
                 var contractStatus = contract.status || '';
                 
-                if (contractStatus === 'pending_approval') {
-                    // Hợp đồng chờ duyệt: chỉ có nút Xem
-                    actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
-                        '<i class="fa fa-eye"></i> Xem' +
-                    '</button>';
-                } else if (contractStatus === 'approved') {
-                    // Hợp đồng đã duyệt: có nút Xem và nút Xuất kho
-                    actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
-                        '<i class="fa fa-eye"></i> Xem' +
-                    '</button> ' +
-                    '<button class="btn btn-danger btn-xs" onclick="exportStockForContract(' + contract.id + ')" title="Xuất kho">' +
+                // Hiển thị nút Xem cho tất cả hợp đồng
+                actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
+                    '<i class="fa fa-eye"></i> Xem' +
+                '</button>';
+                
+                // Hiển thị nút Xuất kho cho hợp đồng ở trạng thái draft hoặc active
+                if (contractStatus === 'draft' || contractStatus === 'active') {
+                    actionButtons += ' ' +
+                        '<button class="btn btn-danger btn-xs" onclick="exportStockForContract(' + contract.id + ')" title="Xuất kho">' +
                         '<i class="fa fa-arrow-up"></i> Xuất kho' +
-                    '</button>';
-                } else {
-                    // Các trạng thái khác: chỉ có nút Xem (fallback)
-                    console.warn('Unknown contract status:', contractStatus, 'for contract ID:', contract.id);
-                    actionButtons = '<button class="btn btn-info btn-xs" onclick="viewContract(' + contract.id + ')" title="Xem chi tiết">' +
-                        '<i class="fa fa-eye"></i> Xem' +
                     '</button>';
                 }
                 
@@ -827,33 +823,25 @@
             var statusText = status;
             
             switch(status) {
-                case 'pending_approval':
-                    badgeClass = 'label-warning';
-                    statusText = 'Chờ duyệt';
-                    break;
-                case 'approved':
-                    badgeClass = 'label-success';
-                    statusText = 'Đã duyệt';
-                    break;
                 case 'draft':
                     badgeClass = 'label-default';
                     statusText = 'Nháp';
                     break;
                 case 'active':
-                    badgeClass = 'label-info';
-                    statusText = 'Đang hoạt động';
-                    break;
-                case 'completed':
-                    badgeClass = 'label-info';
-                    statusText = 'Hoàn thành';
+                    badgeClass = 'label-success';
+                    statusText = 'Hiệu Lực';
                     break;
                 case 'terminated':
-                    badgeClass = 'label-warning';
-                    statusText = 'Chấm dứt';
-                    break;
-                case 'expired':
                     badgeClass = 'label-danger';
-                    statusText = 'Hết hạn';
+                    statusText = 'Chấm Dứt';
+                    break;
+                case 'deleted':
+                    badgeClass = 'label-default';
+                    statusText = 'Đã xóa';
+                    break;
+                default:
+                    badgeClass = 'label-default';
+                    statusText = status || 'Không xác định';
                     break;
             }
             
@@ -993,16 +981,6 @@
                         $('#viewContractModal').data('contract-status', data.status);
                         $('#viewContractModal').data('all-products-available', data.allProductsAvailable);
                         
-                        // Hiển thị nút duyệt hợp đồng CHỈ KHI hợp đồng chờ duyệt và TẤT CẢ sản phẩm đều đủ
-                        if (data.status === 'pending_approval' && data.allProductsAvailable === true) {
-                            $('#approveContractBtn').show();
-                        } else {
-                            $('#approveContractBtn').hide();
-                            // Nếu không đủ hàng, hiển thị thông báo rõ ràng
-                            if (data.status === 'pending_approval' && data.allProductsAvailable === false) {
-                                console.warn('Cannot approve contract: insufficient stock');
-                            }
-                        }
                         
                         $('#viewContractModal').modal('show');
                     } else {
@@ -1012,63 +990,6 @@
                 error: function(xhr, status, error) {
                     console.error('AJAX Error:', error);
                     alert('Lỗi kết nối đến server: ' + error);
-                }
-            });
-        }
-        
-        // Duyệt hợp đồng
-        // Chỉ cho phép duyệt khi validation đã kiểm tra và đủ hàng
-        function approveContract(contractId) {
-            if (!contractId || contractId <= 0) {
-                alert('ID hợp đồng không hợp lệ');
-                return;
-            }
-            
-            // Kiểm tra lại validation trước khi duyệt
-            var contractStatus = $('#viewContractModal').data('contract-status');
-            var allProductsAvailable = $('#viewContractModal').data('all-products-available');
-            
-            if (contractStatus !== 'pending_approval') {
-                alert('Chỉ có thể duyệt hợp đồng ở trạng thái "Chờ duyệt"');
-                return;
-            }
-            
-            if (allProductsAvailable !== true) {
-                alert('Không thể duyệt hợp đồng vì có sản phẩm không đủ trong kho. Vui lòng kiểm tra lại danh sách sản phẩm.');
-                return;
-            }
-            
-            if (!confirm('Bạn có chắc chắn muốn duyệt hợp đồng này?\n\nSau khi duyệt, hợp đồng sẽ chuyển sang trạng thái "Đã duyệt" và có thể xuất kho.')) {
-                return;
-            }
-            
-            // Hiển thị loading
-            var approveBtn = $('#approveContractBtn');
-            var originalText = approveBtn.html();
-            approveBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang duyệt...');
-            
-            $.ajax({
-                url: '<%=request.getContextPath()%>/inventory',
-                type: 'POST',
-                data: { action: 'approveContract', contractId: contractId },
-                dataType: 'json',
-                success: function(response) {
-                    approveBtn.prop('disabled', false).html(originalText);
-                    
-                    if (response.success) {
-                        alert('✓ ' + (response.message || 'Duyệt hợp đồng thành công!'));
-                        $('#viewContractModal').modal('hide');
-                        // Reload danh sách hợp đồng để cập nhật trạng thái
-                        loadContractsData();
-                    } else {
-                        alert('✗ Lỗi: ' + (response.message || 'Không thể duyệt hợp đồng'));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    approveBtn.prop('disabled', false).html(originalText);
-                    console.error('AJAX Error:', error);
-                    console.error('Response:', xhr.responseText);
-                    alert('✗ Lỗi kết nối đến server: ' + error);
                 }
             });
         }

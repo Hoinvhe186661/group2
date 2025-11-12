@@ -231,6 +231,36 @@ public class ContractServlet extends HttpServlet {
                     return;
                 }
                 
+                // Validation cho trạng thái "active" (hiệu lực)
+                if ("active".equals(c.getStatus())) {
+                    // Tiêu đề bắt buộc
+                    if (c.getTitle() == null || c.getTitle().trim().isEmpty()) {
+                        out.print(errorJson("Tiêu đề không được để trống khi trạng thái là 'Hiệu Lực'"));
+                        return;
+                    }
+                    // Điều khoản bắt buộc
+                    if (c.getTerms() == null || c.getTerms().trim().isEmpty()) {
+                        out.print(errorJson("Điều khoản không được để trống khi trạng thái là 'Hiệu Lực'"));
+                        return;
+                    }
+                    // Phải có ít nhất 1 sản phẩm
+                    String productsJson = request.getParameter("products");
+                    if (productsJson == null || productsJson.trim().isEmpty()) {
+                        out.print(errorJson("Hợp đồng ở trạng thái 'Hiệu Lực' phải có ít nhất 1 sản phẩm"));
+                        return;
+                    }
+                    try {
+                        JSONArray products = new JSONArray(productsJson);
+                        if (products.length() == 0) {
+                            out.print(errorJson("Hợp đồng ở trạng thái 'Hiệu Lực' phải có ít nhất 1 sản phẩm"));
+                            return;
+                        }
+                    } catch (Exception e) {
+                        out.print(errorJson("Hợp đồng ở trạng thái 'Hiệu Lực' phải có ít nhất 1 sản phẩm"));
+                        return;
+                    }
+                }
+                
                 // Kiểm tra trùng lặp số hợp đồng (bao gồm cả trong thùng rác)
                 if (contractDAO.isContractNumberExistsIncludingDeleted(c.getContractNumber())) {
                     // Kiểm tra xem có phải trong thùng rác không
@@ -286,6 +316,36 @@ public class ContractServlet extends HttpServlet {
                 if (c.getCustomerId() <= 0) {
                     out.print(errorJson("Vui lòng chọn khách hàng"));
                     return;
+                }
+                
+                // Validation cho trạng thái "active" (hiệu lực)
+                if ("active".equals(c.getStatus())) {
+                    // Tiêu đề bắt buộc
+                    if (c.getTitle() == null || c.getTitle().trim().isEmpty()) {
+                        out.print(errorJson("Tiêu đề không được để trống khi trạng thái là 'Hiệu Lực'"));
+                        return;
+                    }
+                    // Điều khoản bắt buộc
+                    if (c.getTerms() == null || c.getTerms().trim().isEmpty()) {
+                        out.print(errorJson("Điều khoản không được để trống khi trạng thái là 'Hiệu Lực'"));
+                        return;
+                    }
+                    // Phải có ít nhất 1 sản phẩm
+                    String productsJson = request.getParameter("products");
+                    if (productsJson == null || productsJson.trim().isEmpty()) {
+                        out.print(errorJson("Hợp đồng ở trạng thái 'Hiệu Lực' phải có ít nhất 1 sản phẩm"));
+                        return;
+                    }
+                    try {
+                        JSONArray products = new JSONArray(productsJson);
+                        if (products.length() == 0) {
+                            out.print(errorJson("Hợp đồng ở trạng thái 'Hiệu Lực' phải có ít nhất 1 sản phẩm"));
+                            return;
+                        }
+                    } catch (Exception e) {
+                        out.print(errorJson("Hợp đồng ở trạng thái 'Hiệu Lực' phải có ít nhất 1 sản phẩm"));
+                        return;
+                    }
                 }
                 
                 // Kiểm tra trùng lặp số hợp đồng (bao gồm cả trong thùng rác, loại trừ chính hợp đồng đang sửa)
@@ -349,14 +409,9 @@ public class ContractServlet extends HttpServlet {
                 out.print(ok ? successMsg("Đã chuyển hợp đồng vào thùng rác") : errorJson("Xóa hợp đồng thất bại"));
             } else if ("restore".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                String status = param(request, "status");
-                boolean ok;
-                if (status != null && !status.isEmpty()) {
-                    ok = contractDAO.restoreContractWithStatus(id, status);
-                } else {
-                    ok = contractDAO.restoreContract(id);
-                }
-                out.print(ok ? successMsg("Khôi phục hợp đồng thành công") : errorJson("Khôi phục hợp đồng thất bại"));
+                // Luôn khôi phục về trạng thái "draft" để đảm bảo quy trình phê duyệt
+                boolean ok = contractDAO.restoreContract(id);
+                out.print(ok ? successMsg("Khôi phục hợp đồng thành công. Hợp đồng đã được khôi phục về trạng thái 'Bản nháp'.") : errorJson("Khôi phục hợp đồng thất bại"));
             } else if ("permanent_delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 // Xóa sản phẩm trước
@@ -384,7 +439,7 @@ public class ContractServlet extends HttpServlet {
         c.setCustomerId(Integer.parseInt(param(request, "customerId")));
         c.setContractType(param(request, "contractType"));
         c.setTitle(param(request, "title"));
-        c.setStartDate(parseDate(param(request, "startDate")));
+        c.setStartDate(null); // Không dùng startDate nữa, để null
         c.setEndDate(parseDate(param(request, "endDate")));
         String value = param(request, "contractValue");
         c.setContractValue(value == null || value.isEmpty() ? null : new BigDecimal(value));
@@ -504,7 +559,7 @@ public class ContractServlet extends HttpServlet {
                             }
 
                             // Thêm vào contract_products
-                            String insertSql = "INSERT INTO contract_products (contract_id, product_id, description, quantity, unit_price, warranty_months, notes) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                            String insertSql = "INSERT INTO contract_products (contract_id, product_id, description, quantity, unit_price, warranty_months, notes, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'not_delivered')";
                             try (java.sql.PreparedStatement ps = conn.prepareStatement(insertSql)) {
                                 ps.setInt(1, contractId);
                                 ps.setInt(2, productId);
