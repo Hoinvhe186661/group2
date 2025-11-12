@@ -171,10 +171,11 @@ public class EmailNotificationDAO extends DBConnect {
         return notifications;
     }
 
-    // Get email notifications with filters
+    // Get email notifications with filters (with pagination)
     public List<EmailNotification> getEmailNotificationsWithFilters(String emailType, String status, 
                                                                    String searchTerm, 
-                                                                   String startDate, String endDate) {
+                                                                   String startDate, String endDate,
+                                                                   int offset, int limit) {
         List<EmailNotification> notifications = new ArrayList<>();
         if (!checkConnection()) {
             return notifications;
@@ -211,7 +212,9 @@ public class EmailNotificationDAO extends DBConnect {
             params.add(endDate);
         }
         
-        sql.append(" ORDER BY created_at DESC");
+        sql.append(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
         
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
             for (int i = 0; i < params.size(); i++) {
@@ -226,6 +229,67 @@ public class EmailNotificationDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error getting email notifications with filters", e);
         }
         return notifications;
+    }
+    
+    // Get total count of email notifications with filters (for pagination)
+    public int getEmailNotificationsCount(String emailType, String status, 
+                                         String searchTerm, 
+                                         String startDate, String endDate) {
+        if (!checkConnection()) {
+            return 0;
+        }
+        
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) as total FROM email_notifications WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        
+        if (emailType != null && !emailType.isEmpty()) {
+            sql.append(" AND email_type = ?");
+            params.add(emailType);
+        }
+        
+        if (status != null && !status.isEmpty()) {
+            sql.append(" AND status = ?");
+            params.add(status);
+        }
+        
+        if (searchTerm != null && !searchTerm.isEmpty()) {
+            sql.append(" AND (subject LIKE ? OR content LIKE ? OR sent_by_name LIKE ?)");
+            String searchPattern = "%" + searchTerm + "%";
+            params.add(searchPattern);
+            params.add(searchPattern);
+            params.add(searchPattern);
+        }
+        
+        if (startDate != null && !startDate.isEmpty()) {
+            sql.append(" AND DATE(created_at) >= ?");
+            params.add(startDate);
+        }
+        
+        if (endDate != null && !endDate.isEmpty()) {
+            sql.append(" AND DATE(created_at) <= ?");
+            params.add(endDate);
+        }
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total");
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting email notifications count", e);
+        }
+        return 0;
+    }
+    
+    // Legacy method for backward compatibility
+    public List<EmailNotification> getEmailNotificationsWithFilters(String emailType, String status, 
+                                                                   String searchTerm, 
+                                                                   String startDate, String endDate) {
+        return getEmailNotificationsWithFilters(emailType, status, searchTerm, startDate, endDate, 0, Integer.MAX_VALUE);
     }
 
     // Update status
@@ -350,15 +414,20 @@ public class EmailNotificationDAO extends DBConnect {
         }
     }
 
-    // Mark notification as completed
-    public boolean markAsCompleted(int notificationId) {
+    // Mark notification as completed (with status)
+    public boolean markAsCompleted(int notificationId, String status) {
         if (!checkConnection()) {
             return false;
         }
-        String sql = "UPDATE email_notifications SET status = 'completed', " +
+        // Validate status
+        if (status == null || (!status.equals("completed") && !status.equals("failed") && !status.equals("partial"))) {
+            status = "completed"; // Default to completed
+        }
+        String sql = "UPDATE email_notifications SET status = ?, " +
                     "completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, notificationId);
+            ps.setString(1, status);
+            ps.setInt(2, notificationId);
             int result = ps.executeUpdate();
             return result > 0;
         } catch (SQLException e) {
@@ -366,12 +435,39 @@ public class EmailNotificationDAO extends DBConnect {
             return false;
         }
     }
+    
+    // Legacy method for backward compatibility
+    public boolean markAsCompleted(int notificationId) {
+        return markAsCompleted(notificationId, "completed");
+    }
 
-    // Delete email notification
+    // Delete email notification (only if not sending)
     public boolean deleteEmailNotification(int id) {
         if (!checkConnection()) {
             return false;
         }
+        // Check if email is currently sending
+        String checkSql = "SELECT status FROM email_notifications WHERE id = ?";
+        try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+            checkPs.setInt(1, id);
+            try (ResultSet rs = checkPs.executeQuery()) {
+                if (rs.next()) {
+                    String status = rs.getString("status");
+                    if ("sending".equals(status)) {
+                        logger.warning("Cannot delete email notification " + id + " - currently sending");
+                        return false;
+                    }
+                } else {
+                    logger.warning("Email notification not found: " + id);
+                    return false;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking email notification status before delete", e);
+            return false;
+        }
+        
+        // Delete the notification
         String sql = "DELETE FROM email_notifications WHERE id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, id);

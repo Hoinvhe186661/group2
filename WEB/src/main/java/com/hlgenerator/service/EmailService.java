@@ -16,6 +16,8 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -124,8 +126,16 @@ public class EmailService {
         
         if (recipientEmails.isEmpty()) {
             logger.warning("No recipient emails found for notification: " + notificationId);
-            emailDAO.updateSendingResults(notificationId, 0, 0, "[]", "completed", 
+            emailDAO.updateSendingResults(notificationId, 0, 0, "[]", "failed", 
                                         "Không tìm thấy địa chỉ email người nhận");
+            return;
+        }
+        
+        // Limit maximum recipients (prevent spam)
+        if (recipientEmails.size() > 5000) {
+            logger.warning("Recipient count exceeds limit (5000) for notification: " + notificationId);
+            emailDAO.updateSendingResults(notificationId, 0, 0, "[]", "failed", 
+                                        "Số lượng người nhận vượt quá giới hạn (tối đa 5000 người)");
             return;
         }
         
@@ -143,6 +153,7 @@ public class EmailService {
         final AtomicInteger failedCount = new AtomicInteger(0);
         final AtomicInteger completedCount = new AtomicInteger(0);
         final int totalEmails = recipientEmails.size();
+        final AtomicInteger finalStatusSet = new AtomicInteger(0); // To prevent race condition
         
         // Create CountDownLatch to wait for all emails to complete
         final CountDownLatch latch = new CountDownLatch(totalEmails);
@@ -154,32 +165,90 @@ public class EmailService {
                 public void run() {
                     // Create new DAO instance for each thread (thread-safe)
                     EmailNotificationDAO threadEmailDAO = new EmailNotificationDAO();
-                    try {
-                        // Create and send email
-                        MimeMessage message = createMessage(session, finalNotification, email);
-                        Transport.send(message);
-                        
-                        // Update DB immediately - success
+                    boolean success = false;
+                    Exception lastException = null;
+                    
+                    // Try sending with retry (max 2 attempts)
+                    for (int attempt = 1; attempt <= 2; attempt++) {
+                        try {
+                            // Create and send email
+                            MimeMessage message = createMessage(session, finalNotification, email);
+                            
+                            // Send with timeout (30 seconds per email)
+                            ExecutorService timeoutExecutor = Executors.newSingleThreadExecutor();
+                            try {
+                                Future<Void> sendFuture = timeoutExecutor.submit(new Callable<Void>() {
+                                    @Override
+                                    public Void call() throws Exception {
+                                        Transport.send(message);
+                                        return null;
+                                    }
+                                });
+                                
+                                try {
+                                    sendFuture.get(30, TimeUnit.SECONDS);
+                                    success = true;
+                                    break; // Success, exit retry loop
+                                } catch (TimeoutException e) {
+                                    sendFuture.cancel(true);
+                                    throw new Exception("Email sending timeout for: " + email, e);
+                                } finally {
+                                    timeoutExecutor.shutdown();
+                                }
+                            } catch (Exception e) {
+                                timeoutExecutor.shutdownNow();
+                                throw e;
+                            }
+                        } catch (Exception e) {
+                            lastException = e;
+                            if (attempt < 2) {
+                                logger.log(Level.WARNING, "Failed to send email to: " + email + " (attempt " + attempt + "), retrying...", e);
+                                // Wait 2 seconds before retry
+                                try {
+                                    Thread.sleep(2000);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
+                            } else {
+                                logger.log(Level.WARNING, "Failed to send email to: " + email + " (after " + attempt + " attempts)", e);
+                            }
+                        }
+                    }
+                    
+                    // Update DB based on result
+                    if (success) {
                         threadEmailDAO.updateSingleEmailResult(notificationId, true, email);
                         successCount.incrementAndGet();
                         logger.info("Email sent successfully to: " + email);
-                    } catch (Exception e) {
-                        // Update DB immediately - failure
+                    } else {
                         threadEmailDAO.updateSingleEmailResult(notificationId, false, email);
                         failedCount.incrementAndGet();
-                        logger.log(Level.WARNING, "Failed to send email to: " + email, e);
-                    } finally {
-                        // Count down latch and check if all emails are done
-                        latch.countDown();
-                        int completed = completedCount.incrementAndGet();
+                        logger.log(Level.WARNING, "Failed to send email to: " + email + " after retries", lastException);
+                    }
+                    
+                    // Count down latch
+                    latch.countDown();
+                    int completed = completedCount.incrementAndGet();
+                    
+                    // When all emails are sent, mark notification with appropriate status
+                    // Use atomic operation to ensure only one thread sets the final status
+                    if (completed == totalEmails && finalStatusSet.compareAndSet(0, 1)) {
+                        int successCountValue = successCount.get();
+                        int failedCountValue = failedCount.get();
                         
-                        // When all emails are sent, mark notification as completed
-                        // Only the last thread should mark as completed
-                        if (completed == totalEmails) {
-                            threadEmailDAO.markAsCompleted(notificationId);
-                            logger.info("All emails processed for notification: " + notificationId + 
-                                      " (Success: " + successCount.get() + ", Failed: " + failedCount.get() + ")");
+                        String finalStatus;
+                        if (failedCountValue == 0) {
+                            finalStatus = "completed";
+                        } else if (successCountValue == 0) {
+                            finalStatus = "failed";
+                        } else {
+                            finalStatus = "partial";
                         }
+                        
+                        threadEmailDAO.markAsCompleted(notificationId, finalStatus);
+                        logger.info("All emails processed for notification: " + notificationId + 
+                                  " (Success: " + successCountValue + ", Failed: " + failedCountValue + ", Status: " + finalStatus + ")");
                     }
                 }
             });
@@ -190,10 +259,19 @@ public class EmailService {
             boolean finished = latch.await(30, TimeUnit.MINUTES); // Max 30 minutes timeout
             if (!finished) {
                 logger.warning("Email sending timeout for notification: " + notificationId);
+                // Mark as failed if timeout
+                if (finalStatusSet.compareAndSet(0, 1)) {
+                    emailDAO.updateStatus(notificationId, "failed");
+                    emailDAO.updateSendingResults(notificationId, successCount.get(), failedCount.get() + (totalEmails - completedCount.get()), 
+                                                 "[]", "failed", "Timeout: Không thể gửi tất cả email trong thời gian cho phép");
+                }
             }
         } catch (InterruptedException e) {
             logger.log(Level.SEVERE, "Email sending interrupted for notification: " + notificationId, e);
             Thread.currentThread().interrupt();
+            if (finalStatusSet.compareAndSet(0, 1)) {
+                emailDAO.updateStatus(notificationId, "failed");
+            }
         }
     }
     
@@ -320,17 +398,46 @@ public class EmailService {
             try {
                 JSONArray attachmentsArray = new JSONArray(notification.getAttachments());
                 for (int i = 0; i < attachmentsArray.length(); i++) {
-                    String filePath = attachmentsArray.getString(i);
-                    File file = new File(filePath);
+                    String relativePath = attachmentsArray.getString(i);
+                    File file = null;
+                    
+                    // Try multiple path resolution strategies
+                    // Strategy 1: Relative path from webapp (most common)
+                    String webappPath = System.getProperty("catalina.base");
+                    if (webappPath != null) {
+                        // Try with /webapps/ROOT prefix
+                        String absolutePath1 = webappPath + "/webapps/ROOT/" + relativePath;
+                        file = new File(absolutePath1);
+                        if (!file.exists()) {
+                            // Try without ROOT (for exploded WAR)
+                            String absolutePath2 = webappPath + "/webapps/" + relativePath;
+                            file = new File(absolutePath2);
+                        }
+                    }
+                    
+                    // Strategy 2: If still not found, try as absolute path (backward compatibility)
+                    if (file == null || !file.exists()) {
+                        file = new File(relativePath);
+                    }
+                    
+                    // Strategy 3: Try relative to current working directory
+                    if (!file.exists()) {
+                        file = new File(System.getProperty("user.dir") + "/" + relativePath);
+                    }
                     
                     if (file.exists() && file.isFile()) {
                         MimeBodyPart attachmentPart = new MimeBodyPart();
                         attachmentPart.attachFile(file);
-                        attachmentPart.setFileName(file.getName());
+                        // Extract filename from path
+                        String fileName = file.getName();
+                        if (fileName == null || fileName.isEmpty()) {
+                            fileName = relativePath.substring(relativePath.lastIndexOf('/') + 1);
+                        }
+                        attachmentPart.setFileName(fileName);
                         multipart.addBodyPart(attachmentPart);
-                        logger.info("Attached file: " + file.getName());
+                        logger.info("Attached file: " + fileName + " from path: " + relativePath);
                     } else {
-                        logger.warning("Attachment file not found: " + filePath);
+                        logger.warning("Attachment file not found: " + relativePath);
                     }
                 }
             } catch (Exception e) {

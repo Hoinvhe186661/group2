@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @WebServlet("/email-management")
@@ -56,12 +57,11 @@ public class EmailManagementServlet extends HttpServlet {
             return;
         }
         
-        String username = (String) session.getAttribute("username");
-        String userRole = (String) session.getAttribute("userRole");
-        
-        // Only admin can access
-        if (!"admin".equals(userRole)) {
-            response.sendRedirect(request.getContextPath() + "/admin.jsp");
+        // Check permission: only users with manage_email permission can access
+        @SuppressWarnings("unchecked")
+        Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+        if (userPermissions == null || !userPermissions.contains("manage_email")) {
+            response.sendRedirect(request.getContextPath() + "/error/403.jsp");
             return;
         }
         
@@ -94,8 +94,10 @@ public class EmailManagementServlet extends HttpServlet {
             return;
         }
         
-        String userRole = (String) session.getAttribute("userRole");
-        if (!"admin".equals(userRole)) {
+        // Check permission: only users with manage_email permission can access
+        @SuppressWarnings("unchecked")
+        Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+        if (userPermissions == null || !userPermissions.contains("manage_email")) {
             sendJsonResponse(response, false, "Không có quyền truy cập", null);
             return;
         }
@@ -144,25 +146,28 @@ public class EmailManagementServlet extends HttpServlet {
                 // Use defaults
             }
             
-            // Get all filtered emails
-            List<EmailNotification> allEmails = emailDAO.getEmailNotificationsWithFilters(
+            // Calculate pagination
+            int offset = (page - 1) * pageSize;
+            
+            // Get total count for pagination
+            int totalRecords = emailDAO.getEmailNotificationsCount(
                 emailType, status, searchTerm, startDate, endDate
             );
             
-            // Calculate pagination
-            int totalRecords = allEmails.size();
             int totalPages = (int) Math.ceil((double) totalRecords / pageSize);
             if (totalPages == 0) totalPages = 1;
             if (page > totalPages) page = totalPages;
             
-            int startIndex = (page - 1) * pageSize;
-            int endIndex = Math.min(startIndex + pageSize, totalRecords);
+            // Recalculate offset after page validation
+            offset = (page - 1) * pageSize;
             
-            // Get paginated emails
-            List<EmailNotification> emails = new ArrayList<>();
-            if (startIndex < totalRecords) {
-                emails = allEmails.subList(startIndex, endIndex);
-            }
+            // Get paginated emails directly from database
+            List<EmailNotification> emails = emailDAO.getEmailNotificationsWithFilters(
+                emailType, status, searchTerm, startDate, endDate, offset, pageSize
+            );
+            
+            int startIndex = offset + 1;
+            int endIndex = Math.min(offset + emails.size(), totalRecords);
             
             request.setAttribute("emails", emails);
             request.setAttribute("filterEmailType", emailType != null ? emailType : "");
@@ -255,8 +260,8 @@ public class EmailManagementServlet extends HttpServlet {
                         File uploadedFile = new File(uploadDir, uniqueFileName);
                         part.write(uploadedFile.getAbsolutePath());
                         
-                        // Store relative path
-                        String relativePath = uploadedFile.getAbsolutePath();
+                        // Store relative path (relative to webapp root, without leading slash)
+                        String relativePath = "uploads/email_attachments/" + uniqueFileName;
                         attachmentsArray.put(relativePath);
                     }
                 }
@@ -286,16 +291,35 @@ public class EmailManagementServlet extends HttpServlet {
                 }
             }
             
-            // Build recipient emails JSON
+            // Build recipient emails JSON with validation
             JSONArray emailsArray = new JSONArray();
             if (customEmails != null && !customEmails.trim().isEmpty()) {
                 String[] emails = customEmails.split("[,\\n]");
                 for (String email : emails) {
                     email = email.trim();
-                    if (!email.isEmpty() && email.contains("@")) {
+                    if (!email.isEmpty() && isValidEmail(email)) {
                         emailsArray.put(email);
                     }
                 }
+            }
+            
+            // Validate: must have at least one recipient (role or email)
+            boolean hasRoles = rolesArray.length() > 0;
+            boolean hasEmails = emailsArray.length() > 0;
+            if (!hasRoles && !hasEmails) {
+                sendJsonResponse(response, false, "Vui lòng chọn ít nhất một role hoặc nhập email người nhận", null);
+                return;
+            }
+            
+            // Limit maximum recipients (prevent spam)
+            int estimatedRecipientCount = emailsArray.length();
+            if (hasRoles) {
+                // Estimate: each role might have many users, limit to 1000 total
+                estimatedRecipientCount += 1000; // Will be validated in service
+            }
+            if (estimatedRecipientCount > 5000) {
+                sendJsonResponse(response, false, "Số lượng người nhận vượt quá giới hạn (tối đa 5000 người)", null);
+                return;
             }
             
             // Get sender name
@@ -436,6 +460,18 @@ public class EmailManagementServlet extends HttpServlet {
             }
             
             int id = Integer.parseInt(idParam);
+            // Check if email exists and is sending
+            EmailNotification email = emailDAO.getEmailNotificationById(id);
+            if (email == null) {
+                sendJsonResponse(response, false, "Email notification không tồn tại", null);
+                return;
+            }
+            
+            if ("sending".equals(email.getStatus())) {
+                sendJsonResponse(response, false, "Không thể xóa email đang được gửi. Vui lòng đợi quá trình gửi hoàn tất.", null);
+                return;
+            }
+            
             boolean deleted = emailDAO.deleteEmailNotification(id);
             
             if (deleted) {
@@ -495,6 +531,18 @@ public class EmailManagementServlet extends HttpServlet {
             }
         }
         return null;
+    }
+    
+    /**
+     * Validate email format using regex
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return false;
+        }
+        // RFC 5322 compliant email regex (simplified)
+        String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+        return email.matches(emailRegex);
     }
 }
 

@@ -244,6 +244,9 @@ public class EmailNotification {
     }
 
     public String getStatusDisplayName() {
+        if (status == null) {
+            return "Chờ gửi";
+        }
         switch (status) {
             case "pending":
                 return "Chờ gửi";
@@ -251,12 +254,19 @@ public class EmailNotification {
                 return "Đang gửi";
             case "completed":
                 return "Hoàn thành";
+            case "failed":
+                return "Thất bại";
+            case "partial":
+                return "Một phần";
             default:
-                return status != null ? status : "Chờ gửi";
+                return status;
         }
     }
 
     public String getStatusBadgeClass() {
+        if (status == null) {
+            return "label-default";
+        }
         switch (status) {
             case "pending":
                 return "label-warning";
@@ -264,6 +274,10 @@ public class EmailNotification {
                 return "label-info";
             case "completed":
                 return "label-success";
+            case "failed":
+                return "label-danger";
+            case "partial":
+                return "label-warning";
             default:
                 return "label-default";
         }

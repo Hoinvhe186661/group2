@@ -334,9 +334,11 @@
                                                     <label>Trạng thái</label>
                                                     <select name="status" class="form-control">
                                                         <option value="">Tất cả</option>
-                                                        <option value="pending" <%= "pending".equals(filterStatus) ? "selected" : "" %>>Chờ gửi</option>
-                                                        <option value="sending" <%= "sending".equals(filterStatus) ? "selected" : "" %>>Đang gửi</option>
-                                                        <option value="completed" <%= "completed".equals(filterStatus) ? "selected" : "" %>>Hoàn thành</option>
+                                                    <option value="pending" <%= "pending".equals(filterStatus) ? "selected" : "" %>>Chờ gửi</option>
+                                                    <option value="sending" <%= "sending".equals(filterStatus) ? "selected" : "" %>>Đang gửi</option>
+                                                    <option value="completed" <%= "completed".equals(filterStatus) ? "selected" : "" %>>Hoàn thành</option>
+                                                    <option value="failed" <%= "failed".equals(filterStatus) ? "selected" : "" %>>Thất bại</option>
+                                                    <option value="partial" <%= "partial".equals(filterStatus) ? "selected" : "" %>>Một phần</option>
                                                     </select>
                                                 </div>
                                             </div>
