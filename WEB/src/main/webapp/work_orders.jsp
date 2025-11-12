@@ -3243,8 +3243,17 @@
                     var percentage = null;
                     var progressBarClass = 'progress-bar-success';
                     
-                    // Nếu có completionPercentage, dùng giá trị đó
-                    if(task.completionPercentage !== null && task.completionPercentage !== undefined) {
+                    // Kiểm tra status trước - nếu task đang chờ xử lý (pending), luôn hiển thị 0%
+                    if(task.status === 'pending') {
+                        percentage = 0;
+                        progressBarClass = 'progress-bar-warning'; // Màu vàng cho chờ xử lý
+                    }
+                    // Nếu task đã completed, luôn hiển thị 100%
+                    else if(task.status === 'completed') {
+                        percentage = 100;
+                    }
+                    // Nếu có completionPercentage và không phải pending, dùng giá trị đó
+                    else if(task.completionPercentage !== null && task.completionPercentage !== undefined) {
                         percentage = parseFloat(task.completionPercentage);
                     } 
                     // Nếu task đang ở trạng thái in_progress nhưng chưa có completionPercentage
@@ -3263,15 +3272,6 @@
                             percentage = 1;
                         }
                         progressBarClass = 'progress-bar-info'; // Màu xanh dương cho đang thực hiện
-                    }
-                    // Nếu task đã completed nhưng chưa có completionPercentage
-                    else if(task.status === 'completed') {
-                        percentage = 100;
-                    }
-                    // Nếu task ở trạng thái pending và chưa có completionPercentage
-                    else if(task.status === 'pending') {
-                        percentage = 0;
-                        progressBarClass = 'progress-bar-warning'; // Màu vàng cho chờ xử lý
                     }
                     
                     // Hiển thị progress bar nếu có percentage
