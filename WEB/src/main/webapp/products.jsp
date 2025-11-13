@@ -116,7 +116,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">
-            Bảng điều khiển 
+            Quản lý sản phẩm
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -502,8 +502,8 @@
                         </div>
                         <div class="form-group">
                     <label for="edit_unit_price">Giá bán (VNĐ)</label>
-                            <input type="number" class="form-control" id="edit_unit_price" name="unit_price" step="1000" placeholder="Giá được cập nhật từ nhập kho" readonly disabled>
-                            <small class="form-text text-muted">Giá bán không thể thay đổi.</small>
+                            <input type="number" class="form-control" id="edit_unit_price" name="unit_price" step="1000" placeholder="Nhập giá bán">
+                            <small class="form-text text-muted">Nhập giá bán cho sản phẩm. Giá phải lớn hơn 0.</small>
                         </div>
                         <div class="form-group">
                             <label for="edit_supplier_id">Nhà cung cấp</label>

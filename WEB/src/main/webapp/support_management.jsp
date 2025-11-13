@@ -26,7 +26,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lý Yêu Cầu Hỗ Trợ | Bảng Điều Khiển</title>
+    <title>Quản Lý  Hỗ Trợ | Bảng Điều Khiển</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     
     <!-- bootstrap 3.0.2 -->
@@ -166,7 +166,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="support-management" class="logo">
-            Quản Lý Yêu Cầu Hỗ Trợ
+            Quản Lý  Hỗ Trợ
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -273,7 +273,7 @@
                                     <table id="ticketsTable" class="table table-striped table-bordered table-hover">
                                     <thead>
                                         <tr>
-                                                <th>ID</th>
+                                                <th>STT</th>
                                                 <th class="hidden">Sort Priority</th>
                                                 <th>Mã Ticket</th>
                                             <th>Khách hàng</th>
@@ -288,9 +288,9 @@
                                     <tbody>
                                         <c:choose>
                                             <c:when test="${not empty tickets}">
-                                                <c:forEach var="ticket" items="${tickets}">
+                                                <c:forEach var="ticket" items="${tickets}" varStatus="loop">
                                                 <tr class="ticket-priority-${ticket.priority}">
-                                                    <td>${ticket.id}</td>
+                                                    <td>${loop.index + 1}</td>
                                                     <td class="hidden">
                                                         <c:choose>
                                                             <c:when test="${ticket.status == 'open'}">0</c:when>
@@ -385,6 +385,11 @@
                                                                     <i class="fa fa-share"></i> Chuyển tiếp
                                                                 </button>
                                                             </c:when>
+                                                            <c:when test="${ticket.status == 'in_progress'}">
+                                                                <button class="btn btn-success btn-xs" disabled style="opacity: 0.5; cursor: not-allowed;" title="Không thể chuyển tiếp yêu cầu đang xử lý">
+                                                                    <i class="fa fa-share"></i> Chuyển tiếp
+                                                                </button>
+                                                            </c:when>
                                                             <c:otherwise>
                                                                 <button class="btn btn-success btn-xs forward-ticket-btn" data-ticket-id="${ticket.id}" title="Chuyển tiếp cho trưởng phòng kỹ thuật">
                                                                     <i class="fa fa-share"></i> Chuyển tiếp
@@ -404,7 +409,7 @@
                                                                 Không tìm thấy yêu cầu hỗ trợ phù hợp với bộ lọc
                                                             </c:when>
                                                             <c:otherwise>
-                                                                Chưa có yêu cầu hỗ trợ nào
+                                                                Không có yêu cầu hỗ trợ nào
                                                             </c:otherwise>
                                                         </c:choose>
                                                     </td>
@@ -578,7 +583,7 @@
                     "lengthChange": false, // Ẩn dropdown "records per page"
                     "paging": true, // Bật phân trang
                     "pagingType": "full_numbers", // Hiển thị số trang đầy đủ
-                    "order": [[1, "asc"], [8, "desc"]], // Sắp xếp theo Sort Priority (cột ẩn) tăng dần (0=open lên đầu), sau đó theo ngày tạo giảm dần
+                    "order": [[8, "desc"]], // Sắp xếp theo ngày tạo giảm dần (mới nhất lên đầu)
                     "columnDefs": [
                         { "orderable": false, "targets": [0, 9] }, // Không sort cột ID và Thao tác
                         { "visible": false, "targets": [1] }, // Ẩn cột Sort Priority
@@ -593,15 +598,8 @@
                     "searching": true
                 });
             } else {
-                // Nếu không có dữ liệu, vẫn khởi tạo DataTable để hiển thị thông báo
-                table.DataTable({
-                    "language": {
-                        "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
-                    },
-                    "paging": false,
-                    "searching": false,
-                    "info": false
-                });
+                // Nếu không có dữ liệu, không khởi tạo DataTable để giữ nguyên colspan và tránh lỗi
+                // Message đã được hiển thị trong HTML với colspan="10" và icon
             }
 
             // Xử lý click nút Xem

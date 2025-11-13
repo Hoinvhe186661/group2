@@ -251,7 +251,7 @@
 <body class="skin-black">
     <header class="header">
         <a href="customersupport.jsp" class="logo">
-            Hỗ Trợ Khách Hàng
+            Quản lý hợp đồng
         </a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">

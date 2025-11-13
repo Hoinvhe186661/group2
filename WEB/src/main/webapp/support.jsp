@@ -325,9 +325,7 @@
               <label>Loại yêu cầu :</label>
               <select class="form-control" id="category">
                   <option value="technical">Kỹ thuật</option>
-                  <option value="billing">Thanh toán</option>
                   <option value="general" selected>Chung</option>
-                  <option value="complaint">Khiếu nại</option>
               </select>
             </div>
           </div>
@@ -375,7 +373,8 @@
           </div>
           <div class="mb-2">
             <label>Chi tiết vấn đề <span class="text-danger">*</span>:</label>
-            <textarea class="form-control" id="description"></textarea>
+            <textarea class="form-control" id="description" rows="4" placeholder="Nhập chi tiết vấn đề "></textarea>
+            
           </div>
           <div class="text-end mt-3">
             <button type="submit" class="btn btn-success" id="submitBtn">Xác nhận</button>
@@ -402,9 +401,7 @@
           <div class="col-md-6"><label>Loại yêu cầu</label>
             <select id="v_category_inp" class="form-control" disabled>
               <option value="technical">Kỹ thuật</option>
-              <option value="billing">Thanh toán</option>
               <option value="general">Chung</option>
-              <option value="complaint">Khiếu nại</option>
             </select>
           </div>
           <div class="col-md-6">
@@ -415,7 +412,7 @@
           </div>
           <div class="col-md-6"><label>Ưu tiên</label>
             <select id="v_priority_inp" class="form-control" disabled>
-              <option value="">--</option>
+              
               <option value="urgent">Khẩn cấp</option>
               <option value="high">Cao</option>
               <option value="medium">Trung bình</option>
@@ -991,6 +988,15 @@
     }
   }
   
+    // Hàm đếm số từ trong text (global scope trong DOMContentLoaded)
+    function countWords(text) {
+      if (!text || !text.trim()) return 0;
+      // Loại bỏ khoảng trắng thừa và đếm từ
+      return text.trim().split(/\s+/).filter(function(word) {
+        return word.length > 0;
+      }).length;
+    }
+    
     // Tự động set ngày hiện tại cho trường "Ngày tạo" và set min date cho deadline
     document.addEventListener('DOMContentLoaded', function() {
     // Set date using local timezone to avoid UTC offset (+/-1 day) issues
@@ -1222,6 +1228,38 @@
         requestTypeExternal.addEventListener('change', switchFormType);
       }
       
+      // Hàm cập nhật hiển thị số từ
+      function updateWordCount() {
+        const descriptionTextarea = document.getElementById('description');
+        const wordCountElement = document.getElementById('description_word_count');
+        if (!descriptionTextarea || !wordCountElement) return;
+        
+        const text = descriptionTextarea.value || '';
+        const wordCount = countWords(text);
+        const maxWords = 150;
+        const remaining = maxWords - wordCount;
+        
+        if (wordCount > maxWords) {
+          wordCountElement.className = 'text-danger';
+          wordCountElement.textContent = 'Số từ: ' + wordCount + ' / ' + maxWords + ' từ (Vượt quá ' + (wordCount - maxWords) + ' từ)';
+        } else if (wordCount > maxWords * 0.9) {
+          wordCountElement.className = 'text-warning';
+          wordCountElement.textContent = 'Số từ: ' + wordCount + ' / ' + maxWords + ' từ (Còn lại: ' + remaining + ' từ)';
+        } else {
+          wordCountElement.className = 'text-muted';
+          wordCountElement.textContent = 'Số từ: ' + wordCount + ' / ' + maxWords + ' từ (Còn lại: ' + remaining + ' từ)';
+        }
+      }
+      
+      // Thêm event listener cho textarea description
+      const descriptionTextarea = document.getElementById('description');
+      if (descriptionTextarea) {
+        descriptionTextarea.addEventListener('input', updateWordCount);
+        descriptionTextarea.addEventListener('paste', function() {
+          setTimeout(updateWordCount, 10);
+        });
+      }
+      
       // Reset form khi mở modal
       const modalEl = document.getElementById('supportModal');
       if (modalEl) {
@@ -1237,6 +1275,12 @@
           }
           if (document.getElementById('categoryExternal')) {
             document.getElementById('categoryExternal').value = 'technical';
+          }
+          
+          // Reset và cập nhật số từ
+          if (descriptionTextarea) {
+            descriptionTextarea.value = '';
+            updateWordCount();
           }
         });
       }
@@ -1583,6 +1627,14 @@
         return;
       }
       
+      // Kiểm tra số từ (tối đa 150 từ)
+      const wordCount = countWords(description);
+      if (wordCount > 150) {
+        showSuccessModal('Lỗi', 'Chi tiết vấn đề không được vượt quá 150 từ. Hiện tại bạn đã nhập ' + wordCount + ' từ. Vui lòng rút gọn nội dung.');
+        document.getElementById('description').focus();
+        return;
+      }
+      
       const data = new URLSearchParams();
       let composed = description;
       let category = 'general';
@@ -1666,7 +1718,11 @@
             const categoryExternal = document.getElementById('categoryExternal');
             
             if (subjInp) subjInp.value = '';
-            if (descInp) descInp.value = '';
+            if (descInp) {
+              descInp.value = '';
+              // Cập nhật số từ sau khi reset
+              updateWordCount();
+            }
             if (catSel) catSel.value = 'general';
             if (cSel2) cSel2.selectedIndex = 0;
             if (pSel2) { pSel2.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; pSel2.disabled = true; }

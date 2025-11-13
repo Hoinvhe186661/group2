@@ -38,6 +38,29 @@
     <link href="css/style.css" rel="stylesheet" type="text/css" />
 
     <style>
+        /* Đảm bảo hamburger menu button có thể click được */
+        .navbar-btn.sidebar-toggle {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            z-index: 1050 !important;
+            position: relative !important;
+        }
+        .navbar-btn.sidebar-toggle .icon-bar {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background-color: #fff !important;
+        }
+        .navbar-btn.sidebar-toggle:hover {
+            opacity: 0.8 !important;
+        }
+        .navbar-btn.sidebar-toggle:active {
+            opacity: 0.6 !important;
+        }
+        
         /* Stats Cards - Same as tech_support_management */
         .stats-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1818,7 +1841,13 @@
             $('#detail_work_order_number').text(workOrder.workOrderNumber || '#' + workOrder.id);
             $('#detail_customer').text(workOrder.customerName || 'N/A');
             $('#detail_title').val(workOrder.title || '');
-            $('#detail_description').val(workOrder.description || '');
+            
+            // Loại bỏ phần [TICKET_ID:...] khỏi description trước khi hiển thị
+            var description = workOrder.description || '';
+            if (description.indexOf('[TICKET_ID:') !== -1) {
+                description = description.replace(/\[TICKET_ID:\d+\]/g, '').trim();
+            }
+            $('#detail_description').val(description);
             $('#detail_priority').val(workOrder.priority || 'medium');
             $('#detail_status').val(workOrder.status || 'pending');
             $('#detail_created').text(formatDate(workOrder.createdAt));

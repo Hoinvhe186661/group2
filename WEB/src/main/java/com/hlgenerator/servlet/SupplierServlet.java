@@ -219,7 +219,8 @@ public class SupplierServlet extends HttpServlet {
      * Lấy dữ liệu cho các dropdown filter
      */
     private void getFilterOptions(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        response.setContentType("application/json");
+        request.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json; charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
         
         try {
@@ -289,7 +290,9 @@ public class SupplierServlet extends HttpServlet {
             json.append("}}");
             
             System.out.println("JSON response: " + json.toString());
-            response.getWriter().write(json.toString());
+            PrintWriter out = response.getWriter();
+            out.print(json.toString());
+            out.flush();
             
         } catch (Exception e) {
             e.printStackTrace();

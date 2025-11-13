@@ -37,7 +37,9 @@ public class DBConnect {
             // Create connection
             connection = DriverManager.getConnection(url, user, pass);
             
-            inputStream.close();
+            if (inputStream != null) {
+                inputStream.close();
+            }
         } catch (ClassNotFoundException | SQLException ex) {
             Logger.getLogger(DBConnect.class.getName()).log(Level.SEVERE, null, ex);
         } catch (Exception ex) {
@@ -83,7 +85,9 @@ public class DBConnect {
             // Create and return connection
             Connection conn = DriverManager.getConnection(url, user, pass);
             
-            inputStream.close();
+            if (inputStream != null) {
+                inputStream.close();
+            }
             return conn;
         } catch (IOException ex) {
             Logger.getLogger(DBConnect.class.getName()).log(Level.SEVERE, "Error loading database properties", ex);

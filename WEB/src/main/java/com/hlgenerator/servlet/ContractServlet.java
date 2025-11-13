@@ -527,7 +527,14 @@ public class ContractServlet extends HttpServlet {
                 // Sử dụng thông tin từ database.properties
                 java.util.Properties props = new java.util.Properties();
                 java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
-                props.load(input);
+                if (input == null) {
+                    throw new RuntimeException("Cannot load database.properties file");
+                }
+                try {
+                    props.load(input);
+                } finally {
+                    input.close();
+                }
                 
                 String url = props.getProperty("db.url");
                 String user = props.getProperty("db.username");
@@ -626,7 +633,8 @@ public class ContractServlet extends HttpServlet {
             }
         } catch (Exception e) {
             System.err.println("Error saving contract products: " + e.getMessage());
-            throw new RuntimeException(e);
+            e.printStackTrace(); // In đầy đủ stack trace để debug
+            throw new RuntimeException("Error saving contract products: " + e.getMessage(), e);
         }
     }
 
@@ -652,7 +660,14 @@ public class ContractServlet extends HttpServlet {
             // Sử dụng thông tin từ database.properties
             java.util.Properties props = new java.util.Properties();
             java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
-            props.load(input);
+            if (input == null) {
+                throw new RuntimeException("Cannot load database.properties file");
+            }
+            try {
+                props.load(input);
+            } finally {
+                input.close();
+            }
             
             String url = props.getProperty("db.url");
             String user = props.getProperty("db.username");
@@ -667,6 +682,7 @@ public class ContractServlet extends HttpServlet {
             }
         } catch (Exception e) {
             System.err.println("Error deleting contract products: " + e.getMessage());
+            e.printStackTrace(); // In đầy đủ stack trace để debug
         }
     }
 }

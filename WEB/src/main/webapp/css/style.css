@@ -668,6 +668,27 @@ body > .header .navbar .sidebar-toggle .icon-bar {
 body > .header .navbar .sidebar-toggle .icon-bar + .icon-bar {
   margin-top: 4px;
 }
+/* Đảm bảo hamburger menu button có thể click được trên tất cả các trang */
+.navbar-btn.sidebar-toggle {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  z-index: 1050 !important;
+  position: relative !important;
+}
+.navbar-btn.sidebar-toggle .icon-bar {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.navbar-btn.sidebar-toggle:hover {
+  opacity: 0.8 !important;
+}
+.navbar-btn.sidebar-toggle:active {
+  opacity: 0.6 !important;
+}
 body > .header .navbar .nav > li.user > a {
   font-weight: bold;
 }

@@ -184,7 +184,7 @@
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="<%=request.getContextPath()%>/admin.jsp" class="logo">
-            Bảng điều khiển 
+            Quản lý kho
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -524,8 +524,7 @@
                                     <label>Kho <span class="text-danger">*</span></label>
                                     <select id="stockOutWarehouse" class="form-control" required>
                                         <option value="Main Warehouse">Kho Chính</option>
-                                        <option value="Warehouse A">Kho A</option>
-                                        <option value="Warehouse B">Kho B</option>
+                                        
                                     </select>
                                 </div>
                             </div>

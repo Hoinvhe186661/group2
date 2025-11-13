@@ -23,7 +23,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lý Yêu Cầu Hỗ Trợ Kỹ Thuật | HL Generator</title>
+    <title>Quản Lý Yêu Cầu | HL Generator</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     
     <!-- bootstrap 3.0.2 -->
@@ -38,6 +38,29 @@
     <link href="css/style.css" rel="stylesheet" type="text/css" />
 
     <style>
+        /* Đảm bảo hamburger menu button có thể click được */
+        .navbar-btn.sidebar-toggle {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            z-index: 1050 !important;
+            position: relative !important;
+        }
+        .navbar-btn.sidebar-toggle .icon-bar {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            background-color: #fff !important;
+        }
+        .navbar-btn.sidebar-toggle:hover {
+            opacity: 0.8 !important;
+        }
+        .navbar-btn.sidebar-toggle:active {
+            opacity: 0.6 !important;
+        }
+        
         .ticket-filters {
             background: #f5f5f5;
             padding: 15px;
@@ -148,13 +171,61 @@
         .dataTables_wrapper .dataTables_paginate[style*="display: none"] {
             display: block !important;
         }
+        
+        /* Fix tràn chữ trong sidebar */
+        .sidebar-menu li a {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            word-wrap: break-word;
+            max-width: 100%;
+            font-size: 13px !important;
+            padding: 10px 5px 10px 15px !important;
+        }
+        
+        .sidebar-menu li a span {
+            display: inline-block;
+            max-width: calc(100% - 30px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: top;
+            font-size: 13px !important;
+        }
+        
+        .sidebar-menu li a i {
+            margin-right: 8px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+            font-size: 14px !important;
+        }
+        
+        /* Đảm bảo sidebar có đủ không gian */
+        .left-side {
+            overflow-x: hidden;
+        }
+        
+        .sidebar {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        /* Giảm font-size cho logo trong sidebar nếu có */
+        .sidebar .logo {
+            font-size: 16px !important;
+            padding: 15px 10px !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body class="skin-black">
     <!-- header logo -->
     <header class="header">
         <a href="headtech.jsp" class="logo">
-            Quản Lý Yêu Cầu Hỗ Trợ Kỹ Thuật
+            Quản Lý Yêu Cầu
         </a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
@@ -199,12 +270,12 @@
         <aside class="right-side">
             <section class="content-header">
                 <h1>
-                    Quản Lý Yêu Cầu Hỗ Trợ Kỹ Thuật
+                    Quản Lý Yêu Cầu
                     <small>Xử lý yêu cầu hỗ trợ từ khách hàng</small>
                 </h1>
                 <ol class="breadcrumb">
                     <li><a href="headtech.jsp"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
-                    <li class="active">Yêu cầu hỗ trợ kỹ thuật</li>
+                    <li class="active">Yêu cầu hỗ trợ</li>
                 </ol>
             </section>
 

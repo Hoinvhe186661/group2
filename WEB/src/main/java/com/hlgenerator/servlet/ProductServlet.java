@@ -244,8 +244,18 @@ public class ProductServlet extends HttpServlet {
                             product.setUnit(fieldValue);
                             break;
                         case "unit_price":
+                            // Xử lý giá: chỉ set nếu giá hợp lệ (> 0)
                             if (fieldValue != null && !fieldValue.trim().isEmpty()) {
-                                product.setUnitPrice(Double.parseDouble(fieldValue));
+                                try {
+                                    double price = Double.parseDouble(fieldValue.trim());
+                                    if (price > 0) {
+                                        product.setUnitPrice(price);
+                                    }
+                                    // Nếu giá <= 0, không set (sẽ dùng giá cũ từ DB sau)
+                                } catch (NumberFormatException e) {
+                                    // Nếu parse lỗi, không set (sẽ dùng giá cũ từ DB sau)
+                                    System.out.println("Invalid unit_price format: " + fieldValue);
+                                }
                             }
                             break;
                         case "supplier_id":
@@ -477,8 +487,11 @@ public class ProductServlet extends HttpServlet {
             // Khôi phục mã sản phẩm và danh mục từ sản phẩm hiện tại để đảm bảo không bị thay đổi
             product.setProductCode(existingProduct.getProductCode());
             product.setCategory(existingProduct.getCategory());
-            // Khóa giá bán: luôn dùng giá hiện tại trong DB
-            product.setUnitPrice(existingProduct.getUnitPrice());
+            // Xử lý giá: nếu giá mới = 0 hoặc không được set, giữ giá cũ; nếu giá mới > 0, dùng giá mới
+            if (product.getUnitPrice() <= 0) {
+                product.setUnitPrice(existingProduct.getUnitPrice());
+            }
+            System.out.println("Final Unit Price: " + product.getUnitPrice());
             
             boolean success = productDAO.updateProduct(product);
             
@@ -687,6 +700,7 @@ public class ProductServlet extends HttpServlet {
             System.out.println("ID: " + request.getParameter("id"));
             System.out.println("Product Code: " + request.getParameter("product_code"));
             System.out.println("Product Name: " + request.getParameter("product_name"));
+            System.out.println("Unit Price from form: " + request.getParameter("unit_price"));
             
             // Validate và lấy dữ liệu từ form
             ValidationResult validation = validateUpdateData(request);
@@ -702,6 +716,7 @@ public class ProductServlet extends HttpServlet {
             // Tạo Product object
             Product product = createProductFromUpdateRequest(request, imageUrl);
             System.out.println("Product created with ID: " + product.getId());
+            System.out.println("Product Unit Price: " + product.getUnitPrice());
             
             // Cập nhật trong database
             boolean success = productDAO.updateProduct(product);
@@ -983,11 +998,26 @@ public class ProductServlet extends HttpServlet {
         String category = request.getParameter("category").trim();
         String unit = request.getParameter("unit").trim();
         String description = getParameterOrDefault(request, "description", "");
+        
+        // Xử lý giá: lấy giá cũ từ database, nếu giá mới hợp lệ (> 0) thì dùng giá mới
         double unitPrice = 0;
+        Product existingProduct = productDAO.getProductById(id);
+        if (existingProduct != null) {
+            unitPrice = existingProduct.getUnitPrice(); // Giữ giá cũ làm mặc định
+        }
+        
         String unitPriceStr2 = request.getParameter("unit_price");
         if (!isEmpty(unitPriceStr2)) {
-            try { unitPrice = Double.parseDouble(unitPriceStr2.trim()); } catch (NumberFormatException ignore) { unitPrice = 0; }
+            try { 
+                double newPrice = Double.parseDouble(unitPriceStr2.trim());
+                if (newPrice > 0) {
+                    unitPrice = newPrice; // Chỉ cập nhật nếu giá mới hợp lệ (> 0)
+                }
+            } catch (NumberFormatException ignore) { 
+                // Giữ giá cũ nếu parse lỗi
+            }
         }
+        
         int supplierId = Integer.parseInt(request.getParameter("supplier_id").trim());
         String specifications = getParameterOrDefault(request, "specifications", "");
         int warrantyMonths = getIntParameterOrDefault(request, "warranty_months", 12);

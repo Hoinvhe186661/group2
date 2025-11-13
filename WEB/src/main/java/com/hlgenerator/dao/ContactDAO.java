@@ -237,15 +237,18 @@ public class ContactDAO extends DBConnect {
             return false;
         }
 
-        StringBuilder sql = new StringBuilder("UPDATE contact_messages SET status = ?, replied_at = ?");
+        StringBuilder sql = new StringBuilder("UPDATE contact_messages SET status = ?");
         List<Object> params = new ArrayList<>();
         
         params.add(status);
+        
+        // Chỉ cập nhật replied_at nếu status là "replied" và chưa có replied_at
+        // Nếu đã có replied_at thì giữ nguyên, không cập nhật
         if ("replied".equals(status)) {
+            sql.append(", replied_at = COALESCE(replied_at, ?)");
             params.add(new Timestamp(System.currentTimeMillis()));
-        } else {
-            params.add(null);
         }
+        // Nếu status khác "replied", giữ nguyên replied_at (không update)
         
         // Thêm contact_method
         if (contactMethod != null && !contactMethod.trim().isEmpty()) {
@@ -377,30 +380,39 @@ public class ContactDAO extends DBConnect {
         System.out.println("ContactDAO.updateMessageStatusWithMethod: Updating message ID " + messageId + " to status '" + status + "'");
 
         String sql;
+        // Chỉ cập nhật replied_at nếu status là "replied" và chưa có replied_at
+        // Nếu đã có replied_at thì giữ nguyên, không cập nhật
         if (contactMethod != null && !contactMethod.trim().isEmpty()) {
-            // Kiểm tra xem có cột contact_method không, nếu không thì dùng ALTER TABLE để thêm
-            // Tạm thời lưu vào một cột notes hoặc tạo cột mới
-            sql = "UPDATE contact_messages SET status = ?, replied_at = ?, contact_method = ? WHERE id = ?";
+            if ("replied".equals(status)) {
+                sql = "UPDATE contact_messages SET status = ?, replied_at = COALESCE(replied_at, ?), contact_method = ? WHERE id = ?";
+            } else {
+                sql = "UPDATE contact_messages SET status = ?, contact_method = ? WHERE id = ?";
+            }
         } else {
-            sql = "UPDATE contact_messages SET status = ?, replied_at = ? WHERE id = ?";
+            if ("replied".equals(status)) {
+                sql = "UPDATE contact_messages SET status = ?, replied_at = COALESCE(replied_at, ?) WHERE id = ?";
+            } else {
+                sql = "UPDATE contact_messages SET status = ? WHERE id = ?";
+            }
         }
         
         System.out.println("ContactDAO.updateMessageStatusWithMethod: SQL = " + sql);
         
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, status);
+            int paramIndex = 2;
+            
             if ("replied".equals(status)) {
-                ps.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
-            } else {
-                ps.setTimestamp(2, null);
+                ps.setTimestamp(paramIndex, new Timestamp(System.currentTimeMillis()));
+                paramIndex++;
             }
             
             if (contactMethod != null && !contactMethod.trim().isEmpty()) {
-                ps.setString(3, contactMethod.trim());
-                ps.setInt(4, messageId);
-            } else {
-                ps.setInt(3, messageId);
+                ps.setString(paramIndex, contactMethod.trim());
+                paramIndex++;
             }
+            
+            ps.setInt(paramIndex, messageId);
             
             int result = ps.executeUpdate();
             System.out.println("ContactDAO.updateMessageStatusWithMethod: Updated " + result + " row(s) for message ID " + messageId);
@@ -422,13 +434,12 @@ public class ContactDAO extends DBConnect {
                 } catch (SQLException alterE) {
                     System.err.println("ContactDAO.updateMessageStatusWithMethod: Error adding 'converted' to ENUM: " + alterE.getMessage());
                     logger.log(Level.SEVERE, "Error adding 'converted' to status ENUM or updating", alterE);
-                    // Nếu không thêm được, thử dùng 'archived' thay thế
+                    // Nếu không thêm được, thử dùng 'archived' thay thế (giữ nguyên replied_at)
                     if ("converted".equals(status)) {
                         System.out.println("ContactDAO.updateMessageStatusWithMethod: Falling back to 'archived' status");
                         try (PreparedStatement fallbackPs = connection.prepareStatement(
-                            "UPDATE contact_messages SET status = 'archived', replied_at = ? WHERE id = ?")) {
-                            fallbackPs.setTimestamp(1, null);
-                            fallbackPs.setInt(2, messageId);
+                            "UPDATE contact_messages SET status = 'archived' WHERE id = ?")) {
+                            fallbackPs.setInt(1, messageId);
                             int fallbackResult = fallbackPs.executeUpdate();
                             System.out.println("ContactDAO.updateMessageStatusWithMethod: Fallback update result: " + fallbackResult);
                             return fallbackResult > 0;
@@ -452,16 +463,21 @@ public class ContactDAO extends DBConnect {
                     return updateMessageStatusWithMethod(messageId, status, contactMethod);
                 } catch (SQLException alterE) {
                     logger.log(Level.SEVERE, "Error creating contact_method column or updating", alterE);
-                    // Nếu không tạo được cột, vẫn cập nhật status và replied_at
-                    try (PreparedStatement fallbackPs = connection.prepareStatement(
-                        "UPDATE contact_messages SET status = ?, replied_at = ? WHERE id = ?")) {
+                    // Nếu không tạo được cột, vẫn cập nhật status và replied_at (nếu cần)
+                    String fallbackSql;
+                    if ("replied".equals(status)) {
+                        fallbackSql = "UPDATE contact_messages SET status = ?, replied_at = COALESCE(replied_at, ?) WHERE id = ?";
+                    } else {
+                        fallbackSql = "UPDATE contact_messages SET status = ? WHERE id = ?";
+                    }
+                    try (PreparedStatement fallbackPs = connection.prepareStatement(fallbackSql)) {
                         fallbackPs.setString(1, status);
                         if ("replied".equals(status)) {
                             fallbackPs.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
+                            fallbackPs.setInt(3, messageId);
                         } else {
-                            fallbackPs.setTimestamp(2, null);
+                            fallbackPs.setInt(2, messageId);
                         }
-                        fallbackPs.setInt(3, messageId);
                         return fallbackPs.executeUpdate() > 0;
                     } catch (SQLException fallbackE) {
                         logger.log(Level.SEVERE, "Error in fallback update", fallbackE);

@@ -6,6 +6,46 @@
 	String __role = (String) session.getAttribute("userRole");
 	boolean __isAdmin = "admin".equals(__role);
 %>
+<!-- Đảm bảo Font Awesome được load -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+<style>
+	/* Đảm bảo icon hiển thị trong sidebar */
+	.sidebar-menu > li > a > i.fa,
+	.sidebar-menu > li > a > i[class*="fa-"],
+	.sidebar-menu li a i.fa {
+		display: inline-block !important;
+		width: 20px !important;
+		text-align: center !important;
+		margin-right: 8px !important;
+		font-size: 16px !important;
+		vertical-align: middle !important;
+		opacity: 1 !important;
+		visibility: visible !important;
+		font-family: "FontAwesome" !important;
+		font-style: normal !important;
+		font-weight: normal !important;
+		line-height: 1 !important;
+		-webkit-font-smoothing: antialiased !important;
+		-moz-osx-font-smoothing: grayscale !important;
+	}
+	.sidebar-menu > li > a > i.fa:before,
+	.sidebar-menu > li > a > i[class*="fa-"]:before,
+	.sidebar-menu li a i.fa:before {
+		display: inline-block !important;
+		font-family: "FontAwesome" !important;
+	}
+	/* Đảm bảo icon không bị ẩn */
+	.sidebar-menu > li > a > i,
+	.sidebar-menu li a i {
+		display: inline-block !important;
+		visibility: visible !important;
+		opacity: 1 !important;
+	}
+	/* Ẩn text nếu icon không hiển thị để debug */
+	.sidebar-menu li a span {
+		margin-left: 0 !important;
+	}
+</style>
 <aside class="left-side sidebar-offcanvas">
 	<section class="sidebar">
 		<div class="user-panel">

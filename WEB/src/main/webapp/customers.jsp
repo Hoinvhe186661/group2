@@ -302,7 +302,7 @@
 <body class="skin-black">
     <!-- Header -->
     <header class="header">
-        <a href="customers" class="logo">Bảng điều khiển </a>
+        <a href="customers" class="logo">Quản lý khách hàng</a>
         <nav class="navbar navbar-static-top" role="navigation">
             <a href="#" class="navbar-btn sidebar-toggle" data-toggle="offcanvas" role="button">
                 <span class="sr-only">Toggle navigation</span>

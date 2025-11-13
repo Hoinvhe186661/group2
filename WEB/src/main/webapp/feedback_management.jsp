@@ -147,13 +147,48 @@
         .dataTables_wrapper .dataTables_paginate[style*="display: none"] {
             display: block !important;
         }
+        
+        /* Fix tràn chữ trong sidebar */
+        .sidebar-menu li a {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+        
+        .sidebar-menu li a span {
+            display: inline-block;
+            max-width: calc(100% - 30px);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: top;
+        }
+        
+        .sidebar-menu li a i {
+            margin-right: 8px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        /* Đảm bảo sidebar có đủ không gian */
+        .left-side {
+            overflow-x: hidden;
+        }
+        
+        .sidebar {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="feedback_management.jsp" class="logo">
-            Quản Lý Feedback Khách Hàng
+            Quản Lý Feedback
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -207,7 +242,7 @@
                         <div class="box">
                             <div class="box-header">
                                 <h3 class="box-title">
-                                    <i class="fa fa-star"></i> Danh sách Feedback từ Khách Hàng
+                                    <i class="fa fa-star"></i> Danh sách Feedback
                                 </h3>
                             </div>
                             <!-- /.box-header -->

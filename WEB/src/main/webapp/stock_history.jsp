@@ -337,15 +337,6 @@
             '</tr>';
           body.append(row);
         });
-        // Thêm hàng tổng
-        var totalRow = '<tr style="background-color: #f5f5f5; font-weight: bold;">' +
-          '<td colspan="2" style="text-align: right;"><strong>TỔNG:</strong></td>' +
-          '<td class="qty-pos"><strong>+' + totalQuantity + '</strong></td>' +
-          '<td></td>' +
-          '<td><strong>' + (totalAmount > 0 ? formatCurrencyVN(totalAmount) + ' đ' : '') + '</strong></td>' +
-          '<td colspan="4"></td>' +
-          '</tr>';
-        body.append(totalRow);
         var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
         var end = (res.currentPage - 1) * res.pageSize + res.data.length;
         $('#inHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
@@ -544,16 +535,6 @@
             '</tr>';
           body.append(row);
         });
-        // Thêm hàng tổng
-        var totalRow = '<tr style="background-color: #f5f5f5; font-weight: bold;">' +
-          '<td colspan="2" style="text-align: right;"><strong>TỔNG:</strong></td>' +
-          '<td><strong>' + totalStockBefore + '</strong></td>' +
-          '<td><strong>' + totalCurrentStock + '</strong></td>' +
-          '<td><strong>' + totalReservedStock + '</strong></td>' +
-          '<td><strong>' + totalAvailableStock + '</strong></td>' +
-          '<td></td>' +
-          '</tr>';
-        body.append(totalRow);
         var start = (res.currentPage - 1) * res.pageSize + (res.data.length > 0 ? 1 : 0);
         var end = (res.currentPage - 1) * res.pageSize + res.data.length;
         $('#balanceHistoryInfo').text('Hiển thị ' + (res.totalCount > 0 ? start : 0) + ' đến ' + end + ' trong tổng số ' + res.totalCount + ' bản ghi');
