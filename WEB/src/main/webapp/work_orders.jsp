@@ -3907,36 +3907,38 @@
                         html += '<p><strong>Trạng thái:</strong> <span class="badge ' + statusBadgeClass + '">' + statusLabel + '</span></p>';
                     }
                     
-                    // Phần trăm hoàn thành - Load từ database completion_percentage
-                    var percentage = 0;
-                    if (task.completionPercentage != null && task.completionPercentage !== undefined) {
-                        percentage = parseFloat(task.completionPercentage);
-                        // Đảm bảo percentage trong khoảng 0-100
-                        if (isNaN(percentage)) {
-                            percentage = 0;
-                        } else {
-                            percentage = Math.max(0, Math.min(100, percentage));
+                    // Phần trăm hoàn thành - Chỉ hiển thị khi trạng thái là 'completed'
+                    if (task.status === 'completed') {
+                        var percentage = 0;
+                        if (task.completionPercentage != null && task.completionPercentage !== undefined) {
+                            percentage = parseFloat(task.completionPercentage);
+                            // Đảm bảo percentage trong khoảng 0-100
+                            if (isNaN(percentage)) {
+                                percentage = 0;
+                            } else {
+                                percentage = Math.max(0, Math.min(100, percentage));
+                            }
                         }
+                        
+                        // Xác định màu progress bar dựa trên phần trăm
+                        var progressBarClass = 'progress-bar-warning'; // Màu vàng mặc định
+                        if (percentage >= 100) {
+                            progressBarClass = 'progress-bar-success'; // Màu xanh khi hoàn thành 100%
+                        } else if (percentage >= 75) {
+                            progressBarClass = 'progress-bar-info'; // Màu xanh dương khi >= 75%
+                        } else if (percentage >= 50) {
+                            progressBarClass = 'progress-bar-warning'; // Màu vàng khi >= 50%
+                        } else {
+                            progressBarClass = 'progress-bar-danger'; // Màu đỏ khi < 50%
+                        }
+                        
+                        // Hiển thị progress bar
+                        html += '<p><strong>Phần trăm hoàn thành:</strong> ';
+                        html += '<div class="progress" style="margin-top: 5px;">';
+                        html += '<div class="progress-bar ' + progressBarClass + '" role="progressbar" style="width: ' + percentage + '%">';
+                        html += percentage.toFixed(2) + '%';
+                        html += '</div></div></p>';
                     }
-                    
-                    // Xác định màu progress bar dựa trên phần trăm
-                    var progressBarClass = 'progress-bar-warning'; // Màu vàng mặc định
-                    if (percentage >= 100) {
-                        progressBarClass = 'progress-bar-success'; // Màu xanh khi hoàn thành 100%
-                    } else if (percentage >= 75) {
-                        progressBarClass = 'progress-bar-info'; // Màu xanh dương khi >= 75%
-                    } else if (percentage >= 50) {
-                        progressBarClass = 'progress-bar-warning'; // Màu vàng khi >= 50%
-                    } else {
-                        progressBarClass = 'progress-bar-danger'; // Màu đỏ khi < 50%
-                    }
-                    
-                    // Hiển thị progress bar
-                    html += '<p><strong>Phần trăm hoàn thành:</strong> ';
-                    html += '<div class="progress" style="margin-top: 5px;">';
-                    html += '<div class="progress-bar ' + progressBarClass + '" role="progressbar" style="width: ' + percentage + '%">';
-                    html += percentage.toFixed(2) + '%';
-                    html += '</div></div></p>';
                     
                     // Mô tả công việc đã thực hiện
                     if(task.workDescription && task.workDescription.trim() !== '') {

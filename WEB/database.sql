@@ -210,7 +210,7 @@ CREATE TABLE support_requests (
     customer_id INT NOT NULL,
     subject VARCHAR(200) NOT NULL,
     description TEXT,
-    category ENUM('technical', 'billing', 'general', 'complaint') DEFAULT 'general',
+    category ENUM('technical', 'general',) DEFAULT 'general',
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     status ENUM('open', 'in_progress', 'processed', 'resolved', 'closed') DEFAULT 'open',
     assigned_to INT,
