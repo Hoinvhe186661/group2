@@ -119,6 +119,7 @@ CREATE TABLE inventory (
     current_stock INT DEFAULT 0,
     min_stock INT DEFAULT 0,
     max_stock INT DEFAULT 1000,
+    reserved_quantity INT DEFAULT 0,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     UNIQUE KEY unique_product_location (product_id, warehouse_location)
@@ -210,7 +211,7 @@ CREATE TABLE support_requests (
     customer_id INT NOT NULL,
     subject VARCHAR(200) NOT NULL,
     description TEXT,
-    category ENUM('technical', 'general',) DEFAULT 'general',
+    category ENUM('technical', 'general') DEFAULT 'general',
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     status ENUM('open', 'in_progress', 'processed', 'resolved', 'closed') DEFAULT 'open',
     assigned_to INT,
@@ -428,10 +429,77 @@ CREATE TABLE contact_messages (
     email VARCHAR(100) NOT NULL,
     phone VARCHAR(20) NOT NULL,
     message TEXT NOT NULL,
-    status ENUM('new', 'read', 'replied', 'archived') DEFAULT 'new',
+    status ENUM('new', 'read', 'replied', 'archived','converted') DEFAULT 'new',
     replied_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_status (status),
     INDEX idx_created_at (created_at),
     INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bảng lưu lịch sử email đã gửi
+CREATE TABLE email_notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    subject VARCHAR(500) NOT NULL,
+    content TEXT NOT NULL,
+    email_type ENUM('internal', 'marketing') NOT NULL DEFAULT 'internal',
+    recipient_roles JSON COMMENT 'Danh sách các role nhận email (JSON array)',
+    recipient_emails JSON COMMENT 'Danh sách email người nhận (JSON array)',
+    recipient_count INT DEFAULT 0 COMMENT 'Số lượng người nhận',
+    success_count INT DEFAULT 0 COMMENT 'Số email gửi thành công',
+    failed_count INT DEFAULT 0 COMMENT 'Số email gửi thất bại',
+    failed_recipients JSON COMMENT 'Danh sách email gửi thất bại (JSON array)',
+    status ENUM('pending', 'sending', 'completed', 'failed', 'partial') DEFAULT 'pending',
+    sent_by INT COMMENT 'ID người gửi (admin)',
+    sent_by_name VARCHAR(100) COMMENT 'Tên người gửi',
+    scheduled_at DATETIME COMMENT 'Thời gian lên lịch gửi',
+    sent_at DATETIME COMMENT 'Thời gian bắt đầu gửi',
+    completed_at DATETIME COMMENT 'Thời gian hoàn thành',
+    error_message TEXT COMMENT 'Thông báo lỗi nếu có',
+    attachments TEXT COMMENT 'Danh sách file đính kèm (JSON array chứa file paths)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_email_type (email_type),
+    INDEX idx_status (status),
+    INDEX idx_sent_at (sent_at),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS product_price_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    price_type ENUM('purchase','selling') NOT NULL,
+    old_price DECIMAL(15,2) NULL,
+    new_price DECIMAL(15,2) NOT NULL,
+    reason VARCHAR(255) NULL,
+    reference_type VARCHAR(50) NULL,
+    reference_id INT NULL,
+    updated_by INT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_product_type_time (product_id, price_type, updated_at),
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id)
+);
+
+
+-- Tạo bảng ticket_feedback để lưu feedback từ khách hàng
+CREATE TABLE IF NOT EXISTS ticket_feedback (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ticket_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating INT NOT NULL COMMENT 'Đánh giá từ 1-5 sao',
+    comment TEXT COMMENT 'Nhận xét của khách hàng',
+    image_path VARCHAR(500) COMMENT 'Đường dẫn đến ảnh feedback',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES support_requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_ticket_feedback (ticket_id) COMMENT 'Mỗi ticket chỉ có thể có 1 feedback'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Thêm index để tìm kiếm nhanh
+CREATE INDEX idx_ticket_feedback_ticket_id ON ticket_feedback(ticket_id);
+CREATE INDEX idx_ticket_feedback_customer_id ON ticket_feedback(customer_id);
+CREATE INDEX idx_ticket_feedback_rating ON ticket_feedback(rating);
