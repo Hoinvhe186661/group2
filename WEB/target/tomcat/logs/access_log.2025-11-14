@@ -1,0 +1,16 @@
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:49 +0700] "GET /demo HTTP/1.1" 302 - http-bio-8080-exec-1 0
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:51 +0700] "GET /demo/ HTTP/1.1" 200 58283 http-bio-8080-exec-3 2054
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:51 +0700] "GET /demo/uploads/products/5735c22e-4d8d-49de-aaff-b7b7d107ecdc.jpg HTTP/1.1" 304 - http-bio-8080-exec-4 5
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:54 +0700] "GET /demo/login.jsp HTTP/1.1" 200 3937 http-bio-8080-exec-5 57
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:58 +0700] "POST /demo/login HTTP/1.1" 302 - http-bio-8080-exec-6 26
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:58 +0700] "GET /demo/admin.jsp HTTP/1.1" 302 - http-bio-8080-exec-7 153
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:00:58 +0700] "GET /demo/admin HTTP/1.1" 200 30144 http-bio-8080-exec-8 184
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:01:01 +0700] "GET /demo/users HTTP/1.1" 200 91194 http-bio-8080-exec-9 187
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:01:30 +0700] "GET /demo/api/customers?action=list HTTP/1.1" 200 915 http-bio-8080-exec-10 23
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:02:05 +0700] "POST /demo/api/users HTTP/1.1" 200 67 http-bio-8080-exec-10 40
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:02:06 +0700] "GET /demo/users HTTP/1.1" 200 91452 http-bio-8080-exec-10 10
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:03:48 +0700] "GET /demo/logout HTTP/1.1" 302 - http-bio-8080-exec-6 2
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:03:48 +0700] "GET /demo/index.jsp HTTP/1.1" 200 58027 http-bio-8080-exec-6 35
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:03:48 +0700] "GET /demo/uploads/products/4dc34616-91f7-47a6-ac8c-a576b111f764.jpg HTTP/1.1" 304 - http-bio-8080-exec-6 3
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:03:48 +0700] "GET /demo/uploads/products/f451eafb-6fca-4eff-9c5d-8cb9c395a7a6.jpg HTTP/1.1" 304 - http-bio-8080-exec-6 5
+0:0:0:0:0:0:0:1 - - [14/Nov/2025:00:03:49 +0700] "GET /demo/login.jsp HTTP/1.1" 200 3937 http-bio-8080-exec-6 4

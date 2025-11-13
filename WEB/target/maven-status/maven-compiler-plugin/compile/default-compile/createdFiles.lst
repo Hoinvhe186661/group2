@@ -3,6 +3,7 @@ com\hlgenerator\servlet\EmailManagementServlet.class
 com\hlgenerator\service\EmailService$2.class
 com\hlgenerator\dao\SupportRequestDAO.class
 com\hlgenerator\model\User.class
+com\hlgenerator\servlet\UserServlet$1.class
 com\hlgenerator\servlet\CustomerContractsServlet.class
 com\hlgenerator\model\SupportRequest.class
 com\hlgenerator\servlet\TaskServlet.class
@@ -53,6 +54,7 @@ com\hlgenerator\servlet\ForgotPasswordServlet.class
 com\hlgenerator\model\Product.class
 com\hlgenerator\model\WorkOrderTaskAssignment.class
 com\hlgenerator\servlet\SupportManagementServlet$1.class
+com\hlgenerator\service\EmailService$4.class
 com\hlgenerator\servlet\EncodingTestServlet.class
 com\hlgenerator\servlet\TechSupportManagementServlet.class
 com\hlgenerator\servlet\ResetPasswordServlet.class

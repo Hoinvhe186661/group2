@@ -244,14 +244,16 @@
                                             <th>Tên sản phẩm</th>
                                             <th>Danh mục</th>
                                             <th>Đơn vị</th>
-                                            <th>Tổng tồn kho</th>
+                                            <th style="text-align: center;">Đã giữ chỗ</th>
+                                            <th style="text-align: center;">Tổng đang cần</th>
+                                            <th style="text-align: center;">Còn thiếu</th>
                                             <th>Giá bán</th>
                                             <th>Trạng thái</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td colspan="9" class="text-center">
+                                            <td colspan="11" class="text-center">
                                                 <i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...
                                             </td>
                                         </tr>
@@ -322,7 +324,7 @@
             var status = $('#filterStatus').val() || '';
             
             // Hiển thị loading - filter được xử lý hoàn toàn bằng query ở backend
-            $('#stockTable tbody').html('<tr><td colspan="9" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>');
+            $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>');
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
@@ -344,12 +346,12 @@
                         displayStockData(response.data || []);
                         updatePagination(response.pagination || {});
                     } else {
-                        $('#stockTable tbody').html('<tr><td colspan="9" class="text-center"><div class="alert alert-warning">Không có dữ liệu tồn kho</div></td></tr>');
+                        $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><div class="alert alert-warning">Không có dữ liệu tồn kho</div></td></tr>');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading stock data:', error);
-                    $('#stockTable tbody').html('<tr><td colspan="9" class="text-center"><div class="alert alert-danger">Lỗi khi tải dữ liệu: ' + error + '</div></td></tr>');
+                    $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><div class="alert alert-danger">Lỗi khi tải dữ liệu: ' + error + '</div></td></tr>');
                 }
             });
         }
@@ -359,13 +361,22 @@
             tbody.empty();
             
             if (!data || data.length === 0) {
-                tbody.html('<tr><td colspan="9" class="text-center"><div class="alert alert-info">Không có dữ liệu tồn kho</div></td></tr>');
+                tbody.html('<tr><td colspan="11" class="text-center"><div class="alert alert-info">Không có dữ liệu tồn kho</div></td></tr>');
                 return;
             }
 
             data.forEach(function(item) {
                 var statusLabel = getStatusLabel(item.totalStock, item.minStock);
                 var statusText = getStatusText(item.totalStock, item.minStock);
+                
+                // Tính toán các giá trị
+                var reservedStock = item.reservedStock || 0;
+                var totalRequired = item.totalRequired || 0;
+                var shortage = item.shortage || 0;
+                
+                // Format hiển thị số thiếu (có thể âm)
+                var shortageDisplay = shortage >= 0 ? shortage : '(-' + Math.abs(shortage) + ')';
+                var shortageClass = shortage < 0 ? 'text-danger' : '';
                 
                 var row = '<tr>';
                 row += '<td>' + item.productId + '</td>';
@@ -386,7 +397,9 @@
                 row += '<td>' + escapeHtml(item.productName || 'N/A') + '</td>';
                 row += '<td>' + escapeHtml(item.category || 'N/A') + '</td>';
                 row += '<td>' + escapeHtml(item.unit || 'N/A') + '</td>';
-                row += '<td><strong>' + (item.totalStock || 0) + '</strong></td>';
+                row += '<td style="text-align: center;"><strong>' + reservedStock.toLocaleString() + '</strong></td>';
+                row += '<td style="text-align: center;"><strong>' + totalRequired.toLocaleString() + '</strong></td>';
+                row += '<td style="text-align: center;"><strong class="' + shortageClass + '">' + shortageDisplay + '</strong></td>';
                 row += '<td>' + (item.unitPrice ? new Intl.NumberFormat('vi-VN').format(item.unitPrice) + ' VNĐ' : '-') + '</td>';
                 row += '<td><span class="label ' + statusLabel + '">' + statusText + '</span></td>';
                 row += '</tr>';

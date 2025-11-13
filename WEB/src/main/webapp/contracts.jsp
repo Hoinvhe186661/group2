@@ -1051,9 +1051,13 @@
                     var options = '<option value="">Chọn sản phẩm...</option>';
                     if (resp.data && resp.data.length > 0) {
                         resp.data.forEach(function(product) {
-                            options += '<option value="' + product.id + '" data-description="' + (product.description || '') + '" data-unitprice="' + product.unitPrice + '" data-warranty="' + (product.warrantyMonths != null ? product.warrantyMonths : '') + '" data-quantity="' + (product.quantity != null ? product.quantity : 0) + '">' + 
+                            var availableQty = product.quantity != null ? product.quantity : 0;
+                            // Hiển thị số âm với dấu trừ rõ ràng: (-2) thay vì (2)
+                            var stockDisplay = availableQty >= 0 ? availableQty.toLocaleString() : '(-' + Math.abs(availableQty).toLocaleString() + ')';
+                            var stockClass = availableQty < 0 ? 'text-danger' : '';
+                            options += '<option value="' + product.id + '" data-description="' + (product.description || '') + '" data-unitprice="' + product.unitPrice + '" data-warranty="' + (product.warrantyMonths != null ? product.warrantyMonths : '') + '" data-quantity="' + availableQty + '">' + 
                                       product.productCode + ' - ' + product.productName + 
-                                      ' (' + formatCurrency(product.unitPrice) + ' VNĐ, tồn: ' + (product.quantity != null ? formatCurrency(product.quantity) : 0) + ')</option>';
+                                      ' (' + formatCurrency(product.unitPrice) + ' VNĐ, tồn: ' + stockDisplay + ')</option>';
                         });
                     } else {
                         options += '<option value="" disabled>Không có sản phẩm nào</option>';
@@ -1436,17 +1440,17 @@
             // Tính số lượng khả dụng thực tế (tồn kho - số lượng đã thêm vào hợp đồng)
             var actuallyAvailable = availableQuantity - totalQuantityInContract;
             
-            // Kiểm tra nếu số lượng yêu cầu vượt quá tồn kho khả dụng
+            // Kiểm tra nếu số lượng yêu cầu vượt quá tồn kho khả dụng - chỉ cảnh báo, không chặn
             if (requestedQuantity > actuallyAvailable) {
                 var productName = selectedOption.text().split(' - ')[1] || selectedOption.text();
                 if (productName.indexOf('(') > 0) {
                     productName = productName.substring(0, productName.indexOf('(')).trim();
                 }
-                showAlert('Sản phẩm "' + productName + '" không đủ tồn kho. Tồn kho hiện có: ' + 
-                         actuallyAvailable.toLocaleString() + ', bạn đã thêm: ' + 
-                         totalQuantityInContract.toLocaleString() + ', yêu cầu: ' + 
-                         requestedQuantity.toLocaleString(), 'danger');
-                return;
+                showAlert('Cảnh báo: Sản phẩm "' + productName + '" hiện tại trong kho tồn không đủ số lượng. ' + 
+                         'Tồn kho hiện có: ' + actuallyAvailable.toLocaleString() + 
+                         ', yêu cầu: ' + requestedQuantity.toLocaleString() + 
+                         '. Vui lòng báo kho nhập thêm sản phẩm và điều chỉnh lại điều khoản hợp đồng cho phù hợp hơn.', 'warning');
+                // Vẫn cho phép thêm sản phẩm vào hợp đồng, không return
             }
 
             var product = {
@@ -1470,13 +1474,18 @@
             hideAddProductForm();
         }
         
-        // Cập nhật thông tin tồn kho
+        // Cập nhật thông tin tồn kho (cho phép số âm)
         function updateStockInfo(availableQuantity) {
             var stockInfo = $('#stockInfo');
             if (availableQuantity > 0) {
                 stockInfo.html('<i class="fa fa-check-circle text-success"></i> Tồn kho: <strong>' + 
                               availableQuantity.toLocaleString() + '</strong>');
                 stockInfo.removeClass('text-danger').addClass('text-success');
+            } else if (availableQuantity < 0) {
+                // Hiển thị số âm với dấu trừ rõ ràng: (-2) thay vì (2)
+                stockInfo.html('<i class="fa fa-exclamation-triangle text-danger"></i> Tồn kho: <strong class="text-danger">(-' + 
+                              Math.abs(availableQuantity).toLocaleString() + ')</strong> <small class="text-muted">(Thiếu)</small>');
+                stockInfo.removeClass('text-success').addClass('text-danger');
             } else {
                 stockInfo.html('<i class="fa fa-exclamation-circle text-danger"></i> <strong>Hết hàng</strong>');
                 stockInfo.removeClass('text-success').addClass('text-danger');
@@ -1510,18 +1519,26 @@
             var actuallyAvailable = availableQuantity - totalQuantityInContract;
             
             var stockInfo = $('#stockInfo');
+            // Hiển thị available stock (có thể âm) với dấu trừ rõ ràng: 
+            var availableDisplay = actuallyAvailable >= 0 ? actuallyAvailable.toLocaleString() : '(-' + Math.abs(actuallyAvailable).toLocaleString() + ')';
             if (quantity > actuallyAvailable) {
+                var shortage = quantity - actuallyAvailable;
                 stockInfo.html('<i class="fa fa-exclamation-triangle text-danger"></i> ' +
-                              'Tồn kho không đủ! Khả dụng: <strong>' + actuallyAvailable.toLocaleString() + 
+                              'Tồn kho không đủ! Khả dụng: <strong class="' + (actuallyAvailable < 0 ? 'text-danger' : '') + '">' + availableDisplay + 
                               '</strong>, đã thêm: ' + totalQuantityInContract.toLocaleString() + 
-                              ', yêu cầu: ' + quantity.toLocaleString());
+                              ', yêu cầu: ' + quantity.toLocaleString() + 
+                              (shortage > 0 ? ', thiếu: <strong class="text-danger">' + shortage.toLocaleString() + '</strong>' : ''));
                 stockInfo.removeClass('text-success').addClass('text-danger');
             } else {
-                stockInfo.html('<i class="fa fa-check-circle text-success"></i> ' +
+                // Hiển thị available stock (có thể âm) với dấu trừ rõ ràng: (-2) thay vì (2)
+                var availableQtyDisplay = actuallyAvailable >= 0 ? actuallyAvailable.toLocaleString() : '(-' + Math.abs(actuallyAvailable).toLocaleString() + ')';
+                var stockClass = actuallyAvailable < 0 ? 'text-danger' : 'text-success';
+                var iconClass = actuallyAvailable < 0 ? 'fa-exclamation-triangle' : 'fa-check-circle';
+                stockInfo.html('<i class="fa ' + iconClass + ' ' + stockClass + '"></i> ' +
                               'Tồn kho: <strong>' + availableQuantity.toLocaleString() + 
-                              '</strong>, khả dụng: <strong>' + actuallyAvailable.toLocaleString() + 
+                              '</strong>, khả dụng: <strong class="' + (actuallyAvailable < 0 ? 'text-danger' : '') + '">' + availableQtyDisplay + 
                               '</strong>, đã thêm: ' + totalQuantityInContract.toLocaleString());
-                stockInfo.removeClass('text-danger').addClass('text-success');
+                stockInfo.removeClass('text-success text-danger').addClass(stockClass);
             }
         }
 

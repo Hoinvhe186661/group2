@@ -493,5 +493,150 @@ public class EmailService {
             return false;
         }
     }
+    
+    /**
+     * Send account credentials email to a new user
+     * This method sends email directly without creating EmailNotification record
+     * 
+     * @param recipientEmail Email address of the recipient
+     * @param username Username for the account
+     * @param password Plain text password (will be shown in email)
+     * @param fullName Full name of the user
+     * @return true if email sent successfully, false otherwise
+     */
+    public boolean sendAccountCredentialsEmail(String recipientEmail, String username, String password, String fullName) {
+        if (recipientEmail == null || recipientEmail.trim().isEmpty()) {
+            logger.warning("Cannot send account credentials email: recipient email is empty");
+            return false;
+        }
+        
+        try {
+            Session session = createMailSession();
+            MimeMessage message = new MimeMessage(session);
+            message.setFrom(new InternetAddress(smtpUsername, "HL Generator Solutions"));
+            message.setRecipient(Message.RecipientType.TO, new InternetAddress(recipientEmail));
+            message.setSubject("Thông tin tài khoản của bạn - HL Generator Solutions", "UTF-8");
+            
+            // Create HTML content for the email
+            String htmlContent = buildAccountCredentialsEmailContent(username, password, fullName);
+            
+            MimeBodyPart contentPart = new MimeBodyPart();
+            contentPart.setContent(htmlContent, "text/html; charset=UTF-8");
+            
+            MimeMultipart multipart = new MimeMultipart();
+            multipart.addBodyPart(contentPart);
+            message.setContent(multipart);
+            
+            // Send email with timeout
+            ExecutorService timeoutExecutor = Executors.newSingleThreadExecutor();
+            try {
+                Future<Boolean> sendFuture = timeoutExecutor.submit(new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() throws Exception {
+                        Transport.send(message);
+                        return true;
+                    }
+                });
+                
+                try {
+                    sendFuture.get(30, TimeUnit.SECONDS);
+                    logger.info("Account credentials email sent successfully to: " + recipientEmail);
+                    return true;
+                } catch (TimeoutException e) {
+                    sendFuture.cancel(true);
+                    logger.log(Level.WARNING, "Email sending timeout for: " + recipientEmail, e);
+                    return false;
+                } finally {
+                    timeoutExecutor.shutdown();
+                }
+            } catch (Exception e) {
+                timeoutExecutor.shutdownNow();
+                throw e;
+            }
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Error sending account credentials email to: " + recipientEmail, e);
+            return false;
+        }
+    }
+    
+    /**
+     * Build HTML content for account credentials email
+     */
+    private String buildAccountCredentialsEmailContent(String username, String password, String fullName) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html>");
+        html.append("<head>");
+        html.append("<meta charset='UTF-8'>");
+        html.append("<style>");
+        html.append("body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }");
+        html.append(".container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }");
+        html.append(".header { text-align: center; border-bottom: 3px solid #007bff; padding-bottom: 20px; margin-bottom: 30px; }");
+        html.append(".header h1 { color: #007bff; margin: 0; }");
+        html.append(".content { margin: 20px 0; }");
+        html.append(".credentials-box { background-color: #f8f9fa; border: 2px solid #dee2e6; border-radius: 5px; padding: 20px; margin: 20px 0; }");
+        html.append(".credential-item { margin: 15px 0; }");
+        html.append(".credential-label { font-weight: bold; color: #495057; margin-bottom: 5px; }");
+        html.append(".credential-value { font-size: 16px; color: #212529; background-color: #ffffff; padding: 10px; border-radius: 4px; border: 1px solid #ced4da; font-family: 'Courier New', monospace; }");
+        html.append(".warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }");
+        html.append(".warning strong { color: #856404; }");
+        html.append(".footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: 12px; }");
+        html.append(".button { display: inline-block; padding: 12px 30px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; margin: 20px 0; }");
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+        html.append("<div class='container'>");
+        html.append("<div class='header'>");
+        html.append("<h1>Chào mừng đến với HL Generator Solutions</h1>");
+        html.append("</div>");
+        html.append("<div class='content'>");
+        html.append("<p>Xin chào <strong>").append(escapeHtml(fullName != null ? fullName : "")).append("</strong>,</p>");
+        html.append("<p>Tài khoản của bạn đã được tạo thành công. Dưới đây là thông tin đăng nhập của bạn:</p>");
+        html.append("<div class='credentials-box'>");
+        html.append("<div class='credential-item'>");
+        html.append("<div class='credential-label'>Tên đăng nhập:</div>");
+        html.append("<div class='credential-value'>").append(escapeHtml(username)).append("</div>");
+        html.append("</div>");
+        html.append("<div class='credential-item'>");
+        html.append("<div class='credential-label'>Mật khẩu:</div>");
+        html.append("<div class='credential-value'>").append(escapeHtml(password)).append("</div>");
+        html.append("</div>");
+        html.append("</div>");
+        html.append("<div class='warning'>");
+        html.append("<strong>⚠️ Lưu ý quan trọng:</strong>");
+        html.append("<ul style='margin: 10px 0; padding-left: 20px;'>");
+        html.append("<li>Vui lòng đổi mật khẩu ngay sau khi đăng nhập lần đầu</li>");
+        html.append("<li>Không chia sẻ thông tin đăng nhập với bất kỳ ai</li>");
+        html.append("<li>Nếu bạn không yêu cầu tài khoản này, vui lòng liên hệ với quản trị viên</li>");
+        html.append("</ul>");
+        html.append("</div>");
+        html.append("<p style='text-align: center;'>");
+        html.append("<a href='http://localhost:8080/demo/login.jsp' class='button' style='color: #ffffff;'>Đăng nhập ngay</a>");
+        html.append("</p>");
+        html.append("</div>");
+        html.append("<div class='footer'>");
+        html.append("<p>Email này được gửi tự động từ hệ thống HL Generator Solutions</p>");
+        html.append("<p>Vui lòng không trả lời email này</p>");
+        html.append("</div>");
+        html.append("</div>");
+        html.append("</body>");
+        html.append("</html>");
+        
+        return html.toString();
+    }
+    
+    /**
+     * Escape HTML special characters
+     */
+    private String escapeHtml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("&", "&amp;")
+                  .replace("<", "&lt;")
+                  .replace(">", "&gt;")
+                  .replace("\"", "&quot;")
+                  .replace("'", "&#39;");
+    }
 }
 

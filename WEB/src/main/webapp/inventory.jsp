@@ -920,6 +920,9 @@
                                 var rowStyle = isAvailable ? '' : 'background-color: #f2dede;';
                                 
                                 var stockTitle = 'Tổng: ' + totalQty + ' | Giữ chỗ: ' + reservedQty + ' | Khả dụng: ' + availableQty;
+                                // Format hiển thị số âm với dấu trừ rõ ràng: (-2) thay vì (2)
+                                var availableDisplay = availableQty >= 0 ? availableQty : '(-' + Math.abs(availableQty) + ')';
+                                var availableClass = availableQty < 0 ? 'text-danger' : '';
                                 
                                 var rowHtml = '<tr class="' + rowClass + '" style="' + rowStyle + '">' +
                                     '<td>' + (index + 1) + '</td>' +
@@ -927,7 +930,7 @@
                                     '<td><strong>' + escapeHtml(product.productName || '') + '</strong></td>' +
                                     '<td>' + escapeHtml(product.unit || '') + '</td>' +
                                     '<td style="text-align: right;"><strong>' + requiredQty + '</strong></td>' +
-                                    '<td style="text-align: right;" title="' + stockTitle + '">' + availableQty + '</td>' +
+                                    '<td style="text-align: right;" title="' + stockTitle + '"><span class="' + availableClass + '">' + availableDisplay + '</span></td>' +
                                     '<td style="text-align: center;">' + availableBadge;
                                 
                                 // Hiển thị số lượng thiếu nếu không đủ
@@ -1147,7 +1150,8 @@
                 if (stockAtWarehouse) {
                     totalStock = stockAtWarehouse.stock || 0;
                     reservedStock = stockAtWarehouse.reserved || 0;
-                    currentStock = stockAtWarehouse.available || Math.max(totalStock - reservedStock, 0);
+                    // Cho phép số âm
+                    currentStock = stockAtWarehouse.available !== undefined ? stockAtWarehouse.available : (totalStock - reservedStock);
                 }
             }
             var stockTitle = 'Tổng: ' + totalStock + ' | Giữ chỗ: ' + reservedStock + ' | Khả dụng: ' + currentStock;
@@ -1165,10 +1169,10 @@
                     '<input type="text" class="form-control stockOutProductUnit" readonly style="background-color: #f5f5f5; text-align: center;">' +
                 '</td>' +
                 '<td style="text-align: center; vertical-align: middle;">' +
-                    '<span class="stockOutCurrentStock" style="font-weight: bold; color: #5cb85c;" title="' + stockTitle + '">' + currentStock + '</span>' +
+                    '<span class="stockOutCurrentStock" style="font-weight: bold; ' + (currentStock >= 0 ? 'color: #5cb85c;' : 'color: #d9534f;') + '" title="' + stockTitle + '">' + currentStock + '</span>' +
                 '</td>' +
                 '<td>' +
-                    '<input type="number" class="form-control stockOutQuantity" min="1" max="' + currentStock + '" value="' + (product.quantity && product.quantity > 0 ? product.quantity : '') + '" required placeholder="Nhập số lượng" style="text-align: right;">' +
+                    '<input type="number" class="form-control stockOutQuantity" min="1" ' + (currentStock >= 0 ? 'max="' + currentStock + '"' : '') + ' value="' + (product.quantity && product.quantity > 0 ? product.quantity : '') + '" required placeholder="Nhập số lượng" style="text-align: right;">' +
                 '</td>' +
                 '<td style="text-align: center; vertical-align: middle;">' +
                     '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockOutRow(\'' + rowId + '\')" title="Xóa dòng">' +
@@ -1780,10 +1784,18 @@
                         var total = found ? (found.stock || 0) : 0;
                         var reserved = found ? (found.reserved || 0) : 0;
                         var title = 'Tổng: ' + total + ' | Giữ chỗ: ' + reserved + ' | Khả dụng: ' + available;
-                        row.find('.stockOutCurrentStock').text(available).attr('title', title);
                         
-                        // Cập nhật max cho input số lượng
-                        row.find('.stockOutQuantity').attr('max', available);
+                        // Hiển thị số âm nếu thiếu, màu đỏ
+                        var availableText = available;
+                        var availableClass = available >= 0 ? 'text-success' : 'text-danger';
+                        row.find('.stockOutCurrentStock').text(availableText).attr('title', title).removeClass('text-success text-danger').addClass(availableClass);
+                        
+                        // Cập nhật max cho input số lượng (cho phép nhập nếu available < 0)
+                        if (available < 0) {
+                            row.find('.stockOutQuantity').removeAttr('max');
+                        } else {
+                            row.find('.stockOutQuantity').attr('max', available);
+                        }
                     } else {
                         row.find('.stockOutCurrentStock').text('0').attr('title', '');
                         row.find('.stockOutQuantity').attr('max', 0);

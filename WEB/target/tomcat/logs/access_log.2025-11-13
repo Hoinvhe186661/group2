@@ -1,6 +1,0 @@
-0:0:0:0:0:0:0:1 - - [13/Nov/2025:20:18:55 +0700] "GET /demo/role_permissions.jsp HTTP/1.1" 302 - http-bio-8080-exec-1 747
-0:0:0:0:0:0:0:1 - - [13/Nov/2025:20:18:55 +0700] "GET /demo/login.jsp HTTP/1.1" 200 3937 http-bio-8080-exec-4 58
-0:0:0:0:0:0:0:1 - - [13/Nov/2025:20:18:57 +0700] "POST /demo/login HTTP/1.1" 302 - http-bio-8080-exec-5 276
-0:0:0:0:0:0:0:1 - - [13/Nov/2025:20:18:57 +0700] "GET /demo/admin.jsp HTTP/1.1" 302 - http-bio-8080-exec-6 108
-0:0:0:0:0:0:0:1 - - [13/Nov/2025:20:18:57 +0700] "GET /demo/admin HTTP/1.1" 200 30144 http-bio-8080-exec-7 168
-0:0:0:0:0:0:0:1 - - [13/Nov/2025:20:19:05 +0700] "GET /demo/role_permissions.jsp HTTP/1.1" 200 87955 http-bio-8080-exec-8 22

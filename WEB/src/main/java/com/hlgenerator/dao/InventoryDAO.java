@@ -180,7 +180,8 @@ public class InventoryDAO {
 
     public Integer getAvailableStock(int productId) {
         if (connection == null) { lastError = "Không thể kết nối đến cơ sở dữ liệu"; return 0; }
-        String sql = "SELECT COALESCE(SUM(GREATEST(current_stock - reserved_quantity, 0)),0) FROM inventory WHERE product_id = ?";
+        // Cho phép số âm để hiển thị thiếu (không dùng GREATEST)
+        String sql = "SELECT COALESCE(SUM(current_stock - reserved_quantity),0) FROM inventory WHERE product_id = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, productId);
             try (ResultSet rs = ps.executeQuery()) { if (rs.next()) return rs.getInt(1); }
@@ -204,9 +205,7 @@ public class InventoryDAO {
                     int stock = rs.getInt("current_stock");
                     int reserved = rs.getInt("reserved_quantity");
                     int available = stock - reserved;
-                    if (available < 0) {
-                        available = 0;
-                    }
+                    // Cho phép available âm để hiển thị thiếu
                     m.put("stock", stock);
                     m.put("reserved", reserved);
                     m.put("available", available);
@@ -1060,6 +1059,8 @@ public class InventoryDAO {
         sql.append("COALESCE(SUM(i.current_stock), 0) as total_stock, ");
         sql.append("COALESCE(SUM(i.reserved_quantity), 0) as reserved_stock, ");
         sql.append("COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) as available_stock, ");
+        sql.append("(SELECT COALESCE(SUM(cp.quantity), 0) FROM contract_products cp ");
+        sql.append(" WHERE cp.product_id = p.id AND (cp.delivery_status IS NULL OR cp.delivery_status != 'delivered')) as total_required, ");
         sql.append("MIN(i.min_stock) as min_stock, ");
         sql.append("MAX(i.max_stock) as max_stock ");
         sql.append("FROM products p ");
@@ -1122,9 +1123,18 @@ public class InventoryDAO {
                     product.put("unit", rs.getString("unit"));
                     product.put("unitPrice", rs.getDouble("unit_price"));
                     product.put("imageUrl", rs.getString("image_url"));
-                    product.put("totalStock", rs.getInt("total_stock"));
-                    product.put("reservedStock", rs.getInt("reserved_stock"));
+                    int totalStock = rs.getInt("total_stock");
+                    int reservedStockRaw = rs.getInt("reserved_stock");
+                    // Giữ chỗ thực tế = min(reservedStock, totalStock) - chỉ tính phần có trong kho
+                    int reservedStock = Math.min(reservedStockRaw, totalStock);
+                    product.put("totalStock", totalStock);
+                    product.put("reservedStock", reservedStock);
                     product.put("availableStock", rs.getInt("available_stock"));
+                    int totalRequired = rs.getInt("total_required");
+                    product.put("totalRequired", totalRequired);
+                    // Tính số lượng thiếu: totalRequired - totalStock (có thể âm)
+                    int shortage = totalRequired - totalStock;
+                    product.put("shortage", shortage);
                     product.put("minStock", rs.getInt("min_stock"));
                     int maxStock = rs.getInt("max_stock");
                     product.put("maxStock", rs.wasNull() ? null : maxStock);

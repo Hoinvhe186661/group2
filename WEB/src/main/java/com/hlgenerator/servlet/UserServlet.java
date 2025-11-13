@@ -2,6 +2,7 @@ package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.User;
+import com.hlgenerator.service.EmailService;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
@@ -14,19 +15,24 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 @WebServlet("/api/users")
 public class UserServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
+    private static final Logger logger = Logger.getLogger(UserServlet.class.getName());
     private UserDAO userDAO;
+    private EmailService emailService;
 
     @Override
     public void init() throws ServletException {
         super.init();
         try {
             userDAO = new UserDAO();
+            emailService = new EmailService();
             System.out.println("UserServlet: Initialized successfully");
         } catch (Exception e) {
             System.err.println("UserServlet initialization failed: " + e.getMessage());
@@ -314,6 +320,37 @@ public class UserServlet extends HttpServlet {
             if (success) {
                 result.put("success", true);
                 result.put("message", "Đã thêm người dùng thành công");
+                
+                // Send account credentials email to the new user
+                // Send email in background thread to avoid blocking the response
+                final String userEmail = email.trim();
+                final String userUsername = username.trim();
+                final String userPassword = password.trim(); // Plain text password for email
+                final String userName = fullName.trim();
+                
+                Thread emailThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            boolean emailSent = emailService.sendAccountCredentialsEmail(
+                                userEmail, 
+                                userUsername, 
+                                userPassword, 
+                                userName
+                            );
+                            if (emailSent) {
+                                logger.info("Account credentials email sent successfully to: " + userEmail);
+                            } else {
+                                logger.warning("Failed to send account credentials email to: " + userEmail);
+                            }
+                        } catch (Exception e) {
+                            logger.log(Level.SEVERE, "Error sending account credentials email to: " + userEmail, e);
+                        }
+                    }
+                });
+                emailThread.setDaemon(true);
+                emailThread.start();
+                
             } else {
                 result.put("success", false);
                 result.put("message", "Không thể thêm người dùng");

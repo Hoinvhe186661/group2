@@ -462,10 +462,6 @@
                                     <th>Tiêu đề:</th>
                                     <td id="detailWorkOrderTitle">-</td>
                                 </tr>
-                                <tr>
-                                    <th>Ngày dự kiến:</th>
-                                    <td id="detailScheduledDate">-</td>
-                                </tr>
                             </table>
                         </div>
                         <div class="col-md-6">

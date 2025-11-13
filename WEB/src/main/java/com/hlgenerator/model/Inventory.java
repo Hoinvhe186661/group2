@@ -151,8 +151,8 @@ public class Inventory {
     }
     
     public int getAvailableStock() {
-        int available = currentStock - reservedQuantity;
-        return available < 0 ? 0 : available;
+        // Cho phép số âm để hiển thị thiếu
+        return currentStock - reservedQuantity;
     }
     
     /**

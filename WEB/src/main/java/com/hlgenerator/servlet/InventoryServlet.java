@@ -1282,6 +1282,8 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"totalStock\":").append(product.get("totalStock")).append(",");
                 json.append("\"reservedStock\":").append(product.get("reservedStock")).append(",");
                 json.append("\"availableStock\":").append(product.get("availableStock")).append(",");
+                json.append("\"totalRequired\":").append(product.get("totalRequired")).append(",");
+                json.append("\"shortage\":").append(product.get("shortage")).append(",");
                 json.append("\"minStock\":").append(product.get("minStock")).append(",");
                 Object maxStock = product.get("maxStock");
                 json.append("\"maxStock\":").append(maxStock != null ? maxStock : "null").append(",");

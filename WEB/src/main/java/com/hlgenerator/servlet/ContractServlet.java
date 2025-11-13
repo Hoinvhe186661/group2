@@ -121,8 +121,13 @@ public class ContractServlet extends HttpServlet {
                 String pass = props.getProperty("db.password");
                 
                 try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-                    String sql = "SELECT p.id, p.product_code, p.product_name, p.description, p.unit_price, p.warranty_months, COALESCE(i.current_stock, 0) AS quantity " +
-                                 "FROM products p LEFT JOIN inventory i ON p.id = i.product_id ORDER BY p.product_name";
+                    // Tính available stock (current_stock - reserved_quantity) cho tất cả warehouse, cho phép số âm
+                    String sql = "SELECT p.id, p.product_code, p.product_name, p.description, p.unit_price, p.warranty_months, " +
+                                 "COALESCE(SUM(i.current_stock - i.reserved_quantity), 0) AS quantity " +
+                                 "FROM products p " +
+                                 "LEFT JOIN inventory i ON p.id = i.product_id " +
+                                 "GROUP BY p.id, p.product_code, p.product_name, p.description, p.unit_price, p.warranty_months " +
+                                 "ORDER BY p.product_name";
                     try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                         java.sql.ResultSet rs = ps.executeQuery();
                         JSONArray arr = new JSONArray();
@@ -134,6 +139,7 @@ public class ContractServlet extends HttpServlet {
                             obj.put("description", rs.getString("description"));
                             obj.put("unitPrice", rs.getBigDecimal("unit_price"));
                             obj.put("warrantyMonths", rs.getInt("warranty_months"));
+                            // Available stock có thể âm (cho phép số âm)
                             obj.put("quantity", rs.getInt("quantity"));
                             arr.put(obj);
                         }
@@ -384,6 +390,8 @@ public class ContractServlet extends HttpServlet {
                 }
             } else if ("delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
+                // Giải phóng số lượng đã giữ chỗ khi xóa vào thùng rác
+                releaseContractReservedQuantity(id);
                 // Lấy thông tin người xóa từ session
                 Integer deletedBy = null;
                 try {
@@ -411,7 +419,13 @@ public class ContractServlet extends HttpServlet {
                 int id = Integer.parseInt(request.getParameter("id"));
                 // Luôn khôi phục về trạng thái "draft" để đảm bảo quy trình phê duyệt
                 boolean ok = contractDAO.restoreContract(id);
-                out.print(ok ? successMsg("Khôi phục hợp đồng thành công. Hợp đồng đã được khôi phục về trạng thái 'Bản nháp'.") : errorJson("Khôi phục hợp đồng thất bại"));
+                if (ok) {
+                    // Không giữ chỗ lại khi khôi phục vì hợp đồng đang ở trạng thái draft
+                    // Chỉ khi hợp đồng chuyển sang trạng thái active mới cần giữ chỗ
+                    out.print(successMsg("Khôi phục hợp đồng thành công. Hợp đồng đã được khôi phục về trạng thái 'Bản nháp'."));
+                } else {
+                    out.print(errorJson("Khôi phục hợp đồng thất bại"));
+                }
             } else if ("permanent_delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 // Xóa sản phẩm trước
@@ -558,11 +572,12 @@ public class ContractServlet extends HttpServlet {
                                 ps.setInt(1, productId);
                                 try (java.sql.ResultSet rs = ps.executeQuery()) { if (rs.next()) totalAvailable = rs.getInt(1); }
                             }
+                            // Cho phép tạo hợp đồng ngay cả khi tồn kho không đủ, chỉ cảnh báo
                             if (totalAvailable <= 0) {
-                                throw new RuntimeException("Sản phẩm ID " + productId + " đã hết hàng");
+                                System.out.println("Cảnh báo: Sản phẩm ID " + productId + " đã hết hàng trong kho. Hợp đồng vẫn được tạo.");
                             }
                             if (qty.compareTo(new java.math.BigDecimal(totalAvailable)) > 0) {
-                                throw new RuntimeException("Số lượng vượt quá tổng tồn kho cho sản phẩm ID " + productId);
+                                System.out.println("Cảnh báo: Số lượng yêu cầu (" + qty + ") vượt quá tổng tồn kho (" + totalAvailable + ") cho sản phẩm ID " + productId + ". Hợp đồng vẫn được tạo.");
                             }
 
                             // Thêm vào contract_products
@@ -581,46 +596,55 @@ public class ContractServlet extends HttpServlet {
                                 ps.setString(7, product.optString("notes", null));
                                 ps.executeUpdate();
                             }
-                            // Trừ tồn kho phân bổ qua các kho, ghi lịch sử cho từng lần trừ
+                            // Giữ chỗ tồn kho (reserve) thay vì trừ trực tiếp
+                            // Chỉ khi xuất kho thực sự mới trừ current_stock
                             int remaining = qty.intValue();
-                            // Lấy danh sách kho theo tồn giảm dần để trừ
-                            String invRowsSql = "SELECT warehouse_location, current_stock FROM inventory WHERE product_id = ? AND current_stock > 0 ORDER BY current_stock DESC";
+                            int totalReserved = 0;
+                            // Lấy danh sách kho theo tồn khả dụng giảm dần để giữ chỗ
+                            String invRowsSql = "SELECT id, warehouse_location, current_stock, reserved_quantity, (current_stock - reserved_quantity) as available FROM inventory WHERE product_id = ? ORDER BY (current_stock - reserved_quantity) DESC";
                             try (java.sql.PreparedStatement psInv = conn.prepareStatement(invRowsSql)) {
                                 psInv.setInt(1, productId);
                                 try (java.sql.ResultSet rs = psInv.executeQuery()) {
                                     while (rs.next() && remaining > 0) {
-                                        String wh = rs.getString("warehouse_location");
+                                        int invId = rs.getInt("id");
                                         int stock = rs.getInt("current_stock");
-                                        int deduct = Math.min(remaining, stock);
-                                        if (deduct <= 0) continue;
-                                        // Update tồn kho cho kho này
-                                        String updateStockSql = "UPDATE inventory SET current_stock = current_stock - ? WHERE product_id = ? AND warehouse_location = ?";
-                                        try (java.sql.PreparedStatement psUp = conn.prepareStatement(updateStockSql)) {
-                                            psUp.setInt(1, deduct);
-                                            psUp.setInt(2, productId);
-                                            psUp.setString(3, wh);
+                                        int reserved = rs.getInt("reserved_quantity");
+                                        
+                                        // Giữ chỗ tất cả current_stock có sẵn trước
+                                        int stockAvailable = stock - reserved; // Số lượng stock chưa được giữ chỗ
+                                        
+                                        // Bước 1: Giữ chỗ số lượng stock có sẵn (nếu có)
+                                        int toReserveFromStock = Math.min(remaining, Math.max(stockAvailable, 0));
+                                        
+                                        // Bước 2: Nếu còn thiếu, giữ chỗ thêm phần thiếu để đánh dấu
+                                        int shortage = remaining - toReserveFromStock;
+                                        
+                                        // Chỉ giữ chỗ phần thiếu nếu thực sự thiếu (shortage > 0)
+                                        // Tổng giữ chỗ = stock có sẵn + phần thiếu
+                                        int toReserve = toReserveFromStock;
+                                        if (shortage > 0) {
+                                            toReserve += shortage; // Giữ chỗ thêm phần thiếu
+                                        }
+                                        
+                                        if (toReserve <= 0) continue;
+                                        
+                                        // Tăng reserved_quantity thay vì trừ current_stock
+                                        String updateReservedSql = "UPDATE inventory SET reserved_quantity = reserved_quantity + ? WHERE id = ?";
+                                        try (java.sql.PreparedStatement psUp = conn.prepareStatement(updateReservedSql)) {
+                                            psUp.setInt(1, toReserve);
+                                            psUp.setInt(2, invId);
                                             psUp.executeUpdate();
                                         }
-                                        // Ghi lịch sử cho phần trừ này
-                                        String insertHistorySql = "INSERT INTO stock_history (product_id, warehouse_location, movement_type, quantity, reference_type, reference_id, notes, created_by) VALUES (?, ?, 'out', ?, 'contract', ?, ?, ?)";
-                                        try (java.sql.PreparedStatement psH = conn.prepareStatement(insertHistorySql)) {
-                                            psH.setInt(1, productId);
-                                            psH.setString(2, wh);
-                                            psH.setInt(3, deduct);
-                                            psH.setInt(4, contractId);
-                                            String notes = "Xuất kho từ hợp đồng #" + contractId;
-                                            String description = product.optString("description", null);
-                                            if (description != null && !description.isEmpty()) { notes += " - " + description; }
-                                            psH.setString(5, notes);
-                                            if (userId != null) { psH.setInt(6, userId); } else { psH.setNull(6, java.sql.Types.INTEGER); }
-                                            psH.executeUpdate();
-                                        }
-                                        remaining -= deduct;
+                                        
+                                        remaining -= toReserve;
+                                        totalReserved += toReserve;
                                     }
                                 }
                             }
+                            // Cảnh báo nếu tồn kho không đủ, nhưng vẫn cho phép tạo hợp đồng
                             if (remaining > 0) {
-                                throw new RuntimeException("Tồn kho không đủ để xuất cho sản phẩm ID " + productId);
+                                System.out.println("Cảnh báo: Tồn kho không đủ để giữ chỗ cho sản phẩm ID " + productId + 
+                                    ". Yêu cầu: " + qty.intValue() + ", đã giữ chỗ: " + totalReserved + ", còn thiếu: " + remaining);
                             }
                         }
                         conn.commit();
@@ -655,6 +679,86 @@ public class ContractServlet extends HttpServlet {
         return new java.math.BigDecimal(s);
     }
 
+    private void releaseContractReservedQuantity(int contractId) {
+        // Giải phóng số lượng đã giữ chỗ khi hợp đồng bị xóa vào thùng rác
+        // Nhưng vẫn giữ contract_products trong database
+        try {
+            // Sử dụng thông tin từ database.properties
+            java.util.Properties props = new java.util.Properties();
+            java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
+            if (input == null) {
+                throw new RuntimeException("Cannot load database.properties file");
+            }
+            try {
+                props.load(input);
+            } finally {
+                input.close();
+            }
+            
+            String url = props.getProperty("db.url");
+            String user = props.getProperty("db.username");
+            String pass = props.getProperty("db.password");
+            
+            try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
+                boolean oldAutoCommit = conn.getAutoCommit();
+                conn.setAutoCommit(false);
+                try {
+                    // Hoàn lại reserved_quantity dựa trên số lượng trong contract_products
+                    // Lấy tất cả sản phẩm trong hợp đồng để giảm reserved_quantity
+                    String productsSql = "SELECT product_id, quantity FROM contract_products WHERE contract_id = ?";
+                    try (java.sql.PreparedStatement psProducts = conn.prepareStatement(productsSql)) {
+                        psProducts.setInt(1, contractId);
+                        try (java.sql.ResultSet rs = psProducts.executeQuery()) {
+                            while (rs.next()) {
+                                int productId = rs.getInt("product_id");
+                                int quantity = rs.getInt("quantity");
+                                
+                                // Giảm reserved_quantity (hoàn lại số lượng đã giữ chỗ)
+                                // Phân bổ giảm reserved qua các kho có reserved > 0
+                                String releaseSql = "SELECT id, warehouse_location, reserved_quantity FROM inventory " +
+                                                   "WHERE product_id = ? AND reserved_quantity > 0 ORDER BY reserved_quantity DESC";
+                                try (java.sql.PreparedStatement psRelease = conn.prepareStatement(releaseSql)) {
+                                    psRelease.setInt(1, productId);
+                                    try (java.sql.ResultSet rsRelease = psRelease.executeQuery()) {
+                                        int remaining = quantity;
+                                        while (rsRelease.next() && remaining > 0) {
+                                            int invId = rsRelease.getInt("id");
+                                            int reserved = rsRelease.getInt("reserved_quantity");
+                                            int toRelease = Math.min(remaining, reserved);
+                                            
+                                            if (toRelease <= 0) continue;
+                                            
+                                            // Giảm reserved_quantity
+                                            String updateReservedSql = "UPDATE inventory SET reserved_quantity = reserved_quantity - ? WHERE id = ? AND reserved_quantity >= ?";
+                                            try (java.sql.PreparedStatement psUp = conn.prepareStatement(updateReservedSql)) {
+                                                psUp.setInt(1, toRelease);
+                                                psUp.setInt(2, invId);
+                                                psUp.setInt(3, toRelease);
+                                                psUp.executeUpdate();
+                                            }
+                                            
+                                            remaining -= toRelease;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    conn.commit();
+                    conn.setAutoCommit(oldAutoCommit);
+                } catch (Exception ex) {
+                    try { conn.rollback(); } catch (Exception ignore) {}
+                    throw ex;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error releasing contract reserved quantity: " + e.getMessage());
+            e.printStackTrace();
+            // Không throw exception để không chặn quá trình soft delete
+        }
+    }
+
     private void deleteContractProducts(int contractId) {
         try {
             // Sử dụng thông tin từ database.properties
@@ -674,10 +778,66 @@ public class ContractServlet extends HttpServlet {
             String pass = props.getProperty("db.password");
             
             try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-                String sql = "DELETE FROM contract_products WHERE contract_id = ?";
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt(1, contractId);
-                    ps.executeUpdate();
+                boolean oldAutoCommit = conn.getAutoCommit();
+                conn.setAutoCommit(false);
+                try {
+                    // Lấy userId từ session (nếu có) - cần truyền vào hoặc lấy từ context
+                    Integer userId = null;
+                    
+                    // Hoàn lại reserved_quantity dựa trên số lượng trong contract_products
+                    // Lấy tất cả sản phẩm trong hợp đồng để giảm reserved_quantity
+                    String productsSql = "SELECT product_id, quantity FROM contract_products WHERE contract_id = ?";
+                    try (java.sql.PreparedStatement psProducts = conn.prepareStatement(productsSql)) {
+                        psProducts.setInt(1, contractId);
+                        try (java.sql.ResultSet rs = psProducts.executeQuery()) {
+                            while (rs.next()) {
+                                int productId = rs.getInt("product_id");
+                                int quantity = rs.getInt("quantity");
+                                
+                                // Giảm reserved_quantity (hoàn lại số lượng đã giữ chỗ)
+                                // Phân bổ giảm reserved qua các kho có reserved > 0
+                                String releaseSql = "SELECT id, warehouse_location, reserved_quantity FROM inventory " +
+                                                   "WHERE product_id = ? AND reserved_quantity > 0 ORDER BY reserved_quantity DESC";
+                                try (java.sql.PreparedStatement psRelease = conn.prepareStatement(releaseSql)) {
+                                    psRelease.setInt(1, productId);
+                                    try (java.sql.ResultSet rsRelease = psRelease.executeQuery()) {
+                                        int remaining = quantity;
+                                        while (rsRelease.next() && remaining > 0) {
+                                            int invId = rsRelease.getInt("id");
+                                            int reserved = rsRelease.getInt("reserved_quantity");
+                                            int toRelease = Math.min(remaining, reserved);
+                                            
+                                            if (toRelease <= 0) continue;
+                                            
+                                            // Giảm reserved_quantity
+                                            String updateReservedSql = "UPDATE inventory SET reserved_quantity = reserved_quantity - ? WHERE id = ? AND reserved_quantity >= ?";
+                                            try (java.sql.PreparedStatement psUp = conn.prepareStatement(updateReservedSql)) {
+                                                psUp.setInt(1, toRelease);
+                                                psUp.setInt(2, invId);
+                                                psUp.setInt(3, toRelease);
+                                                psUp.executeUpdate();
+                                            }
+                                            
+                                            remaining -= toRelease;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Xóa sản phẩm trong hợp đồng
+                    String sql = "DELETE FROM contract_products WHERE contract_id = ?";
+                    try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setInt(1, contractId);
+                        ps.executeUpdate();
+                    }
+                    
+                    conn.commit();
+                    conn.setAutoCommit(oldAutoCommit);
+                } catch (Exception ex) {
+                    try { conn.rollback(); } catch (Exception ignore) {}
+                    throw ex;
                 }
             }
         } catch (Exception e) {
