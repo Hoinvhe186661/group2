@@ -434,14 +434,6 @@
                             </div>
                         </div>
                         
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Ngày thực hiện:</label>
-                            <div class="col-sm-9">
-                                <input type="date" class="form-control" id="work_order_scheduled_date" min="">
-                                <small class="help-block">Ngày thực hiện công việc (không được chọn ngày quá khứ và phải nhỏ hơn hoặc bằng ngày mong muốn hoàn thành)</small>
-                            </div>
-                        </div>
-                        
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -473,9 +465,6 @@
         
         $(document).ready(function() {
             loadTickets();
-            
-            // Set minimum date for scheduled date input (today)
-            setMinDateForScheduledDate();
             
             // Sync ticket status for completed work orders on page load (one-time)
             syncTicketStatusForCompletedWorkOrders();
@@ -551,68 +540,7 @@
                 }
             });
             
-            // Validate scheduled date when modal is shown
-            $('#createWorkOrderModal').on('shown.bs.modal', function() {
-                setMinDateForScheduledDate();
-            });
-            
-            // Validate scheduled date on change
-            $('#work_order_scheduled_date').on('change', function() {
-                validateScheduledDate();
-            });
-            
         });
-        
-        function setMinDateForScheduledDate() {
-            // Set minimum date to today (YYYY-MM-DD format)
-            var today = new Date();
-            var dd = String(today.getDate()).padStart(2, '0');
-            var mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
-            var yyyy = today.getFullYear();
-            var todayStr = yyyy + '-' + mm + '-' + dd;
-            $('#work_order_scheduled_date').attr('min', todayStr);
-        }
-        
-        function validateScheduledDate() {
-            var scheduledDate = $('#work_order_scheduled_date').val();
-            if (scheduledDate) {
-                var selectedDate = new Date(scheduledDate);
-                var today = new Date();
-                today.setHours(0, 0, 0, 0); // Reset time to 00:00:00
-                selectedDate.setHours(0, 0, 0, 0);
-                
-                // Kiểm tra không được là ngày quá khứ
-                if (selectedDate < today) {
-                    alert('⚠ Lỗi: Ngày thực hiện không được là ngày quá khứ. Vui lòng chọn ngày hôm nay hoặc ngày trong tương lai.');
-                    $('#work_order_scheduled_date').val('');
-                    $('#work_order_scheduled_date').focus();
-                    return false;
-                }
-                
-                // Kiểm tra ngày thực hiện <= deadline
-                var deadlineValue = $('#work_order_scheduled_date').data('deadline');
-                if (deadlineValue) {
-                    try {
-                        // Deadline đã được lưu dạng yyyy-MM-dd
-                        var deadlineDate = new Date(deadlineValue);
-                        deadlineDate.setHours(0, 0, 0, 0);
-                        
-                        if (selectedDate > deadlineDate) {
-                            // Format deadline để hiển thị trong thông báo
-                            var deadlineParts = deadlineValue.split('-');
-                            var deadlineDisplay = deadlineParts[2] + '/' + deadlineParts[1] + '/' + deadlineParts[0];
-                            alert('⚠ Lỗi: Ngày thực hiện không được lớn hơn ngày mong muốn hoàn thành (' + deadlineDisplay + '). Vui lòng chọn ngày nhỏ hơn hoặc bằng ngày mong muốn hoàn thành.');
-                            $('#work_order_scheduled_date').val('');
-                            $('#work_order_scheduled_date').focus();
-                            return false;
-                        }
-                    } catch (e) {
-                        console.warn('Không thể parse deadline:', e);
-                    }
-                }
-            }
-            return true;
-        }
         
         function loadTickets(silent) {
             // silent: if true, don't show console logs (for auto-refresh)
@@ -1262,7 +1190,6 @@
             
             // Hiển thị deadline - format từ yyyy-MM-dd sang dd/MM/yyyy
             var deadlineDisplay = '';
-            var deadlineDateValue = null; // Lưu deadline dạng Date object để validate
             if (ticket.deadline && typeof ticket.deadline === 'string' && ticket.deadline.trim() !== '' && ticket.deadline !== 'null') {
                 try {
                     // Deadline từ DB là yyyy-MM-dd, chuyển sang dd/MM/yyyy
@@ -1270,8 +1197,6 @@
                     if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                         var parts = deadlineStr.split('-');
                         deadlineDisplay = parts[2] + '/' + parts[1] + '/' + parts[0];
-                        // Lưu deadline dạng yyyy-MM-dd vào data attribute để validate
-                        deadlineDateValue = deadlineStr;
                     } else {
                         deadlineDisplay = deadlineStr;
                     }
@@ -1282,18 +1207,8 @@
                 deadlineDisplay = '<span style="color: #999; font-style: italic;">Chưa có</span>';
             }
             $('#work_order_deadline').html(deadlineDisplay);
-            // Lưu deadline vào data attribute để validate
-            if (deadlineDateValue) {
-                $('#work_order_scheduled_date').data('deadline', deadlineDateValue);
-            } else {
-                $('#work_order_scheduled_date').removeData('deadline');
-            }
             
             $('#work_order_estimated_hours').val('');
-            $('#work_order_scheduled_date').val('');
-            
-            // Set minimum date when opening modal
-            setMinDateForScheduledDate();
             
             $('#createWorkOrderModal').modal('show');
         }
@@ -1310,11 +1225,6 @@
             
             if(!description) {
                 alert('Lỗi: Không có mô tả từ ticket!');
-                return;
-            }
-            
-            // Validate scheduled date before submitting
-            if (!validateScheduledDate()) {
                 return;
             }
             
@@ -1392,8 +1302,7 @@
                 description: description,
                 priority: $('#work_order_priority').val() || 'medium',
                 status: $('#work_order_status').val() || 'in_progress',
-                estimatedHours: estimatedHours && estimatedHours.trim() !== '' ? estimatedHours : null,
-                scheduledDate: $('#work_order_scheduled_date').val() || null
+                estimatedHours: estimatedHours && estimatedHours.trim() !== '' ? estimatedHours : null
             };
             
             console.log('Tạo work order với dữ liệu:', data);

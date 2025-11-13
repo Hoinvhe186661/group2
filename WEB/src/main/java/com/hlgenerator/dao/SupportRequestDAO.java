@@ -666,28 +666,68 @@ public class SupportRequestDAO extends DBConnect {
             sql.append("deadline = ?");
             params.add(deadline);
             first = false;
+            System.out.println("DEBUG: Adding deadline to update: " + deadline);
+            System.out.println("DEBUG: Deadline type: " + deadline.getClass().getName());
+            System.out.println("DEBUG: Deadline toString: " + deadline.toString());
+        } else {
+            System.out.println("DEBUG: deadline is NULL - will not update deadline field");
         }
+        
+        // Xử lý internalNotes - cập nhật vào history field (JSON)
+        // Tạm thời bỏ qua xử lý history để tập trung vào deadline
+        // TODO: Xử lý history sau khi deadline được fix
+        // TẠM THỜI: Bỏ qua xử lý history để tránh lỗi SQL ảnh hưởng đến deadline update
+        // if (internalNotes != null && !internalNotes.trim().isEmpty()) {
+        //     if (!first) sql.append(", ");
+        //     sql.append("history = CASE " +
+        //                "WHEN history IS NULL OR history = '' OR history = 'null' THEN JSON_OBJECT('notes', ?) " +
+        //                "ELSE JSON_SET(COALESCE(history, JSON_OBJECT()), '$.lastNote', ?) " +
+        //                "END");
+        //     params.add(internalNotes);
+        //     params.add(internalNotes);
+        //     first = false;
+        //     System.out.println("DEBUG: Adding internalNotes to history: " + internalNotes);
+        // }
         
         sql.append(" WHERE id = ?");
         params.add(id);
         
+        System.out.println("DEBUG: SQL = " + sql.toString());
+        System.out.println("DEBUG: Params count = " + params.size());
+        
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+            int paramIndex = 1;
             for (int i = 0; i < params.size(); i++) {
                 Object param = params.get(i);
                 if (param instanceof Integer) {
-                    ps.setInt(i + 1, (Integer) param);
+                    ps.setInt(paramIndex, (Integer) param);
+                    System.out.println("DEBUG: Param[" + (paramIndex - 1) + "] (index " + paramIndex + ") = Integer(" + param + ")");
+                    paramIndex++;
                 } else if (param instanceof java.sql.Date) {
-                    ps.setDate(i + 1, (java.sql.Date) param);
+                    ps.setDate(paramIndex, (java.sql.Date) param);
+                    System.out.println("DEBUG: Param[" + (paramIndex - 1) + "] (index " + paramIndex + ") = Date(" + param + ")");
+                    System.out.println("DEBUG: Date value set: " + param.toString());
+                    paramIndex++;
                 } else {
-                    ps.setString(i + 1, (String) param);
+                    ps.setString(paramIndex, (String) param);
+                    System.out.println("DEBUG: Param[" + (paramIndex - 1) + "] (index " + paramIndex + ") = String(" + param + ")");
+                    paramIndex++;
                 }
             }
             
+            System.out.println("DEBUG: Executing SQL update...");
             int result = ps.executeUpdate();
+            System.out.println("DEBUG: executeUpdate result = " + result + " for ticket ID = " + id);
             lastError = null;
+            if (result > 0) {
+                System.out.println("DEBUG: Update successful for ticket ID = " + id);
+            } else {
+                System.out.println("DEBUG: Update failed - no rows affected for ticket ID = " + id);
+            }
             return result > 0;
         } catch (SQLException e) {
             e.printStackTrace();
+            System.out.println("DEBUG: SQLException in updateSupportRequest: " + e.getMessage());
             lastError = e.getMessage();
             return false;
         }

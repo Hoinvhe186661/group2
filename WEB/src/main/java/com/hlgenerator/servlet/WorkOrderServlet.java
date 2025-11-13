@@ -61,6 +61,7 @@ public class WorkOrderServlet extends HttpServlet {
             
             String action = request.getParameter("action");
             System.out.println("WorkOrder GET Action: " + action);
+            System.out.println("WorkOrder GET Action type: " + (action != null ? action.getClass().getName() : "null"));
             
             if ("list".equals(action) || action == null) {
                 // Lấy danh sách work orders
@@ -106,6 +107,85 @@ public class WorkOrderServlet extends HttpServlet {
                     } catch (NumberFormatException e) {
                         jsonResponse.addProperty("success", false);
                         jsonResponse.addProperty("message", "ID không hợp lệ");
+                    }
+                }
+                
+            } else if ("getTicketDeadline".equals(action)) {
+                System.out.println("DEBUG: Processing getTicketDeadline action");
+                // Lấy deadline từ support request theo ticket ID
+                String ticketIdParam = request.getParameter("ticketId");
+                System.out.println("DEBUG: ticketIdParam = " + ticketIdParam);
+                if (ticketIdParam == null || ticketIdParam.isEmpty()) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Thiếu ticket ID");
+                } else {
+                    try {
+                        int ticketId = Integer.parseInt(ticketIdParam);
+                        System.out.println("DEBUG: Parsed ticketId = " + ticketId);
+                        SupportRequestDAO supportDAO = new SupportRequestDAO();
+                        Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                        System.out.println("DEBUG: ticket = " + (ticket != null ? "found" : "null"));
+                        
+                        if (ticket != null && ticket.get("deadline") != null) {
+                            String deadlineStr = ticket.get("deadline").toString();
+                            System.out.println("DEBUG: deadlineStr = " + deadlineStr);
+                            jsonResponse.addProperty("success", true);
+                            jsonResponse.addProperty("deadline", deadlineStr);
+                        } else {
+                            System.out.println("DEBUG: ticket is null or deadline is null");
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy deadline");
+                        }
+                    } catch (NumberFormatException e) {
+                        System.out.println("DEBUG: NumberFormatException: " + e.getMessage());
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Ticket ID không hợp lệ");
+                    } catch (Exception e) {
+                        System.out.println("DEBUG: Exception: " + e.getMessage());
+                        e.printStackTrace();
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Lỗi: " + e.getMessage());
+                    }
+                }
+                
+            } else if ("getTicketDeadlineByCustomerAndTitle".equals(action)) {
+                System.out.println("DEBUG: Processing getTicketDeadlineByCustomerAndTitle action");
+                // Lấy deadline từ support request theo customerId và title
+                String customerIdParam = request.getParameter("customerId");
+                String titleParam = request.getParameter("title");
+                System.out.println("DEBUG: customerIdParam = " + customerIdParam + ", titleParam = " + titleParam);
+                if (customerIdParam == null || customerIdParam.isEmpty() || 
+                    titleParam == null || titleParam.isEmpty()) {
+                    jsonResponse.addProperty("success", false);
+                    jsonResponse.addProperty("message", "Thiếu customerId hoặc title");
+                } else {
+                    try {
+                        int customerId = Integer.parseInt(customerIdParam);
+                        System.out.println("DEBUG: Parsed customerId = " + customerId);
+                        SupportRequestDAO supportDAO = new SupportRequestDAO();
+                        Map<String, Object> ticket = supportDAO.getSupportRequestBySubjectAndCustomer(
+                            titleParam.trim(), customerId);
+                        System.out.println("DEBUG: ticket = " + (ticket != null ? "found" : "null"));
+                        
+                        if (ticket != null && ticket.get("deadline") != null) {
+                            String deadlineStr = ticket.get("deadline").toString();
+                            System.out.println("DEBUG: deadlineStr = " + deadlineStr);
+                            jsonResponse.addProperty("success", true);
+                            jsonResponse.addProperty("deadline", deadlineStr);
+                        } else {
+                            System.out.println("DEBUG: ticket is null or deadline is null");
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Không tìm thấy ticket hoặc deadline");
+                        }
+                    } catch (NumberFormatException e) {
+                        System.out.println("DEBUG: NumberFormatException: " + e.getMessage());
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Customer ID không hợp lệ");
+                    } catch (Exception e) {
+                        System.out.println("DEBUG: Exception: " + e.getMessage());
+                        e.printStackTrace();
+                        jsonResponse.addProperty("success", false);
+                        jsonResponse.addProperty("message", "Lỗi: " + e.getMessage());
                     }
                 }
                 
@@ -481,6 +561,19 @@ public class WorkOrderServlet extends HttpServlet {
                                 System.out.println("Update work order - No completionDate in request, keeping existing: " + workOrder.getCompletionDate());
                             }
                             
+                            // Update technical solution
+                            String technicalSolution = request.getParameter("technicalSolution");
+                            System.out.println("=== UPDATE WORK ORDER - TECHNICAL SOLUTION ===");
+                            System.out.println("Received technicalSolution parameter: " + (technicalSolution != null ? ("'" + technicalSolution + "' (length: " + technicalSolution.length() + ")") : "null"));
+                            if (technicalSolution != null) {
+                                String trimmed = technicalSolution.trim();
+                                workOrder.setTechnicalSolution(trimmed);
+                                System.out.println("Setting technicalSolution on workOrder object: " + (trimmed.isEmpty() ? "(empty)" : trimmed.substring(0, Math.min(100, trimmed.length())) + (trimmed.length() > 100 ? "..." : "")));
+                                System.out.println("TechnicalSolution length: " + trimmed.length());
+                            } else {
+                                System.out.println("technicalSolution parameter is null, not updating");
+                            }
+                            
                             boolean success = workOrderDAO.updateWorkOrder(workOrder);
                             
                             if (success) {
@@ -620,6 +713,32 @@ public class WorkOrderServlet extends HttpServlet {
                                     jsonResponse.addProperty("success", false);
                                     jsonResponse.addProperty("message", "Đơn hàng này đã được hoàn thành rồi");
                                 } else {
+                                    // Validate: Check if there are incomplete tasks (pending or in_progress)
+                                    boolean hasIncompleteTasks = taskDAO.hasIncompleteTasks(id);
+                                    if (hasIncompleteTasks) {
+                                        java.util.Map<String, Integer> taskCounts = taskDAO.getIncompleteTaskCounts(id);
+                                        int pendingCount = taskCounts.get("pending");
+                                        int inProgressCount = taskCounts.get("in_progress");
+                                        int totalCount = taskCounts.get("total");
+                                        
+                                        String errorMessage = "Không thể hoàn thành đơn hàng. Vẫn còn " + totalCount + " nhiệm vụ chưa hoàn thành:\n";
+                                        if (pendingCount > 0) {
+                                            errorMessage += "- " + pendingCount + " nhiệm vụ đang chờ xử lý (pending)\n";
+                                        }
+                                        if (inProgressCount > 0) {
+                                            errorMessage += "- " + inProgressCount + " nhiệm vụ đang thực hiện (in_progress)\n";
+                                        }
+                                        errorMessage += "\nVui lòng hoàn thành tất cả nhiệm vụ trước khi hoàn thành đơn hàng.";
+                                        
+                                        jsonResponse.addProperty("success", false);
+                                        jsonResponse.addProperty("message", errorMessage);
+                                        jsonResponse.addProperty("pendingCount", pendingCount);
+                                        jsonResponse.addProperty("inProgressCount", inProgressCount);
+                                        jsonResponse.addProperty("totalIncompleteCount", totalCount);
+                                        out.print(jsonResponse.toString());
+                                        return;
+                                    }
+                                    
                                     // Set completion date but keep status as in_progress
                                     String completionDateParam = request.getParameter("completionDate");
                                     Date completionDate = null;
@@ -654,6 +773,9 @@ public class WorkOrderServlet extends HttpServlet {
                                     boolean success = workOrderDAO.updateWorkOrder(workOrder);
                                     
                                     if (success) {
+                                        // Update ticket status to processed when work order is finished
+                                        updateTicketStatusWhenFinishingWorkOrder(workOrder);
+                                        
                                         jsonResponse.addProperty("success", true);
                                         jsonResponse.addProperty("message", "Hoàn thành đơn hàng thành công");
                                     } else {
@@ -684,6 +806,145 @@ public class WorkOrderServlet extends HttpServlet {
         
         out.print(jsonResponse.toString());
         out.flush();
+    }
+    
+    /**
+     * Update ticket status to processed when work order is finished
+     * Finds ticket by:
+     * 1. Parsing ticket ID from description (format: [TICKET_ID:123]) - MOST RELIABLE
+     * 2. If not found, matching work order title with ticket subject and customer_id
+     * 3. If still not found, try to find any technical ticket for this customer that is not processed/resolved
+     */
+    private void updateTicketStatusWhenFinishingWorkOrder(WorkOrder workOrder) {
+        try {
+            System.out.println("========================================");
+            System.out.println("=== UPDATING TICKET STATUS WHEN FINISHING WORK ORDER ===");
+            System.out.println("Work Order ID: " + workOrder.getId());
+            System.out.println("Work Order Number: " + workOrder.getWorkOrderNumber());
+            System.out.println("Work Order Title: [" + workOrder.getTitle() + "]");
+            System.out.println("Work Order Customer ID: " + workOrder.getCustomerId());
+            System.out.println("Work Order Description: " + (workOrder.getDescription() != null ? 
+                (workOrder.getDescription().length() > 200 ? workOrder.getDescription().substring(0, 200) + "..." : workOrder.getDescription()) 
+                : "null"));
+            
+            Map<String, Object> ticket = null;
+            Integer ticketIdFromDescription = null;
+            String methodUsed = "";
+            
+            // Method 1: Try to extract ticket ID from description (MOST RELIABLE)
+            if (workOrder.getDescription() != null && workOrder.getDescription().contains("[TICKET_ID:")) {
+                try {
+                    String desc = workOrder.getDescription();
+                    int startIdx = desc.indexOf("[TICKET_ID:") + 11;
+                    int endIdx = desc.indexOf("]", startIdx);
+                    if (endIdx > startIdx) {
+                        String ticketIdStr = desc.substring(startIdx, endIdx).trim();
+                        ticketIdFromDescription = Integer.parseInt(ticketIdStr);
+                        System.out.println("✓ Found ticket ID in description: " + ticketIdFromDescription);
+                        
+                        // Get ticket by ID
+                        ticket = supportDAO.getSupportRequestById(ticketIdFromDescription);
+                        if (ticket != null) {
+                            methodUsed = "ticket_id_from_description";
+                            System.out.println("✓ SUCCESS: Found ticket by ID from description: " + ticket.get("ticketNumber"));
+                        } else {
+                            System.out.println("✗ Ticket ID " + ticketIdFromDescription + " not found in database");
+                        }
+                    }
+                } catch (Exception e) {
+                    System.out.println("✗ Error parsing ticket ID from description: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("⚠ No [TICKET_ID:xxx] found in work order description");
+            }
+            
+            // Method 2: If ticket ID not found in description, try matching by title and customer_id
+            String titleToSearch = workOrder.getTitle() != null ? workOrder.getTitle().trim() : "";
+            if (ticket == null && titleToSearch != null && !titleToSearch.isEmpty() && workOrder.getCustomerId() > 0) {
+                System.out.println("Trying Method 2: Match by title and customer_id...");
+                System.out.println("  Searching for ticket with:");
+                System.out.println("    Subject: [" + titleToSearch + "]");
+                System.out.println("    Customer ID: " + workOrder.getCustomerId());
+                
+                ticket = supportDAO.getSupportRequestBySubjectAndCustomer(
+                    titleToSearch, 
+                    workOrder.getCustomerId()
+                );
+                
+                if (ticket != null) {
+                    methodUsed = "title_and_customer_match";
+                    System.out.println("✓ SUCCESS: Found ticket by title and customer match");
+                } else {
+                    System.out.println("✗ No ticket found with matching title and customer_id");
+                }
+            }
+            
+            // Update ticket status if found
+            if (ticket != null) {
+                Integer ticketId = (Integer) ticket.get("id");
+                String currentStatus = (String) ticket.get("status");
+                String ticketSubject = (String) ticket.get("subject");
+                String ticketNumber = (String) ticket.get("ticketNumber");
+                
+                System.out.println("\n--- FOUND TICKET ---");
+                System.out.println("  Ticket ID: " + ticketId);
+                System.out.println("  Ticket Number: " + ticketNumber);
+                System.out.println("  Ticket Subject: [" + ticketSubject + "]");
+                System.out.println("  Ticket Current Status: " + currentStatus);
+                System.out.println("  Found using method: " + methodUsed);
+                
+                // Only update if ticket is not already processed/resolved/closed
+                if (ticketId != null && !"processed".equals(currentStatus) && !"resolved".equals(currentStatus) && !"closed".equals(currentStatus)) {
+                    System.out.println("\n--- UPDATING TICKET STATUS ---");
+                    System.out.println("  From: '" + currentStatus + "'");
+                    System.out.println("  To: 'processed'");
+                    
+                    // Check if work order has technical solution - if yes, don't set resolution
+                    String resolutionToSet = null;
+                    if (workOrder.getTechnicalSolution() == null || workOrder.getTechnicalSolution().trim().isEmpty()) {
+                        // Only set resolution if there's no technical solution
+                        resolutionToSet = "Đơn hàng công việc đã hoàn thành: " + workOrder.getWorkOrderNumber();
+                        System.out.println("  No technical solution found, setting resolution");
+                    } else {
+                        System.out.println("  Technical solution exists, skipping resolution update");
+                    }
+                    
+                    // Update ticket status to processed
+                    boolean updated = supportDAO.updateSupportRequest(
+                        ticketId, 
+                        null, // category - don't change
+                        null, // priority - don't change
+                        "processed", // status
+                        resolutionToSet, // resolution - only set if no technical solution
+                        null,  // internalNotes - don't change
+                        null   // assignedTo - don't change
+                    );
+                    
+                    if (updated) {
+                        System.out.println("✓✓✓ SUCCESS: Updated ticket " + ticketId + " (" + ticketNumber + ") status to 'processed'");
+                        System.out.println("   Work Order: " + workOrder.getWorkOrderNumber());
+                        System.out.println("   Resolution: Đơn hàng công việc đã hoàn thành: " + workOrder.getWorkOrderNumber());
+                    } else {
+                        System.out.println("✗✗✗ FAILED: Failed to update ticket " + ticketId + " status");
+                        System.out.println("   Error: " + supportDAO.getLastError());
+                    }
+                } else if (ticketId != null) {
+                    System.out.println("⚠ Ticket " + ticketId + " is already processed/resolved/closed (status: " + currentStatus + "), skipping update");
+                }
+            } else {
+                System.out.println("\n✗✗✗ NO TICKET FOUND FOR WORK ORDER");
+                System.out.println("  Work Order: " + workOrder.getWorkOrderNumber());
+                System.out.println("  Title: [" + titleToSearch + "]");
+                System.out.println("  Customer ID: " + workOrder.getCustomerId());
+                System.out.println("  Description contains [TICKET_ID:]: " + 
+                    (workOrder.getDescription() != null && workOrder.getDescription().contains("[TICKET_ID:")));
+            }
+            
+        } catch (Exception e) {
+            System.out.println("✗✗✗ EXCEPTION in updateTicketStatusWhenFinishingWorkOrder: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     /**

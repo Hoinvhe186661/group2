@@ -1,6 +1,8 @@
 package com.hlgenerator.servlet;
 
 import com.hlgenerator.dao.SupportRequestDAO;
+import com.hlgenerator.dao.WorkOrderDAO;
+import com.hlgenerator.model.WorkOrder;
 import org.json.JSONObject;
 
 import javax.servlet.ServletException;
@@ -136,6 +138,27 @@ public class SupportDetailServlet extends HttpServlet {
             }
             
             System.out.println("DEBUG SupportDetailServlet: Final deadline in JSON data = " + data.get("deadline"));
+            
+            // Lấy technical_solution từ work_order nếu có
+            try {
+                WorkOrderDAO workOrderDAO = new WorkOrderDAO();
+                String ticketTitle = (String) ticket.get("subject");
+                Integer customerIdObj = (Integer) ticket.get("customerId");
+                int customerId = customerIdObj != null ? customerIdObj : 0;
+                
+                WorkOrder workOrder = workOrderDAO.getWorkOrderByTicketId(ticketId, ticketTitle, customerId);
+                if (workOrder != null && workOrder.getTechnicalSolution() != null && !workOrder.getTechnicalSolution().trim().isEmpty()) {
+                    data.put("technicalSolution", workOrder.getTechnicalSolution());
+                    System.out.println("DEBUG SupportDetailServlet: Found technical solution from work order: " + workOrder.getWorkOrderNumber());
+                } else {
+                    data.put("technicalSolution", "");
+                    System.out.println("DEBUG SupportDetailServlet: No technical solution found for ticket " + ticketId);
+                }
+            } catch (Exception e) {
+                System.out.println("DEBUG SupportDetailServlet: Error getting technical solution: " + e.getMessage());
+                e.printStackTrace();
+                data.put("technicalSolution", "");
+            }
             
             json.put("data", data);
             out.print(json.toString());

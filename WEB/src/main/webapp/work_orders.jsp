@@ -705,6 +705,29 @@
                                 <small class="help-block text-muted" id="completionDateHelp"></small>
                             </div>
                         </div>
+                        
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Ngày hoàn thành mong muốn của khách hàng:</label>
+                            <div class="col-sm-9">
+                                <p class="form-control-static" id="detail_customer_deadline" style="color: #d9534f; font-weight: bold;">
+                                    <i class="fa fa-calendar"></i> <span id="detail_customer_deadline_text">Đang tải...</span>
+                                </p>
+                                <small class="help-block text-muted">Ngày deadline từ yêu cầu hỗ trợ của khách hàng</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Giải pháp kỹ thuật:</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="detail_technical_solution" rows="5" placeholder="Nhập giải pháp kỹ thuật..." maxlength="1000"></textarea>
+                                <small class="help-block text-muted">
+                                    Mô tả giải pháp kỹ thuật để xử lý yêu cầu
+                                    <span class="text-info" style="margin-left: 10px;">
+                                        <span id="technical_solution_char_count">0</span>/1000 ký tự
+                                    </span>
+                                </small>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -755,6 +778,13 @@
                                         <span id="taskDescriptionCounter">0</span>/150 ký tự
                                     </small>
                                     <div id="taskDescriptionError" class="text-danger" style="display: none;"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Ngày mong muốn hoàn thành của khách hàng:</label>
+                                    <p class="form-control-static" id="customer_deadline_display" style="color: #d9534f; font-weight: bold;">
+                                        <i class="fa fa-calendar"></i> <span id="customer_deadline_text">Đang tải...</span>
+                                    </p>
+                                    <small class="help-block text-muted">Ngày deadline từ yêu cầu hỗ trợ của khách hàng</small>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6">
@@ -905,6 +935,9 @@
                         </select>
                         <div id="userTaskCountInfo" class="help-block" style="margin-top: 8px; display: none;">
                             <i class="fa fa-info-circle"></i> <span id="userTaskCountText"></span>
+                            <div id="userActiveTasksList" style="margin-top: 8px; display: none;">
+                                <ul id="userActiveTasksItems" style="margin: 0; padding-left: 20px; list-style-type: disc;"></ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1149,6 +1182,37 @@
                 saveWorkOrderChanges();
             });
             
+            // Word count validation for technical solution
+            $('#detail_technical_solution').on('input', function() {
+                updateTechnicalSolutionCharCount();
+            });
+            
+            // Validate character count on paste
+            $('#detail_technical_solution').on('paste', function() {
+                var self = this;
+                setTimeout(function() {
+                    var text = $(self).val() || '';
+                    var charCount = text.length;
+                    
+                    // If exceeds limit, trim to 1000 characters
+                    if (charCount > 1000) {
+                        var trimmedText = text.substring(0, 1000);
+                        $(self).val(trimmedText);
+                        // Show warning
+                        if (!$('#technical_solution_warning').length) {
+                            $(self).after('<div id="technical_solution_warning" class="alert alert-warning" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;"><i class="fa fa-exclamation-triangle"></i> Nội dung đã được tự động cắt xuống 1000 ký tự.</div>');
+                            setTimeout(function() {
+                                $('#technical_solution_warning').fadeOut(function() {
+                                    $(this).remove();
+                                });
+                            }, 3000);
+                        }
+                    }
+                    
+                    updateTechnicalSolutionCharCount();
+                }, 10);
+            });
+            
             // Finish work order
             $('#btnFinishWorkOrder').click(function() {
                 finishWorkOrder();
@@ -1207,6 +1271,8 @@
             // Hide task count info when modal is closed
             $('#assignTaskUserModal').on('hidden.bs.modal', function() {
                 $('#userTaskCountInfo').hide();
+                $('#userActiveTasksList').hide();
+                $('#userActiveTasksItems').empty();
                 $('#assign_user_id').val('');
             });
             
@@ -1238,21 +1304,47 @@
         
         function loadUserActiveTaskCount(userId) {
             $.ajax({
-                url: ctx + '/api/work-order-tasks?action=activeTaskCount&userId=' + userId,
+                url: ctx + '/api/work-order-tasks?action=activeTasks&userId=' + userId,
                 type: 'GET',
                 dataType: 'json',
                 success: function(response) {
                     if(response && response.success) {
                         var count = response.count || 0;
+                        var tasks = response.tasks || [];
                         var userName = $('#assign_user_id option:selected').text();
                         
                         if(count > 0) {
-                            var countText = 'Nhân viên <strong>' + userName + '</strong> đang thực hiện <strong>' + count + '</strong> công việc';
+                            var countText = 'Nhân viên <strong>' + userName + '</strong> đang thực hiện <strong>' + count + '</strong> công việc:';
                             $('#userTaskCountText').html(countText);
+                            
+                            // Hiển thị danh sách công việc
+                            var tasksList = $('#userActiveTasksItems');
+                            tasksList.empty();
+                            tasks.forEach(function(task) {
+                                var priorityBadge = '';
+                                if(task.priority === 'high') {
+                                    priorityBadge = '<span class="label label-danger">Cao</span>';
+                                } else if(task.priority === 'medium') {
+                                    priorityBadge = '<span class="label label-warning">Trung bình</span>';
+                                } else {
+                                    priorityBadge = '<span class="label label-info">Thấp</span>';
+                                }
+                                
+                                var taskItem = '<li style="margin-bottom: 5px;">' +
+                                    '<strong>' + (task.taskNumber || 'N/A') + '</strong> - ' +
+                                    (task.taskDescription || 'Không có mô tả') +
+                                    ' <small>(' + (task.workOrderNumber || 'N/A') + ': ' + (task.workOrderTitle || 'N/A') + ')</small> ' +
+                                    priorityBadge +
+                                    '</li>';
+                                tasksList.append(taskItem);
+                            });
+                            
+                            $('#userActiveTasksList').show();
                             $('#userTaskCountInfo').removeClass('text-danger text-warning text-success').addClass('text-info').show();
                         } else {
                             var countText = 'Nhân viên <strong>' + userName + '</strong> chưa có công việc nào đang thực hiện';
                             $('#userTaskCountText').html(countText);
+                            $('#userActiveTasksList').hide();
                             $('#userTaskCountInfo').removeClass('text-danger text-warning text-info').addClass('text-success').show();
                         }
                     } else {
@@ -1260,7 +1352,7 @@
                     }
                 },
                 error: function() {
-                    console.log('Không thể tải số lượng công việc của nhân viên');
+                    console.log('Không thể tải danh sách công việc của nhân viên');
                     $('#userTaskCountInfo').hide();
                 }
             });
@@ -1655,6 +1747,33 @@
             }
         }
         
+        // Function to count characters in text (for technical solution)
+        function countCharacters(text) {
+            if (!text) {
+                return 0;
+            }
+            return text.length;
+        }
+        
+        // Function to update character count display for technical solution
+        function updateTechnicalSolutionCharCount() {
+            var textarea = $('#detail_technical_solution');
+            var text = textarea.val() || '';
+            var charCount = text.length;
+            var maxChars = 1000;
+            
+            $('#technical_solution_char_count').text(charCount);
+            
+            // Change color based on character count
+            if (charCount > maxChars) {
+                $('#technical_solution_char_count').removeClass('text-info text-warning').addClass('text-danger');
+            } else if (charCount > maxChars * 0.9) {
+                $('#technical_solution_char_count').removeClass('text-info text-danger').addClass('text-warning');
+            } else {
+                $('#technical_solution_char_count').removeClass('text-warning text-danger').addClass('text-info');
+            }
+        }
+        
         function viewWorkOrderDetail(id) {
             var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
             if(!workOrder) return;
@@ -1668,6 +1787,13 @@
             $('#detail_status').val(workOrder.status || 'pending');
             $('#detail_created').text(formatDate(workOrder.createdAt));
             $('#detail_estimated_hours').val(workOrder.estimatedHours || '');
+            var technicalSolutionValue = workOrder.technicalSolution || '';
+            $('#detail_technical_solution').val(technicalSolutionValue);
+            
+            // Update character count for technical solution - use setTimeout to ensure textarea value is set
+            setTimeout(function() {
+                updateTechnicalSolutionCharCount();
+            }, 100);
             
             // Tính actualHours từ tổng actualHours của các tasks
             calculateAndUpdateActualHours(id);
@@ -1809,6 +1935,12 @@
                 $('#workOrderDetailLockedAlert').remove();
             }
             
+            // Load customer deadline
+            loadCustomerDeadlineForWorkOrderDetail(workOrder);
+            
+            // Update word count for technical solution
+            updateTechnicalSolutionCharCount();
+            
             $('#workOrderDetailModal').modal('show');
         }
         
@@ -1876,6 +2008,14 @@
         function saveWorkOrderChanges() {
             var id = $('#detail_work_order_id').val();
             
+            // Validate technical solution character count
+            var technicalSolution = $('#detail_technical_solution').val() || '';
+            var charCount = technicalSolution.length;
+            if (charCount > 1000) {
+                alert('Giải pháp kỹ thuật không được vượt quá 1000 ký tự. Hiện tại bạn đã nhập ' + charCount + ' ký tự. Vui lòng rút gọn nội dung.');
+                return;
+            }
+            
             // Kiểm tra nếu work order đã đóng (completed, cancelled, rejected) thì không cho phép lưu thay đổi
             var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
             if (workOrder) {
@@ -1931,11 +2071,25 @@
             // - actualHours: tự động tính từ tasks ở server
             // - scheduledDate: không cho phép sửa (trùng với createdAt)
             
+            var technicalSolutionValue = $('#detail_technical_solution').val();
+            console.log('=== SAVING WORK ORDER ===');
+            console.log('Work Order ID:', id);
+            console.log('Technical Solution value:', technicalSolutionValue ? (technicalSolutionValue.substring(0, 100) + (technicalSolutionValue.length > 100 ? '...' : '')) : '(empty)');
+            console.log('Technical Solution length:', technicalSolutionValue ? technicalSolutionValue.length : 0);
+            
             var data = {
                 action: 'update',
                 id: id,
-                completionDate: $('#detail_completion_date').val()
+                completionDate: $('#detail_completion_date').val(),
+                technicalSolution: technicalSolutionValue
             };
+            
+            console.log('Sending data to server:', {
+                action: data.action,
+                id: data.id,
+                completionDate: data.completionDate,
+                technicalSolution: data.technicalSolution ? (data.technicalSolution.substring(0, 50) + '...') : '(empty)'
+            });
             
             $.ajax({
                 url: ctx + '/api/work-orders',
@@ -1943,16 +2097,21 @@
                 data: data,
                 dataType: 'json',
                 success: function(response) {
+                    console.log('Server response:', response);
                     if(response && response.success) {
                         alert('Cập nhật thành công!');
                         $('#workOrderDetailModal').modal('hide');
                         loadWorkOrders();
                     } else {
-                        alert('Lỗi: ' + (response.message || 'Không thể cập nhật'));
+                        var errorMsg = response.message || 'Không thể cập nhật';
+                        console.error('Update failed:', errorMsg);
+                        alert('Lỗi: ' + errorMsg);
                     }
                 },
-                error: function() {
-                    alert('Lỗi kết nối máy chủ');
+                error: function(xhr, status, error) {
+                    console.error('AJAX error:', status, error);
+                    console.error('Response text:', xhr.responseText);
+                    alert('Lỗi kết nối máy chủ: ' + error);
                 }
             });
         }
@@ -1989,10 +2148,59 @@
                 }
             }
             
+            // Kiểm tra tasks chưa hoàn thành trước
+            $.ajax({
+                url: ctx + '/api/work-order-tasks',
+                type: 'GET',
+                data: {
+                    action: 'getIncompleteTaskCounts',
+                    workOrderId: id
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response && response.success) {
+                        var pendingCount = response.pendingCount || 0;
+                        var inProgressCount = response.inProgressCount || 0;
+                        var totalCount = response.totalCount || 0;
+                        
+                        if (totalCount > 0) {
+                            var errorMessage = '✗ Lỗi: Không thể hoàn thành đơn hàng!\n\n';
+                            errorMessage += 'Vẫn còn ' + totalCount + ' nhiệm vụ chưa hoàn thành:\n';
+                            if (pendingCount > 0) {
+                                errorMessage += '• ' + pendingCount + ' nhiệm vụ đang chờ xử lý (pending)\n';
+                            }
+                            if (inProgressCount > 0) {
+                                errorMessage += '• ' + inProgressCount + ' nhiệm vụ đang thực hiện (in_progress)\n';
+                            }
+                            errorMessage += '\nVui lòng hoàn thành tất cả nhiệm vụ trước khi hoàn thành đơn hàng.';
+                            alert(errorMessage);
+                            console.log('Cannot finish work order - incomplete tasks:', {
+                                pending: pendingCount,
+                                inProgress: inProgressCount,
+                                total: totalCount
+                            });
+                            return;
+                        }
+                        
+                        // Nếu không có tasks chưa hoàn thành, tiếp tục với confirm và finish
+                        proceedWithFinishWorkOrder(id);
+                    } else {
+                        // Nếu không lấy được thông tin tasks, vẫn tiếp tục (fallback)
+                        console.warn('Could not check incomplete tasks, proceeding anyway');
+                        proceedWithFinishWorkOrder(id);
+                    }
+                },
+                error: function() {
+                    // Nếu có lỗi khi kiểm tra, vẫn tiếp tục (fallback)
+                    console.warn('Error checking incomplete tasks, proceeding anyway');
+                    proceedWithFinishWorkOrder(id);
+                }
+            });
+        }
+        
+        function proceedWithFinishWorkOrder(id) {
             // Confirm before finishing
-            if(!confirm('Bạn có chắc chắn muốn hoàn thành đơn hàng này?\n\n' +
-                       'Sau khi hoàn thành, bạn sẽ không thể tạo task hay chỉnh sửa đơn hàng này nữa.\n' +
-                       'Trạng thái đơn hàng vẫn là "Đang xử lý" và không thể cập nhật thành "Đã giải quyết".')) {
+            if(!confirm('Bạn có chắc chắn muốn hoàn thành đơn hàng này?')) {
                 return;
             }
             
@@ -2028,14 +2236,8 @@
                         $('#btnSaveWorkOrder').hide();
                         $('#btnFinishWorkOrder').hide();
                         
-                        // Hiển thị alert
+                        // Remove alert if exists
                         $('#workOrderDetailLockedAlert').remove();
-                        $('#workOrderDetailModal .modal-body').first().prepend(
-                            '<div class="alert alert-warning" id="workOrderDetailLockedAlert" style="margin-bottom: 15px;">' +
-                            '<i class="fa fa-lock"></i> <strong>Đơn hàng Đã hoàn thành.</strong> ' +
-                            'Không thể chỉnh sửa thông tin đơn hàng này hoặc tạo task mới.' +
-                            '</div>'
-                        );
                         
                         // Reload work orders list
                         loadWorkOrders();
@@ -2202,10 +2404,12 @@
             // Load deadline from support request
             loadWorkOrderDeadline(workOrderId);
             
+            // Load customer deadline for display
+            loadCustomerDeadlineForAssignment(workOrderId);
+            
             $('#assignTaskModal').modal('show');
             loadTasks(workOrderId);
-            // Load users for assignment dropdown
-            loadUsersForTaskAssignment(workOrderId);
+            // Note: Users are loaded when opening assignTaskUserModal via loadAvailableUsersForTaskAssignment
         }
         
         // Load deadline from support request for work order
@@ -2256,40 +2460,12 @@
                 return;
             }
             
-            // Get all support requests for this customer and find matching one
-            $.ajax({
-                url: ctx + '/api/support-requests',
-                type: 'GET',
-                data: {
-                    action: 'listByCustomer',
-                    customerId: customerId
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response && response.success && response.data && Array.isArray(response.data)) {
-                        // Find ticket with matching subject/title
-                        var matchingTicket = response.data.find(function(ticket) {
-                            return ticket.subject && ticket.subject.trim() === title.trim();
-                        });
-                        
-                        if (matchingTicket && matchingTicket.deadline) {
-                            parseAndStoreDeadline(matchingTicket.deadline);
-                        } else {
-                            // No deadline found
-                            $('#taskStartDate').removeData('workOrderDeadline');
-                            $('#taskDeadline').removeData('workOrderDeadline');
-                        }
-                    } else {
-                        $('#taskStartDate').removeData('workOrderDeadline');
-                        $('#taskDeadline').removeData('workOrderDeadline');
-                    }
-                },
-                error: function() {
-                    console.warn('Error loading support requests for customer');
-                    $('#taskStartDate').removeData('workOrderDeadline');
-                    $('#taskDeadline').removeData('workOrderDeadline');
-                }
-            });
+            // Use getSupportRequestBySubjectAndCustomer via a workaround
+            // Since there's no direct API, we'll try to get deadline from work order's ticket ID first
+            // If that fails, we'll show "Chưa có deadline"
+            console.warn('Cannot load deadline by customer and title - no direct API available');
+            $('#taskStartDate').removeData('workOrderDeadline');
+            $('#taskDeadline').removeData('workOrderDeadline');
         }
         
         // Helper function to parse and store deadline
@@ -2650,6 +2826,450 @@
                     alert('Lỗi kết nối máy chủ');
                 }
             });
+        }
+        
+        // Load customer deadline for assignment modal (Chia việc cho nhân viên)
+        function loadCustomerDeadlineForAssignment(workOrderId) {
+            console.log('DEBUG: loadCustomerDeadlineForAssignment called with workOrderId:', workOrderId);
+            var workOrder = allWorkOrders.find(function(w) { return w.id == parseInt(workOrderId); });
+            console.log('DEBUG: Found workOrder:', workOrder);
+            
+            if (!workOrder) {
+                $('#customer_deadline_text').text('Không tìm thấy đơn hàng công việc');
+                return;
+            }
+            
+            // Set default text
+            $('#customer_deadline_text').text('Đang tải...');
+            
+            // Try to get deadline from support request
+            // Method 1: Extract ticket ID from description if available
+            var ticketId = null;
+            if (workOrder.description && workOrder.description.indexOf('[TICKET_ID:') !== -1) {
+                try {
+                    var desc = workOrder.description;
+                    var startIdx = desc.indexOf('[TICKET_ID:') + 11;
+                    var endIdx = desc.indexOf(']', startIdx);
+                    if (endIdx > startIdx) {
+                        var ticketIdStr = desc.substring(startIdx, endIdx).trim();
+                        ticketId = parseInt(ticketIdStr);
+                        console.log('DEBUG: Extracted ticketId from description:', ticketId);
+                    }
+                } catch (e) {
+                    console.error('DEBUG: Error extracting ticket ID from description:', e);
+                }
+            }
+            
+            // Method 2: Use supportRequestId if available
+            if (!ticketId && workOrder.supportRequestId) {
+                ticketId = workOrder.supportRequestId;
+                console.log('DEBUG: Using supportRequestId:', ticketId);
+            }
+            
+            if (ticketId) {
+                // Use WorkOrderServlet endpoint to get deadline (no permission check needed)
+                $.ajax({
+                    url: ctx + '/api/work-orders',
+                    type: 'GET',
+                    data: {
+                        action: 'getTicketDeadline',
+                        ticketId: ticketId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('DEBUG: getTicketDeadline response:', response);
+                        
+                        if (response && response.success && response.deadline) {
+                            var deadlineStr = response.deadline;
+                            console.log('DEBUG: Found deadline from getTicketDeadline:', deadlineStr);
+                            
+                            if (deadlineStr && deadlineStr !== '' && deadlineStr !== 'null' && deadlineStr !== null) {
+                                formatAndDisplayDeadline(deadlineStr);
+                                return; // Success, don't try fallback
+                            }
+                        }
+                        
+                        // If we get here, deadline not found, try fallback
+                        console.log('DEBUG: No deadline found in getTicketDeadline, trying fallback');
+                        findDeadlineByCustomerAndTitleForAssignment(workOrder.customerId, workOrder.title);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('DEBUG: Error loading getTicketDeadline:', status, error, xhr);
+                        // Try fallback: find by customerId and title
+                        findDeadlineByCustomerAndTitleForAssignment(workOrder.customerId, workOrder.title);
+                    }
+                });
+            } else {
+                console.log('DEBUG: No ticketId found, trying fallback with customerId:', workOrder.customerId, 'title:', workOrder.title);
+                // No ticketId, try to find by customerId and title
+                findDeadlineByCustomerAndTitleForAssignment(workOrder.customerId, workOrder.title);
+            }
+        }
+        
+        // Helper function to find deadline by customerId and title for assignment modal
+        function findDeadlineByCustomerAndTitleForAssignment(customerId, title) {
+            console.log('DEBUG: findDeadlineByCustomerAndTitleForAssignment called with customerId:', customerId, 'title:', title);
+            
+            if (!customerId || !title) {
+                console.log('DEBUG: Missing customerId or title');
+                $('#customer_deadline_text').text('Không có thông tin');
+                return;
+            }
+            
+            // Use WorkOrderServlet endpoint to get deadline by customerId and title
+            $.ajax({
+                url: ctx + '/api/work-orders',
+                type: 'GET',
+                data: {
+                    action: 'getTicketDeadlineByCustomerAndTitle',
+                    customerId: customerId,
+                    title: title
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('DEBUG: getTicketDeadlineByCustomerAndTitle response:', response);
+                    
+                    if (response && response.success && response.deadline) {
+                        var deadlineStr = response.deadline;
+                        console.log('DEBUG: Found deadline from getTicketDeadlineByCustomerAndTitle:', deadlineStr);
+                        
+                        if (deadlineStr && deadlineStr !== '' && deadlineStr !== 'null' && deadlineStr !== null) {
+                            formatAndDisplayDeadline(deadlineStr);
+                        } else {
+                            console.log('DEBUG: Deadline is empty/null');
+                            $('#customer_deadline_text').text('Chưa có deadline');
+                        }
+                    } else {
+                        console.log('DEBUG: No deadline found or invalid response');
+                        $('#customer_deadline_text').text('Chưa có deadline');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('DEBUG: Error loading getTicketDeadlineByCustomerAndTitle:', status, error);
+                    $('#customer_deadline_text').text('Không thể tải deadline');
+                }
+            });
+        }
+        
+        // Load customer deadline for tasks table
+        function loadCustomerDeadlineForTasksTable(workOrder, workOrderId) {
+            console.log('DEBUG: loadCustomerDeadlineForTasksTable called with workOrderId:', workOrderId);
+            
+            if (!workOrder) {
+                updateCustomerDeadlineCells(workOrderId, 'Không có thông tin');
+                return;
+            }
+            
+            // Try to get deadline from support request
+            var ticketId = null;
+            if (workOrder.description && workOrder.description.indexOf('[TICKET_ID:') !== -1) {
+                try {
+                    var desc = workOrder.description;
+                    var startIdx = desc.indexOf('[TICKET_ID:') + 11;
+                    var endIdx = desc.indexOf(']', startIdx);
+                    if (endIdx > startIdx) {
+                        var ticketIdStr = desc.substring(startIdx, endIdx).trim();
+                        ticketId = parseInt(ticketIdStr);
+                        console.log('DEBUG: Extracted ticketId from description:', ticketId);
+                    }
+                } catch (e) {
+                    console.error('DEBUG: Error extracting ticket ID from description:', e);
+                }
+            }
+            
+            // Use supportRequestId if available
+            if (!ticketId && workOrder.supportRequestId) {
+                ticketId = workOrder.supportRequestId;
+                console.log('DEBUG: Using supportRequestId:', ticketId);
+            }
+            
+            if (ticketId) {
+                // Use WorkOrderServlet endpoint to get deadline
+                $.ajax({
+                    url: ctx + '/api/work-orders',
+                    type: 'GET',
+                    data: {
+                        action: 'getTicketDeadline',
+                        ticketId: ticketId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('DEBUG: getTicketDeadline response for tasks table:', response);
+                        
+                        if (response && response.success && response.deadline) {
+                            var deadlineStr = response.deadline;
+                            var formattedDeadline = formatDeadlineForDisplay(deadlineStr);
+                            updateCustomerDeadlineCells(workOrderId, formattedDeadline);
+                            return;
+                        }
+                        
+                        // Fallback: try by customerId and title
+                        findDeadlineByCustomerAndTitleForTasksTable(workOrder.customerId, workOrder.title, workOrderId);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('DEBUG: Error loading getTicketDeadline for tasks table:', status, error);
+                        // Fallback: try by customerId and title
+                        findDeadlineByCustomerAndTitleForTasksTable(workOrder.customerId, workOrder.title, workOrderId);
+                    }
+                });
+            } else {
+                // No ticketId, try to find by customerId and title
+                findDeadlineByCustomerAndTitleForTasksTable(workOrder.customerId, workOrder.title, workOrderId);
+            }
+        }
+        
+        // Helper function to find deadline by customerId and title for tasks table
+        function findDeadlineByCustomerAndTitleForTasksTable(customerId, title, workOrderId) {
+            console.log('DEBUG: findDeadlineByCustomerAndTitleForTasksTable called with customerId:', customerId, 'title:', title);
+            
+            if (!customerId || !title) {
+                console.log('DEBUG: Missing customerId or title');
+                updateCustomerDeadlineCells(workOrderId, 'Không có thông tin');
+                return;
+            }
+            
+            $.ajax({
+                url: ctx + '/api/work-orders',
+                type: 'GET',
+                data: {
+                    action: 'getTicketDeadlineByCustomerAndTitle',
+                    customerId: customerId,
+                    title: title
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('DEBUG: getTicketDeadlineByCustomerAndTitle response for tasks table:', response);
+                    
+                    if (response && response.success && response.deadline) {
+                        var deadlineStr = response.deadline;
+                        var formattedDeadline = formatDeadlineForDisplay(deadlineStr);
+                        updateCustomerDeadlineCells(workOrderId, formattedDeadline);
+                    } else {
+                        updateCustomerDeadlineCells(workOrderId, 'Chưa có deadline');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('DEBUG: Error loading getTicketDeadlineByCustomerAndTitle for tasks table:', status, error);
+                    updateCustomerDeadlineCells(workOrderId, 'Không thể tải deadline');
+                }
+            });
+        }
+        
+        // Load customer deadline for work order detail modal
+        function loadCustomerDeadlineForWorkOrderDetail(workOrder) {
+            console.log('DEBUG: loadCustomerDeadlineForWorkOrderDetail called with workOrder:', workOrder);
+            
+            // Set default text
+            $('#detail_customer_deadline_text').text('Đang tải...');
+            
+            if (!workOrder) {
+                $('#detail_customer_deadline_text').text('Không có thông tin');
+                return;
+            }
+            
+            // Try to get deadline from support request
+            var ticketId = null;
+            if (workOrder.description && workOrder.description.indexOf('[TICKET_ID:') !== -1) {
+                try {
+                    var desc = workOrder.description;
+                    var startIdx = desc.indexOf('[TICKET_ID:') + 11;
+                    var endIdx = desc.indexOf(']', startIdx);
+                    if (endIdx > startIdx) {
+                        var ticketIdStr = desc.substring(startIdx, endIdx).trim();
+                        ticketId = parseInt(ticketIdStr);
+                        console.log('DEBUG: Extracted ticketId from description:', ticketId);
+                    }
+                } catch (e) {
+                    console.error('DEBUG: Error extracting ticket ID from description:', e);
+                }
+            }
+            
+            // Use supportRequestId if available
+            if (!ticketId && workOrder.supportRequestId) {
+                ticketId = workOrder.supportRequestId;
+                console.log('DEBUG: Using supportRequestId:', ticketId);
+            }
+            
+            if (ticketId) {
+                // Use WorkOrderServlet endpoint to get deadline
+                $.ajax({
+                    url: ctx + '/api/work-orders',
+                    type: 'GET',
+                    data: {
+                        action: 'getTicketDeadline',
+                        ticketId: ticketId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('DEBUG: getTicketDeadline response for work order detail:', response);
+                        
+                        if (response && response.success && response.deadline) {
+                            var deadlineStr = response.deadline;
+                            var formattedDeadline = formatDeadlineForDisplay(deadlineStr);
+                            $('#detail_customer_deadline_text').text(formattedDeadline);
+                            return;
+                        }
+                        
+                        // Fallback: try by customerId and title
+                        findDeadlineByCustomerAndTitleForWorkOrderDetail(workOrder.customerId, workOrder.title);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('DEBUG: Error loading getTicketDeadline for work order detail:', status, error);
+                        // Fallback: try by customerId and title
+                        findDeadlineByCustomerAndTitleForWorkOrderDetail(workOrder.customerId, workOrder.title);
+                    }
+                });
+            } else {
+                // No ticketId, try to find by customerId and title
+                findDeadlineByCustomerAndTitleForWorkOrderDetail(workOrder.customerId, workOrder.title);
+            }
+        }
+        
+        // Helper function to find deadline by customerId and title for work order detail
+        function findDeadlineByCustomerAndTitleForWorkOrderDetail(customerId, title) {
+            console.log('DEBUG: findDeadlineByCustomerAndTitleForWorkOrderDetail called with customerId:', customerId, 'title:', title);
+            
+            if (!customerId || !title) {
+                console.log('DEBUG: Missing customerId or title');
+                $('#detail_customer_deadline_text').text('Không có thông tin');
+                return;
+            }
+            
+            $.ajax({
+                url: ctx + '/api/work-orders',
+                type: 'GET',
+                data: {
+                    action: 'getTicketDeadlineByCustomerAndTitle',
+                    customerId: customerId,
+                    title: title
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('DEBUG: getTicketDeadlineByCustomerAndTitle response for work order detail:', response);
+                    
+                    if (response && response.success && response.deadline) {
+                        var deadlineStr = response.deadline;
+                        var formattedDeadline = formatDeadlineForDisplay(deadlineStr);
+                        $('#detail_customer_deadline_text').text(formattedDeadline);
+                    } else {
+                        $('#detail_customer_deadline_text').text('Chưa có deadline');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('DEBUG: Error loading getTicketDeadlineByCustomerAndTitle for work order detail:', status, error);
+                    $('#detail_customer_deadline_text').text('Không thể tải deadline');
+                }
+            });
+        }
+        
+        // Helper function to format deadline for display
+        function formatDeadlineForDisplay(deadlineStr) {
+            if (!deadlineStr || deadlineStr === '' || deadlineStr === 'null' || deadlineStr === null) {
+                return 'Chưa có deadline';
+            }
+            
+            try {
+                deadlineStr = String(deadlineStr).trim();
+                
+                // If deadline is in dd/MM/yyyy format
+                if (deadlineStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                    return deadlineStr;
+                } else if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    // yyyy-MM-dd format
+                    var parts = deadlineStr.split('-');
+                    return parts[2] + '/' + parts[1] + '/' + parts[0];
+                } else if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/)) {
+                    // yyyy-MM-dd HH:mm:ss format
+                    var datePart = deadlineStr.split(' ')[0];
+                    var parts = datePart.split('-');
+                    return parts[2] + '/' + parts[1] + '/' + parts[0];
+                } else {
+                    // Try to parse as Date
+                    var deadlineDate = new Date(deadlineStr);
+                    if (!isNaN(deadlineDate.getTime())) {
+                        var day = String(deadlineDate.getDate()).padStart(2, '0');
+                        var month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+                        var year = deadlineDate.getFullYear();
+                        return day + '/' + month + '/' + year;
+                    }
+                }
+            } catch (e) {
+                console.error('DEBUG: Error formatting deadline:', e);
+            }
+            
+            return 'Không hợp lệ';
+        }
+        
+        // Helper function to update all customer deadline cells in tasks table
+        function updateCustomerDeadlineCells(workOrderId, deadlineText) {
+            $('.customer-deadline-cell[data-work-order-id="' + workOrderId + '"]').each(function() {
+                // Highlight in red if deadline is important
+                if (deadlineText && deadlineText !== 'Chưa có deadline' && deadlineText !== 'Không có thông tin' && deadlineText !== 'Không thể tải deadline' && deadlineText !== 'Không hợp lệ') {
+                    $(this).html('<span class="text-danger" style="font-weight: bold;"><i class="fa fa-calendar"></i> ' + deadlineText + '</span>');
+                } else {
+                    $(this).html('<span class="text-muted">' + deadlineText + '</span>');
+                }
+            });
+        }
+        
+        // Helper function to format and display deadline
+        function formatAndDisplayDeadline(deadlineStr) {
+            console.log('DEBUG: formatAndDisplayDeadline called with:', deadlineStr);
+            
+            if (!deadlineStr || deadlineStr === '' || deadlineStr === 'null' || deadlineStr === null) {
+                console.log('DEBUG: deadlineStr is empty/null');
+                $('#customer_deadline_text').text('Chưa có deadline');
+                return;
+            }
+            
+            try {
+                var displayDate = '';
+                
+                // Trim whitespace
+                deadlineStr = String(deadlineStr).trim();
+                console.log('DEBUG: deadlineStr after trim:', deadlineStr);
+                
+                // If deadline is in dd/MM/yyyy format (from SupportDetailServlet)
+                if (deadlineStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                    console.log('DEBUG: Matched dd/MM/yyyy format');
+                    displayDate = deadlineStr; // Keep original format
+                } else if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    // Already in yyyy-MM-dd format
+                    console.log('DEBUG: Matched yyyy-MM-dd format');
+                    var parts = deadlineStr.split('-');
+                    displayDate = parts[2] + '/' + parts[1] + '/' + parts[0]; // Convert to dd/MM/yyyy
+                } else if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/)) {
+                    // Format: yyyy-MM-dd HH:mm:ss
+                    console.log('DEBUG: Matched yyyy-MM-dd HH:mm:ss format');
+                    var datePart = deadlineStr.split(' ')[0];
+                    var parts = datePart.split('-');
+                    displayDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+                } else {
+                    // Try to parse as Date
+                    console.log('DEBUG: Trying to parse as Date object');
+                    var deadlineDate = new Date(deadlineStr);
+                    if (!isNaN(deadlineDate.getTime())) {
+                        var day = String(deadlineDate.getDate()).padStart(2, '0');
+                        var month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+                        var year = deadlineDate.getFullYear();
+                        displayDate = day + '/' + month + '/' + year;
+                        console.log('DEBUG: Parsed date:', displayDate);
+                    } else {
+                        console.log('DEBUG: Failed to parse as Date');
+                    }
+                }
+                
+                if (displayDate) {
+                    console.log('DEBUG: Setting displayDate to:', displayDate);
+                    $('#customer_deadline_text').text(displayDate);
+                } else {
+                    console.log('DEBUG: displayDate is empty, showing error');
+                    $('#customer_deadline_text').text('Định dạng không hợp lệ: ' + deadlineStr);
+                }
+            } catch (e) {
+                console.error('DEBUG: Exception in formatAndDisplayDeadline:', e);
+                $('#customer_deadline_text').text('Lỗi định dạng ngày: ' + e.message);
+            }
         }
         
         function deleteTask(taskId) {
@@ -3229,40 +3849,26 @@
                         html += '<p><strong>Ngày hoàn thành:</strong> ' + formatDateTime(task.completionDate) + '</p>';
                     }
                     
-                    // Phần trăm hoàn thành
-                    var percentage = null;
-                    var progressBarClass = 'progress-bar-success';
-                    
-                    // Kiểm tra status trước - nếu task đang chờ xử lý (pending), luôn hiển thị 0%
-                    if(task.status === 'pending') {
-                        percentage = 0;
-                        progressBarClass = 'progress-bar-warning'; // Màu vàng cho chờ xử lý
-                    }
-                    // Nếu task đã completed, luôn hiển thị 100%
-                    else if(task.status === 'completed') {
-                        percentage = 100;
-                    }
-                    // Nếu có completionPercentage và không phải pending, dùng giá trị đó
-                    else if(task.completionPercentage !== null && task.completionPercentage !== undefined) {
-                        percentage = parseFloat(task.completionPercentage);
-                    } 
-                    // Nếu task đang ở trạng thái in_progress nhưng chưa có completionPercentage
-                    else if(task.status === 'in_progress') {
-                        // Tính progress dựa trên actualHours / estimatedHours nếu có
-                        if(task.actualHours && task.estimatedHours) {
-                            var actual = parseFloat(task.actualHours);
-                            var estimated = parseFloat(task.estimatedHours);
-                            if(estimated > 0) {
-                                percentage = Math.min(100, Math.max(1, Math.round((actual / estimated) * 100)));
-                            } else {
-                                percentage = 1; // Tối thiểu 1% nếu đang thực hiện
-                            }
-                        } else {
-                            // Nếu không có actualHours/estimatedHours, hiển thị 1% để cho biết đang thực hiện
-                            percentage = 1;
+                    // Trạng thái task
+                    if(task.status) {
+                        var statusLabels = {
+                            'pending': 'Đang chờ xử lý',
+                            'in_progress': 'Đang thực hiện',
+                            'completed': 'Hoàn thành',
+                            'cancelled': 'Đã hủy',
+                            'rejected': 'Đã từ chối'
+                        };
+                        var statusBadgeClass = 'badge-' + task.status;
+                        if(task.status === 'rejected') {
+                            statusBadgeClass = 'badge-danger';
                         }
-                        progressBarClass = 'progress-bar-info'; // Màu xanh dương cho đang thực hiện
+                        var statusLabel = statusLabels[task.status] || task.status;
+                        html += '<p><strong>Trạng thái:</strong> <span class="badge ' + statusBadgeClass + '">' + statusLabel + '</span></p>';
                     }
+                    
+                    // Phần trăm hoàn thành - Luôn hiển thị 0% trong báo cáo
+                    var percentage = 0;
+                    var progressBarClass = 'progress-bar-warning'; // Màu vàng cho 0%
                     
                     // Hiển thị progress bar nếu có percentage
                     if(percentage !== null) {
@@ -3522,6 +4128,20 @@
         // Reset form when modal is closed
         $(document).on('hidden.bs.modal', '#assignTaskUserModal', function() {
             $('#userTaskCountInfo').hide();
+        });
+        
+        // Reset deadline when assignTaskModal is closed
+        $(document).on('hidden.bs.modal', '#assignTaskModal', function() {
+            $('#customer_deadline_text').text('Đang tải...');
+        });
+        
+        // Ensure deadline is loaded when assignTaskModal is shown
+        $(document).on('shown.bs.modal', '#assignTaskModal', function() {
+            var workOrderId = $('#assign_work_order_id').val();
+            if (workOrderId) {
+                // Reload deadline if modal is reopened
+                loadCustomerDeadlineForAssignment(workOrderId);
+            }
         });
         
         // Function to format datetime

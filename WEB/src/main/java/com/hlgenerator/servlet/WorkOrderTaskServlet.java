@@ -67,6 +67,10 @@ public class WorkOrderTaskServlet extends HttpServlet {
                 handleListAssignments(request, response);
             } else if ("activeTaskCount".equals(action)) {
                 handleGetActiveTaskCount(request, response);
+            } else if ("activeTasks".equals(action)) {
+                handleGetActiveTasks(request, response);
+            } else if ("getIncompleteTaskCounts".equals(action)) {
+                handleGetIncompleteTaskCounts(request, response);
             } else if ("fixAssignments".equals(action)) {
                 handleFixTaskAssignments(request, response);
             } else if ("getAvailableUsers".equals(action)) {
@@ -186,6 +190,65 @@ public class WorkOrderTaskServlet extends HttpServlet {
         } catch (Exception e) {
             logger.severe("Error getting active task count: " + e.getMessage());
             sendError(response, "Error getting active task count: " + e.getMessage());
+        }
+    }
+
+    private void handleGetActiveTasks(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        
+        String userIdParam = request.getParameter("userId");
+        
+        try {
+            if (userIdParam == null || userIdParam.isEmpty()) {
+                sendError(response, "User ID is required");
+                return;
+            }
+            
+            int userId = Integer.parseInt(userIdParam);
+            List<java.util.Map<String, Object>> activeTasks = taskDAO.getActiveTasksForUser(userId);
+            
+            JsonObject result = new JsonObject();
+            result.addProperty("success", true);
+            result.addProperty("count", activeTasks.size());
+            result.add("tasks", gson.toJsonTree(activeTasks));
+            
+            sendJson(response, result);
+            
+        } catch (NumberFormatException e) {
+            sendError(response, "Invalid user ID");
+        } catch (Exception e) {
+            logger.severe("Error getting active tasks: " + e.getMessage());
+            sendError(response, "Error getting active tasks: " + e.getMessage());
+        }
+    }
+    
+    private void handleGetIncompleteTaskCounts(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        
+        String workOrderIdParam = request.getParameter("workOrderId");
+        
+        try {
+            if (workOrderIdParam == null || workOrderIdParam.isEmpty()) {
+                sendError(response, "Work Order ID is required");
+                return;
+            }
+            
+            int workOrderId = Integer.parseInt(workOrderIdParam);
+            java.util.Map<String, Integer> counts = taskDAO.getIncompleteTaskCounts(workOrderId);
+            
+            JsonObject result = new JsonObject();
+            result.addProperty("success", true);
+            result.addProperty("pendingCount", counts.get("pending"));
+            result.addProperty("inProgressCount", counts.get("in_progress"));
+            result.addProperty("totalCount", counts.get("total"));
+            
+            sendJson(response, result);
+            
+        } catch (NumberFormatException e) {
+            sendError(response, "Invalid work order ID");
+        } catch (Exception e) {
+            logger.severe("Error getting incomplete task counts: " + e.getMessage());
+            sendError(response, "Error getting incomplete task counts: " + e.getMessage());
         }
     }
 

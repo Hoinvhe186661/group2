@@ -372,6 +372,64 @@ public class WorkOrderTaskDAO extends DBConnect {
         }
         return 0;
     }
+    
+    /**
+     * Check if work order has any incomplete tasks (status = 'pending' or 'in_progress')
+     * Returns true if there are incomplete tasks, false otherwise
+     */
+    public boolean hasIncompleteTasks(int workOrderId) {
+        if (!checkConnection()) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) as count FROM tasks WHERE work_order_id = ? AND status IN ('pending', 'in_progress')";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count") > 0;
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error checking incomplete tasks for work order: " + workOrderId, e);
+        }
+        return false;
+    }
+    
+    /**
+     * Get count of incomplete tasks (status = 'pending' or 'in_progress') for a work order
+     * Returns a map with counts for pending and in_progress tasks
+     */
+    public java.util.Map<String, Integer> getIncompleteTaskCounts(int workOrderId) {
+        java.util.Map<String, Integer> counts = new java.util.HashMap<>();
+        counts.put("pending", 0);
+        counts.put("in_progress", 0);
+        counts.put("total", 0);
+        
+        if (!checkConnection()) {
+            return counts;
+        }
+
+        String sql = "SELECT status, COUNT(*) as count FROM tasks WHERE work_order_id = ? AND status IN ('pending', 'in_progress') GROUP BY status";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, workOrderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                int total = 0;
+                while (rs.next()) {
+                    String status = rs.getString("status");
+                    int count = rs.getInt("count");
+                    counts.put(status, count);
+                    total += count;
+                }
+                counts.put("total", total);
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting incomplete task counts for work order: " + workOrderId, e);
+        }
+        return counts;
+    }
 
     /**
      * Check if task has an assignment with role 'assignee'
@@ -466,12 +524,18 @@ public class WorkOrderTaskDAO extends DBConnect {
                 newTask.setPriority(task.getPriority());
                 newTask.setStatus("pending"); // New task always starts with pending status
                 newTask.setEstimatedHours(task.getEstimatedHours());
-                // Set start date and deadline if provided
+                // Set start date and deadline: use provided values, or copy from original task if not provided
                 if (startDate != null) {
                     newTask.setStartDate(startDate);
+                } else if (task.getStartDate() != null) {
+                    // Copy start date from original task if not provided
+                    newTask.setStartDate(task.getStartDate());
                 }
                 if (deadline != null) {
                     newTask.setDeadline(deadline);
+                } else if (task.getDeadline() != null) {
+                    // Copy deadline from original task if not provided
+                    newTask.setDeadline(task.getDeadline());
                 }
                 
                 // Create the new task
@@ -533,18 +597,37 @@ public class WorkOrderTaskDAO extends DBConnect {
             StringBuilder updateTaskSql = new StringBuilder("UPDATE tasks SET ");
             List<Object> updateParams = new ArrayList<>();
             
+            // For start date: use provided value, or keep existing if not provided
+            // When reassigning a rejected task, preserve the original start_date if not explicitly provided
             if (startDate != null) {
                 updateTaskSql.append("start_date = ?");
                 updateParams.add(startDate);
                 needUpdateTask = true;
+            } else if (task.getStartDate() != null && !isAssigningToDifferentUser) {
+                // If not provided and task has start_date, keep it when reassigning to same task
+                // This ensures rejected task's start_date is preserved when reassigning
+                updateTaskSql.append("start_date = ?");
+                updateParams.add(task.getStartDate());
+                needUpdateTask = true;
             }
             
+            // For deadline: use provided value, or keep existing if not provided
+            // When reassigning a rejected task, preserve the original deadline if not explicitly provided
             if (deadline != null) {
                 if (needUpdateTask) {
                     updateTaskSql.append(", ");
                 }
                 updateTaskSql.append("deadline = ?");
                 updateParams.add(deadline);
+                needUpdateTask = true;
+            } else if (task.getDeadline() != null && !isAssigningToDifferentUser) {
+                // If not provided and task has deadline, keep it when reassigning to same task
+                // This ensures rejected task's deadline is preserved when reassigning
+                if (needUpdateTask) {
+                    updateTaskSql.append(", ");
+                }
+                updateTaskSql.append("deadline = ?");
+                updateParams.add(task.getDeadline());
                 needUpdateTask = true;
             }
             
@@ -759,6 +842,47 @@ public class WorkOrderTaskDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error getting active task count for user", e);
         }
         return 0;
+    }
+
+    /**
+     * Get list of tasks that are currently in progress (status = 'in_progress') assigned to a user
+     * Returns list of tasks with work order information
+     */
+    public List<java.util.Map<String, Object>> getActiveTasksForUser(int userId) {
+        List<java.util.Map<String, Object>> tasks = new ArrayList<>();
+        if (!checkConnection()) {
+            return tasks;
+        }
+
+        String sql = "SELECT t.id, t.task_number, t.task_description, t.status, t.priority, " +
+                     "wo.id as work_order_id, wo.work_order_number, wo.title as work_order_title " +
+                     "FROM task_assignments ta " +
+                     "JOIN tasks t ON ta.task_id = t.id " +
+                     "JOIN work_orders wo ON t.work_order_id = wo.id " +
+                     "WHERE ta.user_id = ? AND ta.role = 'assignee' " +
+                     "AND t.status = 'in_progress' " +
+                     "ORDER BY t.updated_at DESC, t.created_at DESC";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> task = new java.util.HashMap<>();
+                    task.put("id", rs.getInt("id"));
+                    task.put("taskNumber", rs.getString("task_number"));
+                    task.put("taskDescription", rs.getString("task_description"));
+                    task.put("status", rs.getString("status"));
+                    task.put("priority", rs.getString("priority"));
+                    task.put("workOrderId", rs.getInt("work_order_id"));
+                    task.put("workOrderNumber", rs.getString("work_order_number"));
+                    task.put("workOrderTitle", rs.getString("work_order_title"));
+                    tasks.add(task);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting active tasks for user", e);
+        }
+        return tasks;
     }
 
     /**

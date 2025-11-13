@@ -211,7 +211,7 @@ CREATE TABLE support_requests (
     description TEXT,
     category ENUM('technical', 'billing', 'general', 'complaint') DEFAULT 'general',
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
-    status ENUM('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
+    status ENUM('open', 'in_progress', 'processed', 'resolved', 'closed') DEFAULT 'open',
     assigned_to INT,
     history JSON,
     resolution TEXT,

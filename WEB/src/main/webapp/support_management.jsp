@@ -107,6 +107,11 @@
              display: none !important;
          }
          
+         /* Ẩn cột Sort Priority */
+         .hidden {
+             display: none !important;
+         }
+         
          /* Tối ưu hiển thị cho modal chi tiết ticket - tránh tràn chữ */
          .ticket-detail-view {
              word-wrap: break-word;
@@ -269,6 +274,7 @@
                                     <thead>
                                         <tr>
                                                 <th>ID</th>
+                                                <th class="hidden">Sort Priority</th>
                                                 <th>Mã Ticket</th>
                                             <th>Khách hàng</th>
                                             <th>Tiêu đề</th>
@@ -285,6 +291,12 @@
                                                 <c:forEach var="ticket" items="${tickets}">
                                                 <tr class="ticket-priority-${ticket.priority}">
                                                     <td>${ticket.id}</td>
+                                                    <td class="hidden">
+                                                        <c:choose>
+                                                            <c:when test="${ticket.status == 'open'}">0</c:when>
+                                                            <c:otherwise>1</c:otherwise>
+                                                        </c:choose>
+                                                    </td>
                                                     <td><strong>#${ticket.ticketNumber}</strong></td>
                                                     <td>${not empty ticket.customerName ? ticket.customerName : 'N/A'}</td>
                                                     <td>${ticket.subject}</td>
@@ -334,6 +346,9 @@
                                                             <c:when test="${ticket.status == 'in_progress'}">
                                                                 <span class='label label-primary label-status-in_progress'>Đang xử lý</span>
                                                             </c:when>
+                                                            <c:when test="${ticket.status == 'processed'}">
+                                                                <span class='label label-info'>Đã xử lý</span>
+                                                            </c:when>
                                                             <c:when test="${ticket.status == 'resolved' || ticket.status == 'closed'}">
                                                                 <span class='label label-success'>Đã giải quyết</span>
                                                             </c:when>
@@ -349,10 +364,22 @@
                                                         <button class="btn btn-info btn-xs view-ticket-btn" data-ticket-id="${ticket.id}" title="Xem chi tiết">
                                                             <i class="fa fa-eye"></i> Xem
                                                         </button>
-                                                        <button class="btn btn-warning btn-xs edit-ticket-btn" data-ticket-id="${ticket.id}" title="Chỉnh sửa">
-                                                            <i class="fa fa-edit"></i> Sửa
-                                                        </button>
                                                         <c:choose>
+                                                            <c:when test="${ticket.status == 'resolved' || ticket.status == 'closed'}">
+                                                                <button class="btn btn-warning btn-xs" disabled title="Không thể chỉnh sửa ticket đã giải quyết">
+                                                                    <i class="fa fa-edit"></i> Sửa
+                                                                </button>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <button class="btn btn-warning btn-xs edit-ticket-btn" data-ticket-id="${ticket.id}" title="Chỉnh sửa">
+                                                                    <i class="fa fa-edit"></i> Sửa
+                                                                </button>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                        <c:choose>
+                                                            <c:when test="${ticket.category == 'general'}">
+                                                                <!-- Ẩn nút chuyển tiếp cho danh mục "Chung" -->
+                                                            </c:when>
                                                             <c:when test="${ticket.status == 'resolved' || ticket.status == 'closed'}">
                                                                 <button class="btn btn-success btn-xs" disabled title="Không thể chuyển tiếp yêu cầu đã giải quyết">
                                                                     <i class="fa fa-share"></i> Chuyển tiếp
@@ -370,7 +397,7 @@
                                             </c:when>
                                             <c:otherwise>
                                                 <tr>
-                                                    <td colspan="9" class="text-center">
+                                                    <td colspan="10" class="text-center">
                                                         <i class="fa fa-info-circle"></i> 
                                                         <c:choose>
                                                             <c:when test="${not empty param.status or not empty param.priority or not empty param.category}">
@@ -495,9 +522,9 @@
                             <small class="text-muted">Độ ưu tiên không thể thay đổi khi chuyển tiếp</small>
                         </div>
                         <div class="form-group">
-                            <label>Ngày mong muốn hoàn thành:</label>
-                            <input type="text" class="form-control" id="forward_deadline" readonly>
-                            <small class="text-muted">Ngày mong muốn hoàn thành của ticket</small>
+                            <label>Ngày mong muốn hoàn thành: <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="forward_deadline" required>
+                            <small class="text-muted">Ngày mong muốn hoàn thành của ticket (có thể chỉnh sửa)</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -551,10 +578,11 @@
                     "lengthChange": false, // Ẩn dropdown "records per page"
                     "paging": true, // Bật phân trang
                     "pagingType": "full_numbers", // Hiển thị số trang đầy đủ
-                    "order": [[7, "desc"]], // Sort by Ngày tạo (column 7) giảm dần - mới nhất lên đầu
+                    "order": [[1, "asc"], [8, "desc"]], // Sắp xếp theo Sort Priority (cột ẩn) tăng dần (0=open lên đầu), sau đó theo ngày tạo giảm dần
                     "columnDefs": [
-                        { "orderable": false, "targets": [0, 8] }, // Không sort cột ID và Thao tác
-                        { "orderData": [7], "targets": 7 } // Sử dụng data-order attribute cho cột Ngày tạo để sắp xếp đúng
+                        { "orderable": false, "targets": [0, 9] }, // Không sort cột ID và Thao tác
+                        { "visible": false, "targets": [1] }, // Ẩn cột Sort Priority
+                        { "orderable": true, "targets": [2, 3, 4, 5, 6, 7, 8] } // Cho phép sắp xếp các cột khác nếu người dùng click
                     ],
                     "autoWidth": false,
                     "responsive": false,
@@ -661,6 +689,7 @@
             switch(ticket.status) {
                 case 'open': statusBadge = '<span class="label label-primary">Đang chờ</span>'; break;
                 case 'in_progress': statusBadge = '<span class="label label-primary label-status-in_progress">Đang xử lý</span>'; break;
+                case 'processed': statusBadge = '<span class="label label-info">Đã xử lý</span>'; break;
                 case 'resolved':
                 case 'closed': statusBadge = '<span class="label label-success">Đã giải quyết</span>'; break;
                 default: statusBadge = '<span class="label label-default">' + ticket.status + '</span>';
@@ -740,12 +769,21 @@
             html += escapeHtml(cleanDescription || 'Không có mô tả');
             html += '</div></div>';
 
-            // Giải pháp
-            if (ticket.resolution) {
+            // Giải pháp / Kết quả xử lý - chỉ hiển thị technicalSolution từ work_order, bỏ qua resolution tự động
+            var solutionText = '';
+            if (ticket.technicalSolution && ticket.technicalSolution.trim() !== '') {
+                solutionText = ticket.technicalSolution;
+            } else if (ticket.resolution && ticket.resolution.trim() !== '' && 
+                       !ticket.resolution.includes('Đơn hàng công việc đã hoàn thành:')) {
+                // Chỉ hiển thị resolution nếu không phải là message tự động
+                solutionText = ticket.resolution;
+            }
+            
+            if (solutionText) {
                 html += '<div style="margin-bottom: 20px;">';
                 html += '<h5><i class="fa fa-check-circle"></i> <strong>Giải pháp / Kết quả xử lý</strong></h5>';
-                html += '<div style="background: #d4edda; padding: 10px; border-radius: 3px; white-space: pre-wrap; word-wrap: break-word;">';
-                html += escapeHtml(ticket.resolution);
+                html += '<div style="background: #d4edda; padding: 10px; border-radius: 3px; white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word;">';
+                html += escapeHtml(solutionText);
                 html += '</div></div>';
             }
 
@@ -827,6 +865,7 @@
         // Load ticket để edit
         var currentEditTicketId = null;
         var currentTicketStatus = null; // Lưu trạng thái hiện tại của ticket
+        var currentTicketCategory = null; // Lưu danh mục hiện tại của ticket
         
         function loadTicketForEdit(ticketId) {
             currentEditTicketId = ticketId;
@@ -846,6 +885,15 @@
                 success: function(response) {
                     if (response.success) {
                         currentTicketStatus = response.data.status; // Lưu trạng thái
+                        currentTicketCategory = response.data.category; // Lưu danh mục
+                        
+                        // Kiểm tra nếu ticket đã giải quyết thì không cho phép sửa
+                        if (response.data.status === 'resolved' || response.data.status === 'closed') {
+                            alert('Không thể chỉnh sửa ticket đã giải quyết!');
+                            $('#editTicketModal').modal('hide');
+                            return;
+                        }
+                        
                         displayEditForm(response.data);
                     } else {
                         $('#editTicketContent').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> ' + response.message + '</div>');
@@ -940,25 +988,40 @@
             
             // Kiểm tra xem ticket đã được chuyển tiếp chưa (có assignedTo)
             var isAssigned = ticket.assignedTo && ticket.assignedTo !== '' && ticket.assignedTo !== null;
+            // Nếu danh mục là "general" (chung) thì không cần assignedTo
+            var isGeneralCategory = ticket.category === 'general';
             
             html += '<div class="form-group">';
             html += '<label>Giải pháp / Kết quả xử lý:</label>';
-            if (!isAssigned) {
+            if (!isAssigned && !isGeneralCategory) {
                 html += '<div class="alert alert-warning" style="margin-bottom: 10px;">';
                 html += '<i class="fa fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Chỉ có thể nhập giải pháp và đóng ticket sau khi ticket đã được chuyển tiếp (phân công cho người xử lý).';
                 html += '</div>';
             }
-            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp hoặc kết quả xử lý..." maxlength="10000" ' + (isAssigned ? '' : 'readonly') + '>' + (ticket.resolution ? escapeHtml(ticket.resolution) : '') + '</textarea>';
+            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp hoặc kết quả xử lý..." maxlength="10000" ' + ((isAssigned || isGeneralCategory) ? '' : 'readonly') + '>' + (ticket.resolution ? escapeHtml(ticket.resolution) : '') + '</textarea>';
             html += '<small class="text-muted" id="resolution_word_count">Số từ: 0 / 1000 từ</small>';
             html += '</div>';
             
             $('#editTicketContent').html(html);
             
-            // Disable nút đóng ticket nếu chưa được chuyển tiếp
-            if (!isAssigned) {
-                $('#btnSaveTicket').prop('disabled', true).attr('title', 'Ticket chưa được chuyển tiếp. Vui lòng chuyển tiếp ticket trước khi đóng.');
+            // Disable nút đóng ticket nếu:
+            // 1. Chưa được chuyển tiếp (trừ danh mục "general")
+            // 2. Trạng thái không phải "processed" (đã xử lý)
+            var canCloseTicket = false;
+            var disableReason = '';
+            
+            if (ticket.status !== 'processed') {
+                disableReason = 'Chỉ có thể đóng ticket khi trạng thái là "Đã xử lý" (processed). Trạng thái hiện tại: ' + (ticket.status || 'N/A');
+            } else if (!isAssigned && !isGeneralCategory) {
+                disableReason = 'Ticket chưa được chuyển tiếp. Vui lòng chuyển tiếp ticket trước khi đóng.';
             } else {
+                canCloseTicket = true;
+            }
+            
+            if (canCloseTicket) {
                 $('#btnSaveTicket').prop('disabled', false).removeAttr('title');
+            } else {
+                $('#btnSaveTicket').prop('disabled', true).attr('title', disableReason);
             }
             
             // Thêm event listener để đếm số từ real-time
@@ -1008,9 +1071,28 @@
                 return;
             }
             
-            // Kiểm tra ticket đã được chuyển tiếp chưa
+            // Kiểm tra trạng thái ticket phải là "processed" (đã xử lý)
+            if (currentTicketStatus !== 'processed') {
+                var statusText = '';
+                switch(currentTicketStatus) {
+                    case 'open': statusText = 'Đang chờ'; break;
+                    case 'in_progress': statusText = 'Đang xử lý'; break;
+                    case 'resolved': statusText = 'Đã giải quyết'; break;
+                    case 'closed': statusText = 'Đã đóng'; break;
+                    default: statusText = currentTicketStatus || 'N/A';
+                }
+                alert('✗ Không thể đóng ticket!\n\n' +
+                      'Chỉ có thể đóng ticket khi trạng thái là "Đã xử lý" (processed).\n' +
+                      'Trạng thái hiện tại: ' + statusText + '\n\n' +
+                      'Vui lòng đợi ticket được xử lý và chuyển sang trạng thái "Đã xử lý" trước khi đóng.');
+                return;
+            }
+            
+            // Kiểm tra ticket đã được chuyển tiếp chưa (trừ danh mục "general")
             var assignedTo = $('#edit_assignedTo').val();
-            if (!assignedTo || assignedTo === '' || assignedTo === null) {
+            var isGeneralCategory = currentTicketCategory === 'general';
+            
+            if (!isGeneralCategory && (!assignedTo || assignedTo === '' || assignedTo === null)) {
                 alert('Không thể đóng ticket! Ticket chưa được chuyển tiếp (phân công cho người xử lý).\n\nVui lòng chuyển tiếp ticket trước khi đóng.');
                 return;
             }
@@ -1083,6 +1165,7 @@
             $('#forward_assignedTo').html('<option value="">-- Chọn trưởng phòng kỹ thuật --</option>');
             $('#forward_priority').val('medium');
             $('#forward_deadline').val('');
+            $('#forward_deadline').removeAttr('min');
             
             // Load thông tin ticket trước để kiểm tra status
             $.ajax({
@@ -1117,11 +1200,36 @@
                             $('#forward_priority').val('medium');
                         }
                         
-                        // Set deadline (chỉ để hiển thị)
+                        // Set deadline (có thể chỉnh sửa) - format từ dd/MM/yyyy hoặc yyyy-MM-dd sang yyyy-MM-dd cho date input
+                        var today = new Date();
+                        var dd = String(today.getDate()).padStart(2, '0');
+                        var mm = String(today.getMonth() + 1).padStart(2, '0');
+                        var yyyy = today.getFullYear();
+                        var todayStr = yyyy + '-' + mm + '-' + dd;
+                        
+                        // Set min date là hôm nay (không cho chọn ngày quá khứ)
+                        $('#forward_deadline').attr('min', todayStr);
+                        
                         if (ticket.deadline && ticket.deadline.trim() !== '' && ticket.deadline !== 'null') {
-                            $('#forward_deadline').val(ticket.deadline);
+                            var deadlineStr = ticket.deadline.trim();
+                            // Kiểm tra format: nếu là dd/MM/yyyy thì chuyển sang yyyy-MM-dd
+                            if (deadlineStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                                var parts = deadlineStr.split('/');
+                                deadlineStr = parts[2] + '-' + parts[1] + '-' + parts[0]; // yyyy-MM-dd
+                            } else if (deadlineStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                // Đã đúng format yyyy-MM-dd
+                                deadlineStr = deadlineStr;
+                            }
+                            // Kiểm tra deadline không được là ngày quá khứ
+                            if (deadlineStr < todayStr) {
+                                // Nếu deadline là quá khứ, set về hôm nay
+                                $('#forward_deadline').val(todayStr);
+                            } else {
+                                $('#forward_deadline').val(deadlineStr);
+                            }
                         } else {
-                            $('#forward_deadline').val('Chưa có');
+                            // Nếu chưa có deadline, set về hôm nay
+                            $('#forward_deadline').val(todayStr);
                         }
                         
                         // Load danh sách head technicians
@@ -1215,29 +1323,56 @@
             var assignedToId = $('#forward_assignedTo').val();
             // Lấy priority từ ticket hiện tại (không từ form vì đã disabled)
             var priority = currentForwardPriority || 'medium';
+            // Lấy deadline từ form (có thể chỉnh sửa)
+            var deadline = $('#forward_deadline').val();
+            console.log('DEBUG: deadline from form =', deadline);
+            console.log('DEBUG: deadline type =', typeof deadline);
+            console.log('DEBUG: deadline length =', deadline ? deadline.length : 0);
             
             if (!ticketId || !assignedToId) {
                 alert('✗ Vui lòng chọn trưởng phòng kỹ thuật');
                 return;
             }
             
+            if (!deadline || deadline.trim() === '') {
+                alert('✗ Vui lòng nhập ngày mong muốn hoàn thành');
+                $('#forward_deadline').focus();
+                return;
+            }
+            
+            // Validate deadline format (phải là yyyy-MM-dd)
+            var datePattern = /^\d{4}-\d{2}-\d{2}$/;
+            if (!datePattern.test(deadline.trim())) {
+                alert('✗ Định dạng ngày không hợp lệ. Vui lòng chọn lại ngày.');
+                $('#forward_deadline').focus();
+                return;
+            }
+            
             // Disable button
             $('#btnForwardTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang chuyển tiếp...');
             
+            // Chuẩn bị data để gửi
+            var requestData = {
+                action: 'forward',
+                id: ticketId,  // SupportStatsServlet dùng 'id' thay vì 'ticketId'
+                assignedTo: assignedToId,  // SupportStatsServlet dùng 'assignedTo' thay vì 'assignedToId'
+                forwardPriority: priority,  // Dùng priority hiện tại của ticket (không cho phép thay đổi)
+                forwardDeadline: deadline,  // Deadline mới (có thể chỉnh sửa)
+                forwardNote: ''  // Có thể thêm ghi chú nếu cần
+            };
+            
+            console.log('DEBUG: Sending forward request with data:', requestData);
+            
             // Submit AJAX - gọi SupportStatsServlet
-            // Gửi priority hiện tại của ticket (không cho phép thay đổi)
+            // Gửi priority hiện tại của ticket (không cho phép thay đổi) và deadline mới
             $.ajax({
                 url: 'api/support-stats',  // Dùng URL tương đối
                 type: 'POST',
-                data: {
-                    action: 'forward',
-                    id: ticketId,  // SupportStatsServlet dùng 'id' thay vì 'ticketId'
-                    assignedTo: assignedToId,  // SupportStatsServlet dùng 'assignedTo' thay vì 'assignedToId'
-                    forwardPriority: priority,  // Dùng priority hiện tại của ticket (không cho phép thay đổi)
-                    forwardNote: ''  // Có thể thêm ghi chú nếu cần
-                },
+                data: $.param(requestData),  // Encode data properly để đảm bảo deadline được gửi đúng
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
                 dataType: 'json',
                 success: function(response) {
+                    console.log('DEBUG: Forward response:', response);
                     if (response.success) {
                         alert('✓ ' + response.message);
                         $('#forwardTicketModal').modal('hide');
@@ -1247,7 +1382,9 @@
                         alert('✗ ' + response.message);
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('DEBUG: Forward error:', {xhr: xhr, status: status, error: error});
+                    console.error('DEBUG: Response text:', xhr.responseText);
                     alert('✗ Không thể chuyển tiếp ticket. Vui lòng thử lại!');
                 },
                 complete: function() {

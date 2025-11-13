@@ -365,12 +365,22 @@ public class SupportStatsServlet extends HttpServlet {
                 
             } else if ("forward".equals(action)) {
                 // Chuyển tiếp yêu cầu hỗ trợ KỸ THUẬT
+                // Debug: Log tất cả parameters
+                System.out.println("DEBUG: All request parameters:");
+                java.util.Enumeration<String> paramNames = request.getParameterNames();
+                while (paramNames.hasMoreElements()) {
+                    String paramName = paramNames.nextElement();
+                    String paramValue = request.getParameter(paramName);
+                    System.out.println("DEBUG:   " + paramName + " = " + paramValue);
+                }
+                
                 String idParam = request.getParameter("id");
                 String forwardNote = request.getParameter("forwardNote");
                 String forwardPriority = request.getParameter("forwardPriority");
                 String assignedToParam = request.getParameter("assignedTo");
+                String forwardDeadlineParam = request.getParameter("forwardDeadline");
                 
-                System.out.println("DEBUG: Forward action - ID=" + idParam + ", assignedTo=" + assignedToParam);
+                System.out.println("DEBUG: Forward action - ID=" + idParam + ", assignedTo=" + assignedToParam + ", forwardDeadline=" + forwardDeadlineParam);
                 
                 if (idParam == null || idParam.trim().isEmpty()) {
                     jsonResponse.addProperty("success", false);
@@ -429,6 +439,36 @@ public class SupportStatsServlet extends HttpServlet {
                         if (forwardNote == null) forwardNote = "";
                         if (forwardPriority == null) forwardPriority = "medium";
                         
+                        // Parse deadline (bắt buộc phải có khi chuyển tiếp)
+                        java.sql.Date deadlineDate = null;
+                        String forwardDeadline = forwardDeadlineParam; // Dùng biến đã lấy ở trên
+                        System.out.println("DEBUG: forwardDeadline parameter (from variable) = " + forwardDeadline);
+                        if (forwardDeadline != null && !forwardDeadline.trim().isEmpty()) {
+                            try {
+                                // Đảm bảo format là yyyy-MM-dd
+                                String deadlineStr = forwardDeadline.trim();
+                                System.out.println("DEBUG: deadlineStr before parsing = " + deadlineStr);
+                                deadlineDate = java.sql.Date.valueOf(deadlineStr);
+                                System.out.println("DEBUG: Parsed deadlineDate = " + deadlineDate);
+                                System.out.println("DEBUG: deadlineDate.toString() = " + deadlineDate.toString());
+                            } catch (IllegalArgumentException e) {
+                                System.out.println("ERROR: Invalid deadline format: " + forwardDeadline + ", error: " + e.getMessage());
+                                e.printStackTrace();
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Định dạng ngày không hợp lệ: " + forwardDeadline + ". Vui lòng chọn lại ngày.");
+                                out.print(jsonResponse.toString());
+                                out.flush();
+                                return;
+                            }
+                        } else {
+                            System.out.println("ERROR: forwardDeadline is null or empty, but it's required for forwarding");
+                            jsonResponse.addProperty("success", false);
+                            jsonResponse.addProperty("message", "Vui lòng nhập ngày mong muốn hoàn thành!");
+                            out.print(jsonResponse.toString());
+                            out.flush();
+                            return;
+                        }
+                        
                         // Parse assignedTo - CHỈ nhận một ID
                         Integer assignedToId = null;
                         if (assignedToParam != null && !assignedToParam.trim().isEmpty()) {
@@ -485,11 +525,27 @@ public class SupportStatsServlet extends HttpServlet {
                         String newInternalNotes = "CHUYỂN TIẾP ĐẾN BỘ PHẬN KỸ THUẬT" + 
                                                 (forwardNote.isEmpty() ? "" : " - Ghi chú: " + forwardNote);
                         
-                        System.out.println("DEBUG: Forwarding ticket ID=" + id + " to head_technician ID=" + assignedToId + " with priority=" + forwardPriority);
+                        System.out.println("DEBUG: Forwarding ticket ID=" + id + " to head_technician ID=" + assignedToId + " with priority=" + forwardPriority + ", deadline=" + deadlineDate);
+                        System.out.println("DEBUG: deadlineDate is null? " + (deadlineDate == null));
+                        if (deadlineDate != null) {
+                            System.out.println("DEBUG: deadlineDate.toString() = " + deadlineDate.toString());
+                            System.out.println("DEBUG: deadlineDate.getTime() = " + deadlineDate.getTime());
+                        }
                         
-                        // Update: set category to 'technical', update priority, status, add notes, assign user
+                        // Update: set category to 'technical', update priority, status, add notes, assign user, update deadline
                         // CHỈ cập nhật một ticket ID
-                        boolean success = supportDAO.updateSupportRequest(id, "technical", forwardPriority, "in_progress", null, newInternalNotes, assignedToId);
+                        // QUAN TRỌNG: Đảm bảo deadlineDate được truyền vào, kể cả khi nó null (để xóa deadline cũ nếu cần)
+                        boolean success = supportDAO.updateSupportRequest(id, "technical", forwardPriority, "in_progress", null, newInternalNotes, assignedToId, deadlineDate);
+                        
+                        System.out.println("DEBUG: updateSupportRequest returned: " + success);
+                        if (!success) {
+                            System.out.println("DEBUG: Last error from DAO: " + supportDAO.getLastError());
+                        }
+                        
+                        System.out.println("DEBUG: Update result = " + success);
+                        if (!success) {
+                            System.out.println("DEBUG: Update error = " + supportDAO.getLastError());
+                        }
                         
                         if (success) {
                             System.out.println("SUCCESS: Ticket forwarded to technical department");

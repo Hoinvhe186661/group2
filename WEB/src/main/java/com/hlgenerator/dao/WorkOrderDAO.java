@@ -275,6 +275,45 @@ public class WorkOrderDAO extends DBConnect {
         
         return null;
     }
+    
+    /**
+     * Get work order by ticket ID
+     * Tìm work order liên kết với ticket bằng cách:
+     * 1. Tìm trong description có [TICKET_ID:xxx]
+     * 2. Nếu không tìm thấy, tìm theo title và customer_id từ ticket
+     */
+    public WorkOrder getWorkOrderByTicketId(int ticketId, String ticketTitle, int customerId) {
+        if (!checkConnection()) {
+            return null;
+        }
+        
+        // Method 1: Tìm work order có description chứa [TICKET_ID:ticketId]
+        String sql1 = "SELECT wo.*, u.full_name AS assigned_to_name, c.contact_person AS customer_name " +
+                      "FROM work_orders wo " +
+                      "LEFT JOIN users u ON wo.assigned_to = u.id " +
+                      "LEFT JOIN customers c ON wo.customer_id = c.id " +
+                      "WHERE wo.description LIKE ? " +
+                      "LIMIT 1";
+        
+        try (PreparedStatement ps = connection.prepareStatement(sql1)) {
+            ps.setString(1, "%[TICKET_ID:" + ticketId + "]%");
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToWorkOrder(rs);
+                }
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error getting work order by ticket ID (method 1): " + ticketId, e);
+        }
+        
+        // Method 2: Tìm theo title và customer_id
+        if (ticketTitle != null && !ticketTitle.trim().isEmpty() && customerId > 0) {
+            return getWorkOrderByTicketInfo(ticketTitle.trim(), customerId);
+        }
+        
+        return null;
+    }
 
     /**
      * Get all work orders
@@ -383,9 +422,17 @@ public class WorkOrderDAO extends DBConnect {
             return false;
         }
 
+        // Build dynamic SQL to include technical_solution if column exists
         String sql = "UPDATE work_orders SET customer_id = ?, contract_id = ?, title = ?, description = ?, " +
                      "priority = ?, status = ?, assigned_to = ?, estimated_hours = ?, actual_hours = ?, " +
-                     "scheduled_date = ?, completion_date = ? WHERE id = ?";
+                     "scheduled_date = ?, completion_date = ?";
+        
+        // Always include technical_solution in UPDATE (assume column exists)
+        // If column doesn't exist, the SQL will fail and we'll catch the error
+        sql += ", technical_solution = ?";
+        logger.info("Adding technical_solution to UPDATE SQL");
+        
+        sql += " WHERE id = ?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, workOrder.getCustomerId());
@@ -431,9 +478,26 @@ public class WorkOrderDAO extends DBConnect {
                 ps.setNull(11, Types.DATE);
             }
             
-            ps.setInt(12, workOrder.getId());
+            int paramIndex = 12;
+            // Always set technical_solution parameter
+            if (workOrder.getTechnicalSolution() != null && !workOrder.getTechnicalSolution().trim().isEmpty()) {
+                ps.setString(paramIndex++, workOrder.getTechnicalSolution());
+                logger.info("Setting technical_solution parameter: " + workOrder.getTechnicalSolution().substring(0, Math.min(50, workOrder.getTechnicalSolution().length())) + "...");
+            } else {
+                ps.setNull(paramIndex++, Types.VARCHAR);
+                logger.info("Setting technical_solution parameter to NULL (empty or null value)");
+            }
+            
+            ps.setInt(paramIndex, workOrder.getId());
+            logger.info("Executing UPDATE work_orders SQL with " + paramIndex + " parameters");
+            logger.info("SQL: " + sql);
+            logger.info("Work Order ID: " + workOrder.getId());
+            logger.info("Technical Solution: " + (workOrder.getTechnicalSolution() != null ? 
+                ("'" + workOrder.getTechnicalSolution().substring(0, Math.min(100, workOrder.getTechnicalSolution().length())) + 
+                (workOrder.getTechnicalSolution().length() > 100 ? "..." : "") + "' (length: " + workOrder.getTechnicalSolution().length() + ")") : "null"));
 
             int affectedRows = ps.executeUpdate();
+            logger.info("UPDATE affected rows: " + affectedRows);
             return affectedRows > 0;
             
         } catch (SQLException e) {
@@ -534,6 +598,16 @@ public class WorkOrderDAO extends DBConnect {
             }
         } catch (SQLException e) {
             // Column might not exist in some queries, ignore
+        }
+        
+        // Get technical solution (may not exist in database yet)
+        try {
+            String technicalSolution = rs.getString("technical_solution");
+            if (technicalSolution != null) {
+                workOrder.setTechnicalSolution(technicalSolution);
+            }
+        } catch (SQLException e) {
+            // Column might not exist in database yet, ignore
         }
         
         return workOrder;

@@ -23,6 +23,7 @@ public class WorkOrder {
 	private Timestamp updatedAt;
 	private String assignedToName;
 	private String customerName;
+	private String technicalSolution;
 
 	public int getId() {
 		return id;
@@ -166,6 +167,14 @@ public class WorkOrder {
 
 	public void setCustomerName(String customerName) {
 		this.customerName = customerName;
+	}
+
+	public String getTechnicalSolution() {
+		return technicalSolution;
+	}
+
+	public void setTechnicalSolution(String technicalSolution) {
+		this.technicalSolution = technicalSolution;
 	}
 }
 
