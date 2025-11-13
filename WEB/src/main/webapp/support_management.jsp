@@ -993,12 +993,7 @@
             
             html += '<div class="form-group">';
             html += '<label>Giải pháp / Kết quả xử lý:</label>';
-            if (!isAssigned && !isGeneralCategory) {
-                html += '<div class="alert alert-warning" style="margin-bottom: 10px;">';
-                html += '<i class="fa fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Chỉ có thể nhập giải pháp và đóng ticket sau khi ticket đã được chuyển tiếp (phân công cho người xử lý).';
-                html += '</div>';
-            }
-            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp hoặc kết quả xử lý..." maxlength="10000" ' + ((isAssigned || isGeneralCategory) ? '' : 'readonly') + '>' + (ticket.resolution ? escapeHtml(ticket.resolution) : '') + '</textarea>';
+            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Giải pháp kỹ thuật từ đơn hàng công việc..." maxlength="10000" readonly style="background-color: #f5f5f5; cursor: not-allowed;">' + (ticket.technicalSolution ? escapeHtml(ticket.technicalSolution) : '') + '</textarea>';
             html += '<small class="text-muted" id="resolution_word_count">Số từ: 0 / 1000 từ</small>';
             html += '</div>';
             
@@ -1097,30 +1092,16 @@
                 return;
             }
             
-            // Kiểm tra giải pháp xử lý
+            // Lấy giải pháp kỹ thuật từ textarea (readonly, chỉ để hiển thị)
             var resolution = $('#edit_resolution').val();
-            if (!resolution || resolution.trim() === '') {
-                alert('Vui lòng nhập giải pháp xử lý trước khi đóng ticket!');
-                $('#edit_resolution').focus();
-                return;
-            }
-            
-            // Kiểm tra số từ (tối đa 1000 từ)
-            var wordCount = countWords(resolution);
-            if (wordCount > 1000) {
-                alert('Giải pháp xử lý không được vượt quá 1000 từ. Hiện tại bạn đã nhập ' + wordCount + ' từ. Vui lòng rút gọn nội dung.');
-                $('#edit_resolution').focus();
-                return;
-            }
             
             // Disable button
             $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
             
-            // Lấy dữ liệu - nếu có resolution thì tự động set status = resolved
+            // Lấy dữ liệu - chỉ cập nhật status, không gửi technicalSolution vì không cho phép chỉnh sửa
             var data = {
                 id: currentEditTicketId,
-                resolution: resolution,
-                status: 'resolved' // Tự động set status thành resolved khi có resolution
+                status: 'resolved' // Tự động set status thành resolved khi đóng ticket
             };
             
             // Submit AJAX với UTF-8

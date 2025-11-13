@@ -5,3 +5,5 @@
 ALTER TABLE support_requests 
 MODIFY COLUMN status ENUM('open', 'in_progress', 'processed', 'resolved', 'closed') DEFAULT 'open';
 
+
+

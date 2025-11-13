@@ -1775,9 +1775,45 @@
         }
         
         function viewWorkOrderDetail(id) {
-            var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
-            if(!workOrder) return;
-            
+            // Load fresh data from server to ensure we have the latest technical solution
+            $.ajax({
+                url: ctx + '/api/work-orders',
+                type: 'GET',
+                data: { action: 'get', id: id },
+                dataType: 'json',
+                success: function(response) {
+                    var workOrder;
+                    if (response && response.success && response.data) {
+                        workOrder = response.data;
+                        // Update cached data
+                        var cachedIndex = allWorkOrders.findIndex(function(w) { return w.id == id; });
+                        if (cachedIndex >= 0) {
+                            allWorkOrders[cachedIndex] = workOrder;
+                        }
+                    } else {
+                        // Fallback to cached data if server request fails
+                        workOrder = allWorkOrders.find(function(w) { return w.id == id; });
+                        if(!workOrder) {
+                            alert('Không thể tải chi tiết đơn hàng công việc');
+                            return;
+                        }
+                    }
+                    
+                    populateWorkOrderDetailModal(workOrder);
+                },
+                error: function() {
+                    // Fallback to cached data if server request fails
+                    var workOrder = allWorkOrders.find(function(w) { return w.id == id; });
+                    if(!workOrder) {
+                        alert('Không thể tải chi tiết đơn hàng công việc');
+                        return;
+                    }
+                    populateWorkOrderDetailModal(workOrder);
+                }
+            });
+        }
+        
+        function populateWorkOrderDetailModal(workOrder) {
             $('#detail_work_order_id').val(workOrder.id);
             $('#detail_work_order_number').text(workOrder.workOrderNumber || '#' + workOrder.id);
             $('#detail_customer').text(workOrder.customerName || 'N/A');
@@ -1796,7 +1832,7 @@
             }, 100);
             
             // Tính actualHours từ tổng actualHours của các tasks
-            calculateAndUpdateActualHours(id);
+            calculateAndUpdateActualHours(workOrder.id);
             
             // Set scheduledDate từ createdAt nếu chưa có
             if (workOrder.scheduledDate) {
@@ -1883,7 +1919,7 @@
             });
             
             // Load danh sách người đã được phân công từ các task
-            loadAssignedUsers(id);
+            loadAssignedUsers(workOrder.id);
             
             // Kiểm tra nếu work order đã hoàn thành (có completion_date nhưng status là in_progress)
             var isFinished = workOrder.completionDate && workOrder.status === 'in_progress';
@@ -2099,13 +2135,14 @@
                 success: function(response) {
                     console.log('Server response:', response);
                     if(response && response.success) {
-                        alert('Cập nhật thành công!');
+                        alert('✓ Cập nhật thành công!');
                         $('#workOrderDetailModal').modal('hide');
+                        // Reload work orders list to ensure data is synced with database
                         loadWorkOrders();
                     } else {
                         var errorMsg = response.message || 'Không thể cập nhật';
                         console.error('Update failed:', errorMsg);
-                        alert('Lỗi: ' + errorMsg);
+                        alert('✗ Lỗi: ' + errorMsg);
                     }
                 },
                 error: function(xhr, status, error) {
@@ -2207,13 +2244,17 @@
             // Send completion date from input (if set)
             var completionDateValue = $('#detail_completion_date').val();
             
+            // Get technical solution from textarea to ensure it's saved when finishing
+            var technicalSolutionValue = $('#detail_technical_solution').val() || '';
+            
             $.ajax({
                 url: ctx + '/api/work-orders',
                 type: 'POST',
                 data: {
                     action: 'finish',
                     id: id,
-                    completionDate: completionDateValue || ''
+                    completionDate: completionDateValue || '',
+                    technicalSolution: technicalSolutionValue
                 },
                 dataType: 'json',
                 success: function(response) {
@@ -3866,18 +3907,36 @@
                         html += '<p><strong>Trạng thái:</strong> <span class="badge ' + statusBadgeClass + '">' + statusLabel + '</span></p>';
                     }
                     
-                    // Phần trăm hoàn thành - Luôn hiển thị 0% trong báo cáo
+                    // Phần trăm hoàn thành - Load từ database completion_percentage
                     var percentage = 0;
-                    var progressBarClass = 'progress-bar-warning'; // Màu vàng cho 0%
-                    
-                    // Hiển thị progress bar nếu có percentage
-                    if(percentage !== null) {
-                        html += '<p><strong>Phần trăm hoàn thành:</strong> ';
-                        html += '<div class="progress" style="margin-top: 5px;">';
-                        html += '<div class="progress-bar ' + progressBarClass + '" role="progressbar" style="width: ' + percentage + '%">';
-                        html += percentage + '%';
-                        html += '</div></div></p>';
+                    if (task.completionPercentage != null && task.completionPercentage !== undefined) {
+                        percentage = parseFloat(task.completionPercentage);
+                        // Đảm bảo percentage trong khoảng 0-100
+                        if (isNaN(percentage)) {
+                            percentage = 0;
+                        } else {
+                            percentage = Math.max(0, Math.min(100, percentage));
+                        }
                     }
+                    
+                    // Xác định màu progress bar dựa trên phần trăm
+                    var progressBarClass = 'progress-bar-warning'; // Màu vàng mặc định
+                    if (percentage >= 100) {
+                        progressBarClass = 'progress-bar-success'; // Màu xanh khi hoàn thành 100%
+                    } else if (percentage >= 75) {
+                        progressBarClass = 'progress-bar-info'; // Màu xanh dương khi >= 75%
+                    } else if (percentage >= 50) {
+                        progressBarClass = 'progress-bar-warning'; // Màu vàng khi >= 50%
+                    } else {
+                        progressBarClass = 'progress-bar-danger'; // Màu đỏ khi < 50%
+                    }
+                    
+                    // Hiển thị progress bar
+                    html += '<p><strong>Phần trăm hoàn thành:</strong> ';
+                    html += '<div class="progress" style="margin-top: 5px;">';
+                    html += '<div class="progress-bar ' + progressBarClass + '" role="progressbar" style="width: ' + percentage + '%">';
+                    html += percentage.toFixed(2) + '%';
+                    html += '</div></div></p>';
                     
                     // Mô tả công việc đã thực hiện
                     if(task.workDescription && task.workDescription.trim() !== '') {

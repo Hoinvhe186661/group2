@@ -499,7 +499,8 @@
             </div>
             <div class="mb-3">
               <label>Nhận xét của bạn:</label>
-              <textarea id="feedbackCommentModal" class="form-control" rows="3" placeholder="Chia sẻ cảm nhận của bạn về dịch vụ hỗ trợ..."></textarea>
+              <textarea id="feedbackCommentModal" class="form-control" rows="3" placeholder="Chia sẻ cảm nhận của bạn về dịch vụ hỗ trợ..." maxlength="1000"></textarea>
+              <small class="text-muted" id="feedback_comment_char_count">Số ký tự: 0 / 1000 ký tự</small>
             </div>
             <div class="mb-3">
               <label>Ảnh minh chứng (tùy chọn, tối đa 10MB):</label>
@@ -664,6 +665,43 @@
     
     // Initialize rating stars for modal
     initRatingStarsModal();
+    
+    // Initialize character count for feedback comment
+    updateFeedbackCommentCharCount();
+    
+    // Add event listener for real-time character count
+    var commentTextarea = document.getElementById('feedbackCommentModal');
+    if (commentTextarea) {
+      commentTextarea.addEventListener('input', updateFeedbackCommentCharCount);
+      commentTextarea.addEventListener('paste', function() {
+        setTimeout(updateFeedbackCommentCharCount, 10);
+      });
+    }
+  }
+  
+  // Function to update character count display for feedback comment
+  function updateFeedbackCommentCharCount() {
+    var textarea = document.getElementById('feedbackCommentModal');
+    if (!textarea) return;
+    
+    var text = textarea.value || '';
+    var charCount = text.length;
+    var maxChars = 1000;
+    var remaining = maxChars - charCount;
+    
+    var countElement = document.getElementById('feedback_comment_char_count');
+    if (!countElement) return;
+    
+    if (charCount > maxChars) {
+      countElement.className = 'text-danger';
+      countElement.textContent = 'Số ký tự: ' + charCount + ' / ' + maxChars + ' ký tự (Vượt quá ' + (charCount - maxChars) + ' ký tự)';
+    } else if (charCount > maxChars * 0.9) {
+      countElement.className = 'text-warning';
+      countElement.textContent = 'Số ký tự: ' + charCount + ' / ' + maxChars + ' ký tự (Còn lại: ' + remaining + ' ký tự)';
+    } else {
+      countElement.className = 'text-muted';
+      countElement.textContent = 'Số ký tự: ' + charCount + ' / ' + maxChars + ' ký tự (Còn lại: ' + remaining + ' ký tự)';
+    }
   }
   
   // Preview image
@@ -810,6 +848,15 @@
     }
     
     var comment = document.getElementById('feedbackCommentModal').value || '';
+    
+    // Validate character count - tối đa 1000 ký tự
+    var charCount = comment.length;
+    if (charCount > 1000) {
+      alert('Nhận xét không được vượt quá 1000 ký tự. Hiện tại bạn đã nhập ' + charCount + ' ký tự. Vui lòng rút gọn nội dung.');
+      document.getElementById('feedbackCommentModal').focus();
+      return;
+    }
+    
     var imageInput = document.getElementById('feedbackImageModal');
     var hasImage = imageInput && imageInput.files && imageInput.files[0];
     
@@ -1246,6 +1293,7 @@
         'pending': 'Chờ xử lý',
         'open': 'Chờ xử lý',
         'in_progress': 'Đang xử lý',
+        'processed': 'Đã xử lý',
         'resolved': 'Đã giải quyết',
         'cancelled': 'Đã hủy',
         'closed': 'Đã đóng'
@@ -1258,6 +1306,7 @@
         'pending': 'bg-warning',
         'open': 'bg-warning',
         'in_progress': 'bg-info',
+        'processed': 'bg-info',
         'resolved': 'bg-success',
         'cancelled': 'bg-danger',
         'closed': 'bg-secondary'

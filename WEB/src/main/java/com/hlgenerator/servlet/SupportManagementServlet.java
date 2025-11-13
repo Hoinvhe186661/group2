@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hlgenerator.dao.SupportRequestDAO;
 import com.hlgenerator.dao.UserDAO;
+import com.hlgenerator.dao.WorkOrderDAO;
 import com.hlgenerator.model.User;
+import com.hlgenerator.model.WorkOrder;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -170,14 +172,16 @@ public class SupportManagementServlet extends HttpServlet {
                 String status = request.getParameter("status");
                 String assignedTo = request.getParameter("assignedTo");
                 String resolution = request.getParameter("resolution");
+                String technicalSolution = request.getParameter("technicalSolution"); // Lấy technicalSolution từ request
                 
                 if (idParam == null || idParam.trim().isEmpty()) {
                     jsonResponse.addProperty("success", false);
                     jsonResponse.addProperty("message", "Thiếu thông tin ID");
                 } else {
-                    // Validate resolution - tối đa 1000 từ
-                    if (resolution != null && !resolution.trim().isEmpty()) {
-                        int wordCount = countWords(resolution);
+                    // Validate technicalSolution hoặc resolution - tối đa 1000 từ
+                    String solutionToValidate = technicalSolution != null ? technicalSolution : resolution;
+                    if (solutionToValidate != null && !solutionToValidate.trim().isEmpty()) {
+                        int wordCount = countWords(solutionToValidate);
                         if (wordCount > 1000) {
                             jsonResponse.addProperty("success", false);
                             jsonResponse.addProperty("message", "Giải pháp xử lý không được vượt quá 1000 từ. Hiện tại bạn đã nhập " + wordCount + " từ. Vui lòng rút gọn nội dung.");
@@ -198,8 +202,59 @@ public class SupportManagementServlet extends HttpServlet {
                             }
                         }
                         
+                        // Lấy technicalSolution từ work_orders để lưu vào resolution của support_requests
+                        // Chỉ lưu khi đóng ticket (status = 'resolved')
+                        String resolutionToSave = null;
+                        
+                        if ("resolved".equals(status)) {
+                            // Khi đóng ticket, lấy technical_solution từ work_orders để lưu vào resolution
+                            Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                            if (ticket != null) {
+                                WorkOrderDAO workOrderDAO = new WorkOrderDAO();
+                                String ticketTitle = (String) ticket.get("subject");
+                                Integer customerIdObj = (Integer) ticket.get("customerId");
+                                int customerId = customerIdObj != null ? customerIdObj : 0;
+                                
+                                WorkOrder workOrder = workOrderDAO.getWorkOrderByTicketId(ticketId, ticketTitle, customerId);
+                                if (workOrder != null && workOrder.getTechnicalSolution() != null && !workOrder.getTechnicalSolution().trim().isEmpty()) {
+                                    // Lấy technical_solution từ work_orders để lưu vào resolution
+                                    resolutionToSave = workOrder.getTechnicalSolution().trim();
+                                    System.out.println("Closing ticket " + ticketId + ": Found technical_solution from work order, will save to resolution");
+                                } else {
+                                    System.out.println("Closing ticket " + ticketId + ": No technical_solution found in work order");
+                                }
+                            }
+                        }
+                        
+                        // Nếu có technicalSolution từ request, cập nhật vào work_orders (nếu cần)
+                        if (technicalSolution != null && !technicalSolution.trim().isEmpty()) {
+                            Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                            if (ticket != null) {
+                                WorkOrderDAO workOrderDAO = new WorkOrderDAO();
+                                String ticketTitle = (String) ticket.get("subject");
+                                Integer customerIdObj = (Integer) ticket.get("customerId");
+                                int customerId = customerIdObj != null ? customerIdObj : 0;
+                                
+                                WorkOrder workOrder = workOrderDAO.getWorkOrderByTicketId(ticketId, ticketTitle, customerId);
+                                if (workOrder != null) {
+                                    workOrder.setTechnicalSolution(technicalSolution.trim());
+                                    boolean woUpdated = workOrderDAO.updateWorkOrder(workOrder);
+                                    if (!woUpdated) {
+                                        System.out.println("Warning: Failed to update technical_solution in work_orders for ticket " + ticketId);
+                                    } else {
+                                        System.out.println("Success: Updated technical_solution in work_orders for ticket " + ticketId);
+                                        // Nếu đang đóng ticket, cập nhật lại resolutionToSave với giá trị mới
+                                        if ("resolved".equals(status)) {
+                                            resolutionToSave = technicalSolution.trim();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Cập nhật status của ticket và lưu resolution (technical_solution từ work_orders khi đóng ticket)
                         boolean success = supportDAO.updateSupportRequest(
-                            ticketId, null, priority, status, resolution, null, assignedToId
+                            ticketId, null, priority, status, resolutionToSave, null, assignedToId
                         );
                         
                         if (success) {

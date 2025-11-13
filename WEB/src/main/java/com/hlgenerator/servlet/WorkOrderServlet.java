@@ -769,6 +769,17 @@ public class WorkOrderServlet extends HttpServlet {
                                     
                                     // Set completion date nhưng giữ status là in_progress
                                     workOrder.setCompletionDate(completionDate);
+                                    
+                                    // Update technical solution if provided
+                                    String technicalSolution = request.getParameter("technicalSolution");
+                                    if (technicalSolution != null) {
+                                        String trimmed = technicalSolution.trim();
+                                        workOrder.setTechnicalSolution(trimmed);
+                                        System.out.println("Finish work order - Setting technicalSolution: " + 
+                                            (trimmed.isEmpty() ? "(empty)" : trimmed.substring(0, Math.min(100, trimmed.length())) + 
+                                            (trimmed.length() > 100 ? "..." : "")));
+                                    }
+                                    
                                     // Không thay đổi status - vẫn giữ là in_progress
                                     boolean success = workOrderDAO.updateWorkOrder(workOrder);
                                     

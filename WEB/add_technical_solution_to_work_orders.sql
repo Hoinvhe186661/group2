@@ -8,3 +8,5 @@ ADD COLUMN technical_solution TEXT COMMENT 'Giải pháp kỹ thuật để xử
 
 SELECT 'Migration completed successfully! Column technical_solution added to work_orders table.' AS status;
 
+
+

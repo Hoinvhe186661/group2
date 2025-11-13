@@ -159,6 +159,7 @@ CREATE TABLE work_orders (
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    technical_solution TEXT COMMENT 'Giải pháp kỹ thuật để xử lý yêu cầu',
     FOREIGN KEY (customer_id) REFERENCES customers(id),
     FOREIGN KEY (contract_id) REFERENCES contracts(id),
     FOREIGN KEY (assigned_to) REFERENCES users(id),

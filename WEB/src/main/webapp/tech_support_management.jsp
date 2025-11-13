@@ -54,6 +54,7 @@
         
         .badge-open { background-color: #f0ad4e !important; }
         .badge-in_progress { background-color: #337ab7 !important; }
+        .badge-processed { background-color: #5bc0de !important; }
         .badge-resolved { background-color: #5cb85c !important; }
         .badge-closed { background-color: #5cb85c !important; }
         
@@ -867,6 +868,7 @@
             var labels = {
                 'open': 'Chờ xử lý',
                 'in_progress': 'Đang xử lý',
+                'processed': 'Đã xử lý',
                 'resolved': 'Đã giải quyết',
                 'closed': 'Đã giải quyết'
             };
@@ -992,6 +994,7 @@
             var statusLabels = {
                 'open': 'Chờ xử lý',
                 'in_progress': 'Đang xử lý',
+                'processed': 'Đã xử lý',
                 'resolved': 'Đã giải quyết',
                 'closed': 'Đã giải quyết'
             };

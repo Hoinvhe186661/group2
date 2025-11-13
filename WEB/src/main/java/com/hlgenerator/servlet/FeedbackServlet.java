@@ -253,6 +253,17 @@ public class FeedbackServlet extends HttpServlet {
                             return;
                         }
                         
+                        // Validate comment - tối đa 1000 ký tự
+                        if (comment != null && !comment.trim().isEmpty()) {
+                            int charCount = comment.length();
+                            if (charCount > 1000) {
+                                jsonResponse.addProperty("success", false);
+                                jsonResponse.addProperty("message", "Nhận xét không được vượt quá 1000 ký tự. Hiện tại bạn đã nhập " + charCount + " ký tự. Vui lòng rút gọn nội dung.");
+                                out.print(jsonResponse.toString());
+                                return;
+                            }
+                        }
+                        
                         // Lấy customer ID từ session
                         Integer customerId = (Integer) session.getAttribute("customerId");
                         if (customerId == null) {
@@ -472,5 +483,6 @@ public class FeedbackServlet extends HttpServlet {
             System.err.println("Error deleting old image: " + e.getMessage());
         }
     }
+    
 }
 
