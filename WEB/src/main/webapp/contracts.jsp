@@ -390,6 +390,7 @@
                                             <th>Loại</th>
                                             <th>Tiêu đề</th>
                                             <th>Ngày ký</th>
+                                            <th>Ngày bắt đầu</th>
                                             <th>Kết thúc</th>
                                             <th>Giá trị</th>
                                             <th>Trạng thái</th>
@@ -433,6 +434,7 @@
                                             <td><%= c.getContractType() != null ? c.getContractType() : "-" %></td>
                                             <td><%= c.getTitle() != null ? c.getTitle() : "-" %></td>
                                             <td><%= c.getSignedDate() != null ? c.getSignedDate() : "-" %></td>
+                                            <td><%= c.getStartDate() != null ? c.getStartDate() : "-" %></td>
                                             <td><%= "terminated".equals(c.getStatus()) ? (c.getEndDate() != null ? c.getEndDate() : "-") : "Vô thời hạn" %></td>
                                             <td><%= formatCurrencyValue(c.getContractValue() != null ? c.getContractValue().toString() : "-") %></td>
                                             <td><%= translateStatus(c.getStatus()) %></td>
@@ -582,6 +584,12 @@
                                     <input type="date" class="form-control" id="signedDate">
                                     <div class="help-block text-danger" id="signedDateError" style="display: none;"></div>
                                     <small class="text-muted" id="signedDateHint">Bắt buộc khi hợp đồng không phải "Nháp"</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="startDate">Ngày bắt đầu <span class="text-danger" id="startDateRequired">*</span></label>
+                                    <input type="date" class="form-control" id="startDate">
+                                    <div class="help-block text-danger" id="startDateError" style="display: none;"></div>
+                                    <small class="text-muted" id="startDateHint">Ngày hợp đồng có hiệu lực (bắt buộc khi hợp đồng không phải "Nháp")</small>
                                 </div>
                                 <!-- endDate: chỉ hiển thị khi status = "terminated" -->
                                 <div class="form-group" id="endDateGroup" style="display: none;">
@@ -997,7 +1005,7 @@
                 "autoWidth": false,
                 "responsive": true,
                 "order": [[0, "desc"]],
-                "columnDefs": [{ "targets": [10], "orderable": false, "searchable": false }],
+                "columnDefs": [{ "targets": [11], "orderable": false, "searchable": false }],
                 "retrieve": true
             });
             // Safety: remove filter container if any existed from previous inits
@@ -1081,6 +1089,7 @@
                         '    <p><strong>Loại:</strong> ' + (c.contractType || '-') + '</p>' +
                         (function(){ var endLabel = (c.status === 'terminated') ? 'Ngày chấm dứt' : 'Ngày kết thúc'; var endValue = (c.status === 'terminated') ? (c.endDate || '-') : 'Vô thời hạn'; return '    <p><strong>' + endLabel + ':</strong> ' + endValue + '</p>'; })() +
                         '    <p><strong>Ngày ký:</strong> ' + (c.signedDate || '-') + '</p>' +
+                        '    <p><strong>Ngày bắt đầu:</strong> ' + (c.startDate || '-') + '</p>' +
                         '  </div>' +
                         '</div>' +
                         '<div class="well" style="padding: 10px;">' +
@@ -1101,17 +1110,18 @@
                         '  <table class="table table-striped table-hover" style="table-layout: fixed; width: 100%;">' +
                         '    <thead>' +
                         '      <tr class="text-center">' +
-                        '        <th style="width:8%" class="text-center">STT</th>' +
-                        '        <th style="width:12%" class="text-center">Product ID</th>' +
-                        '        <th style="width:25%" class="text-center">Mô tả</th>' +
-                        '        <th style="width:10%" class="text-center">Số lượng</th>' +
-                        '        <th style="width:12%" class="text-center">Đơn giá</th>' +
-                        '        <th style="width:12%" class="text-center">Thành tiền</th>' +
-                        '        <th style="width:15%" class="text-center">Trạng thái bàn giao</th>' +
+                        '        <th style="width:6%" class="text-center">STT</th>' +
+                        '        <th style="width:8%" class="text-center">Product ID</th>' +
+                        '        <th style="width:18%" class="text-center">Tên sản phẩm</th>' +
+                        '        <th style="width:20%" class="text-center">Mô tả</th>' +
+                        '        <th style="width:8%" class="text-center">Số lượng</th>' +
+                        '        <th style="width:10%" class="text-center">Đơn giá</th>' +
+                        '        <th style="width:10%" class="text-center">Thành tiền</th>' +
+                        '        <th style="width:12%" class="text-center">Trạng thái bàn giao</th>' +
                         '      </tr>' +
                         '    </thead>' +
                         '    <tbody id="contractDetailProductsBody" style="word-break: break-word; overflow-wrap: anywhere;">' +
-                        '      <tr><td colspan="7" class="text-center text-muted"><i class="fa fa-spinner fa-spin"></i> Đang tải sản phẩm...</td></tr>' +
+                        '      <tr><td colspan="8" class="text-center text-muted"><i class="fa fa-spinner fa-spin"></i> Đang tải sản phẩm...</td></tr>' +
                         '    </tbody>' +
                         '  </table>' +
                         '</div>';
@@ -1123,7 +1133,7 @@
                         if (itemsResp && itemsResp.success) {
                             var items = itemsResp.data || [];
                             if (items.length === 0) {
-                                tbody.html('<tr><td colspan="7" class="text-center text-muted"><i class="fa fa-info-circle"></i> Hợp đồng chưa có sản phẩm</td></tr>');
+                                tbody.html('<tr><td colspan="8" class="text-center text-muted"><i class="fa fa-info-circle"></i> Hợp đồng chưa có sản phẩm</td></tr>');
                                 return;
                             }
                             var rows = '';
@@ -1142,9 +1152,13 @@
                                     deliveryStatusText = '<span class="label label-warning"><i class="fa fa-clock-o"></i> Chưa bàn giao</span>';
                                 }
                                 
+                                // Lấy tên sản phẩm, nếu không có thì hiển thị "-"
+                                var productName = p.productName || '<span class="text-muted">-</span>';
+                                
                                 rows += '<tr class="text-center">' +
                                     '<td class="text-center">' + (idx++) + '</td>' +
                                     '<td class="text-center">' + p.productId + '</td>' +
+                                    '<td class="text-center">' + productName + '</td>' +
                                     '<td class="text-center">' + (p.description || '<span class="text-muted">-</span>') + '</td>' +
                                     '<td class="text-center">' + qty + '</td>' +
                                     '<td class="text-center text-nowrap">' + price + '</td>' +
@@ -1154,10 +1168,10 @@
                             });
                             tbody.html(rows);
                         } else {
-                            tbody.html('<tr><td colspan="7" class="text-center text-danger">Không tải được danh sách sản phẩm</td></tr>');
+                            tbody.html('<tr><td colspan="8" class="text-center text-danger">Không tải được danh sách sản phẩm</td></tr>');
                         }
                     }, 'json').fail(function() {
-                        $('#contractDetailProductsBody').html('<tr><td colspan="7" class="text-center text-danger">Lỗi kết nối khi tải sản phẩm</td></tr>');
+                        $('#contractDetailProductsBody').html('<tr><td colspan="8" class="text-center text-danger">Lỗi kết nối khi tải sản phẩm</td></tr>');
                     });
 
                     $('#contractDetailModal').modal('show');
@@ -1207,6 +1221,7 @@
                         $('#contractType').val('Bán hàng'); // Luôn là 'Bán hàng'
                         $('#title').val(c.title || '');
                         $('#signedDate').val(formatDateInput(c.signedDate));
+                        $('#startDate').val(formatDateInput(c.startDate));
                         // Format giá trị hợp đồng với dấu phẩy ngăn cách
                         var contractValue = parseFloat(c.contractValue) || 0;
                         $('#contractValue').val(contractValue > 0 ? formatCurrency(contractValue) : '');
@@ -1246,6 +1261,7 @@
                         $('#contractType').val('Bán hàng');
                         $('#title').val(c.title || '');
                         $('#signedDate').val(formatDateInput(c.signedDate));
+                        $('#startDate').val(formatDateInput(c.startDate));
                         // Format giá trị hợp đồng với dấu phẩy ngăn cách
                         var contractValue = parseFloat(c.contractValue) || 0;
                         $('#contractValue').val(contractValue > 0 ? formatCurrency(contractValue) : '');
@@ -1596,6 +1612,7 @@
                 title: $('#title').val(),
                 endDate: $('#endDate').val(),
                 signedDate: $('#signedDate').val(),
+                startDate: $('#startDate').val(),
                 // Parse giá trị hợp đồng (bỏ dấu phẩy) trước khi gửi
                 contractValue: $('#contractValue').val() ? parseFloat($('#contractValue').val().toString().replace(/[^\d]/g, '')) || 0 : '',
                 status: $('#status').val(),
@@ -1623,6 +1640,21 @@
                     showFieldError('signedDate', 'Ngày ký không được để trống khi hợp đồng không phải "Nháp"');
                     isValid = false;
                 }
+                // Kiểm tra ngày bắt đầu (chỉ bắt buộc khi status != "draft")
+                if (!data.startDate || data.startDate.trim() === '') {
+                    showFieldError('startDate', 'Ngày bắt đầu không được để trống khi hợp đồng không phải "Nháp"');
+                    isValid = false;
+                } else {
+                    // Validate startDate >= signedDate (chỉ khi có signedDate)
+                    if (data.signedDate && data.signedDate.trim() !== '') {
+                        var signedDate = new Date(data.signedDate);
+                        var startDate = new Date(data.startDate);
+                        if (startDate < signedDate) {
+                            showFieldError('startDate', 'Ngày bắt đầu không được trước ngày ký');
+                            isValid = false;
+                        }
+                    }
+                }
             }
             
             // Kiểm tra ngày chấm dứt (bắt buộc khi status = "terminated")
@@ -1631,12 +1663,12 @@
                     showFieldError('endDate', 'Ngày chấm dứt không được để trống khi trạng thái là "Chấm Dứt"');
                     isValid = false;
                 } else {
-                    // Validate endDate >= signedDate (chỉ khi có signedDate)
-                    if (data.signedDate && data.signedDate.trim() !== '') {
-                        var signedDate = new Date(data.signedDate);
+                    // Validate endDate >= startDate (chỉ khi có startDate)
+                    if (data.startDate && data.startDate.trim() !== '') {
+                        var startDate = new Date(data.startDate);
                         var endDate = new Date(data.endDate);
-                        if (endDate < signedDate) {
-                            showFieldError('endDate', 'Ngày chấm dứt không được trước ngày ký');
+                        if (endDate < startDate) {
+                            showFieldError('endDate', 'Ngày chấm dứt không được trước ngày bắt đầu');
                             isValid = false;
                         }
                     }
@@ -2120,6 +2152,10 @@
             // Reset signedDate required (draft không bắt buộc)
             $('#signedDate').prop('required', false);
             $('#signedDateRequired').hide();
+            // Reset startDate required (draft không bắt buộc)
+            $('#startDate').val('');
+            $('#startDate').prop('required', false);
+            $('#startDateRequired').hide();
             // Reset giá trị hợp đồng và cảnh báo
             $('#contractValue').val('');
             $('#contractValueWarning').hide();
@@ -2291,12 +2327,37 @@
             $(this).removeClass('has-error');
         });
         
-        $(document).on('change', '#signedDate, #endDate', function() {
+        $(document).on('change', '#signedDate, #startDate, #endDate', function() {
             var signedDate = $('#signedDate').val();
+            var startDate = $('#startDate').val();
             var endDate = $('#endDate').val();
             var status = $('#status').val();
             
-            // Chỉ validate khi status = "terminated" và có cả 2 ngày
+            // Validate startDate >= signedDate
+            if (signedDate && startDate) {
+                var signed = new Date(signedDate);
+                var start = new Date(startDate);
+                if (start < signed) {
+                    showFieldError('startDate', 'Ngày bắt đầu không được trước ngày ký');
+                } else {
+                    $('#startDateError').hide();
+                    $('#startDate').removeClass('has-error');
+                }
+            }
+            
+            // Validate endDate >= startDate (nếu có cả 2)
+            if (startDate && endDate) {
+                var start = new Date(startDate);
+                var end = new Date(endDate);
+                if (end < start) {
+                    showFieldError('endDate', 'Ngày chấm dứt không được trước ngày bắt đầu');
+                } else {
+                    $('#endDateError').hide();
+                    $('#endDate').removeClass('has-error');
+                }
+            }
+            
+            // Chỉ validate khi status = "terminated" và có cả signedDate và endDate
             if (status === 'terminated' && signedDate && endDate) {
                 var signed = new Date(signedDate);
                 var end = new Date(endDate);
@@ -2330,15 +2391,24 @@
             var termsInput = $('#terms');
             var termsRequired = $('#termsRequired');
             
+            var startDateInput = $('#startDate');
+            var startDateRequired = $('#startDateRequired');
+            
             // Cập nhật required và label cho signedDate
             if (status === 'draft') {
                 // Nháp: không bắt buộc ngày ký
                 signedDateInput.prop('required', false);
                 signedDateRequired.hide();
+                // Nháp: không bắt buộc ngày bắt đầu
+                startDateInput.prop('required', false);
+                startDateRequired.hide();
             } else {
                 // Các trạng thái khác: bắt buộc ngày ký
                 signedDateInput.prop('required', true);
                 signedDateRequired.show();
+                // Các trạng thái khác: bắt buộc ngày bắt đầu
+                startDateInput.prop('required', true);
+                startDateRequired.show();
             }
             
             // Cập nhật required cho Tiêu đề và Điều khoản khi status = "active"
@@ -2402,13 +2472,22 @@
             var termsInput = $('#terms');
             var termsRequired = $('#termsRequired');
             
+            var startDateInput = $('#startDate');
+            var startDateRequired = $('#startDateRequired');
+            
             // Cập nhật required cho signedDate
             if (status === 'draft') {
                 signedDateInput.prop('required', false);
                 signedDateRequired.hide();
+                // Nháp: không bắt buộc ngày bắt đầu
+                startDateInput.prop('required', false);
+                startDateRequired.hide();
             } else {
                 signedDateInput.prop('required', true);
                 signedDateRequired.show();
+                // Các trạng thái khác: bắt buộc ngày bắt đầu
+                startDateInput.prop('required', true);
+                startDateRequired.show();
             }
             
             // Cập nhật required cho Tiêu đề và Điều khoản khi status = "active"

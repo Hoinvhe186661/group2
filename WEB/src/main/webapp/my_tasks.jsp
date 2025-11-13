@@ -943,8 +943,12 @@
                 } catch(e) {}
                 
                 if(deadlineDate && !isNaN(deadlineDate.getTime())) {
+                    // Set deadline to end of day (23:59:59.999)
+                    var deadlineEndOfDay = new Date(deadlineDate);
+                    deadlineEndOfDay.setHours(23, 59, 59, 999);
+                    
                     var now = new Date();
-                    if(deadlineDate < now) {
+                    if(now > deadlineEndOfDay) {
                         if(!confirm('Cảnh báo: Nhiệm vụ này đã quá deadline!\n\nBạn có chắc chắn muốn nhận nhiệm vụ này không?')) {
                             return;
                         }
@@ -1071,9 +1075,13 @@
                 } catch(e) {}
                 
                 if(deadlineDate && !isNaN(deadlineDate.getTime())) {
+                    // Set deadline to end of day (23:59:59.999)
+                    var deadlineEndOfDay = new Date(deadlineDate);
+                    deadlineEndOfDay.setHours(23, 59, 59, 999);
+                    
                     var now = new Date();
-                    if(deadlineDate < now) {
-                        var diffMs = now.getTime() - deadlineDate.getTime();
+                    if(now > deadlineEndOfDay) {
+                        var diffMs = now.getTime() - deadlineEndOfDay.getTime();
                         var diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
                         var diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                         var lateMsg = '';

@@ -206,29 +206,38 @@ public class SupportManagementServlet extends HttpServlet {
                         // Chỉ lưu khi đóng ticket (status = 'resolved')
                         String resolutionToSave = null;
                         
+                        // Lấy thông tin ticket để kiểm tra category
+                        Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                        String category = ticket != null ? (String) ticket.get("category") : null;
+                        boolean isGeneralCategory = "general".equals(category);
+                        
                         if ("resolved".equals(status)) {
-                            // Khi đóng ticket, lấy technical_solution từ work_orders để lưu vào resolution
-                            Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
-                            if (ticket != null) {
-                                WorkOrderDAO workOrderDAO = new WorkOrderDAO();
-                                String ticketTitle = (String) ticket.get("subject");
-                                Integer customerIdObj = (Integer) ticket.get("customerId");
-                                int customerId = customerIdObj != null ? customerIdObj : 0;
-                                
-                                WorkOrder workOrder = workOrderDAO.getWorkOrderByTicketId(ticketId, ticketTitle, customerId);
-                                if (workOrder != null && workOrder.getTechnicalSolution() != null && !workOrder.getTechnicalSolution().trim().isEmpty()) {
-                                    // Lấy technical_solution từ work_orders để lưu vào resolution
-                                    resolutionToSave = workOrder.getTechnicalSolution().trim();
-                                    System.out.println("Closing ticket " + ticketId + ": Found technical_solution from work order, will save to resolution");
-                                } else {
-                                    System.out.println("Closing ticket " + ticketId + ": No technical_solution found in work order");
+                            // Nếu category là 'general' và có technicalSolution từ request, lưu trực tiếp vào resolution
+                            if (isGeneralCategory && technicalSolution != null && !technicalSolution.trim().isEmpty()) {
+                                resolutionToSave = technicalSolution.trim();
+                                System.out.println("Closing ticket " + ticketId + " (general category): Saving technicalSolution directly to resolution");
+                            } else if (!isGeneralCategory) {
+                                // Với category khác 'general', lấy technical_solution từ work_orders để lưu vào resolution
+                                if (ticket != null) {
+                                    WorkOrderDAO workOrderDAO = new WorkOrderDAO();
+                                    String ticketTitle = (String) ticket.get("subject");
+                                    Integer customerIdObj = (Integer) ticket.get("customerId");
+                                    int customerId = customerIdObj != null ? customerIdObj : 0;
+                                    
+                                    WorkOrder workOrder = workOrderDAO.getWorkOrderByTicketId(ticketId, ticketTitle, customerId);
+                                    if (workOrder != null && workOrder.getTechnicalSolution() != null && !workOrder.getTechnicalSolution().trim().isEmpty()) {
+                                        // Lấy technical_solution từ work_orders để lưu vào resolution
+                                        resolutionToSave = workOrder.getTechnicalSolution().trim();
+                                        System.out.println("Closing ticket " + ticketId + ": Found technical_solution from work order, will save to resolution");
+                                    } else {
+                                        System.out.println("Closing ticket " + ticketId + ": No technical_solution found in work order");
+                                    }
                                 }
                             }
                         }
                         
-                        // Nếu có technicalSolution từ request, cập nhật vào work_orders (nếu cần)
-                        if (technicalSolution != null && !technicalSolution.trim().isEmpty()) {
-                            Map<String, Object> ticket = supportDAO.getSupportRequestById(ticketId);
+                        // Nếu có technicalSolution từ request và category không phải 'general', cập nhật vào work_orders
+                        if (technicalSolution != null && !technicalSolution.trim().isEmpty() && !isGeneralCategory) {
                             if (ticket != null) {
                                 WorkOrderDAO workOrderDAO = new WorkOrderDAO();
                                 String ticketTitle = (String) ticket.get("subject");

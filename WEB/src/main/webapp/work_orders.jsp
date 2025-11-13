@@ -127,6 +127,10 @@
             background: linear-gradient(135deg, #5cb85c 0%, #449d44 100%) !important;
             box-shadow: 0 2px 8px rgba(92, 184, 92, 0.3);
         }
+        .badge-completed_late { 
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+        }
         .badge-cancelled { 
             background: linear-gradient(135deg, #777 0%, #555 100%) !important;
             box-shadow: 0 2px 8px rgba(119, 119, 119, 0.3);
@@ -681,6 +685,7 @@
                                     <option value="pending">Chờ xử lý</option>
                                     <option value="in_progress">Đang thực hiện</option>
                                     <option value="completed">Hoàn thành</option>
+                                    <option value="completed_late">Hoàn Thành Muộn</option>
                                     <option value="cancelled">Đã hủy</option>
                                 </select>
                             </div>
@@ -1746,6 +1751,7 @@
                 'pending': 'Chờ xử lý',
                 'in_progress': 'Đang thực hiện',
                 'completed': 'Hoàn thành',
+                'completed_late': 'Hoàn Thành Muộn',
                 'cancelled': 'Đã hủy',
                 'rejected': 'Đã từ chối'
             };
@@ -3925,6 +3931,7 @@
                             'pending': 'Đang chờ xử lý',
                             'in_progress': 'Đang thực hiện',
                             'completed': 'Hoàn thành',
+                            'completed_late': 'Hoàn Thành Muộn',
                             'cancelled': 'Đã hủy',
                             'rejected': 'Đã từ chối'
                         };
@@ -3936,8 +3943,8 @@
                         html += '<p><strong>Trạng thái:</strong> <span class="badge ' + statusBadgeClass + '">' + statusLabel + '</span></p>';
                     }
                     
-                    // Phần trăm hoàn thành - Chỉ hiển thị khi trạng thái là 'completed'
-                    if (task.status === 'completed') {
+                    // Phần trăm hoàn thành - Chỉ hiển thị khi trạng thái là 'completed' hoặc 'completed_late'
+                    if (task.status === 'completed' || task.status === 'completed_late') {
                         var percentage = 0;
                         if (task.completionPercentage != null && task.completionPercentage !== undefined) {
                             percentage = parseFloat(task.completionPercentage);

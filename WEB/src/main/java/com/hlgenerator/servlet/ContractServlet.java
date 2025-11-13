@@ -439,7 +439,7 @@ public class ContractServlet extends HttpServlet {
         c.setCustomerId(Integer.parseInt(param(request, "customerId")));
         c.setContractType(param(request, "contractType"));
         c.setTitle(param(request, "title"));
-        c.setStartDate(null); // Không dùng startDate nữa, để null
+        c.setStartDate(parseDate(param(request, "startDate")));
         c.setEndDate(parseDate(param(request, "endDate")));
         String value = param(request, "contractValue");
         c.setContractValue(value == null || value.isEmpty() ? null : new BigDecimal(value));

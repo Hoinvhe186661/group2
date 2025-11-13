@@ -26,7 +26,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Quản Lý  Hỗ Trợ | Bảng Điều Khiển</title>
+    <title>Quản Lý Yêu Cầu Hỗ Trợ | Bảng Điều Khiển</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
     
     <!-- bootstrap 3.0.2 -->
@@ -160,13 +160,61 @@
              overflow-wrap: break-word;
          }
          
+         /* Fix tràn chữ trong sidebar */
+         .sidebar-menu li a {
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+             word-wrap: break-word;
+             max-width: 100%;
+             font-size: 13px !important;
+             padding: 10px 5px 10px 15px !important;
+         }
+         
+         .sidebar-menu li a span {
+             display: inline-block;
+             max-width: calc(100% - 30px);
+             overflow: hidden;
+             text-overflow: ellipsis;
+             white-space: nowrap;
+             vertical-align: top;
+             font-size: 13px !important;
+         }
+         
+         .sidebar-menu li a i {
+             margin-right: 8px;
+             width: 20px;
+             text-align: center;
+             flex-shrink: 0;
+             font-size: 14px !important;
+         }
+         
+         /* Đảm bảo sidebar có đủ không gian */
+         .left-side {
+             overflow-x: hidden;
+         }
+         
+         .sidebar {
+             overflow-x: hidden;
+             overflow-y: auto;
+         }
+         
+         /* Giảm font-size cho logo trong sidebar nếu có */
+         .sidebar .logo {
+             font-size: 16px !important;
+             padding: 15px 10px !important;
+             white-space: nowrap;
+             overflow: hidden;
+             text-overflow: ellipsis;
+         }
+         
     </style>
 </head>
 <body class="skin-black">
     <!-- header logo: style can be found in header.less -->
     <header class="header">
         <a href="support-management" class="logo">
-            Quản Lý  Hỗ Trợ
+            Quản Lý Yêu Cầu Hỗ Trợ
         </a>
         <!-- Header Navbar: style can be found in header.less -->
         <nav class="navbar navbar-static-top" role="navigation">
@@ -973,42 +1021,64 @@
             
             html += '</div>'; // end row
             
-            html += '<div class="form-group">';
-            html += '<label>Người nhận (Người xử lý):</label>';
-            html += '<select class="form-control" id="edit_assignedTo" disabled>';
-            html += '<option value="">-- Chưa phân công --</option>';
-            html += '</select>';
-            html += '<small class="text-muted">Người nhận không thể chỉnh sửa. Chỉ có thể thay đổi qua chức năng chuyển tiếp.</small>';
-            html += '</div>';
-            
-            // Load danh sách head technicians vào dropdown (chỉ để hiển thị, không cho chỉnh sửa)
-            loadHeadTechniciansForEdit(ticket.assignedTo);
-            
             // Kiểm tra xem ticket đã được chuyển tiếp chưa (có assignedTo)
             var isAssigned = ticket.assignedTo && ticket.assignedTo !== '' && ticket.assignedTo !== null;
             // Nếu danh mục là "general" (chung) thì không cần assignedTo
             var isGeneralCategory = ticket.category === 'general';
             
+            // Chỉ hiển thị "Người nhận" nếu category không phải "general"
+            if (!isGeneralCategory) {
+                html += '<div class="form-group">';
+                html += '<label>Người nhận (Người xử lý):</label>';
+                html += '<select class="form-control" id="edit_assignedTo" disabled>';
+                html += '<option value="">-- Chưa phân công --</option>';
+                html += '</select>';
+                html += '<small class="text-muted">Người nhận không thể chỉnh sửa. Chỉ có thể thay đổi qua chức năng chuyển tiếp.</small>';
+                html += '</div>';
+                
+                // Load danh sách head technicians vào dropdown (chỉ để hiển thị, không cho chỉnh sửa)
+                loadHeadTechniciansForEdit(ticket.assignedTo);
+            } else {
+                // Với category "general", tạo một hidden select để tránh lỗi khi validate
+                html += '<select class="form-control" id="edit_assignedTo" style="display: none;"><option value=""></option></select>';
+            }
+            
             html += '<div class="form-group">';
             html += '<label>Giải pháp / Kết quả xử lý:</label>';
-            html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Giải pháp kỹ thuật từ đơn hàng công việc..." maxlength="10000" readonly style="background-color: #f5f5f5; cursor: not-allowed;">' + (ticket.technicalSolution ? escapeHtml(ticket.technicalSolution) : '') + '</textarea>';
-            html += '<small class="text-muted" id="resolution_word_count">Số từ: 0 / 1000 từ</small>';
+            
+            // Nếu category là 'general' thì cho phép chỉnh sửa, nếu không thì readonly
+            if (isGeneralCategory) {
+                html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Nhập giải pháp / kết quả xử lý..." maxlength="10000">' + (ticket.technicalSolution ? escapeHtml(ticket.technicalSolution) : '') + '</textarea>';
+                html += '<small class="text-muted" id="resolution_word_count">Số từ: 0 / 1000 từ</small>';
+            } else {
+                html += '<textarea class="form-control" rows="5" id="edit_resolution" placeholder="Giải pháp kỹ thuật từ đơn hàng công việc..." maxlength="10000" readonly style="background-color: #f5f5f5; cursor: not-allowed;">' + (ticket.technicalSolution ? escapeHtml(ticket.technicalSolution) : '') + '</textarea>';
+                html += '<small class="text-muted" id="resolution_word_count">Số từ: 0 / 1000 từ</small>';
+            }
             html += '</div>';
             
             $('#editTicketContent').html(html);
             
             // Disable nút đóng ticket nếu:
-            // 1. Chưa được chuyển tiếp (trừ danh mục "general")
-            // 2. Trạng thái không phải "processed" (đã xử lý)
+            // 1. Với category "general": cho phép đóng ở bất kỳ trạng thái nào (trừ resolved/closed)
+            // 2. Với category khác: phải là "processed" và đã được chuyển tiếp
             var canCloseTicket = false;
             var disableReason = '';
             
-            if (ticket.status !== 'processed') {
-                disableReason = 'Chỉ có thể đóng ticket khi trạng thái là "Đã xử lý" (processed). Trạng thái hiện tại: ' + (ticket.status || 'N/A');
-            } else if (!isAssigned && !isGeneralCategory) {
-                disableReason = 'Ticket chưa được chuyển tiếp. Vui lòng chuyển tiếp ticket trước khi đóng.';
-            } else {
+            // Không cho phép đóng nếu đã resolved hoặc closed
+            if (ticket.status === 'resolved' || ticket.status === 'closed') {
+                disableReason = 'Ticket đã được đóng rồi.';
+            } else if (isGeneralCategory) {
+                // Category "general": cho phép đóng ở bất kỳ trạng thái nào
                 canCloseTicket = true;
+            } else {
+                // Category khác: phải là "processed" và đã được chuyển tiếp
+                if (ticket.status !== 'processed') {
+                    disableReason = 'Chỉ có thể đóng ticket khi trạng thái là "Đã xử lý" (processed). Trạng thái hiện tại: ' + (ticket.status || 'N/A');
+                } else if (!isAssigned) {
+                    disableReason = 'Ticket chưa được chuyển tiếp. Vui lòng chuyển tiếp ticket trước khi đóng.';
+                } else {
+                    canCloseTicket = true;
+                }
             }
             
             if (canCloseTicket) {
@@ -1064,20 +1134,9 @@
                 return;
             }
             
-            // Kiểm tra trạng thái ticket phải là "processed" (đã xử lý)
-            if (currentTicketStatus !== 'processed') {
-                var statusText = '';
-                switch(currentTicketStatus) {
-                    case 'open': statusText = 'Đang chờ'; break;
-                    case 'in_progress': statusText = 'Đang xử lý'; break;
-                    case 'resolved': statusText = 'Đã giải quyết'; break;
-                    case 'closed': statusText = 'Đã đóng'; break;
-                    default: statusText = currentTicketStatus || 'N/A';
-                }
-                alert('✗ Không thể đóng ticket!\n\n' +
-                      'Chỉ có thể đóng ticket khi trạng thái là "Đã xử lý" (processed).\n' +
-                      'Trạng thái hiện tại: ' + statusText + '\n\n' +
-                      'Vui lòng đợi ticket được xử lý và chuyển sang trạng thái "Đã xử lý" trước khi đóng.');
+            // Kiểm tra trạng thái - không cho phép đóng nếu đã resolved hoặc closed
+            if (currentTicketStatus === 'resolved' || currentTicketStatus === 'closed') {
+                alert('✗ Không thể đóng ticket!\n\nTicket đã được đóng rồi.');
                 return;
             }
             
@@ -1085,22 +1144,47 @@
             var assignedTo = $('#edit_assignedTo').val();
             var isGeneralCategory = currentTicketCategory === 'general';
             
-            if (!isGeneralCategory && (!assignedTo || assignedTo === '' || assignedTo === null)) {
-                alert('Không thể đóng ticket! Ticket chưa được chuyển tiếp (phân công cho người xử lý).\n\nVui lòng chuyển tiếp ticket trước khi đóng.');
-                return;
+            // Với category "general": cho phép đóng ở bất kỳ trạng thái nào
+            // Với category khác: phải là "processed" và đã được chuyển tiếp
+            if (!isGeneralCategory) {
+                if (currentTicketStatus !== 'processed') {
+                    var statusText = '';
+                    switch(currentTicketStatus) {
+                        case 'open': statusText = 'Đang chờ'; break;
+                        case 'in_progress': statusText = 'Đang xử lý'; break;
+                        case 'resolved': statusText = 'Đã giải quyết'; break;
+                        case 'closed': statusText = 'Đã đóng'; break;
+                        default: statusText = currentTicketStatus || 'N/A';
+                    }
+                    alert('✗ Không thể đóng ticket!\n\n' +
+                          'Chỉ có thể đóng ticket khi trạng thái là "Đã xử lý" (processed).\n' +
+                          'Trạng thái hiện tại: ' + statusText + '\n\n' +
+                          'Vui lòng đợi ticket được xử lý và chuyển sang trạng thái "Đã xử lý" trước khi đóng.');
+                    return;
+                }
+                
+                if (!assignedTo || assignedTo === '' || assignedTo === null) {
+                    alert('Không thể đóng ticket! Ticket chưa được chuyển tiếp (phân công cho người xử lý).\n\nVui lòng chuyển tiếp ticket trước khi đóng.');
+                    return;
+                }
             }
             
-            // Lấy giải pháp kỹ thuật từ textarea (readonly, chỉ để hiển thị)
+            // Lấy giải pháp kỹ thuật từ textarea
             var resolution = $('#edit_resolution').val();
             
             // Disable button
             $('#btnSaveTicket').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
             
-            // Lấy dữ liệu - chỉ cập nhật status, không gửi technicalSolution vì không cho phép chỉnh sửa
+            // Lấy dữ liệu - nếu category là 'general' thì gửi resolution, nếu không thì chỉ cập nhật status
             var data = {
                 id: currentEditTicketId,
                 status: 'resolved' // Tự động set status thành resolved khi đóng ticket
             };
+            
+            // Nếu category là 'general' thì cho phép gửi resolution để lưu
+            if (isGeneralCategory && resolution && resolution.trim() !== '') {
+                data.technicalSolution = resolution.trim();
+            }
             
             // Submit AJAX với UTF-8
             $.ajax({

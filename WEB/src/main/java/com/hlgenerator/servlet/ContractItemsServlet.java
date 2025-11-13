@@ -44,7 +44,12 @@ public class ContractItemsServlet extends HttpServlet {
             String user = props.getProperty("db.username");
             String pass = props.getProperty("db.password");
 
-            String sql = "SELECT product_id, description, quantity, unit_price, warranty_months, notes, COALESCE(delivery_status, 'not_delivered') as delivery_status FROM contract_products WHERE contract_id = ? ORDER BY id";
+            String sql = "SELECT cp.product_id, cp.description, cp.quantity, cp.unit_price, cp.warranty_months, cp.notes, " +
+                         "COALESCE(cp.delivery_status, 'not_delivered') as delivery_status, " +
+                         "p.product_name " +
+                         "FROM contract_products cp " +
+                         "LEFT JOIN products p ON cp.product_id = p.id " +
+                         "WHERE cp.contract_id = ? ORDER BY cp.id";
             try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass);
                  java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setInt(1, contractId);
@@ -53,6 +58,8 @@ public class ContractItemsServlet extends HttpServlet {
                     while (rs.next()) {
                         JSONObject obj = new JSONObject();
                         obj.put("productId", rs.getInt("product_id"));
+                        String productName = rs.getString("product_name");
+                        obj.put("productName", rs.wasNull() ? JSONObject.NULL : productName);
                         String desc = rs.getString("description");
                         obj.put("description", rs.wasNull() ? JSONObject.NULL : desc);
                         obj.put("quantity", rs.getBigDecimal("quantity"));

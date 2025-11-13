@@ -9,6 +9,7 @@ public class Permission {
     public static final String MANAGE_USERS = "manage_users";
     public static final String MANAGE_SETTINGS = "manage_settings";
     public static final String MANAGE_EMAIL = "manage_email";
+    public static final String SEND_MARKETING_EMAIL = "send_marketing_email";
     
     // Inventory Permissions
     public static final String MANAGE_INVENTORY = "manage_inventory";

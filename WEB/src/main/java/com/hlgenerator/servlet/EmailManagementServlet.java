@@ -5,6 +5,7 @@ import com.hlgenerator.dao.UserDAO;
 import com.hlgenerator.model.EmailNotification;
 import com.hlgenerator.model.User;
 import com.hlgenerator.service.EmailService;
+import com.hlgenerator.util.Permission;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -57,10 +58,22 @@ public class EmailManagementServlet extends HttpServlet {
             return;
         }
         
-        // Check permission: only users with manage_email permission can access
+        // Check permission: users with manage_email OR send_marketing_email can access
         @SuppressWarnings("unchecked")
         Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
-        if (userPermissions == null || !userPermissions.contains("manage_email")) {
+        String userRole = (String) session.getAttribute("userRole");
+        boolean hasAccess = false;
+        
+        if (userPermissions != null) {
+            hasAccess = userPermissions.contains(Permission.MANAGE_EMAIL) || 
+                       userPermissions.contains(Permission.SEND_MARKETING_EMAIL);
+        }
+        // Admin always has access
+        if ("admin".equals(userRole)) {
+            hasAccess = true;
+        }
+        
+        if (!hasAccess) {
             response.sendRedirect(request.getContextPath() + "/error/403.jsp");
             return;
         }
@@ -94,10 +107,22 @@ public class EmailManagementServlet extends HttpServlet {
             return;
         }
         
-        // Check permission: only users with manage_email permission can access
+        // Check permission: users with manage_email OR send_marketing_email can access
         @SuppressWarnings("unchecked")
         Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
-        if (userPermissions == null || !userPermissions.contains("manage_email")) {
+        String userRole = (String) session.getAttribute("userRole");
+        boolean hasAccess = false;
+        
+        if (userPermissions != null) {
+            hasAccess = userPermissions.contains(Permission.MANAGE_EMAIL) || 
+                       userPermissions.contains(Permission.SEND_MARKETING_EMAIL);
+        }
+        // Admin always has access
+        if ("admin".equals(userRole)) {
+            hasAccess = true;
+        }
+        
+        if (!hasAccess) {
             sendJsonResponse(response, false, "Không có quyền truy cập", null);
             return;
         }
@@ -281,6 +306,36 @@ public class EmailManagementServlet extends HttpServlet {
             if (emailType == null || (!emailType.equals("internal") && !emailType.equals("marketing"))) {
                 sendJsonResponse(response, false, "Loại email không hợp lệ", null);
                 return;
+            }
+            
+            // Check permission based on email type
+            @SuppressWarnings("unchecked")
+            Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
+            String userRole = (String) session.getAttribute("userRole");
+            
+            if ("internal".equals(emailType)) {
+                // Internal email: only admin can send
+                if (!"admin".equals(userRole)) {
+                    sendJsonResponse(response, false, "Chỉ admin mới có quyền gửi email nội bộ", null);
+                    return;
+                }
+            } else if ("marketing".equals(emailType)) {
+                // Marketing email: admin KHÔNG được gửi, chỉ người có permission send_marketing_email
+                if ("admin".equals(userRole)) {
+                    sendJsonResponse(response, false, "Admin chỉ có quyền gửi email nội bộ. Email marketing chỉ dành cho hỗ trợ khách hàng.", null);
+                    return;
+                }
+                
+                // Check if user has send_marketing_email permission
+                boolean canSendMarketing = false;
+                if (userPermissions != null) {
+                    canSendMarketing = userPermissions.contains(Permission.SEND_MARKETING_EMAIL);
+                }
+                
+                if (!canSendMarketing) {
+                    sendJsonResponse(response, false, "Bạn không có quyền gửi email marketing. Vui lòng liên hệ admin để được cấp quyền.", null);
+                    return;
+                }
             }
             
             // Build recipient roles JSON

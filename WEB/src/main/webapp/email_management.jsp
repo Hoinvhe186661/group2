@@ -9,13 +9,34 @@
         return;
     }
     
-    // Kiểm tra quyền: chỉ người có quyền manage_email mới truy cập được
+    // Kiểm tra quyền: người có quyền manage_email hoặc send_marketing_email có thể truy cập
     @SuppressWarnings("unchecked")
     Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
-    if (userPermissions == null || !userPermissions.contains("manage_email")) {
+    String userRole = (String) session.getAttribute("userRole");
+    boolean hasAccess = false;
+    
+    if (userPermissions != null) {
+        hasAccess = userPermissions.contains("manage_email") || 
+                   userPermissions.contains("send_marketing_email");
+    }
+    // Admin luôn có quyền truy cập
+    if ("admin".equals(userRole)) {
+        hasAccess = true;
+    }
+    
+    if (!hasAccess) {
         response.sendRedirect(request.getContextPath() + "/error/403.jsp");
         return;
     }
+    
+    // Kiểm tra quyền cụ thể cho từng loại email
+    boolean isAdmin = "admin".equals(userRole);
+    boolean canSendInternal = isAdmin; // Chỉ admin mới gửi được email nội bộ
+    boolean canSendMarketing = false;
+    if (userPermissions != null) {
+        canSendMarketing = userPermissions.contains("send_marketing_email");
+    }
+    // Admin KHÔNG được gửi email marketing, chỉ gửi email nội bộ
     
     @SuppressWarnings("unchecked")
     List<EmailNotification> emails = (List<EmailNotification>) request.getAttribute("emails");
@@ -143,9 +164,20 @@
                                     <div class="form-group">
                                         <label>Loại Email <span class="text-danger">*</span></label>
                                         <select name="emailType" id="emailType" class="form-control" required>
+                                            <% if (canSendInternal) { %>
                                             <option value="internal">Email Nội bộ</option>
+                                            <% } %>
+                                            <% if (canSendMarketing) { %>
                                             <option value="marketing">Email Marketing</option>
+                                            <% } %>
                                         </select>
+                                        <% if (!canSendInternal && !canSendMarketing) { %>
+                                        <p class="text-danger">Bạn không có quyền gửi email. Vui lòng liên hệ admin.</p>
+                                        <% } else if (!canSendInternal) { %>
+                                        <small class="text-muted">Lưu ý: Chỉ admin mới có quyền gửi email nội bộ.</small>
+                                        <% } else if (!canSendMarketing) { %>
+                                        <small class="text-muted">Lưu ý: Bạn chỉ có quyền gửi email nội bộ. Để gửi email marketing, vui lòng liên hệ admin để được cấp quyền.</small>
+                                        <% } %>
                                     </div>
                                     
                                     <div class="form-group">
@@ -154,19 +186,19 @@
                                                placeholder="Nhập tiêu đề email" required>
                                     </div>
                                     
-                                    <div class="form-group">
+                                    <div class="form-group" id="roleSelectionGroup">
                                         <label>Chọn Role người nhận</label>
-                                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
-                                            <label class="checkbox-inline"><input type="checkbox" name="roles" value="admin"> Admin</label><br>
-                                            <label class="checkbox-inline"><input type="checkbox" name="roles" value="customer_support"> Hỗ trợ khách hàng</label><br>
-                                            <label class="checkbox-inline"><input type="checkbox" name="roles" value="technical_staff"> Nhân viên kỹ thuật</label><br>
-                                            <label class="checkbox-inline"><input type="checkbox" name="roles" value="head_technician"> Trưởng phòng kỹ thuật</label><br>
-                                            <label class="checkbox-inline"><input type="checkbox" name="roles" value="storekeeper"> Thủ kho</label><br>
-                                            <label class="checkbox-inline"><input type="checkbox" name="roles" value="customer"> Khách hàng</label><br>
+                                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px;" id="rolesContainer">
+                                            <label class="checkbox-inline role-option" id="role-admin"><input type="checkbox" name="roles" value="admin"> Admin</label><br>
+                                            <label class="checkbox-inline role-option" id="role-customer_support"><input type="checkbox" name="roles" value="customer_support"> Hỗ trợ khách hàng</label><br>
+                                            <label class="checkbox-inline role-option" id="role-technical_staff"><input type="checkbox" name="roles" value="technical_staff"> Nhân viên kỹ thuật</label><br>
+                                            <label class="checkbox-inline role-option" id="role-head_technician"><input type="checkbox" name="roles" value="head_technician"> Trưởng phòng kỹ thuật</label><br>
+                                            <label class="checkbox-inline role-option" id="role-storekeeper"><input type="checkbox" name="roles" value="storekeeper"> Thủ kho</label><br>
+                                            <label class="checkbox-inline role-option" id="role-customer"><input type="checkbox" name="roles" value="customer"> Khách hàng</label><br>
                                         </div>
                                     </div>
                                     
-                                    <div class="form-group">
+                                    <div class="form-group" id="customEmailsGroup">
                                         <label>Hoặc nhập email trực tiếp (mỗi email một dòng hoặc phân cách bằng dấu phẩy)</label>
                                         <textarea name="customEmails" id="customEmails" class="form-control" 
                                                   rows="4" placeholder="user1@example.com&#10;user2@example.com"></textarea>
@@ -190,9 +222,6 @@
                                     <div class="form-group">
                                         <button type="submit" class="btn btn-primary">
                                             <i class="fa fa-paper-plane"></i> Gửi Email
-                                        </button>
-                                        <a href="email-management" class="btn btn-default">
-                                            <i class="fa fa-times"></i> Hủy
                                         </button>
                                     </div>
                                 </form>
@@ -307,9 +336,16 @@
                             <div class="panel-body">
                                 <div class="row">
                                     <div class="col-md-12">
+                                        <% if (canSendInternal || canSendMarketing) { %>
                                         <a href="email-management?action=create" class="btn btn-primary">
                                             <i class="fa fa-plus"></i> Tạo Email Mới
                                         </a>
+                                        <% } else { %>
+                                        <button class="btn btn-primary" disabled title="Bạn không có quyền gửi email">
+                                            <i class="fa fa-plus"></i> Tạo Email Mới
+                                        </button>
+                                        <small class="text-muted">Bạn không có quyền gửi email. Vui lòng liên hệ admin.</small>
+                                        <% } %>
                                     </div>
                                 </div>
                                 
@@ -532,8 +568,54 @@
     <script src="js/bootstrap.min.js"></script>
     <script src="js/Director/app.js"></script>
     
+    <%
+    // Chuyển đổi boolean sang string cho JavaScript
+    String isAdminStr = String.valueOf(isAdmin);
+    String canSendMarketingStr = String.valueOf(canSendMarketing);
+    %>
     <script>
+        // Biến để lưu quyền của user
+        var isAdmin = <%= isAdminStr %>;
+        var canSendMarketing = <%= canSendMarketingStr %>;
+        
+        // Hàm để cập nhật hiển thị dựa trên loại email
+        function updateEmailTypeOptions() {
+            var emailType = $('#emailType').val();
+            
+            if (emailType === 'internal') {
+                // Email nội bộ: ẩn role customer và phần nhập email trực tiếp
+                $('#role-customer').hide();
+                $('#customEmailsGroup').hide();
+                
+                // Hiển thị các role khác
+                $('#role-admin').show();
+                $('#role-customer_support').show();
+                $('#role-technical_staff').show();
+                $('#role-head_technician').show();
+                $('#role-storekeeper').show();
+            } else if (emailType === 'marketing') {
+                // Email marketing: chỉ hiển thị role customer và phần nhập email trực tiếp
+                $('#role-admin').hide();
+                $('#role-customer_support').hide();
+                $('#role-technical_staff').hide();
+                $('#role-head_technician').hide();
+                $('#role-storekeeper').hide();
+                
+                // Hiển thị role customer và phần nhập email
+                $('#role-customer').show();
+                $('#customEmailsGroup').show();
+            }
+        }
+        
         $(document).ready(function() {
+            // Khởi tạo hiển thị khi trang load
+            updateEmailTypeOptions();
+            
+            // Cập nhật khi thay đổi loại email
+            $('#emailType').on('change', function() {
+                updateEmailTypeOptions();
+            });
+            
             // Show selected files
             $('#attachments').on('change', function() {
                 var files = this.files;
@@ -555,8 +637,31 @@
             $('#emailForm').on('submit', function(e) {
                 e.preventDefault();
                 
+                var emailType = $('#emailType').val();
                 var hasRole = $('input[name="roles"]:checked').length > 0;
                 var hasEmail = $('#customEmails').val().trim().length > 0;
+                
+                // Validation cho email nội bộ: không cho phép role customer hoặc email trực tiếp
+                if (emailType === 'internal') {
+                    var customerChecked = $('input[name="roles"][value="customer"]:checked').length > 0;
+                    if (customerChecked) {
+                        alert('Email nội bộ không thể gửi cho role khách hàng');
+                        return;
+                    }
+                    if (hasEmail) {
+                        alert('Email nội bộ không thể gửi đến email trực tiếp. Vui lòng chọn role người nhận.');
+                        return;
+                    }
+                }
+                
+                // Validation cho email marketing: chỉ cho phép role customer hoặc email trực tiếp
+                if (emailType === 'marketing') {
+                    var nonCustomerRoles = $('input[name="roles"]:checked').not('[value="customer"]').length;
+                    if (nonCustomerRoles > 0) {
+                        alert('Email marketing chỉ có thể gửi cho role khách hàng hoặc email trực tiếp');
+                        return;
+                    }
+                }
                 
                 if (!hasRole && !hasEmail) {
                     alert('Vui lòng chọn ít nhất một role hoặc nhập email người nhận');

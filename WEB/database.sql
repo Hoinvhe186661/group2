@@ -15,17 +15,9 @@ CREATE TABLE users (
     permissions JSON,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_users_customer_id (customer_id)
 );
-
--- Add index for faster joins on customer_id
-CREATE INDEX idx_users_customer_id ON users(customer_id);
-
--- Add foreign key constraint for customer_id
-ALTER TABLE users
-    ADD CONSTRAINT fk_users_customer
-    FOREIGN KEY (customer_id) REFERENCES customers(id)
-    ON DELETE SET NULL;
 
 -- 2. CUSTOMERS
 CREATE TABLE customers (
@@ -43,6 +35,12 @@ CREATE TABLE customers (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Add foreign key constraint for users.customer_id
+ALTER TABLE users
+    ADD CONSTRAINT fk_users_customer
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+    ON DELETE SET NULL;
+
 -- 3. CONTRACTS
 CREATE TABLE contracts (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -53,7 +51,7 @@ CREATE TABLE contracts (
     start_date DATE,
     end_date DATE,
     contract_value DECIMAL(15,2),
-    status ENUM('draft', 'pending_approval', 'approved', 'active', 'terminated') DEFAULT 'draft',
+    status ENUM('draft', 'active', 'terminated', 'deleted') NOT NULL DEFAULT 'draft',
     terms TEXT,
     signed_date DATE,
     created_by INT,
@@ -107,6 +105,7 @@ CREATE TABLE contract_products (
     line_total DECIMAL(15,2) GENERATED ALWAYS AS (quantity*unit_price) STORED,
     warranty_months INT,
     notes TEXT,
+    delivery_status ENUM('not_delivered', 'delivered') DEFAULT 'not_delivered',
     FOREIGN KEY (contract_id) REFERENCES contracts(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
@@ -173,7 +172,7 @@ CREATE TABLE tasks (
     work_order_id INT NOT NULL,
     task_number VARCHAR(20),
     task_description TEXT NOT NULL,
-    status ENUM('pending', 'in_progress', 'completed', 'cancelled', 'rejected') DEFAULT 'pending',
+    status ENUM('pending', 'in_progress', 'completed', 'completed_late', 'cancelled', 'rejected') DEFAULT 'pending',
     priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
     estimated_hours DECIMAL(5,2),
     acknowledged_at DATETIME COMMENT 'Ngày nhận công việc',
@@ -290,23 +289,6 @@ CREATE TABLE settings (
     FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Dữ liệu mẫu
-INSERT INTO settings (setting_key, setting_value, description) VALUES
-('company_name', 'HL Generator Solutions', 'Tên công ty'),
-('tax_rate', '10.00', 'Thuế suất mặc định (%)'),
-('default_warranty', '24', 'Bảo hành mặc định cho máy phát điện (tháng)'),
-('low_stock_alert', '5', 'Cảnh báo tồn kho thấp cho thiết bị');
-
-INSERT INTO users (username, email, password_hash, full_name, phone, role, permissions) VALUES
-('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
- 'System Administrator', '0123456789', 'admin',
- '["all_permissions"]'),
-('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
- 'Nguyễn Văn Tâm', '0987654321', 'head_technician',
- '["view_work_orders", "manage_tasks", "view_inventory"]'),
-('customer1', 'customer1@gmail.com', '123abc',
- 'Nguyễn Văn Khách', '0909123456', 'customer',
- '["view_products", "view_orders", "submit_support_request"]');
 
 -- 17. RBAC: ROLES
 CREATE TABLE IF NOT EXISTS roles (
@@ -503,3 +485,22 @@ CREATE TABLE IF NOT EXISTS ticket_feedback (
 CREATE INDEX idx_ticket_feedback_ticket_id ON ticket_feedback(ticket_id);
 CREATE INDEX idx_ticket_feedback_customer_id ON ticket_feedback(customer_id);
 CREATE INDEX idx_ticket_feedback_rating ON ticket_feedback(rating);
+
+
+-- Dữ liệu mẫu
+INSERT INTO settings (setting_key, setting_value, description) VALUES
+('company_name', 'HL Generator Solutions', 'Tên công ty'),
+('tax_rate', '10.00', 'Thuế suất mặc định (%)'),
+('default_warranty', '24', 'Bảo hành mặc định cho máy phát điện (tháng)'),
+('low_stock_alert', '5', 'Cảnh báo tồn kho thấp cho thiết bị');
+
+INSERT INTO users (username, email, password_hash, full_name, phone, role, permissions) VALUES
+('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'System Administrator', '0123456789', 'admin',
+ '["all_permissions"]'),
+('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'Nguyễn Văn Tâm', '0987654321', 'head_technician',
+ '["view_work_orders", "manage_tasks", "view_inventory"]'),
+('customer1', 'customer1@gmail.com', '123abc',
+ 'Nguyễn Văn Khách', '0909123456', 'customer',
+ '["view_products", "view_orders", "submit_support_request"]');

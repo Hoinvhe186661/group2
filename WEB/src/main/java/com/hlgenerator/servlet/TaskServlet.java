@@ -221,19 +221,30 @@ public class TaskServlet extends HttpServlet {
 					completionPercentage = new BigDecimal(100);
 				}
 				
-				// Validate deadline and start_date before completing
-				java.sql.Timestamp[] deadlineAndStart = taskDAO.getTaskDeadlineAndStartDate(taskId);
-				java.sql.Timestamp deadline = deadlineAndStart[0];
-				java.sql.Timestamp startDate = deadlineAndStart[1];
+			// Validate deadline and start_date before completing
+			java.sql.Timestamp[] deadlineAndStart = taskDAO.getTaskDeadlineAndStartDate(taskId);
+			java.sql.Timestamp deadline = deadlineAndStart[0];
+			java.sql.Timestamp startDate = deadlineAndStart[1];
+			
+			java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
+			boolean isLate = false;
+			String lateMessage = "";
+			
+			// Check if completion is after deadline
+			// Deadline should be treated as end of day (23:59:59.999)
+			if (deadline != null) {
+				// Set deadline to end of day (23:59:59.999)
+				java.util.Calendar cal = java.util.Calendar.getInstance();
+				cal.setTime(deadline);
+				cal.set(java.util.Calendar.HOUR_OF_DAY, 23);
+				cal.set(java.util.Calendar.MINUTE, 59);
+				cal.set(java.util.Calendar.SECOND, 59);
+				cal.set(java.util.Calendar.MILLISECOND, 999);
+				java.sql.Timestamp deadlineEndOfDay = new java.sql.Timestamp(cal.getTimeInMillis());
 				
-				java.sql.Timestamp now = new java.sql.Timestamp(System.currentTimeMillis());
-				boolean isLate = false;
-				String lateMessage = "";
-				
-				// Check if completion is after deadline
-				if (deadline != null && now.after(deadline)) {
+				if (now.after(deadlineEndOfDay)) {
 					isLate = true;
-					long diffMs = now.getTime() - deadline.getTime();
+					long diffMs = now.getTime() - deadlineEndOfDay.getTime();
 					long diffDays = diffMs / (1000 * 60 * 60 * 24);
 					long diffHours = (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60);
 					if (diffDays > 0) {
@@ -242,6 +253,7 @@ public class TaskServlet extends HttpServlet {
 						lateMessage = String.format("Nhiệm vụ hoàn thành muộn %d giờ so với deadline", diffHours);
 					}
 				}
+			}
 				
 				// Check if completion_date < start_date (should not happen, but validate anyway)
 				if (startDate != null && now.before(startDate)) {
