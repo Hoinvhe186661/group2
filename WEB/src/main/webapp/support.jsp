@@ -321,6 +321,12 @@
                 </select>
               </div>
             </div>
+            <div class="mb-2" id="warrantyInfoContainer" style="display: none;">
+              <div class="alert alert-info" style="margin-bottom: 0; padding: 10px;">
+                <strong><i class="fas fa-shield-alt"></i> Thông tin bảo hành:</strong>
+                <div id="warrantyInfoText" style="margin-top: 5px;"></div>
+              </div>
+            </div>
             <div class="mb-2">
               <label>Loại yêu cầu :</label>
               <select class="form-control" id="category">
@@ -402,9 +408,7 @@
           <div class="col-md-6"><label>Loại yêu cầu</label>
             <select id="v_category_inp" class="form-control" disabled>
               <option value="technical">Kỹ thuật</option>
-              <option value="billing">Thanh toán</option>
               <option value="general">Chung</option>
-              <option value="complaint">Khiếu nại</option>
             </select>
           </div>
           <div class="col-md-6">
@@ -1180,6 +1184,7 @@
         const id = this.value;
         productSelect.innerHTML = '<option value="">-- Chọn sản phẩm --</option>';
         productSelect.disabled = !id;
+        document.getElementById('warrantyInfoContainer').style.display = 'none';
         if (!id) return;
         fetch(ctx + '/api/contract-items?contractId=' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' } })
           .then(r => r.json())
@@ -1193,9 +1198,65 @@
               opt.textContent = name;
               opt.dataset.quantity = item.quantity != null ? String(item.quantity) : '';
               opt.dataset.unitPrice = item.unitPrice != null ? String(item.unitPrice) : '';
+              // Lưu thông tin bảo hành vào dataset
+              if (item.warrantyMonths != null) opt.dataset.warrantyMonths = item.warrantyMonths;
+              if (item.stockOutDate != null) opt.dataset.stockOutDate = item.stockOutDate;
+              if (item.warrantyValid != null) opt.dataset.warrantyValid = item.warrantyValid;
+              if (item.warrantyDaysRemaining != null) opt.dataset.warrantyDaysRemaining = item.warrantyDaysRemaining;
+              if (item.warrantyEndDate != null) opt.dataset.warrantyEndDate = item.warrantyEndDate;
               productSelect.appendChild(opt);
             });
           });
+      });
+      
+      // Hiển thị thông tin bảo hành khi chọn sản phẩm
+      productSelect.addEventListener('change', function(){
+        const selectedOption = this.options[this.selectedIndex];
+        const warrantyContainer = document.getElementById('warrantyInfoContainer');
+        const warrantyText = document.getElementById('warrantyInfoText');
+        
+        if (!selectedOption || !selectedOption.value) {
+          warrantyContainer.style.display = 'none';
+          return;
+        }
+        
+        const warrantyMonths = selectedOption.dataset.warrantyMonths;
+        const stockOutDate = selectedOption.dataset.stockOutDate;
+        const warrantyValid = selectedOption.dataset.warrantyValid;
+        const warrantyDaysRemaining = selectedOption.dataset.warrantyDaysRemaining;
+        const warrantyEndDate = selectedOption.dataset.warrantyEndDate;
+        
+        if (warrantyMonths && stockOutDate && warrantyValid !== undefined) {
+          warrantyContainer.style.display = 'block';
+          let html = '';
+          
+          if (warrantyValid === 'true' || warrantyValid === true) {
+            const daysRemaining = parseInt(warrantyDaysRemaining) || 0;
+            html += '<span style="color: #28a745;"><i class="fas fa-check-circle"></i> <strong>Còn bảo hành</strong></span><br>';
+            html += 'Thời gian bảo hành: <strong>' + warrantyMonths + ' tháng</strong><br>';
+            html += 'Ngày xuất kho: <strong>' + (stockOutDate ? new Date(stockOutDate).toLocaleDateString('vi-VN') : 'Chưa có') + '</strong><br>';
+            html += 'Ngày hết hạn bảo hành: <strong>' + (warrantyEndDate || 'N/A') + '</strong><br>';
+            html += 'Còn lại: <strong style="color: #28a745;">' + daysRemaining + ' ngày</strong>';
+            warrantyContainer.querySelector('.alert').className = 'alert alert-success';
+          } else {
+            html += '<span style="color: #dc3545;"><i class="fas fa-times-circle"></i> <strong>Hết bảo hành</strong></span><br>';
+            html += 'Thời gian bảo hành: <strong>' + warrantyMonths + ' tháng</strong><br>';
+            html += 'Ngày xuất kho: <strong>' + (stockOutDate ? new Date(stockOutDate).toLocaleDateString('vi-VN') : 'Chưa có') + '</strong><br>';
+            html += 'Ngày hết hạn bảo hành: <strong>' + (warrantyEndDate || 'N/A') + '</strong><br>';
+            const daysOverdue = Math.abs(parseInt(warrantyDaysRemaining) || 0);
+            html += 'Đã hết hạn: <strong style="color: #dc3545;">' + daysOverdue + ' ngày</strong>';
+            warrantyContainer.querySelector('.alert').className = 'alert alert-warning';
+          }
+          
+          warrantyText.innerHTML = html;
+        } else if (warrantyMonths) {
+          warrantyContainer.style.display = 'block';
+          warrantyContainer.querySelector('.alert').className = 'alert alert-info';
+          warrantyText.innerHTML = 'Thời gian bảo hành: <strong>' + warrantyMonths + ' tháng</strong><br>' +
+                                 'Ngày xuất kho: <strong>Chưa có</strong> (Sản phẩm chưa được xuất kho)';
+        } else {
+          warrantyContainer.style.display = 'none';
+        }
       });
       
       // Xử lý chuyển đổi giữa 2 loại form

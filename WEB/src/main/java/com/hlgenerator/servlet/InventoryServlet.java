@@ -633,9 +633,20 @@ public class InventoryServlet extends HttpServlet {
                 if (i > 0) json.append(",");
                 java.util.Map<String, Object> p = contractProducts.get(i);
                 int productId = (Integer) p.get("productId");
+                java.math.BigDecimal requiredQuantity = (java.math.BigDecimal) p.get("quantity");
+                int requiredQty = requiredQuantity.intValue();
                 
                 // Query tồn kho theo từng warehouse từ database
                 java.util.List<java.util.Map<String, Object>> warehouseStocks = inventoryDAO.getWarehouseStocks(productId);
+                
+                // Tính tổng tồn kho (tổng current_stock từ tất cả warehouse)
+                int totalStock = 0;
+                for (java.util.Map<String, Object> ws : warehouseStocks) {
+                    totalStock += (Integer) ws.get("stock");
+                }
+                
+                // Tính còn thiếu = số lượng cần - tổng tồn kho
+                int shortage = requiredQty - totalStock;
                 
                 json.append("{");
                 json.append("\"productId\":").append(productId).append(",");
@@ -643,6 +654,8 @@ public class InventoryServlet extends HttpServlet {
                 json.append("\"productCode\":\"").append(escapeJson((String)p.get("productCode"))).append("\",");
                 json.append("\"productName\":\"").append(escapeJson((String)p.get("productName"))).append("\",");
                 json.append("\"unit\":\"").append(escapeJson((String)p.get("unit"))).append("\",");
+                json.append("\"totalStock\":").append(totalStock).append(",");
+                json.append("\"shortage\":").append(shortage).append(",");
                 
                 // Thêm thông tin tồn kho theo từng warehouse
                 json.append("\"stocks\":[");
@@ -663,7 +676,7 @@ public class InventoryServlet extends HttpServlet {
                 if (warehouseParam != null && !warehouseParam.trim().isEmpty()) {
                     Inventory inv = inventoryDAO.getInventoryByProductAndWarehouse(productId, warehouseParam);
                     if (inv != null) {
-                        stockAtWarehouse = inv.getAvailableStock();
+                        stockAtWarehouse = inv.getCurrentStock(); // Dùng current_stock thay vì available
                     }
                 }
                 json.append("\"stockAtSelectedWarehouse\":").append(stockAtWarehouse);
@@ -1092,12 +1105,24 @@ public class InventoryServlet extends HttpServlet {
                     continue;
                 }
                 
-                int currentStock = currentInventory.getAvailableStock();
-                if (quantity > currentStock) {
+                // Nếu xuất kho cho hợp đồng, kiểm tra theo tổng tồn kho (current_stock)
+                // vì reserved quantity cho hợp đồng này có thể được xuất
+                // Nếu không phải hợp đồng, kiểm tra theo available stock
+                int stockToCheck;
+                if (contractIdParam != null && !contractIdParam.trim().isEmpty()) {
+                    // Xuất cho hợp đồng: kiểm tra tổng tồn kho
+                    stockToCheck = currentInventory.getCurrentStock();
+                } else {
+                    // Xuất thông thường: kiểm tra tồn kho khả dụng
+                    stockToCheck = currentInventory.getAvailableStock();
+                }
+                
+                if (quantity > stockToCheck) {
                     errorMsg.append("Sản phẩm ID ").append(productId)
                             .append(" (").append(currentInventory.getProductName()).append("): ")
                             .append("Số lượng xuất (").append(quantity)
-                            .append(") vượt quá tồn kho khả dụng (").append(currentStock).append("). ");
+                            .append(") vượt quá tồn kho ").append(contractIdParam != null && !contractIdParam.trim().isEmpty() ? "tổng" : "khả dụng")
+                            .append(" (").append(stockToCheck).append("). ");
                     allSuccess = false;
                     continue;
                 }

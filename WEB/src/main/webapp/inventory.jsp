@@ -582,7 +582,7 @@
                                             <th style="width: 200px;">Sản phẩm <span class="text-danger">*</span></th>
                                             <th style="width: 200px;">Tên sản phẩm</th>
                                             <th style="width: 100px;">Đơn vị</th>
-                                            <th style="width: 120px;">Tồn khả dụng</th>
+                                            <th style="width: 120px;">Còn thiếu</th>
                                             <th style="width: 120px;">Số lượng xuất <span class="text-danger">*</span></th>
                                             <th style="width: 80px;">Thao tác</th>
                                         </tr>
@@ -1139,22 +1139,29 @@
             var rowId = 'stockOutRow_' + stockOutRowCounter;
             var tbody = $('#stockOutProductsBody');
             
-            // Tìm tồn kho tại warehouse được chọn
-            var currentStock = 0;
-            var totalStock = 0;
-            var reservedStock = 0;
+            // Tính còn thiếu = số lượng cần - tổng tồn kho
+            var requiredQty = parseFloat(product.quantity) || 0;
+            var totalStock = product.totalStock || 0;
+            var shortage = requiredQty - totalStock; // Còn thiếu
+            
+            // Tìm tồn kho tại warehouse được chọn để hiển thị thông tin
+            var stockAtWarehouse = 0;
+            var reservedAtWarehouse = 0;
             if (product.stocks && product.stocks.length > 0) {
-                var stockAtWarehouse = product.stocks.find(function(s) {
+                var stockInfo = product.stocks.find(function(s) {
                     return s.warehouse === warehouse;
                 });
-                if (stockAtWarehouse) {
-                    totalStock = stockAtWarehouse.stock || 0;
-                    reservedStock = stockAtWarehouse.reserved || 0;
-                    // Cho phép số âm
-                    currentStock = stockAtWarehouse.available !== undefined ? stockAtWarehouse.available : (totalStock - reservedStock);
+                if (stockInfo) {
+                    stockAtWarehouse = stockInfo.stock || 0;
+                    reservedAtWarehouse = stockInfo.reserved || 0;
                 }
             }
-            var stockTitle = 'Tổng: ' + totalStock + ' | Giữ chỗ: ' + reservedStock + ' | Khả dụng: ' + currentStock;
+            var stockTitle = 'Cần: ' + requiredQty + ' | Tổng tồn: ' + totalStock + ' | Tại kho này: ' + stockAtWarehouse + ' | Giữ chỗ: ' + reservedAtWarehouse;
+            
+            // Màu sắc: nếu còn thiếu <= 0 thì có thể xuất (màu xanh), nếu > 0 thì thiếu (màu đỏ)
+            var shortageColor = shortage <= 0 ? 'color: #5cb85c;' : 'color: #d9534f;';
+            // Hiển thị: nếu <= 0 thì hiển thị 0 (đủ hàng), nếu > 0 thì hiển thị số thiếu
+            var shortageDisplay = shortage <= 0 ? '0' : shortage;
             
             var row = '<tr id="' + rowId + '">' +
                 '<td style="text-align: center; vertical-align: middle;">' + stockOutRowCounter + '</td>' +
@@ -1169,10 +1176,10 @@
                     '<input type="text" class="form-control stockOutProductUnit" readonly style="background-color: #f5f5f5; text-align: center;">' +
                 '</td>' +
                 '<td style="text-align: center; vertical-align: middle;">' +
-                    '<span class="stockOutCurrentStock" style="font-weight: bold; ' + (currentStock >= 0 ? 'color: #5cb85c;' : 'color: #d9534f;') + '" title="' + stockTitle + '">' + currentStock + '</span>' +
+                    '<span class="stockOutCurrentStock" style="font-weight: bold; ' + shortageColor + '" title="' + stockTitle + '">' + shortageDisplay + '</span>' +
                 '</td>' +
                 '<td>' +
-                    '<input type="number" class="form-control stockOutQuantity" min="1" ' + (currentStock >= 0 ? 'max="' + currentStock + '"' : '') + ' value="' + (product.quantity && product.quantity > 0 ? product.quantity : '') + '" required placeholder="Nhập số lượng" style="text-align: right;">' +
+                    '<input type="number" class="form-control stockOutQuantity" min="1" value="' + (product.quantity && product.quantity > 0 ? product.quantity : '') + '" required placeholder="Nhập số lượng" style="text-align: right;">' +
                 '</td>' +
                 '<td style="text-align: center; vertical-align: middle;">' +
                     '<button type="button" class="btn btn-danger btn-xs" onclick="removeStockOutRow(\'' + rowId + '\')" title="Xóa dòng">' +
@@ -1217,16 +1224,12 @@
                     }
                 });
                 
-                // Gán sự kiện input cho số lượng
+                // Gán sự kiện input cho số lượng - không giới hạn dựa trên available stock
+                // Validation sẽ được thực hiện ở backend
                 $('#' + rowId + ' .stockOutQuantity').off('input').on('input', function() {
                     var row = $(this).closest('tr');
                     var quantity = parseInt($(this).val()) || 0;
-                    var currentStock = parseInt(row.find('.stockOutCurrentStock').text()) || 0;
-                    
-                    if (quantity > currentStock) {
-                        $(this).val(currentStock);
-                        alert('Số lượng xuất không được vượt quá tồn kho khả dụng (' + currentStock + ')');
-                    }
+                    // Không giới hạn số lượng xuất ở frontend, backend sẽ validate
                 });
             }, 100);
         }

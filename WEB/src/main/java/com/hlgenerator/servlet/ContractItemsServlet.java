@@ -46,7 +46,7 @@ public class ContractItemsServlet extends HttpServlet {
 
             String sql = "SELECT cp.product_id, cp.description, cp.quantity, cp.unit_price, cp.warranty_months, cp.notes, " +
                          "COALESCE(cp.delivery_status, 'not_delivered') as delivery_status, " +
-                         "p.product_name " +
+                         "p.product_name, p.warranty_months as product_warranty_months " +
                          "FROM contract_products cp " +
                          "LEFT JOIN products p ON cp.product_id = p.id " +
                          "WHERE cp.contract_id = ? ORDER BY cp.id";
@@ -64,15 +64,120 @@ public class ContractItemsServlet extends HttpServlet {
                         obj.put("description", rs.wasNull() ? JSONObject.NULL : desc);
                         obj.put("quantity", rs.getBigDecimal("quantity"));
                         obj.put("unitPrice", rs.getBigDecimal("unit_price"));
-                        int w = rs.getInt("warranty_months");
+                        
+                        // Lấy warranty_months từ contract_products, nếu null thì lấy từ products
+                        int warrantyMonths = rs.getInt("warranty_months");
                         if (rs.wasNull()) {
-                            obj.put("warrantyMonths", JSONObject.NULL);
-                        } else {
-                            obj.put("warrantyMonths", w);
+                            warrantyMonths = rs.getInt("product_warranty_months");
+                            if (rs.wasNull()) {
+                                warrantyMonths = 12; // Mặc định 12 tháng
+                            }
                         }
+                        obj.put("warrantyMonths", warrantyMonths);
+                        
+                        // Lấy ngày xuất kho từ stock_history
+                        int productId = rs.getInt("product_id");
+                        String deliveryStatus = rs.getString("delivery_status");
+                        java.sql.Timestamp stockOutDate = null;
+                        String stockOutDateStr = null;
+                        try {
+                            // Nếu sản phẩm đã bàn giao, tìm ngày xuất kho
+                            // Thử tìm với reference_type = 'contract' trước
+                            String stockOutSql = "SELECT MIN(created_at) as stock_out_date " +
+                                               "FROM stock_history " +
+                                               "WHERE product_id = ? AND movement_type = 'out' " +
+                                               "AND reference_type = 'contract' AND reference_id = ? " +
+                                               "ORDER BY created_at ASC LIMIT 1";
+                            try (java.sql.PreparedStatement psStock = conn.prepareStatement(stockOutSql)) {
+                                psStock.setInt(1, productId);
+                                psStock.setInt(2, contractId);
+                                try (java.sql.ResultSet rsStock = psStock.executeQuery()) {
+                                    if (rsStock.next()) {
+                                        stockOutDate = rsStock.getTimestamp("stock_out_date");
+                                        if (stockOutDate != null) {
+                                            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                                            stockOutDateStr = sdf.format(stockOutDate);
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Nếu không tìm thấy và sản phẩm đã bàn giao, thử tìm với điều kiện linh hoạt hơn
+                            if (stockOutDate == null && "delivered".equals(deliveryStatus)) {
+                                // Thử tìm với reference_id khớp, bất kể reference_type
+                                String flexibleSql = "SELECT MIN(created_at) as stock_out_date " +
+                                                   "FROM stock_history " +
+                                                   "WHERE product_id = ? AND movement_type = 'out' " +
+                                                   "AND reference_id = ? " +
+                                                   "ORDER BY created_at ASC LIMIT 1";
+                                try (java.sql.PreparedStatement psStock2 = conn.prepareStatement(flexibleSql)) {
+                                    psStock2.setInt(1, productId);
+                                    psStock2.setInt(2, contractId);
+                                    try (java.sql.ResultSet rsStock2 = psStock2.executeQuery()) {
+                                        if (rsStock2.next()) {
+                                            stockOutDate = rsStock2.getTimestamp("stock_out_date");
+                                            if (stockOutDate != null) {
+                                                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                                                stockOutDateStr = sdf.format(stockOutDate);
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Nếu vẫn không tìm thấy, tìm bất kỳ bản ghi xuất kho nào của sản phẩm này
+                                // (có thể sản phẩm đã được xuất kho nhưng không có reference_id)
+                                if (stockOutDate == null) {
+                                    String anyOutSql = "SELECT MIN(created_at) as stock_out_date " +
+                                                      "FROM stock_history " +
+                                                      "WHERE product_id = ? AND movement_type = 'out' " +
+                                                      "ORDER BY created_at ASC LIMIT 1";
+                                    try (java.sql.PreparedStatement psStock3 = conn.prepareStatement(anyOutSql)) {
+                                        psStock3.setInt(1, productId);
+                                        try (java.sql.ResultSet rsStock3 = psStock3.executeQuery()) {
+                                            if (rsStock3.next()) {
+                                                stockOutDate = rsStock3.getTimestamp("stock_out_date");
+                                                if (stockOutDate != null) {
+                                                    java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                                                    stockOutDateStr = sdf.format(stockOutDate);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Nếu có lỗi, bỏ qua
+                            System.out.println("Error getting stock out date: " + e.getMessage());
+                        }
+                        
+                        obj.put("stockOutDate", stockOutDateStr != null ? stockOutDateStr : JSONObject.NULL);
+                        
+                        // Tính toán thông tin bảo hành
+                        if (stockOutDate != null && warrantyMonths > 0) {
+                            java.util.Calendar cal = java.util.Calendar.getInstance();
+                            cal.setTimeInMillis(stockOutDate.getTime());
+                            cal.add(java.util.Calendar.MONTH, warrantyMonths);
+                            java.util.Date warrantyEndDate = cal.getTime();
+                            java.util.Date today = new java.util.Date();
+                            
+                            long diffInMillis = warrantyEndDate.getTime() - today.getTime();
+                            long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
+                            
+                            boolean isWarrantyValid = diffInDays >= 0;
+                            obj.put("warrantyValid", isWarrantyValid);
+                            obj.put("warrantyDaysRemaining", diffInDays);
+                            
+                            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
+                            obj.put("warrantyEndDate", sdf.format(warrantyEndDate));
+                        } else {
+                            obj.put("warrantyValid", JSONObject.NULL);
+                            obj.put("warrantyDaysRemaining", JSONObject.NULL);
+                            obj.put("warrantyEndDate", JSONObject.NULL);
+                        }
+                        
                         String notes = rs.getString("notes");
                         obj.put("notes", rs.wasNull() ? JSONObject.NULL : notes);
-                        String deliveryStatus = rs.getString("delivery_status");
+                        // deliveryStatus đã được lấy ở trên (dòng 80)
                         obj.put("deliveryStatus", deliveryStatus != null ? deliveryStatus : "not_delivered");
                         arr.put(obj);
                     }

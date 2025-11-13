@@ -698,6 +698,13 @@
                     if (response.success) {
                         console.log('Ticket data received:', response.data);
                         console.log('Deadline value:', response.data.deadline);
+                        console.log('Warranty info:', {
+                            warrantyMonths: response.data.warrantyMonths,
+                            stockOutDate: response.data.stockOutDate,
+                            warrantyEndDate: response.data.warrantyEndDate,
+                            warrantyValid: response.data.warrantyValid,
+                            warrantyDaysRemaining: response.data.warrantyDaysRemaining
+                        });
                         displayTicketDetail(response.data);
                     } else {
                         $('#ticketDetailContent').html('<div class="alert alert-danger"><i class="fa fa-exclamation-triangle"></i> ' + response.message + '</div>');
@@ -803,6 +810,86 @@
                     html += '<strong style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Sản phẩm</strong>';
                     html += '<div style="word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; white-space: normal; font-size: 14px; color: #34495e; line-height: 1.5; max-width: 100%;">' + escapeHtml(productInfo) + '</div>';
                     html += '</div></div></div>';
+                }
+                
+                html += '</div></div>';
+            }
+            
+            // Thông tin bảo hành (hiển thị khi có hợp đồng/sản phẩm hoặc có thông tin bảo hành)
+            if (contractInfo || productInfo || ticket.warrantyMonths || ticket.warrantyValid !== undefined) {
+                html += '<div style="margin-bottom: 20px;">';
+                html += '<h5 style="margin-bottom: 12px;"><i class="fa fa-shield"></i> <strong>Thông tin bảo hành</strong></h5>';
+                
+                var warrantyBgColor = '#fff3cd';
+                var warrantyBorderColor = '#ffc107';
+                var warrantyIconColor = '#856404';
+                var warrantyStatusText = '';
+                var warrantyStatusColor = '#856404';
+                
+                if (ticket.warrantyValid === true) {
+                    warrantyBgColor = '#d4edda';
+                    warrantyBorderColor = '#28a745';
+                    warrantyIconColor = '#155724';
+                    warrantyStatusColor = '#28a745';
+                    warrantyStatusText = '<span style="color: ' + warrantyStatusColor + ';"><i class="fa fa-check-circle"></i> <strong>Còn bảo hành</strong></span>';
+                } else if (ticket.warrantyValid === false) {
+                    warrantyBgColor = '#f8d7da';
+                    warrantyBorderColor = '#dc3545';
+                    warrantyIconColor = '#721c24';
+                    warrantyStatusColor = '#dc3545';
+                    warrantyStatusText = '<span style="color: ' + warrantyStatusColor + ';"><i class="fa fa-times-circle"></i> <strong>Hết bảo hành</strong></span>';
+                } else if (ticket.warrantyMonths) {
+                    warrantyStatusText = '<span style="color: ' + warrantyIconColor + ';"><i class="fa fa-info-circle"></i> <strong>Thông tin bảo hành</strong></span>';
+                } else {
+                    warrantyBgColor = '#e7f3ff';
+                    warrantyBorderColor = '#3c8dbc';
+                    warrantyIconColor = '#2c3e50';
+                    warrantyStatusText = '<span style="color: ' + warrantyIconColor + ';"><i class="fa fa-info-circle"></i> <strong>Thông tin bảo hành</strong></span>';
+                }
+                
+                html += '<div style="background: ' + warrantyBgColor + '; padding: 15px; border-radius: 8px; border-left: 4px solid ' + warrantyBorderColor + '; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">';
+                html += '<div style="margin-bottom: 10px;">' + warrantyStatusText + '</div>';
+                
+                if (ticket.warrantyMonths) {
+                    html += '<div style="margin-bottom: 8px;"><strong style="color: #2c3e50; font-size: 13px;">Thời gian bảo hành:</strong> <span style="color: #34495e; font-size: 14px;">' + ticket.warrantyMonths + ' tháng</span></div>';
+                } else if (contractInfo || productInfo) {
+                    html += '<div style="margin-bottom: 8px;"><strong style="color: #2c3e50; font-size: 13px;">Thời gian bảo hành:</strong> <span style="color: #999; font-style: italic; font-size: 14px;">Chưa có thông tin</span></div>';
+                }
+                
+                if (ticket.stockOutDate && ticket.stockOutDate.trim() !== '' && ticket.stockOutDate !== 'null') {
+                    var stockOutDateFormatted = ticket.stockOutDate;
+                    try {
+                        // Nếu là format yyyy-MM-dd, chuyển sang dd/MM/yyyy
+                        if (stockOutDateFormatted.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            var parts = stockOutDateFormatted.split('-');
+                            stockOutDateFormatted = parts[2] + '/' + parts[1] + '/' + parts[0];
+                        } else {
+                            var stockOutDateObj = new Date(ticket.stockOutDate);
+                            if (!isNaN(stockOutDateObj.getTime())) {
+                                var dd = String(stockOutDateObj.getDate()).padStart(2, '0');
+                                var mm = String(stockOutDateObj.getMonth() + 1).padStart(2, '0');
+                                var yyyy = stockOutDateObj.getFullYear();
+                                stockOutDateFormatted = dd + '/' + mm + '/' + yyyy;
+                            }
+                        }
+                    } catch(e) {}
+                    html += '<div style="margin-bottom: 8px;"><strong style="color: #2c3e50; font-size: 13px;">Ngày xuất kho:</strong> <span style="color: #34495e; font-size: 14px;">' + escapeHtml(stockOutDateFormatted) + '</span></div>';
+                } else {
+                    html += '<div style="margin-bottom: 8px;"><strong style="color: #2c3e50; font-size: 13px;">Ngày xuất kho:</strong> <span style="color: #999; font-style: italic; font-size: 14px;">Chưa có (Sản phẩm chưa được xuất kho)</span></div>';
+                }
+                
+                if (ticket.warrantyEndDate && ticket.warrantyEndDate.trim() !== '' && ticket.warrantyEndDate !== 'null') {
+                    html += '<div style="margin-bottom: 8px;"><strong style="color: #2c3e50; font-size: 13px;">Ngày hết hạn bảo hành:</strong> <span style="color: #34495e; font-size: 14px;">' + escapeHtml(ticket.warrantyEndDate) + '</span></div>';
+                } else if (ticket.warrantyMonths) {
+                    html += '<div style="margin-bottom: 8px;"><strong style="color: #2c3e50; font-size: 13px;">Ngày hết hạn bảo hành:</strong> <span style="color: #999; font-style: italic; font-size: 14px;">Chưa có (Chưa xuất kho)</span></div>';
+                }
+                
+                if (ticket.warrantyValid === true && ticket.warrantyDaysRemaining !== undefined && ticket.warrantyDaysRemaining !== null) {
+                    var daysRemaining = parseInt(ticket.warrantyDaysRemaining) || 0;
+                    html += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);"><strong style="color: #2c3e50; font-size: 13px;">Còn lại:</strong> <span style="color: #28a745; font-size: 14px; font-weight: bold;">' + daysRemaining + ' ngày</span></div>';
+                } else if (ticket.warrantyValid === false && ticket.warrantyDaysRemaining !== undefined && ticket.warrantyDaysRemaining !== null) {
+                    var daysOverdue = Math.abs(parseInt(ticket.warrantyDaysRemaining) || 0);
+                    html += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1);"><strong style="color: #2c3e50; font-size: 13px;">Đã hết hạn:</strong> <span style="color: #dc3545; font-size: 14px; font-weight: bold;">' + daysOverdue + ' ngày</span></div>';
                 }
                 
                 html += '</div></div>';
