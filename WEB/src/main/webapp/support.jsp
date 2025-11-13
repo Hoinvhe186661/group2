@@ -331,9 +331,9 @@
               <label>Loại yêu cầu :</label>
               <select class="form-control" id="category">
                   <option value="technical">Kỹ thuật</option>
-                  <option value="billing">Thanh toán</option>
+                  
                   <option value="general" selected>Chung</option>
-                  <option value="complaint">Khiếu nại</option>
+                  
               </select>
             </div>
           </div>
@@ -1194,7 +1194,7 @@
             arr.forEach(item => {
               const opt = document.createElement('option');
               opt.value = item.productId;
-              const name = item.description ? item.description : ('Sản phẩm #' + item.productId);
+              const name = item.productName ? item.productName : ('Sản phẩm #' + item.productId);
               opt.textContent = name;
               opt.dataset.quantity = item.quantity != null ? String(item.quantity) : '';
               opt.dataset.unitPrice = item.unitPrice != null ? String(item.unitPrice) : '';
@@ -2055,7 +2055,7 @@
                     (Array.isArray(j2.data)? j2.data: []).forEach(function(item){
                       var opt = document.createElement('option');
                       opt.value = item.productId;
-                      var name = item.description ? item.description : ('Sản phẩm #' + item.productId);
+                      var name = item.productName ? item.productName : ('Sản phẩm #' + item.productId);
                       opt.textContent = name;
                       vProduct.appendChild(opt);
                     });
