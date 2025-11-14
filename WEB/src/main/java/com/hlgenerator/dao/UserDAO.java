@@ -357,20 +357,137 @@ public class UserDAO extends DBConnect {
     }
 
     // Hard delete user (permanently remove from database)
+    // Trước khi xóa, cần xử lý các foreign key constraints bằng cách set NULL hoặc xóa các bản ghi liên quan
     public boolean hardDeleteUser(int id) {
         if (!checkConnection()) {
             return false;
         }
-        String sql = "DELETE FROM users WHERE id=?";
         
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, id);
+        try {
+            // Tắt auto-commit để thực hiện transaction
+            connection.setAutoCommit(false);
             
-            int result = ps.executeUpdate();
-            return result > 0;
+            // 1. Xử lý support_requests: Set assigned_to = NULL cho các bản ghi được gán cho user này
+            String updateSupportRequests = "UPDATE support_requests SET assigned_to = NULL WHERE assigned_to = ?";
+            try (PreparedStatement ps = connection.prepareStatement(updateSupportRequests)) {
+                ps.setInt(1, id);
+                ps.executeUpdate();
+            }
+            
+            // 2. Xử lý work_orders: Set assigned_to và created_by = NULL
+            String updateWorkOrders = "UPDATE work_orders SET assigned_to = NULL, created_by = NULL WHERE assigned_to = ? OR created_by = ?";
+            try (PreparedStatement ps = connection.prepareStatement(updateWorkOrders)) {
+                ps.setInt(1, id);
+                ps.setInt(2, id);
+                ps.executeUpdate();
+            }
+            
+            // 3. Xử lý tasks: Set created_by = NULL (nếu có cột này)
+            try {
+                String updateTasks = "UPDATE tasks SET created_by = NULL WHERE created_by = ?";
+                try (PreparedStatement ps = connection.prepareStatement(updateTasks)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                // Bỏ qua nếu bảng tasks không có cột created_by
+                logger.fine("Table tasks may not have created_by column: " + e.getMessage());
+            }
+            
+            // 4. Xử lý invoices: Set created_by = NULL
+            String updateInvoices = "UPDATE invoices SET created_by = NULL WHERE created_by = ?";
+            try (PreparedStatement ps = connection.prepareStatement(updateInvoices)) {
+                ps.setInt(1, id);
+                ps.executeUpdate();
+            }
+            
+            // 5. Xử lý contracts: Set created_by = NULL
+            try {
+                String updateContracts = "UPDATE contracts SET created_by = NULL WHERE created_by = ?";
+                try (PreparedStatement ps = connection.prepareStatement(updateContracts)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                // Bỏ qua nếu có lỗi (có thể bảng không có cột này)
+                logger.fine("Error updating contracts: " + e.getMessage());
+            }
+            
+            // 5b. Xử lý stock_history: Set created_by = NULL
+            try {
+                String updateStockHistory = "UPDATE stock_history SET created_by = NULL WHERE created_by = ?";
+                try (PreparedStatement ps = connection.prepareStatement(updateStockHistory)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                // Bỏ qua nếu có lỗi (có thể bảng không có cột này)
+                logger.fine("Error updating stock_history: " + e.getMessage());
+            }
+            
+            // 5c. Xử lý product_price_history: Set created_by và updated_by = NULL
+            try {
+                String updatePriceHistory = "UPDATE product_price_history SET created_by = NULL, updated_by = NULL WHERE created_by = ? OR updated_by = ?";
+                try (PreparedStatement ps = connection.prepareStatement(updatePriceHistory)) {
+                    ps.setInt(1, id);
+                    ps.setInt(2, id);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                // Bỏ qua nếu có lỗi (có thể bảng không có cột này)
+                logger.fine("Error updating product_price_history: " + e.getMessage());
+            }
+            
+            // 6. Xử lý activity_logs: Xóa các bản ghi log của user này (hoặc set user_id = NULL)
+            try {
+                // Cách 1: Xóa các bản ghi log (khuyến nghị vì đây là bảng log)
+                String deleteActivityLogs = "DELETE FROM activity_logs WHERE user_id = ?";
+                try (PreparedStatement ps = connection.prepareStatement(deleteActivityLogs)) {
+                    ps.setInt(1, id);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                // Nếu không xóa được, thử set NULL
+                try {
+                    String updateActivityLogs = "UPDATE activity_logs SET user_id = NULL WHERE user_id = ?";
+                    try (PreparedStatement ps = connection.prepareStatement(updateActivityLogs)) {
+                        ps.setInt(1, id);
+                        ps.executeUpdate();
+                    }
+                } catch (SQLException e2) {
+                    logger.fine("Error updating activity_logs: " + e2.getMessage());
+                }
+            }
+            
+            // 7. Cuối cùng, xóa user
+            String deleteUser = "DELETE FROM users WHERE id=?";
+            try (PreparedStatement ps = connection.prepareStatement(deleteUser)) {
+                ps.setInt(1, id);
+                int result = ps.executeUpdate();
+                
+                if (result > 0) {
+                    connection.commit();
+                    return true;
+                } else {
+                    connection.rollback();
+                    return false;
+                }
+            }
+            
         } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                logger.log(Level.SEVERE, "Error rolling back transaction", rollbackEx);
+            }
             logger.log(Level.SEVERE, "Error hard deleting user", e);
             return false;
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+            } catch (SQLException e) {
+                logger.log(Level.SEVERE, "Error resetting auto-commit", e);
+            }
         }
     }
 

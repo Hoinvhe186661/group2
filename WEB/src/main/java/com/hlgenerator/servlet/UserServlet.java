@@ -411,6 +411,12 @@ public class UserServlet extends HttpServlet {
                 return;
             }
 
+            // Không cho phép thay đổi vai trò nếu người dùng hiện tại là quản trị viên
+            if ("admin".equalsIgnoreCase(existingUser.getRole())) {
+                // Giữ nguyên vai trò admin, không cho phép thay đổi
+                role = existingUser.getRole();
+            }
+
             // Update user object
             existingUser.setUsername(username.trim());
             existingUser.setEmail(email.trim());

@@ -463,7 +463,7 @@
                                         <option value="head_technician">Trưởng phòng kỹ thuật</option>
                                         <option value="storekeeper">Thủ kho</option>
                                         <option value="customer">Khách hàng</option>
-                                        <option value="guest">Khách</option>
+                                        
                                     </select>
                                 </div>
                                 <div class="form-group" id="customerSelectGroup" style="display:none;">
@@ -581,6 +581,7 @@
         var currentPasswordUserId = null;
         var currentSortColumn = null;
         var currentSortOrder = 'asc';
+        var adminOptionHtml = '<option value="admin">Quản trị viên</option>'; // Lưu lại option admin ban đầu
 
         $(document).ready(function() {
             // Không còn sử dụng DataTables, phân trang được xử lý ở server-side
@@ -859,6 +860,23 @@
             });
         }
 
+        // Ẩn/hiện option admin trong dropdown vai trò
+        function toggleAdminOption(show) {
+            var $adminOption = $('#role option[value="admin"]');
+            if (show) {
+                // Hiện option admin nếu chưa có
+                if ($adminOption.length === 0) {
+                    // Khôi phục lại option admin (thêm sau option đầu tiên)
+                    $('#role option:first').after(adminOptionHtml);
+                }
+            } else {
+                // Ẩn option admin bằng cách remove
+                if ($adminOption.length > 0) {
+                    $adminOption.remove();
+                }
+            }
+        }
+
         // Điền dữ liệu vào form chỉnh sửa
         function populateEditForm(user) {
             $('#username').val(user.username);
@@ -870,6 +888,17 @@
             $('#permissions').val(user.permissions || '[]');
             $('#isActive').prop('checked', user.isActive);
             $('#passwordGroup').hide();
+            
+            // Không cho phép sửa vai trò nếu là quản trị viên
+            if (user.role === 'admin') {
+                $('#role').prop('disabled', true).addClass('bg-gray-light');
+                // Giữ lại option admin nếu người dùng đang là admin
+                toggleAdminOption(true);
+            } else {
+                $('#role').prop('disabled', false).removeClass('bg-gray-light');
+                // Ẩn option admin khi chỉnh sửa các vai trò khác (trừ admin ra)
+                toggleAdminOption(false);
+            }
             
             // Xử lý khi vai trò là khách hàng
             if (user.role === 'customer') {
@@ -1108,6 +1137,10 @@
             $('#customerId').val('');
             unlockCustomerFields();
             $('#passwordGroup').show();
+            // Enable lại trường role khi đóng modal
+            $('#role').prop('disabled', false).removeClass('bg-gray-light');
+            // Hiện lại option admin khi đóng modal (để có thể chọn khi thêm mới)
+            toggleAdminOption(true);
         });
 
         // Hiển thị/ẩn nhóm mật khẩu khi mở modal theo trạng thái thêm mới/chỉnh sửa
@@ -1115,9 +1148,13 @@
             if (!currentEditingUser) {
                 $('#passwordGroup').show();
                 $('#password').prop('required', true).val('');
+                // Hiện option admin khi thêm mới
+                toggleAdminOption(true);
             } else {
                 $('#passwordGroup').hide();
                 $('#password').prop('required', false).val('');
+                // Logic ẩn/hiện option admin được xử lý trong populateEditForm
+                // Dựa vào vai trò của người dùng đang chỉnh sửa
             }
         });
 
