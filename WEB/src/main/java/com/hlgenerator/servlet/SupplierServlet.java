@@ -864,7 +864,6 @@ public class SupplierServlet extends HttpServlet {
     
     /**
      * Kiểm tra mã nhà cung cấp có tồn tại không
-     * Tác giả: Sơn Lê
      */
     private void checkSupplierCodeExists(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json; charset=UTF-8");

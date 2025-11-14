@@ -258,21 +258,20 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="row">
-                                            <!-- Lọc theo trạng thái hợp đồng -->
-                                            <div class="col-md-3">
+                                            <!-- Lọc theo trạng thái hợp đồng - Ẩn vì chỉ hiển thị hợp đồng hiệu lực -->
+                                            <div class="col-md-3" style="display: none;">
                                                 <div class="form-group">
                                                     <label for="filterContractStatus">Trạng thái:</label>
                                                     <select class="form-control" id="filterContractStatus">
-                                                        <option value="">Tất cả trạng thái</option>
+                                                        <option value="active" selected>Hiệu Lực</option>
                                                         <option value="draft">Nháp</option>
-                                                        <option value="active">Hiệu Lực</option>
                                                         <option value="terminated">Chấm Dứt</option>
                                                     </select>
                                                 </div>
                                             </div>
                                             
                                             <!-- Tìm kiếm -->
-                                            <div class="col-md-7">
+                                            <div class="col-md-10">
                                                 <div class="form-group">
                                                     <label for="searchContract">Tìm kiếm:</label>
                                                     <input type="text" class="form-control" id="searchContract" 
@@ -636,6 +635,8 @@
         // Load dữ liệu khi trang được tải
         $(document).ready(function() {
             console.log('Page loaded, initializing...');
+            // Set mặc định filter trạng thái là "active" (hiệu lực)
+            $('#filterContractStatus').val('active');
             loadProductsForDropdown();
             loadSuppliersForDropdown();
             loadContractsData();
@@ -1982,7 +1983,7 @@
          * Reset bộ lọc về trạng thái ban đầu
          */
         function resetFilters() {
-            $('#filterContractStatus').val('');
+            $('#filterContractStatus').val('active'); // Mặc định là active
             $('#searchContract').val('');
             currentPage = 1;
             loadContractsData(); // Load lại dữ liệu ban đầu

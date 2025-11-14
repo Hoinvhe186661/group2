@@ -205,7 +205,7 @@ public class InventoryServlet extends HttpServlet {
     
     /**
      * Lấy danh sách hợp đồng với lọc và phân trang
-     * Lấy tất cả hợp đồng (không lọc theo trạng thái cụ thể)
+     * Mặc định chỉ lấy hợp đồng có trạng thái "active" (hiệu lực)
      */
     private void getContractsList(HttpServletRequest request, HttpServletResponse response) 
             throws IOException {
@@ -238,8 +238,14 @@ public class InventoryServlet extends HttpServlet {
                     contractStatus = "";
                 }
                 
-                // Lọc theo trạng thái nếu có filter
-                if (status != null && !status.trim().isEmpty()) {
+                // Mặc định chỉ lấy hợp đồng có trạng thái "active" (hiệu lực)
+                // Nếu không có filter hoặc filter rỗng, chỉ lấy hợp đồng active
+                if (status == null || status.trim().isEmpty()) {
+                    if (!"active".equals(contractStatus)) {
+                        continue;
+                    }
+                } else {
+                    // Nếu có filter, lọc theo filter đó
                     if (!status.equals(contractStatus)) {
                         continue;
                     }
@@ -1420,7 +1426,6 @@ public class InventoryServlet extends HttpServlet {
     
     /**
      * Lấy chi tiết hợp đồng với danh sách sản phẩm và kiểm tra số lượng trong kho
-     * Tác giả: Sơn Lê
      */
     private void getContractDetails(HttpServletRequest request, HttpServletResponse response) 
             throws IOException {

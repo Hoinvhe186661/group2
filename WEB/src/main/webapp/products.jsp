@@ -684,7 +684,6 @@
         
         /**
          * Đếm số từ trong một chuỗi văn bản
-         * Tác giả: Sơn Lê
          * @param {string} text - Chuỗi văn bản cần đếm
          * @returns {number} - Số từ trong chuỗi
          */
@@ -734,7 +733,6 @@
         
         /**
          * Kiểm tra và hiển thị số từ trong textarea
-         * Tác giả: Sơn Lê
          * @param {string} textareaId - ID của textarea cần kiểm tra
          * @param {string} countSpanId - ID của span hiển thị số từ
          */
@@ -1614,7 +1612,6 @@
         
         /**
          * Cập nhật dropdown danh mục (chỉ hiển thị 3 danh mục cố định)
-         * Tác giả: Sơn Lê
          * @param {Array} suppliers - Danh sách nhà cung cấp (không sử dụng)
          * @param {Array} categories - Danh sách danh mục từ server (không sử dụng, chỉ để giữ tương thích)
          */
