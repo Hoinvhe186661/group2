@@ -248,13 +248,11 @@
                               <th>Sản phẩm</th>
                               <th>Tồn kho</th>
                               <th>Tồn thực tế (hiện tại)</th>
-                              <th>Đã giữ chỗ (hiện tại)</th>
-                              <th>Khả dụng (hiện tại)</th>
                               <th>Kho</th>
                             </tr>
                           </thead>
                         <tbody id="balanceHistoryBody">
-                          <tr><td colspan="6" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
+                          <tr><td colspan="5" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải...</td></tr>
                           </tbody>
                         </table>
                       </div>
@@ -490,12 +488,12 @@
         if (dateTo) params.dateTo = dateTo;
         $.getJSON('<%=request.getContextPath()%>/inventory', params, function (res) {
           if (!res.success) {
-            $('#balanceHistoryBody').html('<tr><td colspan="7" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
+            $('#balanceHistoryBody').html('<tr><td colspan="5" class="text-center alert alert-danger">' + (res.message || 'Lỗi tải lịch sử') + '</td></tr>');
             return;
           }
           renderBalanceHistory(res);
         }).fail(function (xhr) {
-          $('#balanceHistoryBody').html('<tr><td colspan="7" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
+          $('#balanceHistoryBody').html('<tr><td colspan="5" class="text-center alert alert-danger">' + (xhr.responseText || 'Lỗi kết nối') + '</td></tr>');
         });
       }
 
@@ -504,33 +502,25 @@
         var body = $('#balanceHistoryBody');
         body.empty();
         if (!res.data || res.data.length === 0) {
-          body.html('<tr><td colspan="7" class="text-center muted">Không có dữ liệu</td></tr>');
+          body.html('<tr><td colspan="5" class="text-center muted">Không có dữ liệu</td></tr>');
           updateBalancePagination(res.totalCount || 0, res.totalPages || 1);
           $('#balanceHistoryInfo').text('0 bản ghi');
           return;
         }
         var totalStockBefore = 0;
         var totalCurrentStock = 0;
-        var totalReservedStock = 0;
-        var totalAvailableStock = 0;
         res.data.forEach(function(h) {
           var when = new Date(h.createdAt).toLocaleString('vi-VN');
           var stockOriginal = h.stockBefore != null ? h.stockBefore : 0;
           var stockBefore = Math.max(stockOriginal, 0);
           var currentStockNow = h.currentStock != null ? h.currentStock : 0;
-          var reservedStockNow = h.reservedStock != null ? h.reservedStock : 0;
-          var availableStockNow = h.availableStock != null ? h.availableStock : Math.max(currentStockNow - reservedStockNow, 0);
           totalStockBefore += stockBefore;
           totalCurrentStock += currentStockNow;
-          totalReservedStock += reservedStockNow;
-          totalAvailableStock += availableStockNow;
           var row = '<tr>' +
             '<td>' + when + '</td>' +
             '<td>' + escapeHtml(h.productName || '') + ' <span class="muted">(' + escapeHtml(h.productCode || '') + ')</span></td>' +
             '<td>' + stockBefore + '</td>' +
             '<td>' + currentStockNow + '</td>' +
-            '<td>' + reservedStockNow + '</td>' +
-            '<td>' + availableStockNow + '</td>' +
             '<td>' + escapeHtml(h.warehouseLocation || '') + '</td>' +
             '</tr>';
           body.append(row);

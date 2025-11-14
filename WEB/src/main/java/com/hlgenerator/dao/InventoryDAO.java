@@ -1059,8 +1059,6 @@ public class InventoryDAO {
         sql.append("COALESCE(SUM(i.current_stock), 0) as total_stock, ");
         sql.append("COALESCE(SUM(i.reserved_quantity), 0) as reserved_stock, ");
         sql.append("COALESCE(SUM(GREATEST(i.current_stock - i.reserved_quantity, 0)), 0) as available_stock, ");
-        sql.append("(SELECT COALESCE(SUM(cp.quantity), 0) FROM contract_products cp ");
-        sql.append(" WHERE cp.product_id = p.id AND (cp.delivery_status IS NULL OR cp.delivery_status != 'delivered')) as total_required, ");
         sql.append("MIN(i.min_stock) as min_stock, ");
         sql.append("MAX(i.max_stock) as max_stock ");
         sql.append("FROM products p ");
@@ -1124,16 +1122,17 @@ public class InventoryDAO {
                     product.put("unitPrice", rs.getDouble("unit_price"));
                     product.put("imageUrl", rs.getString("image_url"));
                     int totalStock = rs.getInt("total_stock");
-                    int reservedStockRaw = rs.getInt("reserved_stock");
-                    // Giữ chỗ thực tế = min(reservedStock, totalStock) - chỉ tính phần có trong kho
-                    int reservedStock = Math.min(reservedStockRaw, totalStock);
+                    int reservedStock = rs.getInt("reserved_stock");
                     product.put("totalStock", totalStock);
                     product.put("reservedStock", reservedStock);
                     product.put("availableStock", rs.getInt("available_stock"));
-                    int totalRequired = rs.getInt("total_required");
+                    int totalRequired = reservedStock;
                     product.put("totalRequired", totalRequired);
-                    // Tính số lượng thiếu: totalRequired - totalStock (có thể âm)
+                    // Tính số lượng thiếu dựa trên tồn kho hiện tại, không để số âm
                     int shortage = totalRequired - totalStock;
+                    if (shortage < 0) {
+                        shortage = 0;
+                    }
                     product.put("shortage", shortage);
                     product.put("minStock", rs.getInt("min_stock"));
                     int maxStock = rs.getInt("max_stock");

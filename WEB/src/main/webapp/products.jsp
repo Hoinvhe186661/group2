@@ -1222,6 +1222,7 @@
             });
         }
 
+        // Hàm xóa sản phẩm thông qua AJAX và hiển thị phản hồi chi tiết từ server.
         function deleteProduct(element) {
             var id = $(element).data('product-id');
             if (!id || id <= 0) {
@@ -1236,13 +1237,24 @@
                         action: 'delete',
                         id: id
                     },
+                    dataType: 'json',
                     success: function(response) {
-                        // Reload trang để cập nhật danh sách
-                        window.location.reload();
+                        if (response.success) {
+                            alert(response.message || 'Xóa sản phẩm thành công');
+                            window.location.reload();
+                        } else {
+                            alert('Lỗi: ' + (response.message || 'Không thể xóa sản phẩm'));
+                        }
                     },
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', error);
-                        alert('Lỗi khi xóa sản phẩm: ' + error);
+                        var message = 'Lỗi khi xóa sản phẩm: ';
+                        if (xhr.responseText) {
+                            message += xhr.responseText;
+                        } else {
+                            message += error || status;
+                        }
+                        alert(message);
                     }
                 });
             }

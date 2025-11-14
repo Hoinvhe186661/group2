@@ -370,13 +370,13 @@
                 var statusText = getStatusText(item.totalStock, item.minStock);
                 
                 // Tính toán các giá trị
-                var reservedStock = item.reservedStock || 0;
-                var totalRequired = item.totalRequired || 0;
-                var shortage = item.shortage || 0;
+                var reservedStock = Number(item.reservedStock || 0);
+                var totalRequired = Number(item.totalRequired || 0);
+                var shortage = Number(item.shortage || 0);
                 
-                // Format hiển thị số thiếu (có thể âm)
-                var shortageDisplay = shortage >= 0 ? shortage : '(-' + Math.abs(shortage) + ')';
-                var shortageClass = shortage < 0 ? 'text-danger' : '';
+                // Format hiển thị số thiếu: >0 màu đỏ, =0 màu xanh
+                var shortageDisplay = shortage.toLocaleString();
+                var shortageClass = shortage > 0 ? 'text-danger' : 'text-success';
                 
                 var row = '<tr>';
                 row += '<td>' + item.productId + '</td>';

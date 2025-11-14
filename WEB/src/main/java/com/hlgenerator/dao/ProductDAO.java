@@ -152,23 +152,90 @@ public class ProductDAO {
         }
     }
 
-    
+    /**
+     * Xóa cứng một sản phẩm, bao gồm toàn bộ dữ liệu phụ thuộc để tránh lỗi ràng buộc khóa ngoại.
+     */
     public boolean deleteProduct(int id) {
         if (connection == null) {
             lastError = "Không thể kết nối đến cơ sở dữ liệu";
             return false;
         }
 
-        String sql = "DELETE FROM products WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            int result = ps.executeUpdate();
-            return result > 0;
+        boolean previousAutoCommit = true;
+        try {
+            previousAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            cleanupProductDependencies(id);
+
+            String sql = "DELETE FROM products WHERE id = ?";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setInt(1, id);
+                int result = ps.executeUpdate();
+                if (result == 0) {
+                    connection.rollback();
+                    lastError = "Không tìm thấy sản phẩm cần xóa";
+                    return false;
+                }
+                connection.commit();
+                return true;
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
-            lastError = "Lỗi khi xóa sản phẩm: " + e.getMessage();
+            tryingRollback(e);
             return false;
+        } finally {
+            restoreAutoCommit(previousAutoCommit);
         }
+    }
+
+    /**
+     * Xóa dữ liệu phụ thuộc của sản phẩm khỏi các bảng không hỗ trợ cascade delete.
+     */
+    private void cleanupProductDependencies(int productId) throws SQLException {
+        deleteDependentRows("DELETE FROM contract_products WHERE product_id = ?", productId);
+        deleteDependentRows("DELETE FROM invoice_items WHERE product_id = ?", productId);
+        deleteDependentRows("DELETE FROM product_price_history WHERE product_id = ?", productId);
+        deleteDependentRows("DELETE FROM inventory WHERE product_id = ?", productId);
+        deleteDependentRows("DELETE FROM stock_history WHERE product_id = ?", productId);
+    }
+
+    /**
+     * Thực thi câu lệnh DELETE tham số hóa cho một bảng phụ thuộc.
+     */
+    private void deleteDependentRows(String sql, int productId) throws SQLException {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, productId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Khôi phục trạng thái auto-commit sau khi xử lý giao dịch xóa.
+     */
+    private void restoreAutoCommit(boolean previousAutoCommit) {
+        try {
+            if (connection != null && !connection.isClosed()) {
+                connection.setAutoCommit(previousAutoCommit);
+            }
+        } catch (SQLException ignore) {
+        }
+    }
+
+    /**
+     * Thực hiện rollback khi giao dịch xóa gặp lỗi và lưu thông báo lỗi cuối cùng.
+     */
+    private void tryingRollback(SQLException originalException) {
+        if (connection != null) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                lastError = "Lỗi khi rollback sau khi xóa sản phẩm: " + rollbackEx.getMessage();
+                rollbackEx.printStackTrace();
+                return;
+            }
+        }
+        lastError = "Lỗi khi xóa sản phẩm: " + originalException.getMessage();
+        originalException.printStackTrace();
     }
 
     /**

@@ -887,10 +887,12 @@
                         var insufficientProducts = [];
                         
                         if (products.length === 0) {
-                            productsHtml = '<tr><td colspan="8" class="text-center text-muted">Hợp đồng chưa có sản phẩm</td></tr>';
+                            productsHtml = '<tr><td colspan="6" class="text-center text-muted">Hợp đồng chưa có sản phẩm</td></tr>';
                         } else {
                             products.forEach(function(product, index) {
                                 var isAvailable = product.available === true;
+                                var deliveryStatus = (product.deliveryStatus || '').toLowerCase();
+                                var isDelivered = deliveryStatus === 'delivered';
                                 var requiredQty = product.quantity || 0;
                                 var totalQty = product.totalStock || 0;
                                 var reservedQty = product.reservedStock || 0;
@@ -898,7 +900,9 @@
                                 var shortage = Math.max(requiredQty - availableQty, 0);
                                 
                                 // Lưu danh sách sản phẩm không đủ
-                                if (!isAvailable) {
+                                var highlightShortage = !isDelivered && !isAvailable;
+
+                                if (highlightShortage) {
                                     insufficientProducts.push({
                                         name: product.productName || '',
                                         required: requiredQty,
@@ -909,36 +913,20 @@
                                     });
                                 }
                                 
-                                // Tạo badge và màu nền cho hàng
-                                var availableBadge = isAvailable 
-                                    ? '<span class="label label-success"><i class="fa fa-check"></i> Đủ</span>' 
-                                    : '<span class="label label-danger"><i class="fa fa-times"></i> Thiếu</span>';
                                 var handoverBadge = getProductDeliveryBadge(product.deliveryStatus);
                                 
                                 // Màu nền cho hàng không đủ
-                                var rowClass = isAvailable ? '' : 'danger';
-                                var rowStyle = isAvailable ? '' : 'background-color: #f2dede;';
-                                
-                                var stockTitle = 'Tổng: ' + totalQty + ' | Giữ chỗ: ' + reservedQty + ' | Khả dụng: ' + availableQty;
-                                // Format hiển thị số âm với dấu trừ rõ ràng: (-2) thay vì (2)
-                                var availableDisplay = availableQty >= 0 ? availableQty : '(-' + Math.abs(availableQty) + ')';
-                                var availableClass = availableQty < 0 ? 'text-danger' : '';
+                                var rowClass = highlightShortage ? 'danger' : '';
+                                var rowStyle = highlightShortage ? 'background-color: #f2dede;' : '';
                                 
                                 var rowHtml = '<tr class="' + rowClass + '" style="' + rowStyle + '">' +
                                     '<td>' + (index + 1) + '</td>' +
                                     '<td><strong>' + escapeHtml(product.productCode || '') + '</strong></td>' +
                                     '<td><strong>' + escapeHtml(product.productName || '') + '</strong></td>' +
                                     '<td>' + escapeHtml(product.unit || '') + '</td>' +
-                                    '<td style="text-align: right;"><strong>' + requiredQty + '</strong></td>' +
-                                    '<td style="text-align: right;" title="' + stockTitle + '"><span class="' + availableClass + '">' + availableDisplay + '</span></td>' +
-                                    '<td style="text-align: center;">' + availableBadge;
-                                
-                                // Hiển thị số lượng thiếu nếu không đủ
-                                if (!isAvailable) {
-                                    rowHtml += '<br/><small class="text-danger">Thiếu: <strong>' + shortage + '</strong></small>';
-                                }
-                                
-                                rowHtml += '</td>' +
+                                    '<td style="text-align: right;"><strong>' + requiredQty + '</strong>' +
+                                        (highlightShortage ? '<br/><small class="text-danger">Thiếu: <strong>' + shortage + '</strong></small>' : '') +
+                                    '</td>' +
                                     '<td style="text-align: center;">' + handoverBadge + '</td>' +
                                 '</tr>';
                                 
@@ -966,8 +954,6 @@
                                         '<th>Tên sản phẩm</th>' +
                                         '<th>Đơn vị</th>' +
                                         '<th style="text-align: right;">Số lượng cần</th>' +
-                                        '<th style="text-align: right;">Tồn khả dụng</th>' +
-                                        '<th style="text-align: center;">Trạng thái</th>' +
                                         '<th style="text-align: center;">Bàn giao</th>' +
                                     '</tr>' +
                                 '</thead>' +

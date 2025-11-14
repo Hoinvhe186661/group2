@@ -783,8 +783,11 @@ public class ProductServlet extends HttpServlet {
         }
     }
     
+    /**
+     * Xóa sản phẩm khỏi hệ thống, bao gồm cả dữ liệu phụ thuộc để tránh lỗi ràng buộc.
+     */
     private void deleteProduct(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        response.setContentType("application/json");
+        response.setContentType("application/json; charset=UTF-8");
         PrintWriter out = response.getWriter();
         
         try {
@@ -792,12 +795,14 @@ public class ProductServlet extends HttpServlet {
             boolean success = productDAO.deleteProduct(id);
             
             if (success) {
-                out.write("{\"success\": true, \"message\": \"Product deleted successfully\"}");
+                out.write("{\"success\": true, \"message\": \"Xóa sản phẩm thành công\"}");
             } else {
-                out.write("{\"success\": false, \"message\": \"Failed to delete product\"}");
+                String error = productDAO.getLastError();
+                out.write("{\"success\": false, \"message\": \"" + escapeJson(error != null ? error : "Không thể xóa sản phẩm") + "\"}");
             }
         } catch (Exception e) {
-            out.write("{\"success\": false, \"message\": \"" + e.getMessage() + "\"}");
+            e.printStackTrace();
+            out.write("{\"success\": false, \"message\": \"Lỗi: " + escapeJson(e.getMessage()) + "\"}");
         }
     }
     
