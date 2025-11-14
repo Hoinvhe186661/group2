@@ -90,8 +90,7 @@
         .product-main-image {
             width: 100%;
             border: 2px solid #000000;
-            border-bottom: none;
-            border-radius: 4px 4px 0 0;
+            border-radius: 8px;
             overflow: hidden;
             background-color: #ffffff;
             display: flex;
@@ -106,71 +105,6 @@
             max-height: 500px;
             object-fit: contain;
             display: block;
-        }
-
-        .product-content-placeholder {
-            color: #0066cc;
-            font-size: 16px;
-            padding: 12px 15px;
-            background-color: #f8f9fa;
-            border: 2px solid #000000;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            cursor: pointer;
-            user-select: none;
-            transition: background-color 0.3s, color 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            margin: 0;
-        }
-
-        .product-content-placeholder:hover {
-            background-color: #e9ecef;
-            color: #0056b3;
-        }
-
-        .product-content-placeholder i {
-            margin-left: 10px;
-            transition: transform 0.3s;
-        }
-
-        .product-content-placeholder.expanded i {
-            transform: rotate(180deg);
-        }
-
-        .product-content-details {
-            display: none;
-            padding: 15px;
-            background-color: #ffffff;
-            border: 2px solid #000000;
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            margin: 0;
-            color: #333;
-            font-size: 15px;
-            line-height: 1.8;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            width: 100%;
-            text-align: left;
-        }
-
-        .product-content-details.show {
-            display: block;
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         /* Right Column - Product Details */
@@ -198,16 +132,38 @@
             padding-left: 10px;
         }
 
+        /* Thông số kĩ thuật - căn sát lề trái */
+        .detail-value.no-padding {
+            padding-left: 0;
+        }
+
         .product-price {
             font-size: 24px;
             font-weight: 700;
             color: var(--primary-red);
         }
 
-        .specifications {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            line-height: 1.6;
+        /* Nội dung sản phẩm - Ẩn/hiện */
+        .product-content-placeholder {
+            cursor: pointer;
+            padding: 12px 15px;
+            background-color: #f8f9fa;
+            border: 2px solid #000000;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .product-content-details {
+            display: none;
+            padding: 15px;
+            background-color: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .product-content-details.show {
+            display: block;
         }
 
         /* Service Info Box */
@@ -353,7 +309,7 @@
 
                             <div class="product-detail-item">
                                 <span class="detail-label">Thông số kĩ thuật:</span>
-                                <span class="detail-value specifications">
+                                <span class="detail-value no-padding">
                                     <c:choose>
                                         <c:when test="${not empty product.specifications and product.specifications != 'null'}">
                                             ${product.specifications}

@@ -225,9 +225,9 @@
             <select id="filterCategory" class="form-select" style="max-width:140px;">
               <option value="">Tất cả loại</option>
               <option value="technical">Kỹ thuật</option>
-              <option value="billing">Thanh toán</option>
+              
               <option value="general">Chung</option>
-              <option value="complaint">Khiếu nại</option>
+              
             </select>
             <button type="button" class="btn btn-primary btn-sm" id="filterBtn" style="min-width:60px;">
               <i class="fas fa-filter"></i> Lọc
@@ -411,7 +411,7 @@
               <option value="general">Chung</option>
             </select>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" id="v_contract_container">
             <label>Hợp đồng</label>
             <select id="v_contract_select" class="form-control" disabled>
               <option value="">-- Chọn hợp đồng --</option>
@@ -426,13 +426,13 @@
               <option value="low">Thấp</option>
             </select>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-6" id="v_product_container">
             <label>Sản phẩm trong hợp đồng</label>
             <select id="v_product_select" class="form-control" disabled>
               <option value="">-- Chọn sản phẩm --</option>
             </select>
           </div>
-          <div class="col-12">
+          <div class="col-12" id="v_external_product_container">
             <label>Sản phẩm ngoài</label>
             <input type="text" id="v_external_product" class="form-control" placeholder="Nhập tên sản phẩm ngoài" disabled/>
           </div>
@@ -1352,9 +1352,9 @@
     function getCategoryText(category) {
       const categoryMap = {
         'technical': 'Kỹ thuật',
-        'billing': 'Thanh toán',
+       
         'general': 'Chung',
-        'complaint': 'Khiếu nại'
+        
       };
       return categoryMap[category] || category || 'N/A';
     }
@@ -1855,6 +1855,15 @@
       var vProduct = document.getElementById('v_product_select');
       var vExternalProduct = document.getElementById('v_external_product');
       var vDeadline = document.getElementById('v_deadline');
+      
+      // Reset hiển thị các trường về mặc định (hiển thị tất cả)
+      var contractContainer = document.getElementById('v_contract_container');
+      var productContainer = document.getElementById('v_product_container');
+      var externalProductContainer = document.getElementById('v_external_product_container');
+      if (contractContainer) contractContainer.style.display = 'block';
+      if (productContainer) productContainer.style.display = 'block';
+      if (externalProductContainer) externalProductContainer.style.display = 'block';
+      
       // Reset trường sản phẩm ngoài về rỗng trước khi điền dữ liệu
       if (vExternalProduct) vExternalProduct.value = '';
       if (catInp) catInp.value = (ticketData.category||'general');
@@ -2033,6 +2042,29 @@
             var productLabel = (desc.match(/\[Sản phẩm:([^\]]+)\]/) || [])[1];
             var externalProductLabel = (desc.match(/\[Sản phẩm ngoài:([^\]]+)\]/) || [])[1];
             
+            // Lấy các container để ẩn/hiện
+            var contractContainer = document.getElementById('v_contract_container');
+            var productContainer = document.getElementById('v_product_container');
+            var externalProductContainer = document.getElementById('v_external_product_container');
+            
+            // Kiểm tra và ẩn/hiện các trường tương ứng
+            if (contractLabel && productLabel) {
+              // Có hợp đồng và sản phẩm -> ẩn sản phẩm ngoài
+              if (externalProductContainer) externalProductContainer.style.display = 'none';
+              if (contractContainer) contractContainer.style.display = 'block';
+              if (productContainer) productContainer.style.display = 'block';
+            } else if (externalProductLabel) {
+              // Có sản phẩm ngoài -> ẩn hợp đồng và sản phẩm trong hợp đồng
+              if (contractContainer) contractContainer.style.display = 'none';
+              if (productContainer) productContainer.style.display = 'none';
+              if (externalProductContainer) externalProductContainer.style.display = 'block';
+            } else {
+              // Không có gì -> hiển thị tất cả
+              if (contractContainer) contractContainer.style.display = 'block';
+              if (productContainer) productContainer.style.display = 'block';
+              if (externalProductContainer) externalProductContainer.style.display = 'block';
+            }
+            
             // Hiển thị sản phẩm ngoài nếu có, nếu không thì để trống
             if (vExternalProduct) {
               if (externalProductLabel) {
@@ -2092,6 +2124,37 @@
         vDeadline.setAttribute('min', todayStr);
       }
       
+      // Hàm cập nhật ẩn/hiện các trường dựa trên giá trị hiện tại
+      function updateFieldVisibility() {
+        var contractContainer = document.getElementById('v_contract_container');
+        var productContainer = document.getElementById('v_product_container');
+        var externalProductContainer = document.getElementById('v_external_product_container');
+        
+        var hasContract = vContract && vContract.value && vContract.value.trim() !== '';
+        var hasProduct = vProduct && vProduct.value && vProduct.value.trim() !== '';
+        var hasExternalProduct = vExternalProduct && vExternalProduct.value && vExternalProduct.value.trim() !== '';
+        
+        if (hasContract && hasProduct) {
+          // Có hợp đồng và sản phẩm -> ẩn sản phẩm ngoài
+          if (externalProductContainer) externalProductContainer.style.display = 'none';
+          if (contractContainer) contractContainer.style.display = 'block';
+          if (productContainer) productContainer.style.display = 'block';
+          if (vExternalProduct) vExternalProduct.value = ''; // Xóa giá trị sản phẩm ngoài
+        } else if (hasExternalProduct) {
+          // Có sản phẩm ngoài -> ẩn hợp đồng và sản phẩm trong hợp đồng
+          if (contractContainer) contractContainer.style.display = 'none';
+          if (productContainer) productContainer.style.display = 'none';
+          if (externalProductContainer) externalProductContainer.style.display = 'block';
+          if (vContract) vContract.selectedIndex = 0; // Reset hợp đồng
+          if (vProduct) { vProduct.innerHTML = '<option value="">-- Chọn sản phẩm --</option>'; vProduct.disabled = true; } // Reset sản phẩm
+        } else {
+          // Không có gì -> hiển thị tất cả
+          if (contractContainer) contractContainer.style.display = 'block';
+          if (productContainer) productContainer.style.display = 'block';
+          if (externalProductContainer) externalProductContainer.style.display = 'block';
+        }
+      }
+      
       // attach handlers
       if (enable) {
         enable.onchange = function(){
@@ -2114,7 +2177,10 @@
               var id = vContract.value;
               vProduct.innerHTML = '<option value="">-- Chọn sản phẩm --</option>';
               vProduct.disabled = !id;
-              if (!id) return;
+              if (!id) {
+                updateFieldVisibility();
+                return;
+              }
               fetch(ctx + '/api/contract-items?contractId=' + encodeURIComponent(id), { headers: { 'Accept': 'application/json' } })
                 .then(function(r){ return r.json(); })
                 .then(function(j2){
@@ -2126,7 +2192,20 @@
                     opt.textContent = name;
                     vProduct.appendChild(opt);
                   });
+                  updateFieldVisibility();
                 });
+            };
+          }
+          // Cập nhật ẩn/hiện khi thay đổi sản phẩm trong hợp đồng
+          if (on && vProduct) {
+            vProduct.onchange = function(){
+              updateFieldVisibility();
+            };
+          }
+          // Cập nhật ẩn/hiện khi thay đổi sản phẩm ngoài
+          if (on && vExternalProduct) {
+            vExternalProduct.oninput = function(){
+              updateFieldVisibility();
             };
           }
         };
