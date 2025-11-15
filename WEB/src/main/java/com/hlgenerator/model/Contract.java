@@ -4,24 +4,26 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 
+// Model đại diện cho hợp đồng trong hệ thống
 public class Contract {
     private int id;
-    private String contractNumber;
-    private int customerId;
-    private String contractType;
-    private String title;
-    private Date startDate;
-    private Date endDate;
-    private BigDecimal contractValue;
-    private String status; // draft, active, completed, terminated, expired
-    private String terms;
-    private Date signedDate;
-    private Integer createdBy;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
-    private String deletedByName; // Tạm thời để lưu tên người xóa
-    private String customerName; // Tên khách hàng
-    private String customerPhone; // Số điện thoại khách hàng
+    private String contractNumber; // Số hợp đồng
+    private int customerId; // ID khách hàng
+    private String contractType; // Loại hợp đồng (VD: "Bán hàng")
+    private String title; // Tiêu đề hợp đồng
+    private Date startDate; // Ngày bắt đầu
+    private Date endDate; // Ngày kết thúc (nếu có)
+    private BigDecimal contractValue; // Giá trị hợp đồng
+    private String status; // Trạng thái: draft, active, terminated, deleted
+    private String terms; // Điều khoản hợp đồng
+    private Date signedDate; // Ngày ký
+    private Integer createdBy; // ID người tạo
+    private Timestamp createdAt; // Thời gian tạo
+    private Timestamp updatedAt; // Thời gian cập nhật
+    private Timestamp deletedAt; // Thời gian xóa (dùng để hiển thị và sắp xếp)
+    private String deletedByName; // Tên người xóa (dùng để hiển thị)
+    private String customerName; // Tên khách hàng (JOIN từ bảng customers)
+    private String customerPhone; // Số điện thoại khách hàng (JOIN từ bảng customers)
 
     public Contract() {
     }
@@ -192,6 +194,14 @@ public class Contract {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Timestamp getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Timestamp deletedAt) {
+        this.deletedAt = deletedAt;
     }
 
     public String getDeletedByName() {

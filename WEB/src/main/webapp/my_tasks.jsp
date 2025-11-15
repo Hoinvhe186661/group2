@@ -1,7 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.Set" %>
 <%
-    // Kiểm tra đăng nhập
+    // ===== KIỂM TRA ĐĂNG NHẬP VÀ PHÂN QUYỀN =====
+    // Kiểm tra user đã đăng nhập chưa
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
     String userRole = (String) session.getAttribute("userRole");
@@ -205,6 +206,8 @@
                                 <h3>Nhiệm vụ của tôi</h3>
                             </header>
                                 <div class="panel-body table-responsive">
+                                    <!-- ===== BỘ LỌC NHIỆM VỤ ===== -->
+                                    <!-- Cho phép lọc theo: trạng thái, ưu tiên, từ khóa, khoảng thời gian -->
                                     <div class="filter-section">
                                         <div class="filter-header" onclick="toggleFilters()">
                                             <h4><i class="fa fa-filter"></i> Bộ lọc</h4>
@@ -304,7 +307,8 @@
         </aside>
     </div>
 
-    <!-- Modal: Báo cáo hoàn thành nhiệm vụ -->
+    <!-- ===== MODAL: BÁO CÁO HOÀN THÀNH NHIỆM VỤ ===== -->
+    <!-- Form để nhân viên báo cáo hoàn thành nhiệm vụ: giờ thực tế, % hoàn thành, mô tả, ảnh -->
     <div class="modal fade" id="completeTaskModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -408,7 +412,8 @@
         </div>
     </div>
 
-    <!-- Modal: Từ chối nhiệm vụ -->
+    <!-- ===== MODAL: TỪ CHỐI NHIỆM VỤ ===== -->
+    <!-- Form để nhân viên từ chối nhiệm vụ với lý do -->
     <div class="modal fade" id="rejectTaskModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -437,7 +442,8 @@
         </div>
     </div>
 
-    <!-- Modal: Xem chi tiết nhiệm vụ -->
+    <!-- ===== MODAL: XEM CHI TIẾT NHIỆM VỤ ===== -->
+    <!-- Hiển thị đầy đủ thông tin nhiệm vụ: WO, task, thời gian, mô tả -->
     <div class="modal fade" id="viewTaskDetailModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -539,7 +545,8 @@
         </div>
     </div>
 
-    <!-- Modal: Xem báo cáo chi tiết -->
+    <!-- ===== MODAL: XEM BÁO CÁO CHI TIẾT ===== -->
+    <!-- Hiển thị báo cáo hoàn thành đã submit: công việc đã làm, vấn đề, ảnh -->
     <div class="modal fade" id="viewReportModal" tabindex="-1" role="dialog">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -596,9 +603,11 @@
     <script src="js/bootstrap.min.js" type="text/javascript"></script>
     <input type="hidden" id="currentUserId" value="<%= session.getAttribute("userId") != null ? session.getAttribute("userId") : 0 %>" />
     <script>
+        // ===== BIẾN TOÀN CỤC =====
         var currentUserId = parseInt(document.getElementById('currentUserId').value) || 0;
         
-        // Toggle filter visibility
+        // ===== HÀM XỬ LÝ BỘ LỌC =====
+        // Đóng/mở bộ lọc và lưu trạng thái vào localStorage
         function toggleFilters() {
             var content = document.getElementById('filterContent');
             var icon = document.getElementById('filterToggleIcon');
@@ -614,7 +623,8 @@
             }
             saveMyTaskFilterState(expanded);
         }
-        // Chuyển đổi trạng thái và độ ưu tiên sang tiếng Việt (giữ nguyên logic giá trị)
+        // ===== HÀM CHUYỂN ĐỔI HIỂN THỊ =====
+        // Chuyển trạng thái và ưu tiên từ tiếng Anh sang tiếng Việt
         function statusToVietnamese(s) {
             var map = {
                 pending: 'Chờ nhận',
@@ -649,10 +659,12 @@
             return '<span class="label ' + (classMap[s]||'label-default') + '">' + statusToVietnamese(s) + '</span>';
         }
 
-        var currentPage = 1;
-        var currentTasksData = []; // Lưu dữ liệu tasks hiện tại
+        // ===== BIẾN QUẢN LÝ DỮ LIỆU =====
+        var currentPage = 1; // Trang hiện tại
+        var currentTasksData = []; // Lưu danh sách tasks đang hiển thị
 
-        // Hàm loại bỏ các phần trong dấu ngoặc vuông và chỉ giữ lại mô tả thực tế
+        // ===== HÀM XỬ LÝ DỮ LIỆU =====
+        // Loại bỏ các phần trong dấu ngoặc vuông [....] trong mô tả ticket
         function extractTicketDescription(text) {
             if(!text) return '';
             // Loại bỏ tất cả các phần trong dấu ngoặc vuông [....]
@@ -662,13 +674,17 @@
             return cleaned;
         }
 
+        // ===== HÀM TẢI DANH SÁCH NHIỆM VỤ =====
+        // Gọi API để lấy danh sách nhiệm vụ được giao cho user, có phân trang và lọc
         function loadTasks(){
+            // Lấy giá trị từ các filter
             var status = document.getElementById('statusFilter').value;
             var priority = document.getElementById('priorityFilter').value;
             var scheduledFrom = document.getElementById('scheduledFrom').value;
             var scheduledTo = document.getElementById('scheduledTo').value;
             var q = document.getElementById('q').value;
             var size = parseInt(document.getElementById('pageSize').value || '10', 10);
+            // Gọi API backend
             $.getJSON('api/tasks', { action:'listAssigned', userId: currentUserId, status: status, priority: priority, scheduledFrom: scheduledFrom, scheduledTo: scheduledTo, q: q, page: currentPage, size: size }, function(res){
                 var tbody = document.getElementById('taskBody');
                 tbody.innerHTML = '';
@@ -707,13 +723,15 @@
                     }catch(e){ return ''; }
                 }
 
+                // Render từng nhiệm vụ vào bảng
                 res.data.forEach(function(it){
                     var actions = [];
                     // Nút xem chi tiết - luôn hiển thị
                     actions.push('<button class="btn btn-xs btn-info" onclick="viewTaskDetail(' + it.taskId + ')"><i class="fa fa-info-circle"></i> Chi tiết</button>');
                     
+                    // Nhiệm vụ chờ nhận: hiển thị nút Nhận và Từ chối
                     if(it.taskStatus === 'pending'){
-                        // Kiểm tra xem có quá start_date không
+                        // Kiểm tra xem có quá start_date không (nếu quá thì không cho nhận)
                         var canAccept = true;
                         if(it.startDate) {
                             try {
@@ -743,9 +761,11 @@
                         }
                         actions.push('<button class="btn btn-xs btn-danger" onclick="openRejectModal(' + it.taskId + ')"><i class="fa fa-times"></i> Từ chối</button>');
                     }
+                    // Nhiệm vụ đang thực hiện: hiển thị nút Hoàn thành
                     if(it.taskStatus === 'in_progress'){
                         actions.push('<button class="btn btn-xs btn-success" onclick="openCompleteModal(' + it.taskId + ', \'' + (it.taskNumber||'').replace(/'/g, "\\'") + '\', \'' + (it.taskDescription||'').replace(/'/g, "\\'") + '\')"><i class="fa fa-flag-checkered"></i> Hoàn thành</button>');
                     }
+                    // Nhiệm vụ đã hoàn thành: hiển thị nút xem báo cáo
                     if(it.taskStatus === 'completed' || it.taskStatus === 'completed_late'){
                         actions.push('<button class="btn btn-xs btn-success" onclick="viewReport(' + it.taskId + ')"><i class="fa fa-file-text"></i> Báo cáo</button>');
                     }
@@ -838,6 +858,8 @@
             });
         }
 
+        // ===== HÀM RESET BỘ LỌC =====
+        // Xóa tất cả filter về mặc định và tải lại danh sách
         function resetFilters(){
             document.getElementById('statusFilter').value = '';
             document.getElementById('priorityFilter').value = '';
@@ -850,6 +872,8 @@
             loadTasks();
         }
 
+        // ===== HÀM HIỂN THỊ PHÂN TRANG =====
+        // Tạo các nút phân trang dựa trên meta (tổng số trang, trang hiện tại)
         function renderPagination(meta){
             var ul = document.getElementById('taskPagination');
             if(!meta){ ul.innerHTML = ''; return; }
@@ -867,11 +891,13 @@
             ul.innerHTML = html;
         }
 
+        // ===== HÀM THAY ĐỔI SỐ LƯỢNG HIỂN THỊ =====
         function changePageSize(){
             currentPage = 1;
             loadTasks();
         }
 
+        // ===== HÀM CHUYỂN TRANG =====
         window.gotoPage = function(p){
             if(p < 1) return false;
             currentPage = p;
@@ -879,8 +905,10 @@
             return false;
         }
 
+        // ===== HÀM NHẬN NHIỆM VỤ =====
+        // Chuyển trạng thái từ "pending" sang "in_progress"
         function ack(id){
-            // Kiểm tra deadline và start_date trước khi acknowledge
+            // Kiểm tra deadline và start_date trước khi nhận nhiệm vụ
             var taskData = null;
             for(var i = 0; i < currentTasksData.length; i++) {
                 if(currentTasksData[i].taskId == id) {
@@ -926,7 +954,7 @@
                 }
             }
             
-            // Kiểm tra deadline: nếu quá deadline thì cảnh báo nhưng vẫn cho phép nhận (có xác nhận)
+            // Kiểm tra deadline: nếu quá deadline thì cảnh báo nhưng vẫn cho phép nhận (có xác nhận của user)
             if(taskData.deadline) {
                 var deadlineDate = null;
                 try {
@@ -959,7 +987,8 @@
             });
         }
 
-        // Mở modal để báo cáo hoàn thành
+        // ===== HÀM MỞ MODAL BÁO CÁO HOÀN THÀNH =====
+        // Reset form và hiển thị modal để nhập thông tin hoàn thành
         function openCompleteModal(taskId, taskNumber, taskDesc){
             $('#modalTaskId').val(taskId);
             $('#modalTaskNumber').text(taskNumber);
@@ -977,11 +1006,12 @@
             $('#completeTaskModal').modal('show');
         }
 
-        // Submit form báo cáo hoàn thành
+        // ===== XỬ LÝ SUBMIT FORM BÁO CÁO HOÀN THÀNH =====
+        // Validate dữ liệu trước khi gửi lên server
         $('#completeTaskForm').on('submit', function(e){
             e.preventDefault();
             
-            // Validate frontend
+            // Validate các trường bắt buộc
             var actualHours = parseFloat($('#actualHours').val());
             if(!actualHours || actualHours <= 0) {
                 alert('Số giờ thực tế phải lớn hơn 0');
@@ -1050,7 +1080,7 @@
             
             var taskId = $('#modalTaskId').val();
             
-            // Kiểm tra deadline trước khi submit
+            // Kiểm tra deadline và start_date trước khi submit (nếu quá deadline thì cảnh báo)
             var taskData = null;
             for(var i = 0; i < currentTasksData.length; i++) {
                 if(currentTasksData[i].taskId == taskId) {
@@ -1114,6 +1144,7 @@
                     }
                 }
             }
+            // Tạo FormData để gửi dữ liệu và file lên server
             var formData = new FormData();
             formData.append('action', 'complete');
             formData.append('id', taskId);
@@ -1123,22 +1154,23 @@
             formData.append('issuesFound', issuesFound);
             formData.append('notes', notes);
             
-            // Thêm files
+            // Thêm các file ảnh đính kèm
             var files = $('#attachments')[0].files;
             for(var i = 0; i < files.length; i++){
                 formData.append('files', files[i]);
             }
             
-            // Disable button to prevent double submit
+            // Disable button để tránh submit nhiều lần
             var submitBtn = $(this).find('button[type="submit"]');
             submitBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Đang xử lý...');
             
+            // Gửi request lên backend
             $.ajax({
                 url: 'api/tasks',
                 type: 'POST',
                 data: formData,
-                processData: false,
-                contentType: false,
+                processData: false, // Không xử lý data (vì có file)
+                contentType: false, // Để browser tự set Content-Type
                 success: function(res){
                     try{ 
                         if(typeof res === 'string') res = JSON.parse(res); 
@@ -1158,7 +1190,8 @@
             });
         });
 
-        // Update percentage value với validation
+        // ===== XỬ LÝ SLIDER PHẦN TRĂM HOÀN THÀNH =====
+        // Cập nhật giá trị % khi user kéo slider (giới hạn 1-100%)
         $('#completionPercentage').on('input', function(){
             var val = parseFloat($(this).val()) || 0;
             if(val < 1) {
@@ -1171,7 +1204,8 @@
             $('#percentageValue').text(val);
         });
 
-        // Preview images
+        // ===== XỬ LÝ PREVIEW ẢNH =====
+        // Hiển thị preview ảnh trước khi upload, kiểm tra số lượng và kích thước
         $('#attachments').on('change', function(){
             var preview = $('#imagePreview');
             preview.html('');
@@ -1214,9 +1248,10 @@
             }
         });
 
-        // Xem chi tiết nhiệm vụ
+        // ===== HÀM XEM CHI TIẾT NHIỆM VỤ =====
+        // Gọi API để lấy thông tin đầy đủ của nhiệm vụ và hiển thị trong modal
         function viewTaskDetail(taskId) {
-            // Gọi API để lấy chi tiết task
+            // Gọi API backend để lấy chi tiết
             $.getJSON('api/tasks', {
                 action: 'getDetail', 
                 id: taskId, 
@@ -1256,7 +1291,8 @@
             });
         }
         
-        // Hiển thị chi tiết nhiệm vụ
+        // ===== HÀM HIỂN THỊ CHI TIẾT NHIỆM VỤ =====
+        // Điền dữ liệu vào modal chi tiết và hiển thị
         function displayTaskDetail(taskData) {
             if(taskData) {
                         // Format ngày tháng
@@ -1353,7 +1389,8 @@
                     }
         }
 
-        // Xem báo cáo chi tiết
+        // ===== HÀM XEM BÁO CÁO CHI TIẾT =====
+        // Lấy và hiển thị báo cáo hoàn thành đã submit (công việc đã làm, ảnh, vấn đề)
         function viewReport(taskId) {
             $.getJSON('api/tasks', {action: 'get', id: taskId}, function(res) {
                 if (res.success && res.data) {
@@ -1397,7 +1434,8 @@
             });
         }
 
-        // Reject modal logic
+        // ===== HÀM MỞ MODAL TỪ CHỐI =====
+        // Reset form và hiển thị modal để nhập lý do từ chối
         function openRejectModal(id){
             $('#rejectTaskId').val(id);
             $('#rejectReason').val('');
@@ -1417,10 +1455,13 @@
         $('#notes').on('input', function(){
             $('#notesCount').text(this.value.length);
         });
+        // ===== XỬ LÝ SUBMIT FORM TỪ CHỐI =====
+        // Validate lý do từ chối và gửi lên server
         $('#rejectTaskForm').on('submit', function(e){
             e.preventDefault();
             var id = $('#rejectTaskId').val();
             var reason = ($('#rejectReason').val()||'').trim();
+            // Validate: lý do phải từ 10-300 ký tự
             if(reason.length < 10){
                 alert('Lý do từ chối quá ngắn. Vui lòng nhập tối thiểu 10 ký tự để giải thích rõ ràng.');
                 $('#rejectReason').focus();
@@ -1447,13 +1488,16 @@
             });
         });
 
-        // ===== LƯU & KHÔI PHỤC TRẠNG THÁI BỘ LỌC + GIÁ TRỊ FILTER =====
+        // ===== LƯU & KHÔI PHỤC TRẠNG THÁI BỘ LỌC =====
+        // Lưu trạng thái đóng/mở của bộ lọc vào localStorage
         function saveMyTaskFilterState(isExpanded) {
             localStorage.setItem('myTaskFilterExpanded', isExpanded ? '1' : '0');
         }
+        // Đọc trạng thái đóng/mở từ localStorage
         function loadMyTaskFilterState() {
             return localStorage.getItem('myTaskFilterExpanded') === '1';
         }
+        // Lưu giá trị các filter vào localStorage
         function saveMyTaskFilterValues() {
             var filterVals = {
                 status: document.getElementById('statusFilter').value,
@@ -1465,6 +1509,7 @@
             };
             localStorage.setItem('myTaskFilterValues', JSON.stringify(filterVals));
         }
+        // Đọc giá trị các filter từ localStorage và điền vào form
         function loadMyTaskFilterValues() {
             var vals = localStorage.getItem('myTaskFilterValues');
             if(vals) {
@@ -1495,7 +1540,8 @@
             }
             saveMyTaskFilterState(expanded);
         }
-        // --- Gán lại trạng thái expand/collapse + value khi DOM ready ---
+        // ===== KHỞI TẠO KHI TRANG LOAD =====
+        // Khôi phục trạng thái filter và tải danh sách nhiệm vụ
         document.addEventListener('DOMContentLoaded', function() {
             var content = document.getElementById('filterContent');
             var icon = document.getElementById('filterToggleIcon');
@@ -1510,19 +1556,19 @@
             // Tải danh sách ngay khi mở trang
             loadTasks();
         });
-        // --- Mỗi lần bấm Lọc, chuyển input/select hoặc Xóa lọc thì lưu giá trị ---
+        // ===== TỰ ĐỘNG LƯU GIÁ TRỊ FILTER =====
         // Lưu giá trị filter trước khi loadTasks
         function myTasksFilterBeforeLoad() {
             saveMyTaskFilterValues();
         }
-        // Thay đổi event onsubmit filter form
+        // Lưu giá trị khi submit form filter
         var filterForm = document.querySelector('.filter-content form');
         if(filterForm) {
             filterForm.addEventListener('submit', function(){
                 myTasksFilterBeforeLoad();
             });
         }
-        // Các trường khi change cũng lưu lại giá trị
+        // Lưu giá trị khi user thay đổi bất kỳ filter nào
         ['statusFilter','priorityFilter','q','scheduledFrom','scheduledTo','pageSize'].forEach(function(id){
             var el = document.getElementById(id);
             if(el) {
@@ -1530,7 +1576,8 @@
                 el.addEventListener('input', saveMyTaskFilterValues);
             }
         });
-        // --- Sửa luôn hàm resetFilters để xóa input+localStorage về mặc định ---
+        // ===== HÀM RESET FILTER (ĐÃ ĐỊNH NGHĨA Ở TRÊN) =====
+        // Xóa tất cả filter và localStorage về mặc định
         function resetFilters(){
             document.getElementById('statusFilter').value = '';
             document.getElementById('priorityFilter').value = '';

@@ -21,15 +21,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+// ===== SERVLET XỬ LÝ NHIỆM VỤ (MY TASKS) =====
+// API endpoint: /api/tasks
+// Xử lý các thao tác: xem danh sách, nhận nhiệm vụ, hoàn thành, từ chối
 @WebServlet("/api/tasks")
 @MultipartConfig(
-	maxFileSize = 5242880,      // 5MB
-	maxRequestSize = 26214400,  // 25MB
-	fileSizeThreshold = 1048576 // 1MB
+	maxFileSize = 5242880,      // 5MB - giới hạn kích thước file upload
+	maxRequestSize = 26214400,  // 25MB - giới hạn tổng request
+	fileSizeThreshold = 1048576 // 1MB - ngưỡng lưu vào disk
 )
 public class TaskServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private TaskDAO taskDAO;
+	private TaskDAO taskDAO; // DAO để thao tác với database
 
 	@Override
 	public void init() throws ServletException {
@@ -37,6 +40,8 @@ public class TaskServlet extends HttpServlet {
 		taskDAO = new TaskDAO();
 	}
 
+	// ===== XỬ LÝ GET REQUEST =====
+	// Các action: listAssigned (danh sách nhiệm vụ), get (chi tiết), getDetail (chi tiết với assignment)
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
@@ -47,10 +52,13 @@ public class TaskServlet extends HttpServlet {
 		PrintWriter out = response.getWriter();
 
 		try {
+			// ===== LẤY DANH SÁCH NHIỆM VỤ ĐƯỢC GIAO =====
+			// Có phân trang và lọc theo: trạng thái, ưu tiên, từ khóa, khoảng thời gian
 			if ("listAssigned".equals(action)) {
 				// Tự động hủy các task quá start_date mà vẫn pending trước khi load danh sách
 				taskDAO.autoCancelOverduePendingTasks();
 				
+				// Lấy các tham số filter từ request
 				int userId = Integer.parseInt(param(request, "userId", "0"));
 				String status = request.getParameter("status");
 				String priority = request.getParameter("priority");
@@ -60,9 +68,11 @@ public class TaskServlet extends HttpServlet {
 				java.sql.Date from = null, to = null;
 				try { if (scheduledFrom != null && !scheduledFrom.isEmpty()) from = java.sql.Date.valueOf(scheduledFrom); } catch (Exception ignored) {}
 				try { if (scheduledTo != null && !scheduledTo.isEmpty()) to = java.sql.Date.valueOf(scheduledTo); } catch (Exception ignored) {}
+				// Xử lý phân trang
 				int page = Integer.parseInt(param(request, "page", "1"));
 				int size = Integer.parseInt(param(request, "size", "10"));
 				if (page < 1) page = 1; if (size < 1) size = 10; if (size > 100) size = 100;
+				// Đếm tổng số và lấy danh sách có phân trang
 				int total = taskDAO.countAssignmentsForUser(userId, status, priority, from, to, keyword);
 				int offset = (page - 1) * size;
 				List<TaskAssignment> items = taskDAO.getAssignmentsForUserPaged(userId, status, priority, from, to, keyword, size, offset);
@@ -80,14 +90,18 @@ public class TaskServlet extends HttpServlet {
 				meta.put("totalPages", (int)Math.ceil(total / (double)size));
 				result.put("meta", meta);
 				out.print(result.toString());
-			} else if ("get".equals(action)) {
+			} 
+			// ===== LẤY CHI TIẾT NHIỆM VỤ =====
+			else if ("get".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				Task task = taskDAO.getTaskById(taskId);
 				JSONObject result = new JSONObject();
 				result.put("success", task != null);
 				result.put("data", task != null ? new JSONObject(task) : JSONObject.NULL);
 				out.print(result.toString());
-			} else if ("getDetail".equals(action)) {
+			} 
+			// ===== LẤY CHI TIẾT NHIỆM VỤ VỚI THÔNG TIN ASSIGNMENT =====
+			else if ("getDetail".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				int userId = Integer.parseInt(param(request, "userId", "0"));
 				TaskAssignment assignment = taskDAO.getAssignmentDetail(taskId, userId);
@@ -114,6 +128,8 @@ public class TaskServlet extends HttpServlet {
 		}
 	}
 
+	// ===== XỬ LÝ POST REQUEST =====
+	// Các action: acknowledge (nhận nhiệm vụ), complete (hoàn thành), reject (từ chối)
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		request.setCharacterEncoding("UTF-8");
@@ -125,13 +141,19 @@ public class TaskServlet extends HttpServlet {
 
 		try {
 			System.out.println("TaskServlet - Action: " + action); // Debug log
+			// ===== NHẬN NHIỆM VỤ =====
+			// Chuyển trạng thái từ "pending" sang "in_progress"
 			if ("acknowledge".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				boolean ok = taskDAO.acknowledgeTask(taskId);
 				String message = ok ? "Đã nhận nhiệm vụ" : 
 					"Không thể nhận nhiệm vụ. Nhiệm vụ phải ở trạng thái 'Chờ nhận' và chưa quá ngày bắt đầu thực hiện.";
 				out.print(jsonResult(ok, message).toString());
-			} else if ("complete".equals(action)) {
+			} 
+			// ===== BÁO CÁO HOÀN THÀNH NHIỆM VỤ =====
+			// Lưu thông tin: giờ thực tế, % hoàn thành, mô tả, vấn đề, ảnh
+			else if ("complete".equals(action)) {
+				// Lấy dữ liệu từ form
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String workDesc = request.getParameter("workDescription");
 				String issuesFound = request.getParameter("issuesFound");
@@ -139,7 +161,8 @@ public class TaskServlet extends HttpServlet {
 				String actual = request.getParameter("actualHours");
 				String percentage = request.getParameter("completionPercentage");
 				
-				// Validate workDescription
+				// ===== VALIDATE DỮ LIỆU =====
+				// Validate mô tả công việc (bắt buộc, 10-1000 ký tự)
 				if (workDesc == null || workDesc.trim().isEmpty()) {
 					out.print(jsonResult(false, "Mô tả công việc đã thực hiện không được để trống").toString());
 					return;
@@ -154,7 +177,7 @@ public class TaskServlet extends HttpServlet {
 					return;
 				}
 				
-				// Validate issuesFound (nếu có nhập)
+				// Validate vấn đề phát sinh (tùy chọn, nếu có thì 10-500 ký tự)
 				String issuesFoundTrimmed = null;
 				if (issuesFound != null && !issuesFound.trim().isEmpty()) {
 					issuesFoundTrimmed = issuesFound.trim();
@@ -168,7 +191,7 @@ public class TaskServlet extends HttpServlet {
 					}
 				}
 				
-				// Validate notes (nếu có nhập)
+				// Validate ghi chú (tùy chọn, nếu có thì 10-1000 ký tự)
 				String notesTrimmed = null;
 				if (notes != null && !notes.trim().isEmpty()) {
 					notesTrimmed = notes.trim();
@@ -182,7 +205,7 @@ public class TaskServlet extends HttpServlet {
 					}
 				}
 				
-				// Validate actualHours
+				// Validate số giờ thực tế (bắt buộc, > 0)
 				BigDecimal actualHours = null;
 				if (actual != null && !actual.isEmpty()) {
 					try {
@@ -200,7 +223,7 @@ public class TaskServlet extends HttpServlet {
 					return;
 				}
 				
-				// Validate completionPercentage
+				// Validate phần trăm hoàn thành (1-100%, mặc định 100%)
 				BigDecimal completionPercentage;
 				if (percentage != null && !percentage.isEmpty()) {
 					try {
@@ -221,7 +244,8 @@ public class TaskServlet extends HttpServlet {
 					completionPercentage = new BigDecimal(100);
 				}
 				
-			// Validate deadline and start_date before completing
+			// ===== KIỂM TRA DEADLINE VÀ START_DATE =====
+			// Nếu quá deadline thì đánh dấu là "completed_late"
 			java.sql.Timestamp[] deadlineAndStart = taskDAO.getTaskDeadlineAndStartDate(taskId);
 			java.sql.Timestamp deadline = deadlineAndStart[0];
 			java.sql.Timestamp startDate = deadlineAndStart[1];
@@ -255,13 +279,14 @@ public class TaskServlet extends HttpServlet {
 				}
 			}
 				
-				// Check if completion_date < start_date (should not happen, but validate anyway)
+				// Kiểm tra ngày hoàn thành không được trước ngày bắt đầu
 				if (startDate != null && now.before(startDate)) {
 					out.print(jsonResult(false, "Ngày hoàn thành không thể trước ngày bắt đầu").toString());
 					return;
 				}
 				
-				// Upload files
+				// ===== UPLOAD FILE ẢNH =====
+				// Lưu các file ảnh vào thư mục uploads/tasks/
 				List<String> uploadedFiles = new ArrayList<>();
 				try {
 					Collection<Part> fileParts = request.getParts();
@@ -288,11 +313,12 @@ public class TaskServlet extends HttpServlet {
 					// Continue even if file upload fails
 				}
 				
-				// Update task with detailed report (pass isLate to set status = 'completed_late' if late)
+				// ===== CẬP NHẬT NHIỆM VỤ =====
+				// Lưu báo cáo hoàn thành vào database (nếu quá deadline thì status = 'completed_late')
 				boolean ok = taskDAO.completeTask(taskId, actualHours, completionPercentage,
 				                                 workDescTrimmed, issuesFoundTrimmed, notesTrimmed, uploadedFiles, isLate);
 				
-				// Return message with late warning if applicable
+				// Trả về thông báo (có cảnh báo nếu hoàn thành muộn)
 				if (ok) {
 					if (isLate) {
 						out.print(jsonResult(true, "Đã báo cáo hoàn thành! ⚠️ " + lateMessage + " (Trạng thái: Hoàn thành muộn)").toString());
@@ -302,18 +328,23 @@ public class TaskServlet extends HttpServlet {
 				} else {
 					out.print(jsonResult(false, "Không thể hoàn thành nhiệm vụ. Nhiệm vụ phải ở trạng thái 'Đang thực hiện'").toString());
 				}
-			} else if ("updateNotes".equals(action)) {
+			} 
+			// ===== CẬP NHẬT GHI CHÚ =====
+			else if ("updateNotes".equals(action)) {
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String notes = request.getParameter("notes");
 				boolean ok = taskDAO.updateTaskStatus(taskId, null, null, null, notes, null);
 				out.print(jsonResult(ok, ok ? "Đã lưu ghi chú" : "Không thể lưu ghi chú").toString());
-			} else if ("reject".equals(action)) {
+			} 
+			// ===== TỪ CHỐI NHIỆM VỤ =====
+			// Chuyển trạng thái từ "pending" sang "rejected" với lý do
+			else if ("reject".equals(action)) {
 				System.out.println("TaskServlet - Processing reject action"); // Debug log
 				int taskId = Integer.parseInt(request.getParameter("id"));
 				String rejectionReason = request.getParameter("rejectionReason");
 				System.out.println("TaskServlet - TaskId: " + taskId + ", Reason: " + rejectionReason); // Debug log
 				
-				// Validate rejection reason
+				// Validate lý do từ chối (bắt buộc, 10-300 ký tự)
 				if (rejectionReason == null || rejectionReason.trim().isEmpty()) {
 					out.print(jsonResult(false, "Lý do từ chối không được để trống").toString());
 					return;
@@ -342,11 +373,14 @@ public class TaskServlet extends HttpServlet {
 		}
 	}
 
+	// ===== HÀM TIỆN ÍCH =====
+	// Lấy parameter từ request, nếu null hoặc rỗng thì trả về giá trị mặc định
 	private String param(HttpServletRequest req, String name, String def) {
 		String v = req.getParameter(name);
 		return v == null || v.isEmpty() ? def : v;
 	}
 
+	// Tạo JSON response với success và message
 	private JSONObject jsonResult(boolean success, String message) {
 		JSONObject o = new JSONObject();
 		o.put("success", success);
@@ -354,6 +388,8 @@ public class TaskServlet extends HttpServlet {
 		return o;
 	}
 
+	// ===== HÀM TỪ CHỐI NHIỆM VỤ TRỰC TIẾP =====
+	// Cập nhật trạng thái task sang "rejected" trong database
 	private boolean rejectTaskDirectly(int taskId, String rejectionReason) {
 		try {
 			// Sử dụng thông tin từ database.properties
@@ -382,6 +418,8 @@ public class TaskServlet extends HttpServlet {
 		}
 	}
 
+	// ===== HÀM LẤY TÊN FILE TỪ PART =====
+	// Trích xuất tên file từ header content-disposition
 	private String getFileName(Part part) {
 		String contentDisposition = part.getHeader("content-disposition");
 		if (contentDisposition == null) return null;

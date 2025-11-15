@@ -17,6 +17,7 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    // Kiểm tra kết nối database có còn hoạt động không
     private boolean checkConnection() {
         try {
             return connection != null && !connection.isClosed();
@@ -42,15 +43,17 @@ public class ContractDAO extends DBConnect {
         return checkContractNumberExists(contractNumber, excludeId, false);
     }
 
+    // Thêm hợp đồng mới vào database
     public boolean addContract(Contract contract) {
         if (!checkConnection()) return false;
         
-        // Kiểm tra trùng lặp số hợp đồng
+        // Kiểm tra số hợp đồng có trùng không
         if (isContractNumberExists(contract.getContractNumber())) {
             logger.warning("Contract number already exists: " + contract.getContractNumber());
             return false;
         }
         
+        // Insert hợp đồng vào database
         String sql = "INSERT INTO contracts (contract_number, customer_id, contract_type, title, start_date, end_date, contract_value, status, terms, signed_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, contract.getContractNumber());
@@ -70,6 +73,7 @@ public class ContractDAO extends DBConnect {
             }
             int affected = ps.executeUpdate();
             if (affected > 0) {
+                // Lấy ID tự động sinh và set vào contract
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
                         int generatedId = rs.getInt(1);
@@ -85,15 +89,17 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    // Cập nhật thông tin hợp đồng
     public boolean updateContract(Contract contract) {
         if (!checkConnection()) return false;
         
-        // Kiểm tra trùng lặp số hợp đồng (loại trừ chính hợp đồng đang sửa)
+        // Kiểm tra số hợp đồng có trùng không (loại trừ chính hợp đồng đang sửa)
         if (isContractNumberExists(contract.getContractNumber(), contract.getId())) {
             logger.warning("Contract number already exists for update: " + contract.getContractNumber());
             return false;
         }
         
+        // Update hợp đồng trong database
         String sql = "UPDATE contracts SET contract_number=?, customer_id=?, contract_type=?, title=?, start_date=?, end_date=?, contract_value=?, status=?, terms=?, signed_date=? WHERE id=?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, contract.getContractNumber());
@@ -135,22 +141,27 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    // Xóa hợp đồng (soft delete - chuyển vào thùng rác)
     public boolean deleteContract(int id) {
         return performSoftDelete(id, null);
     }
 
+    // Xóa hợp đồng kèm thông tin người xóa
     public boolean deleteContract(int id, int deletedBy) {
         return performSoftDelete(id, deletedBy);
     }
 
+    // Khôi phục hợp đồng từ thùng rác về trạng thái "draft"
     public boolean restoreContract(int id) {
         return performRestore(id, "draft");
     }
 
+    // Khôi phục hợp đồng về trạng thái chỉ định
     public boolean restoreContractWithStatus(int id, String status) {
         return performRestore(id, status);
     }
 
+    // Xóa vĩnh viễn hợp đồng khỏi database (chỉ xóa được khi status = 'deleted')
     public boolean permanentlyDeleteContract(int id) {
         if (!checkConnection()) return false;
         String sql = "DELETE FROM contracts WHERE id = ? AND status = 'deleted'";
@@ -163,6 +174,7 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    // Lấy hợp đồng theo ID (kèm thông tin khách hàng)
     public Contract getContractById(int id) {
         if (!checkConnection()) return null;
         String sql = "SELECT c.*, cu.company_name as customer_name, cu.phone as customer_phone FROM contracts c LEFT JOIN customers cu ON cu.id = c.customer_id WHERE c.id=?";
@@ -179,6 +191,7 @@ public class ContractDAO extends DBConnect {
         return null;
     }
 
+    // Lấy tất cả hợp đồng (không bao gồm đã xóa)
     public List<Contract> getAllContracts() {
         List<Contract> list = new ArrayList<>();
         if (!checkConnection()) {
@@ -445,16 +458,17 @@ public class ContractDAO extends DBConnect {
         return list;
     }
 
-    // Helper method để kiểm tra contract number tồn tại
+    // Kiểm tra số hợp đồng có tồn tại không
     private boolean checkContractNumberExists(String contractNumber, Integer excludeId, boolean includeDeleted) {
         if (!checkConnection()) return false;
         
+        // Xây dựng SQL query động
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM contracts WHERE contract_number = ?");
         if (excludeId != null) {
-            sql.append(" AND id != ?");
+            sql.append(" AND id != ?"); // Loại trừ hợp đồng đang sửa
         }
         if (!includeDeleted) {
-            sql.append(" AND status != 'deleted'");
+            sql.append(" AND status != 'deleted'"); // Không bao gồm đã xóa
         }
         
         try (PreparedStatement ps = connection.prepareStatement(sql.toString())) {
@@ -471,11 +485,11 @@ public class ContractDAO extends DBConnect {
         }
     }
 
-    // Helper method để thực hiện soft delete
+    // Thực hiện soft delete (chỉ đổi status = 'deleted', không xóa thật)
     private boolean performSoftDelete(int id, Integer deletedBy) {
         if (!checkConnection()) return false;
         
-        // Kiểm tra xem các cột có tồn tại không
+        // Kiểm tra xem các cột deleted_by, deleted_at có tồn tại không
         String[] columnsToCheck = deletedBy != null ? 
             new String[]{"deleted_by", "deleted_at"} : 
             new String[]{"deleted_at"};
@@ -488,7 +502,7 @@ public class ContractDAO extends DBConnect {
             }
         } catch (SQLException e) {
             logger.log(Level.SEVERE, "Columns do not exist, using fallback method", e);
-            // Fallback: chỉ cập nhật status
+            // Nếu không có cột deleted_at thì chỉ cập nhật status
             String sql = "UPDATE contracts SET status = 'deleted' WHERE id = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
                 ps.setInt(1, id);
@@ -528,30 +542,50 @@ public class ContractDAO extends DBConnect {
         }
     }
 
-    // Helper method để restore contract
+    // Khôi phục hợp đồng từ thùng rác về trạng thái chỉ định
     private boolean performRestore(int id, String status) {
         if (!checkConnection()) return false;
-        String sql = "UPDATE contracts SET status = ? WHERE id = ? AND status = 'deleted'";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, status);
-            ps.setInt(2, id);
-            return ps.executeUpdate() > 0;
+        
+        // Kiểm tra xem các cột deleted_by, deleted_at có tồn tại không
+        try {
+            String checkSql = "SELECT deleted_by, deleted_at FROM contracts WHERE id = ? LIMIT 1";
+            try (PreparedStatement checkPs = connection.prepareStatement(checkSql)) {
+                checkPs.setInt(1, id);
+                checkPs.executeQuery();
+            }
+            // Nếu có các cột, reset chúng về NULL khi khôi phục
+            String sql = "UPDATE contracts SET status = ?, deleted_by = NULL, deleted_at = NULL WHERE id = ? AND status = 'deleted'";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, status);
+                ps.setInt(2, id);
+                return ps.executeUpdate() > 0;
+            }
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Error restoring contract", e);
-            return false;
+            // Nếu không có các cột, chỉ cập nhật status
+            logger.log(Level.INFO, "Columns deleted_by, deleted_at do not exist, using fallback restore method", e);
+            String sql = "UPDATE contracts SET status = ? WHERE id = ? AND status = 'deleted'";
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, status);
+                ps.setInt(2, id);
+                return ps.executeUpdate() > 0;
+            } catch (SQLException ex) {
+                logger.log(Level.SEVERE, "Error restoring contract", ex);
+                return false;
+            }
         }
     }
 
-    // Helper method để thêm search conditions
+    // Thêm điều kiện tìm kiếm vào SQL query
     private void addSearchConditions(StringBuilder sql, List<Object> params, String search, String... columns) {
         if (search != null && !search.isEmpty()) {
             sql.append(" AND (");
+            // Tìm kiếm trong các cột chỉ định
             for (int i = 0; i < columns.length; i++) {
                 if (i > 0) sql.append(" OR ");
                 sql.append(columns[i]).append(" LIKE ?");
                 params.add("%" + search + "%");
             }
-            // Thêm exact ID search nếu search là số
+            // Nếu search là số thì tìm chính xác theo ID
             try {
                 int exactId = Integer.parseInt(search.trim());
                 sql.append(" OR c.id = ?");
@@ -561,6 +595,7 @@ public class ContractDAO extends DBConnect {
         }
     }
 
+    // Chuyển đổi ResultSet thành đối tượng Contract
     private Contract mapRow(ResultSet rs) throws SQLException {
         Contract c = new Contract();
         c.setId(rs.getInt("id"));
@@ -579,7 +614,7 @@ public class ContractDAO extends DBConnect {
         c.setCreatedAt(rs.getTimestamp("created_at"));
         c.setUpdatedAt(rs.getTimestamp("updated_at"));
         
-        // Lấy thông tin khách hàng nếu có
+        // Lấy thông tin khách hàng nếu query có JOIN với bảng customers
         try {
             c.setCustomerName(rs.getString("customer_name"));
         } catch (SQLException e) {
@@ -587,6 +622,13 @@ public class ContractDAO extends DBConnect {
         }
         try {
             c.setCustomerPhone(rs.getString("customer_phone"));
+        } catch (SQLException e) {
+            // Field không tồn tại trong một số query
+        }
+        
+        // Lấy thông tin xóa nếu có
+        try {
+            c.setDeletedAt(rs.getTimestamp("deleted_at"));
         } catch (SQLException e) {
             // Field không tồn tại trong một số query
         }
@@ -602,7 +644,7 @@ public class ContractDAO extends DBConnect {
      */
     public String generateNextContractNumber() {
         if (!checkConnection()) return null;
-        // Lấy ngày theo định dạng yyyymmdd từ DB để đồng bộ múi giờ với DB
+        // Lấy ngày hiện tại từ database để đồng bộ múi giờ
         String currentYmd = null;
         try (PreparedStatement ps = connection.prepareStatement("SELECT DATE_FORMAT(CURRENT_DATE, '%Y%m%d')")) {
             try (ResultSet rs = ps.executeQuery()) {
@@ -614,16 +656,17 @@ public class ContractDAO extends DBConnect {
             logger.log(Level.WARNING, "Error fetching current date from DB, fallback to JVM time", e);
         }
         if (currentYmd == null) {
+            // Nếu không lấy được từ DB thì dùng thời gian JVM
             java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
             currentYmd = java.time.LocalDate.now().format(fmt);
         }
 
-        String prefix = "HD-" + currentYmd + "-"; // e.g. HD-20251103-
+        String prefix = "HD-" + currentYmd + "-"; // VD: HD-20251103-
         String like = prefix + "%";
 
         int nextSeq = 1;
         String lastNumber = null;
-        // Lấy số hợp đồng lớn nhất theo prefix (kể cả deleted) rồi tăng +1
+        // Lấy số hợp đồng lớn nhất trong ngày (kể cả đã xóa) để tăng số thứ tự
         String sql = "SELECT contract_number FROM contracts WHERE contract_number LIKE ? ORDER BY contract_number DESC LIMIT 1";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, like);
@@ -636,6 +679,7 @@ public class ContractDAO extends DBConnect {
             logger.log(Level.SEVERE, "Error fetching last contract number by prefix", e);
         }
 
+        // Tăng số thứ tự dựa trên số hợp đồng lớn nhất
         if (lastNumber != null && lastNumber.startsWith(prefix)) {
             String tail = lastNumber.substring(prefix.length());
             try {
@@ -645,16 +689,16 @@ public class ContractDAO extends DBConnect {
             }
         }
 
-        // Thử tối đa 10 lần để tránh xung đột song song hiếm gặp
+        // Thử tối đa 10 lần để tránh xung đột khi nhiều request cùng lúc
         for (int attempt = 0; attempt < 10; attempt++) {
             String candidate = prefix + String.format("%04d", nextSeq);
             if (!isContractNumberExistsIncludingDeleted(candidate)) {
-                return candidate;
+                return candidate; // Tìm thấy số không trùng
             }
             nextSeq++;
         }
 
-        // Cuối cùng nếu vẫn trùng, tạo chuỗi ngẫu nhiên an toàn hơn
+        // Nếu vẫn trùng thì dùng UUID để đảm bảo unique
         String fallback = prefix + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         return fallback;
     }

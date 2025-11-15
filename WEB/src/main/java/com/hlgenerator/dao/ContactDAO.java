@@ -829,9 +829,7 @@ public class ContactDAO extends DBConnect {
         return messages;
     }
 
-    /**
-     * Helper method để thêm search conditions (giống ContractDAO)
-     */
+   // xử lý tìm kiếm 
     private void addSearchConditions(StringBuilder sql, List<Object> params, String search, String... columns) {
         if (search != null && !search.isEmpty()) {
             sql.append(" AND (");

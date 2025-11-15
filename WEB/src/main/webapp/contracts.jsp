@@ -1,18 +1,19 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.util.Set" %>
 <%
-    // Kiểm tra đăng nhập
+    // Lấy thông tin đăng nhập từ session
     String username = (String) session.getAttribute("username");
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
     String userRole = (String) session.getAttribute("userRole");
-    String currentStatus = request.getParameter("status");
+    String currentStatus = request.getParameter("status"); // Lấy trạng thái filter từ URL
     
+    // Nếu chưa đăng nhập thì chuyển về trang login
     if (username == null || isLoggedIn == null || !isLoggedIn) {
         response.sendRedirect(request.getContextPath() + "/login.jsp");
         return;
     }
     
-    // Kiểm tra quyền: chỉ người có quyền manage_contracts mới truy cập được
+    // Kiểm tra quyền truy cập - chỉ user có quyền manage_contracts mới vào được
     @SuppressWarnings("unchecked")
     Set<String> userPermissions = (Set<String>) session.getAttribute("userPermissions");
     if (userPermissions == null || !userPermissions.contains("manage_contracts")) {
@@ -21,7 +22,7 @@
     }
 %>
 <%!
-    // Hàm dịch trạng thái sang tiếng Việt
+    // Chuyển đổi mã trạng thái sang tiếng Việt để hiển thị
     String translateStatus(String status) {
         if (status == null) return "-";
         if ("draft".equals(status)) return "Nháp";
@@ -31,23 +32,22 @@
         return status;
     }
     
-    // Hàm format số tiền với dấu chấm ngăn cách hàng nghìn (không có dấu thập phân)
+    // Format số tiền: thêm dấu chấm ngăn cách hàng nghìn (VD: 1000000 -> 1.000.000)
     String formatCurrencyValue(String value) {
         if (value == null || value.trim().isEmpty() || "-".equals(value)) {
             return "-";
         }
         try {
-            // Parse số, bỏ dấu thập phân
             double numValue = Double.parseDouble(value);
-            long longValue = (long) numValue;
+            long longValue = (long) numValue; // Bỏ phần thập phân
             
-            // Format với dấu chấm ngăn cách hàng nghìn (theo chuẩn Việt Nam)
+            // Format với dấu chấm theo chuẩn Việt Nam
             java.text.DecimalFormatSymbols symbols = new java.text.DecimalFormatSymbols(java.util.Locale.getDefault());
             symbols.setGroupingSeparator('.');
             java.text.DecimalFormat formatter = new java.text.DecimalFormat("#,###", symbols);
             return formatter.format(longValue);
         } catch (NumberFormatException e) {
-            return value; // Trả về giá trị gốc nếu không parse được
+            return value; // Nếu không parse được thì trả về nguyên gốc
         }
     }
 %>
@@ -988,34 +988,34 @@
         });
 
         $(document).ready(function() {
-            // Kiểm tra và hủy DataTable cũ nếu đã tồn tại
+            // Khởi tạo DataTable cho bảng hợp đồng
             if ($.fn.DataTable.isDataTable('#contractsTable')) {
-                $('#contractsTable').DataTable().destroy();
+                $('#contractsTable').DataTable().destroy(); // Xóa DataTable cũ nếu có
             }
             
             contractsTable = $('#contractsTable').DataTable({
                 "language": { "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json" },
                 "processing": false,
-                "serverSide": false,
-                "paging": false,
-                "searching": false,
+                "serverSide": false, // Dữ liệu đã render sẵn ở server
+                "paging": false, // Dùng phân trang tự viết
+                "searching": false, // Dùng filter tự viết
                 "dom": 'lrt',
-                "ordering": true,
+                "ordering": true, // Cho phép sắp xếp
                 "info": false,
                 "autoWidth": false,
                 "responsive": true,
-                "order": [[0, "desc"]],
-                "columnDefs": [{ "targets": [11], "orderable": false, "searchable": false }],
+                "order": [[0, "desc"]], // Sắp xếp mặc định theo ID giảm dần
+                "columnDefs": [{ "targets": [11], "orderable": false, "searchable": false }], // Cột "Thao tác" không sắp xếp được
                 "retrieve": true
             });
-            // Safety: remove filter container if any existed from previous inits
-            $('#contractsTable_filter').remove();
+            $('#contractsTable_filter').remove(); // Xóa search box mặc định
             
-            // Load danh sách khách hàng
+            // Load danh sách khách hàng vào dropdown
             loadCustomers();
 
         });
 
+        // Load danh sách khách hàng từ API và đổ vào dropdown
         function loadCustomers() {
             console.log('Loading customers...');
             $.get('api/contracts', { action: 'customers' }, function(resp) {
@@ -1023,6 +1023,7 @@
                 if (resp.success) {
                     var options = '<option value="">Chọn khách hàng...</option>';
                     if (resp.data && resp.data.length > 0) {
+                        // Tạo option cho mỗi khách hàng: Mã - Tên công ty (Người liên hệ)
                         resp.data.forEach(function(customer) {
                             options += '<option value="' + customer.id + '">' + 
                                       customer.customerCode + ' - ' + customer.companyName + 
@@ -1043,6 +1044,7 @@
             });
         }
 
+        // Load danh sách sản phẩm từ API và đổ vào dropdown (kèm thông tin giá, tồn kho)
         function loadProducts() {
             console.log('Loading products...');
             $.get('api/contracts', { action: 'products' }, function(resp) {
@@ -1055,6 +1057,7 @@
                             // Hiển thị số âm với dấu trừ rõ ràng: (-2) thay vì (2)
                             var stockDisplay = availableQty >= 0 ? availableQty.toLocaleString() : '(-' + Math.abs(availableQty).toLocaleString() + ')';
                             var stockClass = availableQty < 0 ? 'text-danger' : '';
+                            // Lưu thông tin sản phẩm vào data attributes để dùng sau
                             options += '<option value="' + product.id + '" data-description="' + (product.description || '') + '" data-unitprice="' + product.unitPrice + '" data-warranty="' + (product.warrantyMonths != null ? product.warrantyMonths : '') + '" data-quantity="' + availableQty + '">' + 
                                       product.productCode + ' - ' + product.productName + 
                                       ' (' + formatCurrency(product.unitPrice) + ' VNĐ, tồn: ' + stockDisplay + ')</option>';
@@ -1074,11 +1077,12 @@
             });
         }
 
+        // Xem chi tiết hợp đồng - load thông tin và hiển thị trong modal
         function viewContract(id) {
             $.get('api/contracts', { action: 'get', id: id }, function(resp) {
                 if (resp.success) {
                     var c = resp.data;
-                    // Chuyển xuống dòng trong điều khoản để hiển thị đẹp
+                    // Chuyển xuống dòng trong điều khoản để hiển thị đẹp (thay \n thành <br>)
                     var rawTerms = (c.terms || '-');
                     var safeTerms = $('<div/>').text(rawTerms).html().replace(/\n/g, '<br>');
                     var html = '' +
@@ -1185,18 +1189,18 @@
             }, 'json');
         }
 
+        // Sửa hợp đồng - load thông tin hợp đồng và đổ vào form
         function editContract(id) {
-            // Kiểm tra xem có đang xem hợp đồng đã bị xóa không
+            // Không cho sửa hợp đồng đã xóa
             var currentStatus = '<%= request.getParameter("status") %>';
             if (currentStatus === 'deleted') {
                 showAlert('Không thể chỉnh sửa hợp đồng đã bị xóa. Vui lòng khôi phục trước.', 'warning');
                 return;
             }
             
-            // Load danh sách khách hàng trước, sau đó mới load thông tin hợp đồng
-            // Đảm bảo dropdown có đầy đủ options trước khi set giá trị
+            // Load danh sách khách hàng trước, sau đó mới load hợp đồng (để dropdown có đầy đủ options)
             $.get('api/contracts', { action: 'customers' }, function(customersResp) {
-                // Load danh sách khách hàng vào dropdown
+                // Đổ danh sách khách hàng vào dropdown
                 if (customersResp.success) {
                     var options = '<option value="">Chọn khách hàng...</option>';
                     if (customersResp.data && customersResp.data.length > 0) {
@@ -1288,15 +1292,17 @@
             });
         }
 
+        // Load danh sách sản phẩm của hợp đồng
         function loadContractProducts(contractId) {
             $.get('api/contract-items', { contractId: contractId }, function(resp) {
                 if (resp.success) {
-                    contractProducts = resp.data || [];
-                    renderContractProducts();
+                    contractProducts = resp.data || []; // Lưu vào mảng tạm
+                    renderContractProducts(); // Vẽ lại bảng sản phẩm
                 }
             }, 'json');
         }
 
+        // Vẽ lại bảng sản phẩm trong modal
         function renderContractProducts() {
             var tbody = $('#contractProductsTableBody');
             var noProductsRow = $('#noProductsRow');
@@ -1409,14 +1415,15 @@
             }, 100);
         }
 
+        // Thêm hoặc sửa sản phẩm vào hợp đồng
         function addProductToContract() {
             var productId = $('#newProductId').val();
             var description = $('#newDescription').val();
             var quantity = $('#newQuantity').val();
-            var unitPrice = $('#newUnitPrice').val().replace(/[.,\s]/g, ''); // Loại bỏ dấu phẩy, chấm và khoảng trắng
+            var unitPrice = $('#newUnitPrice').val().replace(/[.,\s]/g, ''); // Bỏ dấu phẩy, chấm, khoảng trắng
             var warrantyMonths = $('#newWarrantyMonths').val();
             var notes = $('#newNotes').val();
-            var editingIndex = $('#editingProductIndex').val();
+            var editingIndex = $('#editingProductIndex').val(); // Nếu có thì là đang sửa
 
             if (!productId || !quantity || !unitPrice) {
                 showAlert('Vui lòng chọn sản phẩm và nhập số lượng', 'warning');
@@ -1437,10 +1444,10 @@
                 }
             });
             
-            // Tính số lượng khả dụng thực tế (tồn kho - số lượng đã thêm vào hợp đồng)
+            // Tính số lượng khả dụng thực tế = tồn kho - số lượng đã thêm vào hợp đồng
             var actuallyAvailable = availableQuantity - totalQuantityInContract;
             
-            // Kiểm tra nếu số lượng yêu cầu vượt quá tồn kho khả dụng - chỉ cảnh báo, không chặn
+            // Cảnh báo nếu không đủ tồn kho (nhưng vẫn cho phép thêm)
             if (requestedQuantity > actuallyAvailable) {
                 var productName = selectedOption.text().split(' - ')[1] || selectedOption.text();
                 if (productName.indexOf('(') > 0) {
@@ -1450,9 +1457,9 @@
                          'Tồn kho hiện có: ' + actuallyAvailable.toLocaleString() + 
                          ', yêu cầu: ' + requestedQuantity.toLocaleString() + 
                          '. Vui lòng báo kho nhập thêm sản phẩm và điều chỉnh lại điều khoản hợp đồng cho phù hợp hơn.', 'warning');
-                // Vẫn cho phép thêm sản phẩm vào hợp đồng, không return
             }
 
+            // Tạo object sản phẩm
             var product = {
                 productId: parseInt(productId),
                 description: description,
@@ -1462,16 +1469,15 @@
                 notes: notes
             };
 
+            // Nếu đang sửa thì cập nhật, không thì thêm mới
             if (editingIndex !== '') {
-                // Sửa sản phẩm
-                contractProducts[parseInt(editingIndex)] = product;
+                contractProducts[parseInt(editingIndex)] = product; // Sửa
             } else {
-                // Thêm sản phẩm mới
-                contractProducts.push(product);
+                contractProducts.push(product); // Thêm mới
             }
 
-            renderContractProducts();
-            hideAddProductForm();
+            renderContractProducts(); // Vẽ lại bảng
+            hideAddProductForm(); // Ẩn form
         }
         
         // Cập nhật thông tin tồn kho (cho phép số âm)
@@ -1549,7 +1555,7 @@
             }
         }
         
-        // Format tiền đẹp hơn
+        // Format số tiền: thêm dấu phẩy ngăn cách hàng nghìn (VD: 1000000 -> 1,000,000)
         function formatCurrency(amount) {
             if (!amount || amount === 0) return '0';
             return parseFloat(amount).toLocaleString('vi-VN', {
@@ -1558,40 +1564,40 @@
             });
         }
         
-        // Format tiền với đơn vị VNĐ
+        // Format số tiền kèm đơn vị VNĐ
         function formatCurrencyWithUnit(amount) {
             return formatCurrency(amount) + ' <span class="text-muted">VNĐ</span>';
         }
         
-        // Cập nhật tổng giá trị
+        // Cập nhật tổng giá trị sản phẩm và hiển thị
         function updateTotalValue(total) {
             total = total || 0;
             $('#totalContractValue').html('<span class="text-primary" style="font-size: 16px;">' + formatCurrencyWithUnit(total) + '</span>');
             
-            // CHỈ tự động cập nhật giá trị hợp đồng khi THÊM MỚI (không phải chỉnh sửa)
-            // Khi chỉnh sửa, giữ nguyên giá trị hợp đồng đã nhập (có thể đã giảm giá)
+            // Chỉ tự động cập nhật giá trị hợp đồng khi THÊM MỚI (không phải chỉnh sửa)
+            // Khi sửa, giữ nguyên giá trị đã nhập (có thể đã giảm giá)
             if (!isEditingMode) {
-                // Chỉ cập nhật khi thêm mới và chưa có giá trị hoặc giá trị = 0
                 var currentValueStr = $('#contractValue').val() || '';
                 var currentValue = parseFloat(currentValueStr.toString().replace(/[^\d]/g, '')) || 0;
+                // Chỉ cập nhật nếu giá trị = 0
                 if (currentValue === 0) {
                     $('#contractValue').val(formatCurrency(total));
                     previousTotalValue = total;
                 }
             }
             
-            // Kiểm tra và hiển thị cảnh báo nếu giá trị không khớp
-            checkContractValueMatch();
+            checkContractValueMatch(); // Kiểm tra xem giá trị hợp đồng có khớp với tổng sản phẩm không
         }
         
-        // Biến lưu tổng giá trị trước đó để so sánh
-        var previousTotalValue = 0;
+        var previousTotalValue = 0; // Lưu tổng giá trị trước đó để so sánh
         
-        // Kiểm tra giá trị hợp đồng có khớp với tổng sản phẩm không
+        // Kiểm tra xem giá trị hợp đồng có khớp với tổng giá trị sản phẩm không
         function checkContractValueMatch() {
-            // Parse giá trị hợp đồng (bỏ dấu phẩy)
+            // Lấy giá trị hợp đồng (bỏ dấu phẩy)
             var contractValueStr = $('#contractValue').val() || '';
             var contractValue = parseFloat(contractValueStr.toString().replace(/[^\d]/g, '')) || 0;
+            
+            // Tính tổng giá trị sản phẩm
             var totalProducts = 0;
             contractProducts.forEach(function(product) {
                 totalProducts += (parseFloat(product.quantity) || 0) * (parseFloat(product.unitPrice) || 0);
@@ -1616,12 +1622,13 @@
             }
         }
 
+        // Lưu hợp đồng (thêm mới hoặc cập nhật)
         function saveContract() {
-            // Clear previous errors
-            clearValidationErrors();
+            clearValidationErrors(); // Xóa lỗi cũ
             
+            // Thu thập dữ liệu từ form
             var data = {
-                action: currentEditingId ? 'update' : 'add',
+                action: currentEditingId ? 'update' : 'add', // Xác định là thêm hay sửa
                 id: $('#contractId').val(),
                 contractNumber: $('#contractNumber').val(),
                 customerId: $('#customerId').val(),
@@ -1630,17 +1637,17 @@
                 endDate: $('#endDate').val(),
                 signedDate: $('#signedDate').val(),
                 startDate: $('#startDate').val(),
-                // Parse giá trị hợp đồng (bỏ dấu phẩy) trước khi gửi
+                // Bỏ dấu phẩy trong số tiền trước khi gửi (VD: "1.000.000" -> 1000000)
                 contractValue: $('#contractValue').val() ? parseFloat($('#contractValue').val().toString().replace(/[^\d]/g, '')) || 0 : '',
                 status: $('#status').val(),
                 terms: $('#terms').val(),
                 products: contractProducts // Gửi kèm danh sách sản phẩm
             };
 
-            // Validation
+            // Kiểm tra dữ liệu hợp lệ
             var isValid = true;
             
-            // Kiểm tra trường bắt buộc
+            // Kiểm tra các trường bắt buộc
             if (!data.contractNumber || data.contractNumber.trim() === '') {
                 showFieldError('contractNumber', 'Số hợp đồng không được để trống');
                 isValid = false;
@@ -1651,18 +1658,17 @@
                 isValid = false;
             }
             
-            // Kiểm tra ngày ký (chỉ bắt buộc khi status != "draft")
+            // Nếu không phải "Nháp" thì phải có ngày ký và ngày bắt đầu
             if (data.status !== 'draft') {
                 if (!data.signedDate || data.signedDate.trim() === '') {
                     showFieldError('signedDate', 'Ngày ký không được để trống khi hợp đồng không phải "Nháp"');
                     isValid = false;
                 }
-                // Kiểm tra ngày bắt đầu (chỉ bắt buộc khi status != "draft")
                 if (!data.startDate || data.startDate.trim() === '') {
                     showFieldError('startDate', 'Ngày bắt đầu không được để trống khi hợp đồng không phải "Nháp"');
                     isValid = false;
                 } else {
-                    // Validate startDate >= signedDate (chỉ khi có signedDate)
+                    // Ngày bắt đầu phải >= ngày ký
                     if (data.signedDate && data.signedDate.trim() !== '') {
                         var signedDate = new Date(data.signedDate);
                         var startDate = new Date(data.startDate);
@@ -1674,13 +1680,13 @@
                 }
             }
             
-            // Kiểm tra ngày chấm dứt (bắt buộc khi status = "terminated")
+            // Nếu trạng thái là "Chấm Dứt" thì phải có ngày chấm dứt
             if (data.status === 'terminated') {
                 if (!data.endDate || data.endDate.trim() === '') {
                     showFieldError('endDate', 'Ngày chấm dứt không được để trống khi trạng thái là "Chấm Dứt"');
                     isValid = false;
                 } else {
-                    // Validate endDate >= startDate (chỉ khi có startDate)
+                    // Ngày chấm dứt phải >= ngày bắt đầu
                     if (data.startDate && data.startDate.trim() !== '') {
                         var startDate = new Date(data.startDate);
                         var endDate = new Date(data.endDate);
@@ -1691,27 +1697,22 @@
                     }
                 }
             } else {
-                // Các trạng thái khác: clear endDate nếu có
+                // Các trạng thái khác: xóa endDate
                 if (data.endDate) {
                     data.endDate = '';
                 }
             }
             
-            // Kiểm tra validation cho trạng thái "hiệu lực" (active)
+            // Nếu trạng thái là "Hiệu Lực" thì phải có tiêu đề, điều khoản và ít nhất 1 sản phẩm
             if (data.status === 'active') {
-                // Tiêu đề bắt buộc
                 if (!data.title || data.title.trim() === '') {
                     showFieldError('title', 'Tiêu đề không được để trống khi trạng thái là "Hiệu Lực"');
                     isValid = false;
                 }
-                
-                // Điều khoản bắt buộc
                 if (!data.terms || data.terms.trim() === '') {
                     showFieldError('terms', 'Điều khoản không được để trống khi trạng thái là "Hiệu Lực"');
                     isValid = false;
                 }
-                
-                // Phải có ít nhất 1 sản phẩm
                 if (!contractProducts || contractProducts.length === 0) {
                     showModalAlert('Hợp đồng ở trạng thái "Hiệu Lực" phải có ít nhất 1 sản phẩm', 'danger');
                     isValid = false;
@@ -1732,21 +1733,20 @@
                 return;
             }
             
-            // Hàm tiếp tục lưu hợp đồng sau khi xác nhận
+            // Gửi dữ liệu lên server để lưu
             function continueSaveContract() {
-                // Backend expects products as JSON string
-                data.products = JSON.stringify(contractProducts);
+                data.products = JSON.stringify(contractProducts); // Chuyển mảng sản phẩm thành JSON string
                 $.post('api/contracts', data, function(resp) {
                     if (resp.success) {
                         showModalAlert(resp.message, 'success');
-                        // Đợi 3 giây để người dùng kịp đọc thông báo thành công
+                        // Đợi 3 giây rồi đóng modal và reload trang
                         setTimeout(function() {
                             $('#contractModal').modal('hide');
                             contractProducts = []; // Reset danh sách sản phẩm
                             location.reload();
                         }, 3000);
                     } else {
-                        // Hiển thị lỗi cụ thể từ server
+                        // Hiển thị lỗi từ server (nếu số hợp đồng trùng thì highlight ô số hợp đồng)
                         if (resp.message && (resp.message.includes('trùng') || resp.message.includes('tồn tại'))) {
                             showFieldError('contractNumber', resp.message);
                             showModalAlert(resp.message, 'danger');
@@ -1757,8 +1757,7 @@
                 }, 'json');
             }
             
-            // Tiếp tục lưu hợp đồng (không kiểm tra chênh lệch giá)
-            continueSaveContract();
+            continueSaveContract(); // Gọi hàm lưu
         }
         
         function clearValidationErrors() {
@@ -1772,8 +1771,8 @@
             $('#' + fieldId).addClass('has-error');
         }
 
+        // Xóa hợp đồng (chuyển vào thùng rác, không xóa vĩnh viễn)
         function deleteContract(id) {
-            // Kiểm tra xem có đang xem hợp đồng đã bị xóa không
             var currentStatus = '<%= request.getParameter("status") %>';
             if (currentStatus === 'deleted') {
                 showAlert('Hợp đồng này đã bị xóa. Sử dụng nút "Xóa vĩnh viễn" để xóa hoàn toàn.', 'warning');
@@ -1783,10 +1782,10 @@
             if (!confirm('Bạn có chắc chắn muốn chuyển hợp đồng này vào thùng rác?')) return;
             $.post('api/contracts', { action: 'delete', id: id }, function(resp) {
                 if (resp.success) {
-                    showAlert(resp.message, 'success', 8000); // Hiển thị 8 giây cho thông báo xóa
+                    showAlert(resp.message, 'success', 8000);
                     setTimeout(function() {
-                        location.reload();
-                    }, 2000); // Đợi 2 giây để user đọc thông báo trước khi reload
+                        location.reload(); // Reload sau 2 giây
+                    }, 2000);
                 } else {
                     showAlert(resp.message, 'danger', 8000);
                 }
@@ -2395,7 +2394,7 @@
             }, 100);
         });
 
-        // Hiển thị/ẩn endDate và cập nhật thời hạn khi thay đổi trạng thái
+        // Khi thay đổi trạng thái hợp đồng: hiển thị/ẩn các trường và cập nhật required
         $(document).on('change', '#status', function() {
             var status = $(this).val();
             var endDateGroup = $('#endDateGroup');
@@ -2407,54 +2406,41 @@
             var titleRequired = $('#titleRequired');
             var termsInput = $('#terms');
             var termsRequired = $('#termsRequired');
-            
             var startDateInput = $('#startDate');
             var startDateRequired = $('#startDateRequired');
             
-            // Cập nhật required và label cho signedDate
+            // Nếu là "Nháp" thì không bắt buộc ngày ký và ngày bắt đầu
             if (status === 'draft') {
-                // Nháp: không bắt buộc ngày ký
                 signedDateInput.prop('required', false);
                 signedDateRequired.hide();
-                // Nháp: không bắt buộc ngày bắt đầu
                 startDateInput.prop('required', false);
                 startDateRequired.hide();
             } else {
-                // Các trạng thái khác: bắt buộc ngày ký
+                // Các trạng thái khác: bắt buộc ngày ký và ngày bắt đầu
                 signedDateInput.prop('required', true);
                 signedDateRequired.show();
-                // Các trạng thái khác: bắt buộc ngày bắt đầu
                 startDateInput.prop('required', true);
                 startDateRequired.show();
             }
             
-            // Cập nhật required cho Tiêu đề và Điều khoản khi status = "active"
+            // Nếu là "Hiệu Lực" thì bắt buộc tiêu đề và điều khoản
             if (status === 'active') {
                 titleInput.prop('required', true);
-                if (titleRequired.length > 0) {
-                    titleRequired.show();
-                }
+                if (titleRequired.length > 0) titleRequired.show();
                 termsInput.prop('required', true);
-                if (termsRequired.length > 0) {
-                    termsRequired.show();
-                }
+                if (termsRequired.length > 0) termsRequired.show();
             } else {
                 titleInput.prop('required', false);
-                if (titleRequired.length > 0) {
-                    titleRequired.hide();
-                }
+                if (titleRequired.length > 0) titleRequired.hide();
                 termsInput.prop('required', false);
-                if (termsRequired.length > 0) {
-                    termsRequired.hide();
-                }
+                if (termsRequired.length > 0) termsRequired.hide();
             }
             
+            // Nếu là "Chấm Dứt" thì hiển thị và bắt buộc ngày chấm dứt
             if (status === 'terminated') {
-                // Hiển thị trường endDate
                 endDateGroup.show();
                 endDateInput.prop('required', true);
-                
-                // Nếu chưa có endDate, set hôm nay
+                // Nếu chưa có ngày chấm dứt thì set hôm nay
                 var currentEnd = endDateInput.val();
                 if (!currentEnd) {
                     var today = new Date();
@@ -2463,18 +2449,14 @@
                     var iso = today.getFullYear() + '-' + m + '-' + d;
                     endDateInput.val(iso);
                 }
-                
-                // Cập nhật label thời hạn
                 contractDuration.val('Có thời hạn');
             } else {
-                // Ẩn trường endDate
+                // Các trạng thái khác: ẩn ngày chấm dứt
                 endDateGroup.hide();
                 endDateInput.prop('required', false);
                 endDateInput.val('');
                 $('#endDateError').hide();
                 endDateInput.removeClass('has-error');
-                
-                // Cập nhật label thời hạn
                 contractDuration.val('Vô thời hạn');
             }
         });
@@ -2540,7 +2522,7 @@
             }
         });
 
-        // Event handler cho dropdown sản phẩm
+        // Khi chọn sản phẩm: tự động điền mô tả, đơn giá, bảo hành
         $(document).on('change', '#newProductId', function() {
             var selectedOption = $(this).find('option:selected');
             var description = selectedOption.data('description') || '';
@@ -2556,36 +2538,32 @@
                 $('#newWarrantyMonths').val('');
             }
 
-            // Hiển thị thông tin tồn kho
-            updateStockInfo(availableQuantity);
-
-            // Tính thành tiền
-            calculateLineTotal();
+            updateStockInfo(availableQuantity); // Hiển thị thông tin tồn kho
+            calculateLineTotal(); // Tính thành tiền
         });
 
-        // Event handler cho số lượng
+        // Khi nhập số lượng: tính lại thành tiền và kiểm tra tồn kho
         $(document).on('input', '#newQuantity', function() {
             calculateLineTotal();
-            // Kiểm tra tồn kho khi nhập số lượng
             checkStockAvailability();
         });
 
-        // Tính thành tiền
+        // Tính thành tiền = số lượng x đơn giá
         function calculateLineTotal() {
             var quantity = parseFloat($('#newQuantity').val()) || 0;
-            var unitPrice = parseFloat($('#newUnitPrice').val().replace(/[.,\s]/g, '')) || 0;
+            var unitPrice = parseFloat($('#newUnitPrice').val().replace(/[.,\s]/g, '')) || 0; // Bỏ dấu phẩy
             var lineTotal = quantity * unitPrice;
             $('#newLineTotal').val(formatCurrency(lineTotal));
         }
 
-        // Cập nhật giá trị hợp đồng từ tổng sản phẩm
+        // Tự động cập nhật giá trị hợp đồng = tổng giá trị sản phẩm (khi click nút "Tự động")
         function updateContractValueFromProducts() {
             var total = 0;
             contractProducts.forEach(function(product) {
                 total += (parseFloat(product.quantity) || 0) * (parseFloat(product.unitPrice) || 0);
             });
             $('#contractValue').val(formatCurrency(total));
-            previousTotalValue = total; // Lưu lại để so sánh
+            previousTotalValue = total;
             checkContractValueMatch(); // Ẩn cảnh báo vì đã khớp
             showModalAlert('Đã cập nhật giá trị hợp đồng: ' + formatCurrency(total) + ' VNĐ', 'success');
         }

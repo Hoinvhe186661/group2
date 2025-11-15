@@ -920,7 +920,9 @@
             feedbackModal.hide();
           }
           // Reload lại danh sách support requests để cập nhật trạng thái
-          load();
+          if (typeof window.loadSupportRequests === 'function') {
+            window.loadSupportRequests();
+          }
         } else {
           alert('✗ ' + (j && j.message ? j.message : 'Lỗi khi gửi feedback'));
         }
@@ -981,7 +983,9 @@
             feedbackModal.hide();
           }
           // Reload lại danh sách support requests để cập nhật trạng thái
-          load();
+          if (typeof window.loadSupportRequests === 'function') {
+            window.loadSupportRequests();
+          }
         } else {
           alert('✗ ' + (j && j.message ? j.message : 'Lỗi khi gửi feedback'));
         }
@@ -1512,6 +1516,8 @@
           tbody.innerHTML='<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Lỗi kết nối máy chủ: ' + error.message + '</td></tr>';
         });
     }
+    // Đưa hàm load() ra scope toàn cục để các hàm khác có thể truy cập
+    window.loadSupportRequests = load;
     load();
 
     // Thêm event listener cho sắp xếp

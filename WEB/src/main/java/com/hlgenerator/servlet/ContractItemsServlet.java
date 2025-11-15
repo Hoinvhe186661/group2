@@ -15,6 +15,7 @@ import java.io.PrintWriter;
 public class ContractItemsServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
+    // Lấy danh sách sản phẩm trong hợp đồng
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.setCharacterEncoding("UTF-8");
@@ -44,6 +45,7 @@ public class ContractItemsServlet extends HttpServlet {
             String user = props.getProperty("db.username");
             String pass = props.getProperty("db.password");
 
+            // Lấy danh sách sản phẩm trong hợp đồng (kèm thông tin sản phẩm và trạng thái bàn giao)
             String sql = "SELECT cp.product_id, cp.description, cp.quantity, cp.unit_price, cp.warranty_months, cp.notes, " +
                          "COALESCE(cp.delivery_status, 'not_delivered') as delivery_status, " +
                          "p.product_name, p.warranty_months as product_warranty_months " +
@@ -65,7 +67,7 @@ public class ContractItemsServlet extends HttpServlet {
                         obj.put("quantity", rs.getBigDecimal("quantity"));
                         obj.put("unitPrice", rs.getBigDecimal("unit_price"));
                         
-                        // Lấy warranty_months từ contract_products, nếu null thì lấy từ products
+                        // Lấy thời gian bảo hành: ưu tiên từ contract_products, nếu không có thì lấy từ products, mặc định 12 tháng
                         int warrantyMonths = rs.getInt("warranty_months");
                         if (rs.wasNull()) {
                             warrantyMonths = rs.getInt("product_warranty_months");
@@ -75,14 +77,13 @@ public class ContractItemsServlet extends HttpServlet {
                         }
                         obj.put("warrantyMonths", warrantyMonths);
                         
-                        // Lấy ngày xuất kho từ stock_history
+                        // Tìm ngày xuất kho từ stock_history để tính bảo hành
                         int productId = rs.getInt("product_id");
                         String deliveryStatus = rs.getString("delivery_status");
                         java.sql.Timestamp stockOutDate = null;
                         String stockOutDateStr = null;
                         try {
-                            // Nếu sản phẩm đã bàn giao, tìm ngày xuất kho
-                            // Thử tìm với reference_type = 'contract' trước
+                            // Tìm ngày xuất kho với reference_type = 'contract' trước
                             String stockOutSql = "SELECT MIN(created_at) as stock_out_date " +
                                                "FROM stock_history " +
                                                "WHERE product_id = ? AND movement_type = 'out' " +
@@ -152,24 +153,26 @@ public class ContractItemsServlet extends HttpServlet {
                         
                         obj.put("stockOutDate", stockOutDateStr != null ? stockOutDateStr : JSONObject.NULL);
                         
-                        // Tính toán thông tin bảo hành
+                        // Tính toán thông tin bảo hành: ngày hết hạn = ngày xuất kho + thời gian bảo hành
                         if (stockOutDate != null && warrantyMonths > 0) {
                             java.util.Calendar cal = java.util.Calendar.getInstance();
                             cal.setTimeInMillis(stockOutDate.getTime());
-                            cal.add(java.util.Calendar.MONTH, warrantyMonths);
+                            cal.add(java.util.Calendar.MONTH, warrantyMonths); // Cộng thêm số tháng bảo hành
                             java.util.Date warrantyEndDate = cal.getTime();
                             java.util.Date today = new java.util.Date();
                             
+                            // Tính số ngày còn lại của bảo hành
                             long diffInMillis = warrantyEndDate.getTime() - today.getTime();
                             long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
                             
-                            boolean isWarrantyValid = diffInDays >= 0;
+                            boolean isWarrantyValid = diffInDays >= 0; // Còn bảo hành nếu >= 0
                             obj.put("warrantyValid", isWarrantyValid);
                             obj.put("warrantyDaysRemaining", diffInDays);
                             
                             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
                             obj.put("warrantyEndDate", sdf.format(warrantyEndDate));
                         } else {
+                            // Nếu chưa xuất kho hoặc không có bảo hành thì không tính
                             obj.put("warrantyValid", JSONObject.NULL);
                             obj.put("warrantyDaysRemaining", JSONObject.NULL);
                             obj.put("warrantyEndDate", JSONObject.NULL);

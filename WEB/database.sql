@@ -55,10 +55,15 @@ CREATE TABLE contracts (
     terms TEXT,
     signed_date DATE,
     created_by INT,
+    deleted_by INT NULL COMMENT 'ID người xóa hợp đồng',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL COMMENT 'Thời gian xóa hợp đồng',
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_contracts_deleted_at (deleted_at),
+    INDEX idx_contracts_status_deleted (status, deleted_at)
 );
 
 -- 4. SUPPLIERS
@@ -223,49 +228,7 @@ CREATE TABLE support_requests (
     FOREIGN KEY (assigned_to) REFERENCES users(id)
 );
 
--- 13. INVOICES
-CREATE TABLE invoices (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    invoice_number VARCHAR(50) UNIQUE NOT NULL,
-    customer_id INT NOT NULL,
-    work_order_id INT,
-    contract_id INT,
-    invoice_date DATE NOT NULL,
-    due_date DATE NOT NULL,
-    subtotal DECIMAL(15,2) NOT NULL,
-    tax_rate DECIMAL(5,2) DEFAULT 10.00,
-    tax_amount DECIMAL(15,2) NOT NULL,
-    total_amount DECIMAL(15,2) NOT NULL,
-    payment_status ENUM('unpaid', 'partial', 'paid', 'overdue') DEFAULT 'unpaid',
-    payment_method VARCHAR(50),
-    payment_date DATE,
-    payment_reference VARCHAR(100),
-    paid_amount DECIMAL(15,2) DEFAULT 0,
-    notes TEXT,
-    created_by INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (customer_id) REFERENCES customers(id),
-    FOREIGN KEY (work_order_id) REFERENCES work_orders(id),
-    FOREIGN KEY (contract_id) REFERENCES contracts(id),
-    FOREIGN KEY (created_by) REFERENCES users(id)
-);
-
--- 14. INVOICE_ITEMS
-CREATE TABLE invoice_items (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    invoice_id INT NOT NULL,
-    product_id INT,
-    item_type ENUM('product', 'service', 'labor') DEFAULT 'product',
-    description VARCHAR(500) NOT NULL,
-    quantity DECIMAL(10,2) NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    line_total DECIMAL(15,2) NOT NULL,
-    FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id)
-);
-
--- 15. ACTIVITY_LOGS
+-- 13. ACTIVITY_LOGS
 CREATE TABLE activity_logs (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT,
@@ -278,7 +241,7 @@ CREATE TABLE activity_logs (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 16. SETTINGS
+-- 14. SETTINGS
 CREATE TABLE settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     setting_key VARCHAR(100) UNIQUE NOT NULL,
@@ -290,7 +253,7 @@ CREATE TABLE settings (
 );
 
 
--- 17. RBAC: ROLES
+-- 15. RBAC: ROLES
 CREATE TABLE IF NOT EXISTS roles (
     id INT PRIMARY KEY AUTO_INCREMENT,
     role_key VARCHAR(50) UNIQUE NOT NULL,
@@ -299,7 +262,7 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 18. RBAC: PERMISSIONS
+-- 16. RBAC: PERMISSIONS
 CREATE TABLE IF NOT EXISTS permissions (
     id INT PRIMARY KEY AUTO_INCREMENT,
     perm_key VARCHAR(100) UNIQUE NOT NULL,
@@ -308,7 +271,7 @@ CREATE TABLE IF NOT EXISTS permissions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 19. RBAC: ROLE_PERMISSIONS
+-- 17. RBAC: ROLE_PERMISSIONS
 CREATE TABLE IF NOT EXISTS role_permissions (
     role_id INT NOT NULL,
     permission_id INT NOT NULL,
@@ -318,7 +281,109 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 );
 
 
--- Seed default roles
+
+-- 18. CONTACT_MESSAGES
+CREATE TABLE contact_messages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('new', 'read', 'replied', 'archived','converted') DEFAULT 'new',
+    replied_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at),
+    INDEX idx_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 19. EMAIL_NOTIFICATIONS
+CREATE TABLE email_notifications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    subject VARCHAR(500) NOT NULL,
+    content TEXT NOT NULL,
+    email_type ENUM('internal', 'marketing') NOT NULL DEFAULT 'internal',
+    recipient_roles JSON COMMENT 'Danh sách các role nhận email (JSON array)',
+    recipient_emails JSON COMMENT 'Danh sách email người nhận (JSON array)',
+    recipient_count INT DEFAULT 0 COMMENT 'Số lượng người nhận',
+    success_count INT DEFAULT 0 COMMENT 'Số email gửi thành công',
+    failed_count INT DEFAULT 0 COMMENT 'Số email gửi thất bại',
+    failed_recipients JSON COMMENT 'Danh sách email gửi thất bại (JSON array)',
+    status ENUM('pending', 'sending', 'completed', 'failed', 'partial') DEFAULT 'pending',
+    sent_by INT COMMENT 'ID người gửi (admin)',
+    sent_by_name VARCHAR(100) COMMENT 'Tên người gửi',
+    scheduled_at DATETIME COMMENT 'Thời gian lên lịch gửi',
+    sent_at DATETIME COMMENT 'Thời gian bắt đầu gửi',
+    completed_at DATETIME COMMENT 'Thời gian hoàn thành',
+    error_message TEXT COMMENT 'Thông báo lỗi nếu có',
+    attachments TEXT COMMENT 'Danh sách file đính kèm (JSON array chứa file paths)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_email_type (email_type),
+    INDEX idx_status (status),
+    INDEX idx_sent_at (sent_at),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 20. PRODUCT_PRICE_HISTORY
+CREATE TABLE IF NOT EXISTS product_price_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    product_id INT NOT NULL,
+    price_type ENUM('purchase','selling') NOT NULL,
+    old_price DECIMAL(15,2) NULL,
+    new_price DECIMAL(15,2) NOT NULL,
+    reason VARCHAR(255) NULL,
+    reference_type VARCHAR(50) NULL,
+    reference_id INT NULL,
+    updated_by INT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_product_type_time (product_id, price_type, updated_at),
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id)
+);
+
+-- 21. TICKET_FEEDBACK
+-- Tạo bảng ticket_feedback để lưu feedback từ khách hàng
+CREATE TABLE IF NOT EXISTS ticket_feedback (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ticket_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating INT NOT NULL COMMENT 'Đánh giá từ 1-5 sao',
+    comment TEXT COMMENT 'Nhận xét của khách hàng',
+    image_path VARCHAR(500) COMMENT 'Đường dẫn đến ảnh feedback',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES support_requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_ticket_feedback (ticket_id) COMMENT 'Mỗi ticket chỉ có thể có 1 feedback'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Thêm index để tìm kiếm nhanh
+CREATE INDEX idx_ticket_feedback_ticket_id ON ticket_feedback(ticket_id);
+CREATE INDEX idx_ticket_feedback_customer_id ON ticket_feedback(customer_id);
+CREATE INDEX idx_ticket_feedback_rating ON ticket_feedback(rating);
+
+
+-- Dữ liệu mẫu
+INSERT INTO settings (setting_key, setting_value, description) VALUES
+('company_name', 'HL Generator Solutions', 'Tên công ty'),
+('tax_rate', '10.00', 'Thuế suất mặc định (%)'),
+('default_warranty', '24', 'Bảo hành mặc định cho máy phát điện (tháng)'),
+('low_stock_alert', '5', 'Cảnh báo tồn kho thấp cho thiết bị');
+
+INSERT INTO users (username, email, password_hash, full_name, phone, role, permissions) VALUES
+('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'System Administrator', '0123456789', 'admin',
+ '["all_permissions"]'),
+('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+ 'Nguyễn Văn Tâm', '0987654321', 'head_technician',
+ '["view_work_orders", "manage_tasks", "view_inventory"]'),
+('customer1', 'customer1@gmail.com', '123abc',
+ 'Nguyễn Văn Khách', '0909123456', 'customer',
+ '["view_products", "view_orders", "submit_support_request"]');
+
+ -- Seed default roles
 INSERT INTO roles (role_key, role_name, is_system) VALUES
 ('admin', 'Quản trị viên', TRUE),
 ('customer_support', 'Hỗ trợ khách hàng', FALSE),
@@ -404,103 +469,3 @@ INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.perm_key IN ('submit_contact')
 WHERE r.role_key = 'guest'
 ON DUPLICATE KEY UPDATE permission_id = permission_id;
-
-CREATE TABLE contact_messages (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    phone VARCHAR(20) NOT NULL,
-    message TEXT NOT NULL,
-    status ENUM('new', 'read', 'replied', 'archived','converted') DEFAULT 'new',
-    replied_at DATETIME NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at),
-    INDEX idx_email (email)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Bảng lưu lịch sử email đã gửi
-CREATE TABLE email_notifications (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    subject VARCHAR(500) NOT NULL,
-    content TEXT NOT NULL,
-    email_type ENUM('internal', 'marketing') NOT NULL DEFAULT 'internal',
-    recipient_roles JSON COMMENT 'Danh sách các role nhận email (JSON array)',
-    recipient_emails JSON COMMENT 'Danh sách email người nhận (JSON array)',
-    recipient_count INT DEFAULT 0 COMMENT 'Số lượng người nhận',
-    success_count INT DEFAULT 0 COMMENT 'Số email gửi thành công',
-    failed_count INT DEFAULT 0 COMMENT 'Số email gửi thất bại',
-    failed_recipients JSON COMMENT 'Danh sách email gửi thất bại (JSON array)',
-    status ENUM('pending', 'sending', 'completed', 'failed', 'partial') DEFAULT 'pending',
-    sent_by INT COMMENT 'ID người gửi (admin)',
-    sent_by_name VARCHAR(100) COMMENT 'Tên người gửi',
-    scheduled_at DATETIME COMMENT 'Thời gian lên lịch gửi',
-    sent_at DATETIME COMMENT 'Thời gian bắt đầu gửi',
-    completed_at DATETIME COMMENT 'Thời gian hoàn thành',
-    error_message TEXT COMMENT 'Thông báo lỗi nếu có',
-    attachments TEXT COMMENT 'Danh sách file đính kèm (JSON array chứa file paths)',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_email_type (email_type),
-    INDEX idx_status (status),
-    INDEX idx_sent_at (sent_at),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-CREATE TABLE IF NOT EXISTS product_price_history (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    product_id INT NOT NULL,
-    price_type ENUM('purchase','selling') NOT NULL,
-    old_price DECIMAL(15,2) NULL,
-    new_price DECIMAL(15,2) NOT NULL,
-    reason VARCHAR(255) NULL,
-    reference_type VARCHAR(50) NULL,
-    reference_id INT NULL,
-    updated_by INT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_product_type_time (product_id, price_type, updated_at),
-    FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (updated_by) REFERENCES users(id)
-);
-
-
--- Tạo bảng ticket_feedback để lưu feedback từ khách hàng
-CREATE TABLE IF NOT EXISTS ticket_feedback (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    ticket_id INT NOT NULL,
-    customer_id INT NOT NULL,
-    rating INT NOT NULL COMMENT 'Đánh giá từ 1-5 sao',
-    comment TEXT COMMENT 'Nhận xét của khách hàng',
-    image_path VARCHAR(500) COMMENT 'Đường dẫn đến ảnh feedback',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (ticket_id) REFERENCES support_requests(id) ON DELETE CASCADE,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_ticket_feedback (ticket_id) COMMENT 'Mỗi ticket chỉ có thể có 1 feedback'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Thêm index để tìm kiếm nhanh
-CREATE INDEX idx_ticket_feedback_ticket_id ON ticket_feedback(ticket_id);
-CREATE INDEX idx_ticket_feedback_customer_id ON ticket_feedback(customer_id);
-CREATE INDEX idx_ticket_feedback_rating ON ticket_feedback(rating);
-
-
--- Dữ liệu mẫu
-INSERT INTO settings (setting_key, setting_value, description) VALUES
-('company_name', 'HL Generator Solutions', 'Tên công ty'),
-('tax_rate', '10.00', 'Thuế suất mặc định (%)'),
-('default_warranty', '24', 'Bảo hành mặc định cho máy phát điện (tháng)'),
-('low_stock_alert', '5', 'Cảnh báo tồn kho thấp cho thiết bị');
-
-INSERT INTO users (username, email, password_hash, full_name, phone, role, permissions) VALUES
-('admin', 'admin@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
- 'System Administrator', '0123456789', 'admin',
- '["all_permissions"]'),
-('technician1', 'tech1@hlgenerator.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
- 'Nguyễn Văn Tâm', '0987654321', 'head_technician',
- '["view_work_orders", "manage_tasks", "view_inventory"]'),
-('customer1', 'customer1@gmail.com', '123abc',
- 'Nguyễn Văn Khách', '0909123456', 'customer',
- '["view_products", "view_orders", "submit_support_request"]');

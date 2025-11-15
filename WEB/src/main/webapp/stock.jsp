@@ -245,6 +245,7 @@
                                             <th>Danh mục</th>
                                             <th>Đơn vị</th>
                                             <th style="text-align: center;">Đã giữ chỗ</th>
+                                            <th style="text-align: center;">Tổng kho</th>
                                             <th style="text-align: center;">Tổng đang cần</th>
                                             <th style="text-align: center;">Còn thiếu</th>
                                             <th>Giá bán</th>
@@ -253,7 +254,7 @@
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td colspan="11" class="text-center">
+                                            <td colspan="12" class="text-center">
                                                 <i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...
                                             </td>
                                         </tr>
@@ -324,7 +325,7 @@
             var status = $('#filterStatus').val() || '';
             
             // Hiển thị loading - filter được xử lý hoàn toàn bằng query ở backend
-            $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>');
+            $('#stockTable tbody').html('<tr><td colspan="12" class="text-center"><i class="fa fa-spinner fa-spin"></i> Đang tải dữ liệu...</td></tr>');
             
             $.ajax({
                 url: '<%=request.getContextPath()%>/inventory',
@@ -346,12 +347,12 @@
                         displayStockData(response.data || []);
                         updatePagination(response.pagination || {});
                     } else {
-                        $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><div class="alert alert-warning">Không có dữ liệu tồn kho</div></td></tr>');
+                        $('#stockTable tbody').html('<tr><td colspan="12" class="text-center"><div class="alert alert-warning">Không có dữ liệu tồn kho</div></td></tr>');
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading stock data:', error);
-                    $('#stockTable tbody').html('<tr><td colspan="11" class="text-center"><div class="alert alert-danger">Lỗi khi tải dữ liệu: ' + error + '</div></td></tr>');
+                    $('#stockTable tbody').html('<tr><td colspan="12" class="text-center"><div class="alert alert-danger">Lỗi khi tải dữ liệu: ' + error + '</div></td></tr>');
                 }
             });
         }
@@ -361,7 +362,7 @@
             tbody.empty();
             
             if (!data || data.length === 0) {
-                tbody.html('<tr><td colspan="11" class="text-center"><div class="alert alert-info">Không có dữ liệu tồn kho</div></td></tr>');
+                tbody.html('<tr><td colspan="12" class="text-center"><div class="alert alert-info">Không có dữ liệu tồn kho</div></td></tr>');
                 return;
             }
 
@@ -371,8 +372,14 @@
                 
                 // Tính toán các giá trị
                 var reservedStock = Number(item.reservedStock || 0);
+                var totalStock = Number(item.totalStock || 0);
                 var totalRequired = Number(item.totalRequired || 0);
                 var shortage = Number(item.shortage || 0);
+                
+                // Tổng kho = Tổng tồn kho hiện có (totalStock)
+                // Lưu ý: reservedStock đã nằm trong totalStock rồi, không cộng lại
+                // totalStock = SUM(current_stock) đã bao gồm cả phần đã giữ chỗ
+                var totalInventory = totalStock;
                 
                 // Format hiển thị số thiếu: >0 màu đỏ, =0 màu xanh
                 var shortageDisplay = shortage.toLocaleString();
@@ -398,6 +405,7 @@
                 row += '<td>' + escapeHtml(item.category || 'N/A') + '</td>';
                 row += '<td>' + escapeHtml(item.unit || 'N/A') + '</td>';
                 row += '<td style="text-align: center;"><strong>' + reservedStock.toLocaleString() + '</strong></td>';
+                row += '<td style="text-align: center;"><strong class="text-primary">' + totalInventory.toLocaleString() + '</strong></td>';
                 row += '<td style="text-align: center;"><strong>' + totalRequired.toLocaleString() + '</strong></td>';
                 row += '<td style="text-align: center;"><strong class="' + shortageClass + '">' + shortageDisplay + '</strong></td>';
                 row += '<td>' + (item.unitPrice ? new Intl.NumberFormat('vi-VN').format(item.unitPrice) + ' VNĐ' : '-') + '</td>';

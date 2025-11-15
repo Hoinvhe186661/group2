@@ -101,7 +101,7 @@ public class ContactManagementServlet extends HttpServlet {
         // Forward to JSP
         request.getRequestDispatcher("/contact_management.jsp").forward(request, response);
     }
-    
+    //nhận request postpost
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {

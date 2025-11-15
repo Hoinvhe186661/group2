@@ -19,12 +19,12 @@ import java.util.List;
 @WebServlet("/api/contracts")
 public class ContractServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
-    private ContractDAO contractDAO;
+    private ContractDAO contractDAO; // DAO để thao tác với database
 
     @Override
     public void init() throws ServletException {
         super.init();
-        contractDAO = new ContractDAO();
+        contractDAO = new ContractDAO(); // Khởi tạo DAO khi servlet được load
     }
 
     @Override
@@ -33,9 +33,10 @@ public class ContractServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json; charset=UTF-8");
 
-        String action = request.getParameter("action");
+        String action = request.getParameter("action"); // Lấy action từ request
         PrintWriter out = response.getWriter();
 
+        // Lấy thông tin hợp đồng theo ID
         if ("get".equalsIgnoreCase(action)) {
             int id = Integer.parseInt(request.getParameter("id"));
             Contract c = contractDAO.getContractById(id);
@@ -47,8 +48,8 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        // Lấy danh sách hợp đồng đã xóa (thùng rác) với phân trang, tìm kiếm, sắp xếp
         if ("deleted".equalsIgnoreCase(action)) {
-            // Trả về danh sách hợp đồng đã bị xóa với tìm kiếm, sắp xếp và phân trang
             String pageParam = request.getParameter("page");
             String pageSizeParam = request.getParameter("pageSize");
             String search = request.getParameter("search");
@@ -57,6 +58,7 @@ public class ContractServlet extends HttpServlet {
             
             System.out.println("Getting deleted contracts - page: " + pageParam + ", pageSize: " + pageSizeParam + ", search: " + search);
             
+            // Parse và validate tham số phân trang
             int page = 1;
             int pageSize = 10;
             try { if (pageParam != null) page = Integer.parseInt(pageParam); } catch (Exception ignored) {}
@@ -64,7 +66,7 @@ public class ContractServlet extends HttpServlet {
             if (page < 1) page = 1;
             if (pageSize < 1) pageSize = 10;
             
-            // Lấy danh sách hợp đồng đã bị xóa với phân trang
+            // Lấy danh sách hợp đồng đã xóa từ database
             List<Contract> contracts = contractDAO.getDeletedContractsPage(page, pageSize, search, sortBy, sortDir);
             int totalRecords = contractDAO.countDeletedContracts(search);
             int totalPages = (int) Math.ceil(totalRecords / (double) pageSize);
@@ -91,11 +93,12 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        // Lấy danh sách khách hàng để đổ vào dropdown
         if ("customers".equalsIgnoreCase(action)) {
-            // Trả về danh sách khách hàng cho dropdown
             com.hlgenerator.dao.CustomerDAO customerDAO = new com.hlgenerator.dao.CustomerDAO();
             java.util.List<com.hlgenerator.model.Customer> customers = customerDAO.getAllCustomers();
             JSONArray arr = new JSONArray();
+            // Chuyển đổi danh sách khách hàng sang JSON
             for (com.hlgenerator.model.Customer customer : customers) {
                 JSONObject obj = new JSONObject();
                 obj.put("id", customer.getId());
@@ -108,8 +111,8 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        // Lấy danh sách sản phẩm để đổ vào dropdown (kèm thông tin tồn kho)
         if ("products".equalsIgnoreCase(action)) {
-            // Trả về danh sách sản phẩm cho dropdown
             try {
                 // Sử dụng thông tin từ database.properties
                 java.util.Properties props = new java.util.Properties();
@@ -121,7 +124,7 @@ public class ContractServlet extends HttpServlet {
                 String pass = props.getProperty("db.password");
                 
                 try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-                    // Tính available stock (current_stock - reserved_quantity) cho tất cả warehouse, cho phép số âm
+                    // Tính tồn kho khả dụng = current_stock - reserved_quantity (cho phép số âm)
                     String sql = "SELECT p.id, p.product_code, p.product_name, p.description, p.unit_price, p.warranty_months, " +
                                  "COALESCE(SUM(i.current_stock - i.reserved_quantity), 0) AS quantity " +
                                  "FROM products p " +
@@ -152,26 +155,27 @@ public class ContractServlet extends HttpServlet {
             return;
         }
 
+        // Kiểm tra số hợp đồng có trùng không (dùng cho validation real-time)
         if ("check_contract_number".equalsIgnoreCase(action)) {
-            // Kiểm tra trùng lặp số hợp đồng
             String contractNumber = request.getParameter("contractNumber");
             if (contractNumber == null || contractNumber.trim().isEmpty()) {
                 out.print(errorJson("Số hợp đồng không được để trống"));
                 return;
             }
             
+            // Kiểm tra trùng trong danh sách hợp đồng đang dùng và trong thùng rác
             boolean exists = contractDAO.isContractNumberExists(contractNumber.trim());
             boolean existsIncludingDeleted = contractDAO.isContractNumberExistsIncludingDeleted(contractNumber.trim());
             
             JSONObject result = new JSONObject();
             result.put("exists", exists);
-            result.put("existsInTrash", existsIncludingDeleted && !exists);
+            result.put("existsInTrash", existsIncludingDeleted && !exists); // Có trong thùng rác nhưng không trong danh sách chính
             out.print(successJson(result));
             return;
         }
 
+        // Sinh số hợp đồng tự động (format: HD-YYYYMMDD-XXXX)
         if ("generate_number".equalsIgnoreCase(action)) {
-            // Sinh số hợp đồng mới
             String generated = contractDAO.generateNextContractNumber();
             org.json.JSONObject result = new org.json.JSONObject();
             result.put("contractNumber", generated);
@@ -214,15 +218,16 @@ public class ContractServlet extends HttpServlet {
         PrintWriter out = response.getWriter();
 
         try {
+            // Thêm hợp đồng mới
             if ("add".equalsIgnoreCase(action)) {
-                Contract c = parseContractFromRequest(request, false);
+                Contract c = parseContractFromRequest(request, false); // Parse dữ liệu từ request
                 
-                // Nếu frontend không gửi hoặc để trống, tự sinh số hợp đồng
+                // Nếu không có số hợp đồng thì tự động sinh
                 if (c.getContractNumber() == null || c.getContractNumber().trim().isEmpty()) {
                     c.setContractNumber(contractDAO.generateNextContractNumber());
                 }
                 
-                // Validate độ dài tiêu đề và điều khoản
+                // Kiểm tra độ dài tiêu đề và điều khoản
                 if (c.getTitle() != null && c.getTitle().length() > 150) {
                     out.print(errorJson("Tiêu đề vượt quá 150 ký tự"));
                     return;
@@ -237,7 +242,7 @@ public class ContractServlet extends HttpServlet {
                     return;
                 }
                 
-                // Validation cho trạng thái "active" (hiệu lực)
+                // Nếu hợp đồng ở trạng thái "active" thì phải có đầy đủ thông tin
                 if ("active".equals(c.getStatus())) {
                     // Tiêu đề bắt buộc
                     if (c.getTitle() == null || c.getTitle().trim().isEmpty()) {
@@ -267,9 +272,9 @@ public class ContractServlet extends HttpServlet {
                     }
                 }
                 
-                // Kiểm tra trùng lặp số hợp đồng (bao gồm cả trong thùng rác)
+                // Kiểm tra số hợp đồng có trùng không (kể cả trong thùng rác)
                 if (contractDAO.isContractNumberExistsIncludingDeleted(c.getContractNumber())) {
-                    // Kiểm tra xem có phải trong thùng rác không
+                    // Phân biệt trùng trong danh sách chính hay trong thùng rác
                     if (contractDAO.isContractNumberExists(c.getContractNumber())) {
                         out.print(errorJson("Số hợp đồng '" + c.getContractNumber() + "' đã tồn tại. Vui lòng chọn số hợp đồng khác."));
                     } else {
@@ -278,14 +283,15 @@ public class ContractServlet extends HttpServlet {
                     return;
                 }
                 
+                // Lưu hợp đồng vào database
                 boolean ok = contractDAO.addContract(c);
                 if (ok) {
                     try {
-                        // Lưu sản phẩm nếu có
+                        // Lưu danh sách sản phẩm vào hợp đồng (và giữ chỗ tồn kho nếu status = active)
                         saveContractProducts(c.getId(), request);
                         out.print(successMsg("Thêm hợp đồng và sản phẩm thành công"));
                     } catch (Exception e) {
-                        // Nếu lưu sản phẩm lỗi, vẫn báo thành công vì hợp đồng đã được lưu
+                        // Hợp đồng đã lưu nhưng lỗi khi lưu sản phẩm
                         out.print(successMsg("Thêm hợp đồng thành công, nhưng có lỗi khi lưu sản phẩm: " + e.getMessage()));
                     }
                 } else {
@@ -300,16 +306,17 @@ public class ContractServlet extends HttpServlet {
                         out.print(errorJson("Thêm hợp đồng thất bại. Vui lòng kiểm tra lại thông tin đã nhập."));
                     }
                 }
+            // Cập nhật hợp đồng
             } else if ("update".equalsIgnoreCase(action)) {
-                Contract c = parseContractFromRequest(request, true);
+                Contract c = parseContractFromRequest(request, true); // Parse kèm ID
                 
-                // Validation cơ bản
+                // Kiểm tra số hợp đồng không được trống
                 if (c.getContractNumber() == null || c.getContractNumber().trim().isEmpty()) {
                     out.print(errorJson("Số hợp đồng không được để trống"));
                     return;
                 }
 
-                // Validate độ dài tiêu đề và điều khoản
+                // Kiểm tra độ dài tiêu đề và điều khoản
                 if (c.getTitle() != null && c.getTitle().length() > 150) {
                     out.print(errorJson("Tiêu đề vượt quá 150 ký tự"));
                     return;
@@ -324,7 +331,7 @@ public class ContractServlet extends HttpServlet {
                     return;
                 }
                 
-                // Validation cho trạng thái "active" (hiệu lực)
+                // Nếu hợp đồng ở trạng thái "active" thì phải có đầy đủ thông tin
                 if ("active".equals(c.getStatus())) {
                     // Tiêu đề bắt buộc
                     if (c.getTitle() == null || c.getTitle().trim().isEmpty()) {
@@ -365,23 +372,22 @@ public class ContractServlet extends HttpServlet {
                     return;
                 }
                 
-                // Lấy trạng thái cũ của hợp đồng để xử lý giữ chỗ sản phẩm
+                // Lấy trạng thái cũ để xử lý giữ chỗ tồn kho khi thay đổi trạng thái
                 Contract oldContract = contractDAO.getContractById(c.getId());
                 String oldStatus = oldContract != null ? oldContract.getStatus() : null;
                 String newStatus = c.getStatus();
                 
+                // Cập nhật hợp đồng trong database
                 boolean ok = contractDAO.updateContract(c);
                 if (ok) {
                     try {
                         String productsJson = request.getParameter("products");
                         
-                        // Xử lý giữ chỗ sản phẩm khi trạng thái thay đổi
-                        // Nếu có sản phẩm mới được gửi lên, xóa sản phẩm cũ và lưu mới (saveContractProducts sẽ tự động giữ chỗ nếu active)
-                        // Nếu không có sản phẩm mới, chỉ xử lý giữ chỗ khi trạng thái thay đổi
+                        // Xử lý sản phẩm và giữ chỗ tồn kho
                         if (productsJson != null && !productsJson.trim().isEmpty()) {
-                            // Có sản phẩm mới: xóa sản phẩm cũ (giải phóng số lượng đã giữ chỗ) và lưu mới
+                            // Có sản phẩm mới: xóa sản phẩm cũ (giải phóng tồn kho) và lưu mới
                             deleteContractProducts(c.getId());
-                            saveContractProducts(c.getId(), request);
+                            saveContractProducts(c.getId(), request); // Tự động giữ chỗ nếu status = active
                         } else {
                             // Không có sản phẩm mới: chỉ xử lý giữ chỗ khi trạng thái thay đổi
                             if (oldStatus != null && !oldStatus.equals(newStatus)) {
@@ -412,11 +418,12 @@ public class ContractServlet extends HttpServlet {
                         out.print(errorJson("Cập nhật hợp đồng thất bại. Vui lòng kiểm tra lại thông tin đã nhập."));
                     }
                 }
+            // Xóa hợp đồng (chuyển vào thùng rác - soft delete)
             } else if ("delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
                 // Giải phóng số lượng đã giữ chỗ khi xóa vào thùng rác
                 releaseContractReservedQuantity(id);
-                // Lấy thông tin người xóa từ session
+                // Lấy ID người xóa từ session
                 Integer deletedBy = null;
                 try {
                     Object sessionUserId = request.getSession().getAttribute("userId");
@@ -429,6 +436,7 @@ public class ContractServlet extends HttpServlet {
                     System.out.println("Error getting userId from session: " + e.getMessage());
                 }
                 
+                // Thực hiện soft delete (chỉ đổi status = 'deleted', không xóa thật)
                 boolean ok;
                 if (deletedBy != null) {
                     System.out.println("Using deleteContract with deletedBy: " + deletedBy);
@@ -439,21 +447,22 @@ public class ContractServlet extends HttpServlet {
                 }
                 System.out.println("Delete result: " + ok);
                 out.print(ok ? successMsg("Đã chuyển hợp đồng vào thùng rác") : errorJson("Xóa hợp đồng thất bại"));
+            // Khôi phục hợp đồng từ thùng rác
             } else if ("restore".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                // Luôn khôi phục về trạng thái "draft" để đảm bảo quy trình phê duyệt
+                // Khôi phục về trạng thái "draft" (không giữ chỗ tồn kho)
                 boolean ok = contractDAO.restoreContract(id);
                 if (ok) {
-                    // Không giữ chỗ lại khi khôi phục vì hợp đồng đang ở trạng thái draft
-                    // Chỉ khi hợp đồng chuyển sang trạng thái active mới cần giữ chỗ
                     out.print(successMsg("Khôi phục hợp đồng thành công. Hợp đồng đã được khôi phục về trạng thái 'Bản nháp'."));
                 } else {
                     out.print(errorJson("Khôi phục hợp đồng thất bại"));
                 }
+            // Xóa vĩnh viễn hợp đồng (hard delete)
             } else if ("permanent_delete".equalsIgnoreCase(action)) {
                 int id = Integer.parseInt(request.getParameter("id"));
-                // Xóa sản phẩm trước
+                // Xóa sản phẩm trước (giải phóng tồn kho)
                 deleteContractProducts(id);
+                // Xóa hợp đồng khỏi database
                 boolean ok = contractDAO.permanentlyDeleteContract(id);
                 out.print(ok ? successMsg("Xóa vĩnh viễn hợp đồng thành công") : errorJson("Xóa vĩnh viễn hợp đồng thất bại"));
             } else {
@@ -468,10 +477,11 @@ public class ContractServlet extends HttpServlet {
         }
     }
 
+    // Parse dữ liệu từ request thành đối tượng Contract
     private Contract parseContractFromRequest(HttpServletRequest request, boolean includeId) {
         Contract c = new Contract();
         if (includeId) {
-            c.setId(Integer.parseInt(request.getParameter("id")));
+            c.setId(Integer.parseInt(request.getParameter("id"))); // Chỉ set ID khi update
         }
         c.setContractNumber(param(request, "contractNumber"));
         c.setCustomerId(Integer.parseInt(param(request, "customerId")));
@@ -489,11 +499,13 @@ public class ContractServlet extends HttpServlet {
         return c;
     }
 
+    // Lấy tham số từ request và trim
     private String param(HttpServletRequest req, String name) {
         String v = req.getParameter(name);
         return v != null ? v.trim() : null;
     }
 
+    // Parse chuỗi ngày thành Date
     private Date parseDate(String v) {
         try {
             return (v == null || v.isEmpty()) ? null : Date.valueOf(v);
@@ -521,6 +533,7 @@ public class ContractServlet extends HttpServlet {
         o.put("createdBy", c.getCreatedBy());
         o.put("createdAt", c.getCreatedAt());
         o.put("updatedAt", c.getUpdatedAt());
+        o.put("deletedAt", c.getDeletedAt());
         return o;
     }
 
@@ -556,18 +569,7 @@ public class ContractServlet extends HttpServlet {
             if (productsJson != null && !productsJson.isEmpty()) {
                 JSONArray products = new JSONArray(productsJson);
                 
-                // Lấy userId từ session
-                Integer userId = null;
-                try {
-                    Object sessionUserId = request.getSession().getAttribute("userId");
-                    if (sessionUserId != null && !sessionUserId.toString().equals("null")) {
-                        userId = Integer.parseInt(sessionUserId.toString());
-                    }
-                } catch (Exception e) {
-                    // Ignore if cannot get userId from session
-                }
-                
-                // Sử dụng thông tin từ database.properties
+                // Load cấu hình database
                 java.util.Properties props = new java.util.Properties();
                 java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
                 if (input == null) {
@@ -584,7 +586,7 @@ public class ContractServlet extends HttpServlet {
                 String pass = props.getProperty("db.password");
                 
                 try (java.sql.Connection conn = java.sql.DriverManager.getConnection(url, user, pass)) {
-                    // Lấy trạng thái hợp đồng để quyết định có giữ chỗ hay không
+                    // Lấy trạng thái hợp đồng để quyết định có giữ chỗ tồn kho hay không
                     String contractStatus = null;
                     String statusSql = "SELECT status FROM contracts WHERE id = ?";
                     try (java.sql.PreparedStatement psStatus = conn.prepareStatement(statusSql)) {
@@ -596,7 +598,7 @@ public class ContractServlet extends HttpServlet {
                         }
                     }
                     
-                    // Chỉ giữ chỗ nếu hợp đồng ở trạng thái "active" (hiệu lực)
+                    // Chỉ giữ chỗ tồn kho nếu hợp đồng ở trạng thái "active" (hiệu lực)
                     boolean shouldReserve = "active".equals(contractStatus);
                     
                     boolean oldAutoCommit = conn.getAutoCommit();
@@ -608,15 +610,14 @@ public class ContractServlet extends HttpServlet {
                             java.math.BigDecimal qty = toBigDecimal(product.opt("quantity"));
                             if (qty == null) qty = java.math.BigDecimal.ZERO;
 
-                            // Tính toán và trừ tồn kho đa kho (nếu có nhiều dòng inventory cho cùng product)
-                            // Khóa các dòng tồn kho của product để tính an toàn
+                            // Kiểm tra tồn kho (chỉ để cảnh báo, không chặn)
                             String sumSql = "SELECT SUM(current_stock) FROM inventory WHERE product_id = ? FOR UPDATE";
                             int totalAvailable = 0;
                             try (java.sql.PreparedStatement ps = conn.prepareStatement(sumSql)) {
                                 ps.setInt(1, productId);
                                 try (java.sql.ResultSet rs = ps.executeQuery()) { if (rs.next()) totalAvailable = rs.getInt(1); }
                             }
-                            // Cho phép tạo hợp đồng ngay cả khi tồn kho không đủ, chỉ cảnh báo
+                            // Cảnh báo nếu tồn kho không đủ (nhưng vẫn cho phép tạo hợp đồng)
                             if (totalAvailable <= 0) {
                                 System.out.println("Cảnh báo: Sản phẩm ID " + productId + " đã hết hàng trong kho. Hợp đồng vẫn được tạo.");
                             }
@@ -624,7 +625,7 @@ public class ContractServlet extends HttpServlet {
                                 System.out.println("Cảnh báo: Số lượng yêu cầu (" + qty + ") vượt quá tổng tồn kho (" + totalAvailable + ") cho sản phẩm ID " + productId + ". Hợp đồng vẫn được tạo.");
                             }
 
-                            // Thêm vào contract_products
+                            // Lưu sản phẩm vào bảng contract_products
                             String insertSql = "INSERT INTO contract_products (contract_id, product_id, description, quantity, unit_price, warranty_months, notes, delivery_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'not_delivered')";
                             try (java.sql.PreparedStatement ps = conn.prepareStatement(insertSql)) {
                                 ps.setInt(1, contractId);
@@ -641,10 +642,9 @@ public class ContractServlet extends HttpServlet {
                                 ps.executeUpdate();
                             }
                             
-                            // Chỉ giữ chỗ tồn kho nếu hợp đồng ở trạng thái "active" (hiệu lực)
-                            // Hợp đồng ở trạng thái "draft" (nháp) không giữ chỗ sản phẩm
+                            // Chỉ giữ chỗ tồn kho nếu hợp đồng ở trạng thái "active"
                             if (shouldReserve) {
-                                // Giữ chỗ tồn kho (reserve) thay vì trừ trực tiếp
+                                // Giữ chỗ tồn kho (tăng reserved_quantity) thay vì trừ current_stock
                                 // Chỉ khi xuất kho thực sự mới trừ current_stock
                                 int remaining = qty.intValue();
                                 int totalReserved = 0;
@@ -732,7 +732,7 @@ public class ContractServlet extends HttpServlet {
 
     /**
      * Giữ chỗ sản phẩm khi hợp đồng chuyển từ trạng thái "draft" sang "active"
-     * Lấy danh sách sản phẩm hiện có trong hợp đồng và giữ chỗ chúng
+     * Lấy danh sách sản phẩm hiện có trong hợp đồng và giữ chỗ chúng (tăng reserved_quantity)
      */
     private void reserveContractProducts(int contractId) {
         try {
@@ -836,9 +836,9 @@ public class ContractServlet extends HttpServlet {
         }
     }
 
+    // Giải phóng số lượng đã giữ chỗ (giảm reserved_quantity) khi hợp đồng bị xóa hoặc chuyển từ active sang draft
     private void releaseContractReservedQuantity(int contractId) {
-        // Giải phóng số lượng đã giữ chỗ khi hợp đồng bị xóa vào thùng rác hoặc chuyển từ active sang draft
-        // Nhưng vẫn giữ contract_products trong database
+        // Vẫn giữ contract_products trong database, chỉ giải phóng tồn kho
         try {
             // Sử dụng thông tin từ database.properties
             java.util.Properties props = new java.util.Properties();
@@ -916,9 +916,10 @@ public class ContractServlet extends HttpServlet {
         }
     }
 
+    // Xóa sản phẩm khỏi hợp đồng và giải phóng tồn kho đã giữ chỗ
     private void deleteContractProducts(int contractId) {
         try {
-            // Sử dụng thông tin từ database.properties
+            // Load cấu hình database
             java.util.Properties props = new java.util.Properties();
             java.io.InputStream input = getClass().getClassLoader().getResourceAsStream("database.properties");
             if (input == null) {
@@ -938,11 +939,7 @@ public class ContractServlet extends HttpServlet {
                 boolean oldAutoCommit = conn.getAutoCommit();
                 conn.setAutoCommit(false);
                 try {
-                    // Lấy userId từ session (nếu có) - cần truyền vào hoặc lấy từ context
-                    Integer userId = null;
-                    
-                    // Hoàn lại reserved_quantity dựa trên số lượng trong contract_products
-                    // Lấy tất cả sản phẩm trong hợp đồng để giảm reserved_quantity
+                    // Lấy danh sách sản phẩm trong hợp đồng để giải phóng tồn kho
                     String productsSql = "SELECT product_id, quantity FROM contract_products WHERE contract_id = ?";
                     try (java.sql.PreparedStatement psProducts = conn.prepareStatement(productsSql)) {
                         psProducts.setInt(1, contractId);
@@ -983,7 +980,7 @@ public class ContractServlet extends HttpServlet {
                         }
                     }
                     
-                    // Xóa sản phẩm trong hợp đồng
+                    // Xóa sản phẩm khỏi hợp đồng
                     String sql = "DELETE FROM contract_products WHERE contract_id = ?";
                     try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                         ps.setInt(1, contractId);
